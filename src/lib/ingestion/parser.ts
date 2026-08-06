@@ -243,14 +243,18 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
     if (
       rowStr.toLowerCase().includes('status of length') ||
       rowStr.toLowerCase().includes('sub total') ||
-      rowStr.toLowerCase().includes('no.of contracts')
+      rowStr.toLowerCase().includes('no.of contracts') ||
+      col2.toLowerCase().includes('nh no') ||
+      col2.toLowerCase().includes('nhno')
     ) {
       continue;
     }
 
     if (col2 && (col2.match(/\d+/) || rowStr.includes('DLP') || rowStr.includes('STMC') || rowStr.includes('PBMC'))) {
       const nhNum = col2.replace(/[^0-9A-Z]/gi, '');
-      const nhCode = nhNum ? `NH-${nhNum}` : 'NH-GENERAL';
+      if (!nhNum || nhNum.toLowerCase() === 'nhno') continue;
+
+      const nhCode = `NH-${nhNum}`;
 
       const fromKmVal = parseFloat(col3.replace('/', '.').replace(/[^0-9.]/g, '')) || 0;
       const toKmVal = parseFloat(col4.replace('/', '.').replace(/[^0-9.]/g, '')) || 0;
