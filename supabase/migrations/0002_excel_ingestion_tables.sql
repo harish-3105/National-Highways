@@ -106,12 +106,13 @@ CREATE TABLE IF NOT EXISTS public.legal_cases (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 8. GRANT ROLE PRIVILEGES (Fixes 401 Permission Denied on Supabase REST API)
+-- 8. GRANT ROLE PRIVILEGES
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ALL TABLES TO anon, authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ALL SEQUENCES TO anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
 
 -- 9. RLS SECURITY POLICIES
 ALTER TABLE public.dataset_uploads ENABLE ROW LEVEL SECURITY;
@@ -130,7 +131,6 @@ CREATE POLICY "Enable select for all users" ON public.accident_blackspots FOR SE
 CREATE POLICY "Enable select for all users" ON public.lawyers FOR SELECT USING (true);
 CREATE POLICY "Enable select for all users" ON public.legal_cases FOR SELECT USING (true);
 
--- Allow Insert for development
 CREATE POLICY "Enable insert for all users" ON public.highways FOR INSERT WITH CHECK (true);
 CREATE POLICY "Enable insert for all users" ON public.dlp_contracts FOR INSERT WITH CHECK (true);
 CREATE POLICY "Enable insert for all users" ON public.highway_chainages FOR INSERT WITH CHECK (true);
@@ -139,7 +139,6 @@ CREATE POLICY "Enable insert for all users" ON public.lawyers FOR INSERT WITH CH
 CREATE POLICY "Enable insert for all users" ON public.legal_cases FOR INSERT WITH CHECK (true);
 CREATE POLICY "Enable insert for all users" ON public.dataset_uploads FOR INSERT WITH CHECK (true);
 
--- Allow Upsert/Update
 CREATE POLICY "Enable update for all users" ON public.highways FOR UPDATE USING (true);
 CREATE POLICY "Enable update for all users" ON public.legal_cases FOR UPDATE USING (true);
 
