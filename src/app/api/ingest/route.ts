@@ -59,10 +59,13 @@ export async function POST(request: Request) {
     let dbError: any = null;
 
     if (datasetType === 'HIGHWAYS_MASTER') {
-      // Deduplicate items by road_code to prevent PostgreSQL ON CONFLICT DO UPDATE batch error
+      // Deduplicate items by road_code while preserving the master record with the largest length_km
       const uniqueMap = new Map();
       parseResult.data.forEach((item: any) => {
-        uniqueMap.set(item.road_code, item);
+        const existing = uniqueMap.get(item.road_code);
+        if (!existing || item.length_km > existing.length_km) {
+          uniqueMap.set(item.road_code, item);
+        }
       });
       const uniqueHighways = Array.from(uniqueMap.values());
 
