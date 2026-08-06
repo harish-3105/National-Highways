@@ -106,7 +106,14 @@ CREATE TABLE IF NOT EXISTS public.legal_cases (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- RLS Security Policies
+-- 8. GRANT ROLE PRIVILEGES (Fixes 401 Permission Denied on Supabase REST API)
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ALL TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ALL SEQUENCES TO anon, authenticated, service_role;
+
+-- 9. RLS SECURITY POLICIES
 ALTER TABLE public.dataset_uploads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.highways ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dlp_contracts ENABLE ROW LEVEL SECURITY;
@@ -131,6 +138,10 @@ CREATE POLICY "Enable insert for all users" ON public.accident_blackspots FOR IN
 CREATE POLICY "Enable insert for all users" ON public.lawyers FOR INSERT WITH CHECK (true);
 CREATE POLICY "Enable insert for all users" ON public.legal_cases FOR INSERT WITH CHECK (true);
 CREATE POLICY "Enable insert for all users" ON public.dataset_uploads FOR INSERT WITH CHECK (true);
+
+-- Allow Upsert/Update
+CREATE POLICY "Enable update for all users" ON public.highways FOR UPDATE USING (true);
+CREATE POLICY "Enable update for all users" ON public.legal_cases FOR UPDATE USING (true);
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_highways_code ON public.highways(road_code);
