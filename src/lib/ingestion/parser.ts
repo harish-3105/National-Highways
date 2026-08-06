@@ -165,6 +165,8 @@ export async function parseDatasetFile(
 
 function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
   const parsedData: HighwayRow[] = [];
+  let currentRoadCode = '';
+  let currentRoadName = '';
 
   for (let i = 0; i < rawRows.length; i++) {
     const row = rawRows[i];
@@ -182,9 +184,16 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
       continue;
     }
 
-    if ((/^\d+$/.test(col0) && col2) || (col2.toUpperCase().startsWith('NH') && /^\d+/.test(col2.replace(/NH-?/i, '')))) {
-      const roadCode = col2.toUpperCase().startsWith('NH') ? col2.toUpperCase() : `NH-${col2.toUpperCase()}`;
-      const roadName = col3 || `National Highway ${col2}`;
+    if (col2) {
+      currentRoadCode = col2.toUpperCase().startsWith('NH') ? col2.toUpperCase() : `NH-${col2.toUpperCase()}`;
+    }
+    if (col3) {
+      currentRoadName = col3;
+    }
+
+    if ((/^\d+$/.test(col0) && currentRoadCode) || (currentRoadCode.startsWith('NH') && /^\d+/.test(currentRoadCode.replace(/NH-?/i, '')))) {
+      const roadCode = currentRoadCode;
+      const roadName = currentRoadName || `National Highway ${currentRoadCode}`;
       const lengthKm = parseFloat(cleanString(row[6])) || parseFloat(cleanString(row[4])) || 0;
 
       const l6 = parseFloat(cleanString(row[11])) || 0;
@@ -233,12 +242,26 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
   const parsedData: DLPRow[] = [];
   const now = new Date();
 
+  // Forward fill state for vertically merged Excel cells
+  let currentDivision = '';
+  let currentNHNo = '';
+
   for (let i = 0; i < rawRows.length; i++) {
     const row = rawRows[i];
     if (!row || row.length === 0) continue;
 
-    const col1 = cleanString(row[1]); // Division
-    const col2 = cleanString(row[2]); // NH No
+    const rawCol1 = cleanString(row[1]); // Division
+    const rawCol2 = cleanString(row[2]); // NH No
+
+    if (rawCol1 && !rawCol1.toLowerCase().includes('division') && !rawCol1.toLowerCase().includes('sub total')) {
+      currentDivision = rawCol1;
+    }
+    if (rawCol2 && !rawCol2.toLowerCase().includes('nh no')) {
+      currentNHNo = rawCol2;
+    }
+
+    const col1 = rawCol1 || currentDivision;
+    const col2 = rawCol2 || currentNHNo;
     const col3 = cleanString(row[3]); // From Chainage
     const col4 = cleanString(row[4]); // To Chainage
     const col5 = cleanString(row[5]); // Total Length
