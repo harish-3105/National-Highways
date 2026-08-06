@@ -1,0 +1,27 @@
+{
+  "name": "highways-management-system",
+  "version": "1.0.0",
+  "description": "Highways Management System - Root workspace",
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:all": "cd backend && npm run build && cd ../frontend && npm run build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:build": "docker compose build",
+    "docker:logs": "docker compose logs -f",
+    "setup": "node scripts/run-setup.js",
+    "start": "node scripts/run-start.js"
+  },
+  "keywords": [
+    "highways",
+    "management",
+    "gis",
+    "postgis",
+    "react",
+    "nestjs"
+  ],
+  "author": "Highway Authority",
+  "license": "PROPRIETARY"
+}
