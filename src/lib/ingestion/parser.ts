@@ -242,17 +242,19 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
       const roadName = currentRoadName || `National Highway ${currentRoadCode}`;
       const lengthKm = roundTo3Decimals(parseChainageValue(row[6]) || parseChainageValue(row[4]) || 0);
 
-      // Scan multi-lane breakdown columns (>2L, 2L, 2L+PS, 4L, 6L)
+      // Scan all multi-lane breakdown columns: Col 8 (2L), Col 9 (2L+PS), Col 10 (4L), Col 11 (6L)
       const l6 = parseChainageValue(row[11]);
       const l4 = parseChainageValue(row[10]);
       const l2ps = parseChainageValue(row[9]);
+      const l2 = parseChainageValue(row[8]);
 
-      const maxLane = Math.max(l6, l4, l2ps);
+      const maxLane = Math.max(l6, l4, l2ps, l2);
       let config = '2-Lane';
       if (maxLane > 0) {
         if (maxLane === l6) config = '6-Lane';
         else if (maxLane === l4) config = '4-Lane';
         else if (maxLane === l2ps) config = '2-Lane (Paved Shoulder)';
+        else if (maxLane === l2) config = '2-Lane';
       }
 
       const fromLoc = roadName.split('-')[0]?.trim() || 'Start';
