@@ -300,9 +300,6 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
   }
 }
 
-/**
- * Advanced multi-sheet matrix parser for TN-NH-Bar chart workbooks
- */
 function parseMilestones(workbook: XLSX.WorkBook | null, rawRows: any[][], result: ParseResult) {
   const parsedData: MilestoneRow[] = [];
 
@@ -361,14 +358,17 @@ function parseMilestones(workbook: XLSX.WorkBook | null, rawRows: any[][], resul
         const remarks = remarksRow && remarksRow[c] !== undefined ? cleanString(remarksRow[c]) : '';
 
         const kmVal = kmStr ? parseFloat(kmStr.replace('/', '.').replace(/[^0-9.]/g, '')) : NaN;
-        const pcuVal = pcuStr ? parseInt(pcuStr.replace(/[^0-9]/g, '')) : undefined;
+        
+        // Clean and slice PCU traffic count to avoid 64-bit integer overflow
+        const rawPcuDigits = pcuStr ? pcuStr.replace(/[^0-9]/g, '').slice(0, 9) : '';
+        const pcuVal = rawPcuDigits ? parseInt(rawPcuDigits, 10) : undefined;
 
         if (town || !isNaN(kmVal) || carriageway || rowWidth) {
           parsedData.push({
             highway_code: nhCode,
             chainage_km: !isNaN(kmVal) ? kmVal : c,
             town_name: town || undefined,
-            traffic_pcu: !isNaN(pcuVal!) ? pcuVal : undefined,
+            traffic_pcu: pcuVal,
             row_width: rowWidth || undefined,
             carriageway_spec: carriageway || undefined,
             remarks: remarks || undefined,
