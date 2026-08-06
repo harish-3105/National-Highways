@@ -2,12 +2,26 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { parseDatasetFile, DatasetType } from '@/lib/ingestion/parser';
 
-// Sanitize URL and Key to strip accidental quotes or trailing spaces
-const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/^["']|["']$/g, '').trim();
-const supabaseKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').replace(/^["']|["']$/g, '').trim();
-
 export async function POST(request: Request) {
   try {
+    // Dynamically read & sanitize environment variables per request
+    const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/^["']|["']$/g, '').trim();
+    const supabaseKey = (
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      ''
+    ).replace(/^["']|["']$/g, '').trim();
+
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Server Configuration Error: Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.',
+        },
+        { status: 500 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const datasetType = (formData.get('datasetType') as DatasetType) || 'HIGHWAYS_MASTER';
@@ -16,16 +30,6 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, message: 'No file uploaded. Please select a .xlsx, .xls, or .csv file.' },
         { status: 400 }
-      );
-    }
-
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Server Configuration Error: Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY on server.',
-        },
-        { status: 500 }
       );
     }
 
@@ -47,8 +51,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Direct Supabase Client for Batch DB Ingestion
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // 2. Instantiate Supabase Client per request
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false },
+    });
 
     let insertedCount = 0;
     let dbError = null;
