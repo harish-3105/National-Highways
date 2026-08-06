@@ -99,6 +99,13 @@ const cleanString = (val: any): string => {
 };
 
 /**
+ * Round floating numbers to 3 decimal places e.g. 60.599999999999994 -> 60.6
+ */
+const roundTo3Decimals = (num: number): number => {
+  return Math.round(num * 1000) / 1000;
+};
+
+/**
  * Converts Indian chainage notation (e.g. 63/2, 110/2, 0/0, 60/600) into clean decimal numbers (63.2, 110.2, 0.0, 60.6)
  */
 const parseChainageValue = (val: any): number => {
@@ -112,14 +119,14 @@ const parseChainageValue = (val: any): number => {
     const whole = parseFloat(slashMatch[1]);
     const fracStr = slashMatch[2];
     if (fracStr.length >= 3) {
-      return whole + parseFloat(fracStr) / 1000;
+      return roundTo3Decimals(whole + parseFloat(fracStr) / 1000);
     } else {
-      return whole + parseFloat(fracStr) / 10;
+      return roundTo3Decimals(whole + parseFloat(fracStr) / 10);
     }
   }
 
   const directNum = parseFloat(str.replace(/[^0-9.]/g, ''));
-  return isNaN(directNum) ? 0 : directNum;
+  return isNaN(directNum) ? 0 : roundTo3Decimals(directNum);
 };
 
 /**
@@ -233,17 +240,20 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
     if ((/^\d+$/.test(col0) && currentRoadCode) || (currentRoadCode.startsWith('NH') && /^\d+/.test(currentRoadCode.replace(/NH-?/i, '')))) {
       const roadCode = currentRoadCode;
       const roadName = currentRoadName || `National Highway ${currentRoadCode}`;
-      const lengthKm = parseChainageValue(row[6]) || parseChainageValue(row[4]) || 0;
+      const lengthKm = roundTo3Decimals(parseChainageValue(row[6]) || parseChainageValue(row[4]) || 0);
 
       // Scan multi-lane breakdown columns (>2L, 2L, 2L+PS, 4L, 6L)
       const l6 = parseChainageValue(row[11]);
       const l4 = parseChainageValue(row[10]);
       const l2ps = parseChainageValue(row[9]);
 
+      const maxLane = Math.max(l6, l4, l2ps);
       let config = '2-Lane';
-      if (l6 > 0) config = '6-Lane';
-      else if (l4 > 0) config = '4-Lane';
-      else if (l2ps > 0) config = '2-Lane (Paved Shoulder)';
+      if (maxLane > 0) {
+        if (maxLane === l6) config = '6-Lane';
+        else if (maxLane === l4) config = '4-Lane';
+        else if (maxLane === l2ps) config = '2-Lane (Paved Shoulder)';
+      }
 
       const fromLoc = roadName.split('-')[0]?.trim() || 'Start';
       const toLoc = roadName.split('-').pop()?.trim() || 'End';
@@ -328,7 +338,7 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
 
       const fromKmVal = parseChainageValue(col3);
       const toKmVal = parseChainageValue(col4);
-      const totalLen = parseChainageValue(col5) || Math.abs(toKmVal - fromKmVal) || 0;
+      const totalLen = parseChainageValue(col5) || roundTo3Decimals(Math.abs(toKmVal - fromKmVal)) || 0;
 
       const contractorMatch = rowStr.match(/(?:M\/s\.|Thiru\.|Contractor[:\s]*)([^,\n\.]+)/i);
       const dlpMatch = rowStr.match(/(\d{1,2}[./-]\d{1,2}[./-]\d{4})/);
@@ -349,9 +359,12 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       if (/STMC/i.test(rowStr)) mode = 'STMC';
       else if (/PBMC/i.test(rowStr)) mode = 'PBMC';
 
+      const chainageRange = (col3 || col4) ? ` (Km ${col3 || '0'} to ${col4 || '0'})` : '';
+      const stretchTitle = `${col1 ? col1 + ' Division - ' : ''}${col2}${chainageRange}`.trim();
+
       parsedData.push({
         highway_code: nhCode,
-        stretch_name: `${col1 ? col1 + ' Division - ' : ''}${col2} (Km ${col3} to ${col4})`.trim(),
+        stretch_name: stretchTitle,
         from_km: fromKmVal,
         to_km: toKmVal,
         length_km: totalLen,
