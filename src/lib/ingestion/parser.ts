@@ -110,6 +110,7 @@ export async function parseDatasetFile(
   datasetType: DatasetType
 ): Promise<ParseResult> {
   const isCsv = fileName.toLowerCase().endsWith('.csv');
+  let workbook: XLSX.WorkBook | null = null;
   let rawRows: any[][] = [];
 
   if (isCsv) {
@@ -117,7 +118,7 @@ export async function parseDatasetFile(
     const parsed = Papa.parse<string[]>(textContent, { skipEmptyLines: true });
     rawRows = parsed.data;
   } else {
-    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+    workbook = XLSX.read(fileBuffer, { type: 'buffer' });
     const firstSheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[firstSheetName];
     rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
@@ -134,12 +135,6 @@ export async function parseDatasetFile(
     warnings: [],
   };
 
-  if (rawRows.length === 0) {
-    result.success = false;
-    result.errors.push(`File ${fileName} is completely empty.`);
-    return result;
-  }
-
   switch (datasetType) {
     case 'HIGHWAYS_MASTER':
       parseHighwaysMaster(rawRows, result);
@@ -148,7 +143,7 @@ export async function parseDatasetFile(
       parseDLPContracts(rawRows, result);
       break;
     case 'HIGHWAY_MILESTONES':
-      parseMilestones(rawRows, result);
+      parseMilestones(workbook, rawRows, result);
       break;
     case 'ACCIDENT_BLACKSPOTS':
       parseBlackspots(rawRows, result);
@@ -239,7 +234,6 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
 
     const rowStr = row.map(cleanString).join(' ');
 
-    // Skip table header & subtotal summary rows
     if (
       rowStr.toLowerCase().includes('status of length') ||
       rowStr.toLowerCase().includes('sub total') ||
@@ -306,39 +300,92 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
   }
 }
 
-function parseMilestones(rawRows: any[][], result: ParseResult) {
+/**
+ * Advanced multi-sheet matrix parser for TN-NH-Bar chart workbooks
+ */
+function parseMilestones(workbook: XLSX.WorkBook | null, rawRows: any[][], result: ParseResult) {
   const parsedData: MilestoneRow[] = [];
 
-  for (let i = 1; i < rawRows.length; i++) {
-    const row = rawRows[i];
-    if (!row || row.length === 0) continue;
+  const sheetsToParse: { sheetName: string; rows: any[][] }[] = [];
 
-    const nhCode = cleanString(row[0]) || 'NH-MASTER';
-    const chainageKm = parseFloat(cleanString(row[1])) || 0;
-    const townName = cleanString(row[2]);
+  if (workbook && workbook.SheetNames.length > 0) {
+    for (const sName of workbook.SheetNames) {
+      const sh = workbook.Sheets[sName];
+      const rows = XLSX.utils.sheet_to_json(sh, { header: 1 }) as any[][];
+      sheetsToParse.push({ sheetName: sName, rows });
+    }
+  } else {
+    sheetsToParse.push({ sheetName: 'Sheet1', rows: rawRows });
+  }
 
-    if (
-      townName.toLowerCase().includes('town name') ||
-      nhCode.toLowerCase().includes('nh no')
-    ) {
-      continue;
+  for (const { sheetName, rows } of sheetsToParse) {
+    const sheetUpper = sheetName.trim().toUpperCase();
+    const nhMatch = sheetUpper.match(/NH\s*[-:\s]?\s*(\d+[A-Z]?)/i);
+    const nhCode = nhMatch ? `NH-${nhMatch[1]}` : `NH-${sheetName.replace(/[^0-9A-Z]/gi, '') || 'MASTER'}`;
+
+    let kmRow: any[] | null = null;
+    let townsRow: any[] | null = null;
+    let pcuRow: any[] | null = null;
+    let rowWidthRow: any[] | null = null;
+    let carriagewayRow: any[] | null = null;
+    let remarksRow: any[] | null = null;
+
+    for (let r = 0; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row || row.length === 0) continue;
+
+      const label = cleanString(row[0]).toLowerCase();
+
+      if (label === 'km' || label.startsWith('km')) kmRow = row;
+      else if (label.includes('town') || label.includes('landmark')) townsRow = row;
+      else if (label.includes('traffic') || label.includes('pcu')) pcuRow = row;
+      else if (label.includes('row')) rowWidthRow = row;
+      else if (label.includes('carriageway')) carriagewayRow = row;
+      else if (label.includes('remarks') || label.includes('other')) remarksRow = row;
     }
 
-    if (townName || chainageKm > 0) {
-      parsedData.push({
-        highway_code: nhCode.toUpperCase().startsWith('NH') ? nhCode.toUpperCase() : `NH-${nhCode.toUpperCase()}`,
-        chainage_km: chainageKm,
-        town_name: townName,
-        traffic_pcu: parseInt(cleanString(row[3])) || undefined,
-        row_width: cleanString(row[4]) || undefined,
-        carriageway_spec: cleanString(row[5]) || undefined,
-      });
+    if (kmRow || townsRow) {
+      const maxCols = Math.max(
+        kmRow ? kmRow.length : 0,
+        townsRow ? townsRow.length : 0,
+        pcuRow ? pcuRow.length : 0,
+        carriagewayRow ? carriagewayRow.length : 0
+      );
+
+      for (let c = 1; c < maxCols; c++) {
+        const kmStr = kmRow && kmRow[c] !== undefined ? cleanString(kmRow[c]) : '';
+        const town = townsRow && townsRow[c] !== undefined ? cleanString(townsRow[c]) : '';
+        const pcuStr = pcuRow && pcuRow[c] !== undefined ? cleanString(pcuRow[c]) : '';
+        const rowWidth = rowWidthRow && rowWidthRow[c] !== undefined ? cleanString(rowWidthRow[c]) : '';
+        const carriageway = carriagewayRow && carriagewayRow[c] !== undefined ? cleanString(carriagewayRow[c]) : '';
+        const remarks = remarksRow && remarksRow[c] !== undefined ? cleanString(remarksRow[c]) : '';
+
+        const kmVal = kmStr ? parseFloat(kmStr.replace('/', '.').replace(/[^0-9.]/g, '')) : NaN;
+        const pcuVal = pcuStr ? parseInt(pcuStr.replace(/[^0-9]/g, '')) : undefined;
+
+        if (town || !isNaN(kmVal) || carriageway || rowWidth) {
+          parsedData.push({
+            highway_code: nhCode,
+            chainage_km: !isNaN(kmVal) ? kmVal : c,
+            town_name: town || undefined,
+            traffic_pcu: !isNaN(pcuVal!) ? pcuVal : undefined,
+            row_width: rowWidth || undefined,
+            carriageway_spec: carriageway || undefined,
+            remarks: remarks || undefined,
+          });
+        }
+      }
     }
   }
 
-  result.totalRows = rawRows.length;
+  result.totalRows = parsedData.length;
   result.validRows = parsedData.length;
   result.data = parsedData;
+
+  if (parsedData.length === 0) {
+    result.success = false;
+    result.errors.push('Could not extract Milestone Bar Chart records from the uploaded file.');
+  }
 }
 
 function parseBlackspots(rawRows: any[][], result: ParseResult) {
