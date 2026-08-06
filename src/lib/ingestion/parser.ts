@@ -178,10 +178,29 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
     const col2 = cleanString(row[2]);
     const col3 = cleanString(row[3]);
 
-    if ((/^\d+$/.test(col0) && col2) || col2.toLowerCase().includes('nh')) {
+    // Skip table header rows
+    if (
+      col2.toLowerCase().includes('new nh') ||
+      col3.toLowerCase().includes('name of section') ||
+      col2.toLowerCase().includes('nh no')
+    ) {
+      continue;
+    }
+
+    if ((/^\d+$/.test(col0) && col2) || (col2.toUpperCase().startsWith('NH') && /^\d+/.test(col2.replace(/NH-?/i, '')))) {
       const roadCode = col2.toUpperCase().startsWith('NH') ? col2.toUpperCase() : `NH-${col2.toUpperCase()}`;
       const roadName = col3 || `National Highway ${col2}`;
       const lengthKm = parseFloat(cleanString(row[6])) || parseFloat(cleanString(row[4])) || 0;
+
+      // Extract lane configuration
+      const l6 = parseFloat(cleanString(row[11])) || 0;
+      const l4 = parseFloat(cleanString(row[10])) || 0;
+      const l2ps = parseFloat(cleanString(row[9])) || 0;
+
+      let config = '2-Lane';
+      if (l6 > 0) config = '6-Lane';
+      else if (l4 > 0) config = '4-Lane';
+      else if (l2ps > 0) config = '2-Lane (Paved Shoulder)';
 
       parsedData.push({
         road_code: roadCode,
@@ -191,7 +210,7 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
         from_chainage: cleanString(row[4]) || '0',
         to_chainage: cleanString(row[5]) || '0',
         length_km: lengthKm,
-        configuration: '2-Lane',
+        configuration: config,
         status: 'ACTIVE',
       });
     }
@@ -204,7 +223,7 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
   if (parsedData.length === 0) {
     result.success = false;
     result.errors.push(
-      'Could not find valid Highway Master rows. Expected headers/columns: [Sl.No, NH No, Road Name, Length].'
+      'Could not find valid Highway Master rows. Expected columns: [Sl.No, NH No, Road Name, Length].'
     );
   }
 }
@@ -218,6 +237,12 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
     if (!row || row.length === 0) continue;
 
     const rowStr = row.map(cleanString).join(' ');
+
+    // Skip table header rows
+    if (rowStr.toLowerCase().includes('contractor name') && rowStr.toLowerCase().includes('dlp date')) {
+      continue;
+    }
+
     if (rowStr.includes('DLP') || rowStr.includes('STMC') || rowStr.includes('PBMC') || rowStr.includes('M/s.')) {
       const nhMatch = rowStr.match(/NH\s*[-:\s]?\s*(\d+[A-Z]?)/i);
       const nhCode = nhMatch ? `NH-${nhMatch[1]}` : 'NH-GENERAL';
@@ -276,6 +301,13 @@ function parseMilestones(rawRows: any[][], result: ParseResult) {
     const nhCode = cleanString(row[0]) || 'NH-MASTER';
     const chainageKm = parseFloat(cleanString(row[1])) || 0;
     const townName = cleanString(row[2]);
+
+    if (
+      townName.toLowerCase().includes('town name') ||
+      nhCode.toLowerCase().includes('nh no')
+    ) {
+      continue;
+    }
 
     if (townName || chainageKm > 0) {
       parsedData.push({
