@@ -85,63 +85,6 @@ export interface LegalCaseRow {
   summary?: string;
 }
 
-// Tamil Nadu town landmark coordinate dictionary [latitude, longitude]
-const TN_TOWN_COORDS: Record<string, [number, number]> = {
-  coimbatore: [11.0168, 76.9558],
-  mettupalayam: [11.3002, 76.9427],
-  ooty: [11.4102, 76.6953],
-  gudaloor: [11.5034, 76.4952],
-  sharjapur: [12.8596, 77.7915],
-  bagalur: [12.8094, 77.8344],
-  hosur: [12.7409, 77.8268],
-  salem: [11.6643, 78.1460],
-  ayodhiyapattinam: [11.6698, 78.2045],
-  pappireddipatti: [11.9135, 78.3615],
-  harur: [12.0624, 78.4947],
-  uthangarai: [12.2618, 78.5524],
-  thirupathur: [12.4925, 78.5678],
-  vaniyambadi: [12.6800, 78.6200],
-  trichy: [10.7905, 78.7047],
-  pudukkottai: [10.3797, 78.8208],
-  karaikudi: [10.0735, 78.7825],
-  devakottai: [9.9481, 78.8242],
-  ramanathapuram: [9.3639, 78.8359],
-  krishnagiri: [12.5266, 78.2138],
-  kuppam: [12.7481, 78.3512],
-  peranampet: [12.9234, 78.7011],
-  gudiyattam: [12.9467, 78.8711],
-  vellore: [12.9165, 79.1325],
-  arani: [12.6694, 79.2854],
-  tiruvannamalai: [12.2253, 79.0747],
-  tirukoilur: [11.9567, 79.2012],
-  villupuram: [11.9401, 79.4937],
-  avinashi: [11.1932, 77.2683],
-  tiruppur: [11.1085, 77.3411],
-  avinashipalayam: [10.9856, 77.4121],
-  vellakoil: [11.1121, 77.7118],
-  erode: [11.3410, 77.7172],
-  sangagiri: [11.4789, 77.8732],
-  musiri: [10.9612, 78.4521],
-  thottiyam: [10.9951, 78.3241],
-  namakkal: [11.2189, 78.1674],
-  cuddalore: [11.7480, 79.7714],
-  kurinjipadi: [11.5621, 79.5841],
-  vridhachalam: [11.5204, 79.3242],
-  veppur: [11.5124, 79.0341],
-  madurai: [9.9252, 78.1198],
-};
-
-const geocodeTown = (townName: string): [number, number] | null => {
-  if (!townName) return null;
-  const nameLower = townName.toLowerCase();
-  for (const [key, coords] of Object.entries(TN_TOWN_COORDS)) {
-    if (nameLower.includes(key)) {
-      return coords;
-    }
-  }
-  return null;
-};
-
 const cleanString = (val: any): string => {
   if (val === null || val === undefined) return '';
   return String(val).replace(/\r\n/g, ' ').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
@@ -256,9 +199,6 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
       const fromLoc = roadName.split('-')[0]?.trim() || 'Start';
       const toLoc = roadName.split('-').pop()?.trim() || 'End';
 
-      const startGeo = geocodeTown(fromLoc);
-      const endGeo = geocodeTown(toLoc);
-
       parsedData.push({
         road_code: roadCode,
         road_name: roadName,
@@ -269,10 +209,10 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
         length_km: lengthKm,
         configuration: config,
         status: 'ACTIVE',
-        start_latitude: startGeo ? startGeo[0] : undefined,
-        start_longitude: startGeo ? startGeo[1] : undefined,
-        end_latitude: endGeo ? endGeo[0] : undefined,
-        end_longitude: endGeo ? endGeo[1] : undefined,
+        start_latitude: undefined,
+        start_longitude: undefined,
+        end_latitude: undefined,
+        end_longitude: undefined,
       });
     }
   }
