@@ -59,9 +59,16 @@ export async function POST(request: Request) {
     let dbError: any = null;
 
     if (datasetType === 'HIGHWAYS_MASTER') {
+      // Deduplicate items by road_code to prevent PostgreSQL ON CONFLICT DO UPDATE batch error
+      const uniqueMap = new Map();
+      parseResult.data.forEach((item: any) => {
+        uniqueMap.set(item.road_code, item);
+      });
+      const uniqueHighways = Array.from(uniqueMap.values());
+
       const { data, error } = await supabase
         .from('highways')
-        .upsert(parseResult.data, { onConflict: 'road_code' })
+        .upsert(uniqueHighways, { onConflict: 'road_code' })
         .select();
 
       if (error) dbError = error;
@@ -91,9 +98,16 @@ export async function POST(request: Request) {
       if (error) dbError = error;
       else insertedCount = data?.length || 0;
     } else if (datasetType === 'LEGAL_CASES') {
+      // Deduplicate items by case_number
+      const uniqueCasesMap = new Map();
+      parseResult.data.forEach((item: any) => {
+        uniqueCasesMap.set(item.case_number, item);
+      });
+      const uniqueLegalCases = Array.from(uniqueCasesMap.values());
+
       const { data, error } = await supabase
         .from('legal_cases')
-        .upsert(parseResult.data, { onConflict: 'case_number' })
+        .upsert(uniqueLegalCases, { onConflict: 'case_number' })
         .select();
 
       if (error) dbError = error;
