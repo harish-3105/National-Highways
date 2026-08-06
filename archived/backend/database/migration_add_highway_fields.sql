@@ -1,9 +1,0 @@
--- Add new columns to highways table
-ALTER TABLE highways 
-ADD COLUMN IF NOT EXISTS from_chainage VARCHAR(50),
-ADD COLUMN IF NOT EXISTS to_chainage VARCHAR(50),
-ADD COLUMN IF NOT EXISTS configuration VARCHAR(100),
-ADD COLUMN IF NOT EXISTS start_latitude DECIMAL(10, 7),
-ADD COLUMN IF NOT EXISTS start_longitude DECIMAL(10, 7),
-ADD COLUMN IF NOT EXISTS end_latitude DECIMAL(10, 7),
-ADD COLUMN IF NOT EXISTS end_longitude DECIMAL(10, 7);
