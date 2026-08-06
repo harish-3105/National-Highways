@@ -104,9 +104,6 @@ const parseIndianDate = (dstr: string): string | null => {
   return null;
 };
 
-/**
- * Unified file parser for Excel (.xlsx, .xls) and CSV (.csv) files
- */
 export async function parseDatasetFile(
   fileBuffer: Buffer,
   fileName: string,
@@ -178,7 +175,6 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
     const col2 = cleanString(row[2]);
     const col3 = cleanString(row[3]);
 
-    // Skip table header rows
     if (
       col2.toLowerCase().includes('new nh') ||
       col3.toLowerCase().includes('name of section') ||
@@ -192,7 +188,6 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
       const roadName = col3 || `National Highway ${col2}`;
       const lengthKm = parseFloat(cleanString(row[6])) || parseFloat(cleanString(row[4])) || 0;
 
-      // Extract lane configuration
       const l6 = parseFloat(cleanString(row[11])) || 0;
       const l4 = parseFloat(cleanString(row[10])) || 0;
       const l2ps = parseFloat(cleanString(row[9])) || 0;
@@ -236,22 +231,34 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
     const row = rawRows[i];
     if (!row || row.length === 0) continue;
 
+    const col1 = cleanString(row[1]); // Division
+    const col2 = cleanString(row[2]); // NH No
+    const col3 = cleanString(row[3]); // From Chainage
+    const col4 = cleanString(row[4]); // To Chainage
+    const col5 = cleanString(row[5]); // Total Length
+
     const rowStr = row.map(cleanString).join(' ');
 
-    // Skip table header rows
-    if (rowStr.toLowerCase().includes('contractor name') && rowStr.toLowerCase().includes('dlp date')) {
+    // Skip table header & subtotal summary rows
+    if (
+      rowStr.toLowerCase().includes('status of length') ||
+      rowStr.toLowerCase().includes('sub total') ||
+      rowStr.toLowerCase().includes('no.of contracts')
+    ) {
       continue;
     }
 
-    if (rowStr.includes('DLP') || rowStr.includes('STMC') || rowStr.includes('PBMC') || rowStr.includes('M/s.')) {
-      const nhMatch = rowStr.match(/NH\s*[-:\s]?\s*(\d+[A-Z]?)/i);
-      const nhCode = nhMatch ? `NH-${nhMatch[1]}` : 'NH-GENERAL';
+    if (col2 && (col2.match(/\d+/) || rowStr.includes('DLP') || rowStr.includes('STMC') || rowStr.includes('PBMC'))) {
+      const nhNum = col2.replace(/[^0-9A-Z]/gi, '');
+      const nhCode = nhNum ? `NH-${nhNum}` : 'NH-GENERAL';
+
+      const fromKmVal = parseFloat(col3.replace('/', '.').replace(/[^0-9.]/g, '')) || 0;
+      const toKmVal = parseFloat(col4.replace('/', '.').replace(/[^0-9.]/g, '')) || 0;
+      const totalLen = parseFloat(col5) || Math.abs(toKmVal - fromKmVal) || 0;
+
       const contractorMatch = rowStr.match(/(?:M\/s\.|Thiru\.|Contractor[:\s]*)([^,\n\.]+)/i);
+      const dlpMatch = rowStr.match(/(\d{1,2}[./-]\d{1,2}[./-]\d{4})/);
 
-      const dlpMatch = rowStr.match(/DLP[:\s]*(?:upto|to|completed on)?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{4})/i);
-      const docMatch = rowStr.match(/DOC[:\s]*(\d{1,2}[./-]\d{1,2}[./-]\d{4})/i);
-
-      const docDateStr = docMatch ? parseIndianDate(docMatch[1]) : undefined;
       const dlpDateStr = dlpMatch ? parseIndianDate(dlpMatch[1]) : undefined;
 
       let daysRemaining = 0;
@@ -264,16 +271,20 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
         else if (daysRemaining <= 90) status = 'EXPIRING_SOON';
       }
 
+      let mode = 'EPC';
+      if (/STMC/i.test(rowStr)) mode = 'STMC';
+      else if (/PBMC/i.test(rowStr)) mode = 'PBMC';
+
       parsedData.push({
         highway_code: nhCode,
-        stretch_name: rowStr.slice(0, 100),
-        from_km: 0,
-        to_km: 0,
-        length_km: 0,
-        contractor_name: contractorMatch ? contractorMatch[0].trim() : 'Contractor Unspecified',
-        contract_mode: rowStr.includes('STMC') ? 'STMC' : rowStr.includes('PBMC') ? 'PBMC' : 'EPC',
-        work_description: rowStr,
-        doc_date: docDateStr || undefined,
+        stretch_name: `${col1 ? col1 + ' Division - ' : ''}${col2} (Km ${col3} to ${col4})`.trim(),
+        from_km: fromKmVal,
+        to_km: toKmVal,
+        length_km: totalLen,
+        contractor_name: contractorMatch ? contractorMatch[0].trim() : `${col1 || 'PWD'} Division Contractor`,
+        contract_mode: mode,
+        work_description: rowStr.slice(0, 500),
+        doc_date: undefined,
         dlp_expiry_date: dlpDateStr || undefined,
         days_remaining: daysRemaining,
         status: status,
