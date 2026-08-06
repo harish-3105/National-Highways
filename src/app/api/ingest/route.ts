@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { parseDatasetFile, DatasetType } from '@/lib/ingestion/parser';
+
+// Sanitize URL and Key to strip accidental quotes or trailing spaces
+const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/^["']|["']$/g, '').trim();
+const supabaseKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').replace(/^["']|["']$/g, '').trim();
 
 export async function POST(request: Request) {
   try {
@@ -12,6 +16,16 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, message: 'No file uploaded. Please select a .xlsx, .xls, or .csv file.' },
         { status: 400 }
+      );
+    }
+
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Server Configuration Error: Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY on server.',
+        },
+        { status: 500 }
       );
     }
 
@@ -33,9 +47,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = await createClient();
+    // 2. Direct Supabase Client for Batch DB Ingestion
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 2. Insert into PostgreSQL based on Dataset Type
     let insertedCount = 0;
     let dbError = null;
 
@@ -59,6 +73,22 @@ export async function POST(request: Request) {
       const { data, error } = await supabase
         .from('highway_chainages')
         .insert(parseResult.data)
+        .select();
+
+      if (error) dbError = error;
+      else insertedCount = data?.length || 0;
+    } else if (datasetType === 'ACCIDENT_BLACKSPOTS') {
+      const { data, error } = await supabase
+        .from('accident_blackspots')
+        .insert(parseResult.data)
+        .select();
+
+      if (error) dbError = error;
+      else insertedCount = data?.length || 0;
+    } else if (datasetType === 'LEGAL_CASES') {
+      const { data, error } = await supabase
+        .from('legal_cases')
+        .upsert(parseResult.data, { onConflict: 'case_number' })
         .select();
 
       if (error) dbError = error;
