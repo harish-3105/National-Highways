@@ -4,19 +4,18 @@ import { parseDatasetFile, DatasetType } from '@/lib/ingestion/parser';
 
 export async function POST(request: Request) {
   try {
-    // Dynamically read & sanitize environment variables per request
-    const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/^["']|["']$/g, '').trim();
-    const supabaseKey = (
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      ''
-    ).replace(/^["']|["']$/g, '').trim();
+    // Read & sanitize environment variables per request
+    const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const rawKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+    const supabaseUrl = rawUrl.replace(/^["']|["']$/g, '').trim();
+    const supabaseKey = rawKey.replace(/^["']|["']$/g, '').trim();
 
     if (!supabaseUrl || !supabaseKey) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Server Configuration Error: Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.',
+          message: `Server Config Error: URL present? ${Boolean(supabaseUrl)}, Key present? ${Boolean(supabaseKey)}. Please verify Vercel Environment Variables.`,
         },
         { status: 500 }
       );
@@ -51,13 +50,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Instantiate Supabase Client per request
+    // 2. Direct Supabase Client
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false },
     });
 
     let insertedCount = 0;
-    let dbError = null;
+    let dbError: any = null;
 
     if (datasetType === 'HIGHWAYS_MASTER') {
       const { data, error } = await supabase
@@ -105,7 +104,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message: `Database error while inserting records into Supabase: ${dbError.message}`,
+          message: `Database error while inserting records into Supabase: ${dbError.message} (URL: ${supabaseUrl.slice(0, 25)}..., Key Length: ${supabaseKey.length})`,
           details: dbError,
         },
         { status: 500 }
