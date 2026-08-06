@@ -15,6 +15,7 @@ import {
 import { JwtPayload, UserRole } from '../../common/types';
 import { AuthorizationService } from '../../common/services/authorization.service';
 import { AuditService } from '../../common/services/audit.service';
+import { createDbPool } from '../../common/database/database.provider';
 import csvParser from 'csv-parser';
 import { Readable } from 'stream';
 
@@ -22,25 +23,12 @@ import { Readable } from 'stream';
 export class HighwaysService {
   private pool: Pool;
   private auditService: AuditService;
-  private fallbackHighways: any[];
 
   constructor() {
-    this.pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
-      user: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres',
-      database: process.env.DB_NAME || 'highways_db',
-      ssl: false,
-    });
-
+    this.pool = createDbPool();
     this.auditService = new AuditService(this.pool);
-    this.fallbackHighways = this.getFallbackHighways();
   }
 
-  private getFallbackHighways(): any[] {
-    return [];
-  }
 
   async getAccessibleHighways(user: JwtPayload, queryDto: HighwayQueryDto): Promise<any[]> {
     try {
@@ -122,8 +110,8 @@ export class HighwaysService {
         subDivisionName: row.sub_division_name,
       }));
     } catch (error) {
-      console.warn('Falling back to demo highway data because the database is unavailable.', error);
-      return this.fallbackHighways.map((highway) => ({ ...highway }));
+      console.error('Error fetching accessible highways:', error);
+      throw error;
     }
   }
 
@@ -156,10 +144,6 @@ export class HighwaysService {
     };
   }
 
-  private getFallbackHighwayById(id: number): any | null {
-    return this.fallbackHighways.find((highway) => highway.id === id) || this.fallbackHighways[0] || null;
-  }
-
   async getHighwayById(user: JwtPayload, id: number): Promise<any> {
     try {
       const result = await this.pool.query(
@@ -179,33 +163,6 @@ export class HighwaysService {
       );
 
       if (result.rows.length === 0) {
-        const fallbackHighway = this.getFallbackHighwayById(id);
-        if (fallbackHighway) {
-          return {
-            id: fallbackHighway.id,
-            roadName: fallbackHighway.roadName,
-            roadCode: fallbackHighway.roadCode,
-            fromLocation: fallbackHighway.fromLocation,
-            toLocation: fallbackHighway.toLocation,
-            fromChainage: fallbackHighway.fromChainage,
-            toChainage: fallbackHighway.toChainage,
-            configuration: fallbackHighway.configuration,
-            startLatitude: fallbackHighway.startLatitude,
-            startLongitude: fallbackHighway.startLongitude,
-            endLatitude: fallbackHighway.endLatitude,
-            endLongitude: fallbackHighway.endLongitude,
-            lengthKm: fallbackHighway.lengthKm,
-            status: fallbackHighway.status,
-            geometry: fallbackHighway.geometry,
-            divisionName: fallbackHighway.divisionName,
-            subDivisionName: fallbackHighway.subDivisionName,
-            divisionId: fallbackHighway.divisionId,
-            subDivisionId: fallbackHighway.subDivisionId,
-            parentHighwayId: fallbackHighway.parentHighwayId,
-            sectionNumber: fallbackHighway.sectionNumber,
-            isParent: fallbackHighway.isParent,
-          };
-        }
         throw new NotFoundException('Highway not found');
       }
 
@@ -257,35 +214,7 @@ export class HighwaysService {
       if (error instanceof NotFoundException || error instanceof ForbiddenException) {
         throw error;
       }
-
-      console.warn('Falling back to demo highway detail data because the database is unavailable.', error);
-      const fallbackHighway = this.getFallbackHighwayById(id);
-      if (fallbackHighway) {
-        return {
-          id: fallbackHighway.id,
-          roadName: fallbackHighway.roadName,
-          roadCode: fallbackHighway.roadCode,
-          fromLocation: fallbackHighway.fromLocation,
-          toLocation: fallbackHighway.toLocation,
-          fromChainage: fallbackHighway.fromChainage,
-          toChainage: fallbackHighway.toChainage,
-          configuration: fallbackHighway.configuration,
-          startLatitude: fallbackHighway.startLatitude,
-          startLongitude: fallbackHighway.startLongitude,
-          endLatitude: fallbackHighway.endLatitude,
-          endLongitude: fallbackHighway.endLongitude,
-          lengthKm: fallbackHighway.lengthKm,
-          status: fallbackHighway.status,
-          geometry: fallbackHighway.geometry,
-          divisionName: fallbackHighway.divisionName,
-          subDivisionName: fallbackHighway.subDivisionName,
-          divisionId: fallbackHighway.divisionId,
-          subDivisionId: fallbackHighway.subDivisionId,
-          parentHighwayId: fallbackHighway.parentHighwayId,
-          sectionNumber: fallbackHighway.sectionNumber,
-          isParent: fallbackHighway.isParent,
-        };
-      }
+      console.error('Error fetching highway detail:', error);
       throw error;
     }
   }
@@ -723,8 +652,7 @@ export class HighwaysService {
       const result = await this.pool.query('SELECT * FROM highways WHERE id = $1', [id]);
 
       if (result.rows.length === 0) {
-        this.fallbackHighways = this.fallbackHighways.filter((highway) => highway.id !== id);
-        return;
+        throw new NotFoundException(`Highway with ID ${id} not found`);
       }
 
       await this.pool.query('DELETE FROM highways WHERE id = $1', [id]);
@@ -741,9 +669,8 @@ export class HighwaysService {
       if (error instanceof NotFoundException || error instanceof ForbiddenException) {
         throw error;
       }
-
-      console.warn('Falling back to demo delete handling because the database is unavailable.', error);
-      this.fallbackHighways = this.fallbackHighways.filter((highway) => highway.id !== id);
+      console.error('Error deleting highway:', error);
+      throw error;
     }
   }
 

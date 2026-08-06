@@ -7,7 +7,8 @@
     "build": "tsc",
     "start": "node dist/main.js",
     "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
-    "migration:run": "ts-node src/database/run-migration.ts",
+    "db:init": "ts-node database/init-cloud-db.ts",
+    "migration:run": "ts-node database/init-cloud-db.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\""
   },
   "dependencies": {

@@ -5,62 +5,18 @@ import { CreateUserDto, UpdateUserDto } from '../../common/dto/user.dto';
 import { JwtPayload, UserRole } from '../../common/types';
 import { AuthorizationService } from '../../common/services/authorization.service';
 import { AuditService } from '../../common/services/audit.service';
+import { createDbPool } from '../../common/database/database.provider';
 
 @Injectable()
 export class UsersService {
   private pool: Pool;
   private auditService: AuditService;
 
-  private getFallbackUsers(): any[] {
-    return [
-      {
-        id: 1,
-        username: 'admin',
-        name: 'System Administrator',
-        email: 'admin@highways.gov',
-        role: UserRole.ADMIN,
-        parent_id: null,
-        office_name: 'Central Highway Authority',
-        office_code: 'CHA001',
-        is_active: true,
-      },
-      {
-        id: 2,
-        username: 'div_north',
-        name: 'North Division',
-        email: 'div.north@highways.gov',
-        role: UserRole.DIVISION,
-        parent_id: 1,
-        office_name: 'Northern Division Office',
-        office_code: 'NDO001',
-        is_active: true,
-      },
-      {
-        id: 3,
-        username: 'subdiv_n1',
-        name: 'North Sub-Division 1',
-        email: 'subdiv.n1@highways.gov',
-        role: UserRole.SUB_DIVISION,
-        parent_id: 2,
-        office_name: 'North Sub-Division 1',
-        office_code: 'NSD001',
-        is_active: true,
-      },
-    ];
-  }
-
   constructor() {
-    this.pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
-      user: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres',
-      database: process.env.DB_NAME || 'highways_db',
-      ssl: false,
-    });
-
+    this.pool = createDbPool();
     this.auditService = new AuditService(this.pool);
   }
+
 
   async getAccessibleUsers(user: JwtPayload, includeInactive: boolean = false): Promise<any[]> {
     try {
@@ -83,8 +39,8 @@ export class UsersService {
       const result = await this.pool.query(query, [accessibleUserIds]);
       return result.rows;
     } catch (error) {
-      console.warn('Falling back to demo users because the database is unavailable.', error);
-      return this.getFallbackUsers().filter((userRecord) => includeInactive || userRecord.is_active);
+      console.error('Error fetching accessible users:', error);
+      throw error;
     }
   }
 
