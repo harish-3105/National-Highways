@@ -51,18 +51,23 @@ CREATE TABLE IF NOT EXISTS public.dlp_contracts (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 4. Highway Chainages & Milestones Table
+-- 4. Highway Chainages & Milestones Table (TEXT for unlimited column lengths)
 CREATE TABLE IF NOT EXISTS public.highway_chainages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     highway_code VARCHAR(100) NOT NULL,
     chainage_km DECIMAL(10, 3) NOT NULL,
-    town_name VARCHAR(255),
+    town_name TEXT,
     traffic_pcu INTEGER,
-    row_width VARCHAR(100),
-    carriageway_spec VARCHAR(200),
+    row_width TEXT,
+    carriageway_spec TEXT,
     remarks TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Ensure existing columns in highway_chainages are TEXT type
+ALTER TABLE public.highway_chainages ALTER COLUMN town_name TYPE TEXT;
+ALTER TABLE public.highway_chainages ALTER COLUMN row_width TYPE TEXT;
+ALTER TABLE public.highway_chainages ALTER COLUMN carriageway_spec TYPE TEXT;
 
 -- 5. Accident Blackspots Table
 CREATE TABLE IF NOT EXISTS public.accident_blackspots (
