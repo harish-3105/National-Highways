@@ -85,11 +85,46 @@ export interface LegalCaseRow {
   summary?: string;
 }
 
+/**
+ * Clean multi-line Alt+Enter text and normalize spaces
+ */
 const cleanString = (val: any): string => {
   if (val === null || val === undefined) return '';
-  return String(val).replace(/\r\n/g, ' ').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+  return String(val)
+    .replace(/\r\n/g, ' ')
+    .replace(/\n/g, ' ')
+    .replace(/\r/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 };
 
+/**
+ * Converts Indian chainage notation (e.g. 63/2, 110/2, 0/0, 60/600) into clean decimal numbers (63.2, 110.2, 0.0, 60.6)
+ */
+const parseChainageValue = (val: any): number => {
+  if (val === null || val === undefined) return 0;
+  const str = cleanString(val);
+  if (!str) return 0;
+
+  // Handle slash notation e.g. 63/2, 110/2, 60/600
+  const slashMatch = str.match(/^(\d+)\/(\d+)$/);
+  if (slashMatch) {
+    const whole = parseFloat(slashMatch[1]);
+    const fracStr = slashMatch[2];
+    if (fracStr.length >= 3) {
+      return whole + parseFloat(fracStr) / 1000;
+    } else {
+      return whole + parseFloat(fracStr) / 10;
+    }
+  }
+
+  const directNum = parseFloat(str.replace(/[^0-9.]/g, ''));
+  return isNaN(directNum) ? 0 : directNum;
+};
+
+/**
+ * Standardize Indian Date formats (DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY) to ISO YYYY-MM-DD
+ */
 const parseIndianDate = (dstr: string): string | null => {
   if (!dstr) return null;
   const m1 = dstr.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
@@ -175,8 +210,12 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
     const col0 = cleanString(row[0]);
     const col2 = cleanString(row[2]);
     const col3 = cleanString(row[3]);
+    const rowStr = row.map(cleanString).join(' ').toLowerCase();
 
+    // Exclusion filter for summary / subtotal / title header rows
     if (
+      rowStr.includes('total length') ||
+      rowStr.includes('sub total') ||
       col2.toLowerCase().includes('new nh') ||
       col3.toLowerCase().includes('name of section') ||
       col2.toLowerCase().includes('nh no')
@@ -194,11 +233,12 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
     if ((/^\d+$/.test(col0) && currentRoadCode) || (currentRoadCode.startsWith('NH') && /^\d+/.test(currentRoadCode.replace(/NH-?/i, '')))) {
       const roadCode = currentRoadCode;
       const roadName = currentRoadName || `National Highway ${currentRoadCode}`;
-      const lengthKm = parseFloat(cleanString(row[6])) || parseFloat(cleanString(row[4])) || 0;
+      const lengthKm = parseChainageValue(row[6]) || parseChainageValue(row[4]) || 0;
 
-      const l6 = parseFloat(cleanString(row[11])) || 0;
-      const l4 = parseFloat(cleanString(row[10])) || 0;
-      const l2ps = parseFloat(cleanString(row[9])) || 0;
+      // Scan multi-lane breakdown columns (>2L, 2L, 2L+PS, 4L, 6L)
+      const l6 = parseChainageValue(row[11]);
+      const l4 = parseChainageValue(row[10]);
+      const l2ps = parseChainageValue(row[9]);
 
       let config = '2-Lane';
       if (l6 > 0) config = '6-Lane';
@@ -242,7 +282,7 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
   const parsedData: DLPRow[] = [];
   const now = new Date();
 
-  // Forward fill state for vertically merged Excel cells
+  // Forward fill memory state for vertically merged Excel cells
   let currentDivision = '';
   let currentNHNo = '';
 
@@ -267,11 +307,13 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
     const col5 = cleanString(row[5]); // Total Length
 
     const rowStr = row.map(cleanString).join(' ');
+    const rowStrLower = rowStr.toLowerCase();
 
+    // Filter out summary / subtotal / title header rows
     if (
-      rowStr.toLowerCase().includes('status of length') ||
-      rowStr.toLowerCase().includes('sub total') ||
-      rowStr.toLowerCase().includes('no.of contracts') ||
+      rowStrLower.includes('status of length') ||
+      rowStrLower.includes('sub total') ||
+      rowStrLower.includes('no.of contracts') ||
       col2.toLowerCase().includes('nh no') ||
       col2.toLowerCase().includes('nhno')
     ) {
@@ -284,9 +326,9 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
 
       const nhCode = `NH-${nhNum}`;
 
-      const fromKmVal = parseFloat(col3.replace('/', '.').replace(/[^0-9.]/g, '')) || 0;
-      const toKmVal = parseFloat(col4.replace('/', '.').replace(/[^0-9.]/g, '')) || 0;
-      const totalLen = parseFloat(col5) || Math.abs(toKmVal - fromKmVal) || 0;
+      const fromKmVal = parseChainageValue(col3);
+      const toKmVal = parseChainageValue(col4);
+      const totalLen = parseChainageValue(col5) || Math.abs(toKmVal - fromKmVal) || 0;
 
       const contractorMatch = rowStr.match(/(?:M\/s\.|Thiru\.|Contractor[:\s]*)([^,\n\.]+)/i);
       const dlpMatch = rowStr.match(/(\d{1,2}[./-]\d{1,2}[./-]\d{4})/);
@@ -391,7 +433,7 @@ function parseMilestones(workbook: XLSX.WorkBook | null, rawRows: any[][], resul
         const carriageway = carriagewayRow && carriagewayRow[c] !== undefined ? cleanString(carriagewayRow[c]) : '';
         const remarks = remarksRow && remarksRow[c] !== undefined ? cleanString(remarksRow[c]) : '';
 
-        const kmVal = kmStr ? parseFloat(kmStr.replace('/', '.').replace(/[^0-9.]/g, '')) : NaN;
+        const kmVal = parseChainageValue(kmStr);
         
         const rawPcuDigits = pcuStr ? pcuStr.replace(/[^0-9]/g, '').slice(0, 9) : '';
         const pcuVal = rawPcuDigits ? parseInt(rawPcuDigits, 10) : undefined;
