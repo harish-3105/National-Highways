@@ -427,8 +427,11 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Execute soft delete data keepsake retention update
-    const { data: deletedRows, error: deleteError } = await supabase
+    // Execute soft delete data keepsake retention update with graceful fallback
+    let deletedRecord = null;
+    let errMessage = '';
+
+    const { data: res1, error: err1 } = await supabase
       .from('highways')
       .update({
         delete_status: 'DELETED',
@@ -438,27 +441,42 @@ export async function DELETE(request: Request) {
       .eq('id', id)
       .select();
 
-    if (deleteError) {
-      return NextResponse.json(
-        { success: false, message: `Database soft-delete failed: ${deleteError.message}` },
-        { status: 500 }
-      );
+    if (res1 && res1.length > 0) {
+      deletedRecord = res1[0];
+    } else if (err1 && err1.message?.includes('delete_status')) {
+      // Fallback: soft-delete using status = 'DELETED' if column is not yet in Supabase schema cache
+      const { data: res2, error: err2 } = await supabase
+        .from('highways')
+        .update({
+          status: 'DELETED',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select();
+
+      if (res2 && res2.length > 0) {
+        deletedRecord = res2[0];
+      } else if (err2) {
+        errMessage = err2.message;
+      }
+    } else if (err1) {
+      errMessage = err1.message;
     }
 
-    if (!deletedRows || deletedRows.length === 0) {
+    if (!deletedRecord) {
       return NextResponse.json(
         {
           success: false,
-          message: `Database soft-delete returned 0 rows. Please execute migration 0003_fix_rls_update_policies.sql in Supabase SQL Editor.`,
+          message: `Database soft-delete failed: ${errMessage || 'Unknown error during soft-delete.'}`,
         },
-        { status: 400 }
+        { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
       message: `Highway corridor soft-deleted and archived in database.`,
-      corridor: deletedRows[0],
+      corridor: deletedRecord,
     });
   } catch (err: any) {
     return NextResponse.json(
