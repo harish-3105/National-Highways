@@ -352,24 +352,36 @@ export async function PATCH(request: Request) {
       updated_at: new Date().toISOString(),
     };
 
-    const { data: updated, error: updateError } = await supabase
+    const { data: updatedRows, error: updateError } = await supabase
       .from('highways')
       .update(updatePayload)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
     if (updateError) {
       return NextResponse.json(
-        { success: false, message: `Database update failed: ${updateError.message}` },
+        {
+          success: false,
+          message: `Database update failed: ${updateError.message}. If RLS policy error, please execute migration 0003_fix_rls_update_policies.sql in Supabase SQL Editor.`,
+        },
         { status: 500 }
+      );
+    }
+
+    if (!updatedRows || updatedRows.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Database update returned 0 rows. Please ensure RLS UPDATE policy with "WITH CHECK (true)" is executed in Supabase SQL Editor (see migration 0003_fix_rls_update_policies.sql).`,
+        },
+        { status: 400 }
       );
     }
 
     return NextResponse.json({
       success: true,
       message: `Highway corridor updated successfully.`,
-      corridor: updated,
+      corridor: updatedRows[0],
     });
   } catch (err: any) {
     return NextResponse.json(
@@ -396,7 +408,7 @@ export async function DELETE(request: Request) {
     }
 
     // Execute soft delete data keepsake retention update
-    const { data: softDeleted, error: deleteError } = await supabase
+    const { data: deletedRows, error: deleteError } = await supabase
       .from('highways')
       .update({
         delete_status: 'DELETED',
@@ -404,8 +416,7 @@ export async function DELETE(request: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
     if (deleteError) {
       return NextResponse.json(
@@ -414,10 +425,20 @@ export async function DELETE(request: Request) {
       );
     }
 
+    if (!deletedRows || deletedRows.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Database soft-delete returned 0 rows. Please execute migration 0003_fix_rls_update_policies.sql in Supabase SQL Editor.`,
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       message: `Highway corridor soft-deleted and archived in database.`,
-      corridor: softDeleted,
+      corridor: deletedRows[0],
     });
   } catch (err: any) {
     return NextResponse.json(

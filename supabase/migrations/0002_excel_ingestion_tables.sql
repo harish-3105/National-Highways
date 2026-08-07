@@ -145,8 +145,9 @@ CREATE POLICY "Enable insert for all users" ON public.lawyers FOR INSERT WITH CH
 CREATE POLICY "Enable insert for all users" ON public.legal_cases FOR INSERT WITH CHECK (true);
 CREATE POLICY "Enable insert for all users" ON public.dataset_uploads FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "Enable update for all users" ON public.highways FOR UPDATE USING (true);
-CREATE POLICY "Enable update for all users" ON public.legal_cases FOR UPDATE USING (true);
+CREATE POLICY "Enable update for all users" ON public.highways FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Enable update for all users" ON public.legal_cases FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Enable delete for all users" ON public.highways FOR DELETE USING (true);
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_highways_code ON public.highways(road_code);
