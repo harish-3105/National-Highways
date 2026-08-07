@@ -29,6 +29,7 @@ export interface HighwayRow {
   length_km: number;
   configuration: string;
   status: string;
+  delete_status?: string;
   start_latitude?: number;
   start_longitude?: number;
   end_latitude?: number;
@@ -270,6 +271,7 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
         length_km: lengthKm,
         configuration: config,
         status: 'ACTIVE',
+        delete_status: 'KEEP',
         start_latitude: undefined,
         start_longitude: undefined,
         end_latitude: undefined,

@@ -74,8 +74,21 @@ export async function POST(request: Request) {
         .upsert(uniqueHighways, { onConflict: 'road_code' })
         .select();
 
-      if (error) dbError = error;
-      else insertedCount = data?.length || 0;
+      if (error && error.message?.includes('delete_status')) {
+        // Fallback without delete_status field if column is missing from Supabase schema cache
+        const fallbackHighways = uniqueHighways.map(({ delete_status, ...rest }: any) => rest);
+        const { data: data2, error: error2 } = await supabase
+          .from('highways')
+          .upsert(fallbackHighways, { onConflict: 'road_code' })
+          .select();
+
+        if (error2) dbError = error2;
+        else insertedCount = data2?.length || 0;
+      } else if (error) {
+        dbError = error;
+      } else {
+        insertedCount = data?.length || 0;
+      }
     } else if (datasetType === 'DLP_CONTRACTS') {
       const { data, error } = await supabase
         .from('dlp_contracts')
