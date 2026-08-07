@@ -9,6 +9,21 @@ interface AddHighwayModalProps {
   onSuccess: () => void;
 }
 
+function parseChainageValue(val: string): number | null {
+  if (!val || !val.trim()) return null;
+  const cleaned = val.trim();
+  if (cleaned.includes('/')) {
+    const parts = cleaned.split('/');
+    const km = parseFloat(parts[0]);
+    const m = parseFloat(parts[1]);
+    if (!isNaN(km) && !isNaN(m)) {
+      return km + (m >= 100 ? m / 1000 : m / 10);
+    }
+  }
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? null : parsed;
+}
+
 export const AddHighwayModal: React.FC<AddHighwayModalProps> = ({
   isOpen,
   onClose,
@@ -25,6 +40,36 @@ export const AddHighwayModal: React.FC<AddHighwayModalProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const handleFromChainageChange = (val: string) => {
+    setFromChainage(val);
+    const startNum = parseChainageValue(val);
+    const endNum = parseChainageValue(toChainage);
+    if (startNum !== null && endNum !== null && endNum >= startNum) {
+      const calculated = Math.round((endNum - startNum) * 1000) / 1000;
+      if (calculated >= 0) setLengthKm(String(calculated));
+    }
+  };
+
+  const handleToChainageChange = (val: string) => {
+    setToChainage(val);
+    const startNum = parseChainageValue(fromChainage);
+    const endNum = parseChainageValue(val);
+    if (startNum !== null && endNum !== null && endNum >= startNum) {
+      const calculated = Math.round((endNum - startNum) * 1000) / 1000;
+      if (calculated >= 0) setLengthKm(String(calculated));
+    }
+  };
+
+  const handleLengthChange = (val: string) => {
+    setLengthKm(val);
+    const lenNum = parseFloat(val);
+    const startNum = parseChainageValue(fromChainage);
+    if (!isNaN(lenNum) && lenNum > 0 && startNum !== null) {
+      const calculatedEnd = Math.round((startNum + lenNum) * 1000) / 1000;
+      setToChainage(String(calculatedEnd));
+    }
+  };
 
   // Reset form when modal opens
   useEffect(() => {
@@ -230,7 +275,7 @@ export const AddHighwayModal: React.FC<AddHighwayModalProps> = ({
                 step="0.001"
                 placeholder="e.g. 171.4"
                 value={lengthKm}
-                onChange={(e) => setLengthKm(e.target.value)}
+                onChange={(e) => handleLengthChange(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
@@ -244,7 +289,7 @@ export const AddHighwayModal: React.FC<AddHighwayModalProps> = ({
                 type="text"
                 placeholder="e.g. 0.000"
                 value={fromChainage}
-                onChange={(e) => setFromChainage(e.target.value)}
+                onChange={(e) => handleFromChainageChange(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -257,7 +302,7 @@ export const AddHighwayModal: React.FC<AddHighwayModalProps> = ({
                 type="text"
                 placeholder="e.g. 171.400"
                 value={toChainage}
-                onChange={(e) => setToChainage(e.target.value)}
+                onChange={(e) => handleToChainageChange(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
