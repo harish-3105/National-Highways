@@ -243,12 +243,12 @@ export async function POST(request: Request) {
     // Check collision on road_code
     const { data: existing } = await supabase
       .from('highways')
-      .select('id, status, delete_status')
+      .select('id, status')
       .eq('road_code', formattedRoadCode)
       .neq('status', 'DELETED')
       .maybeSingle();
 
-    if (existing && existing.delete_status !== 'DELETED') {
+    if (existing && (existing as any).status !== 'DELETED') {
       return NextResponse.json(
         {
           success: false,
@@ -258,8 +258,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Insert new corridor record into PostgreSQL
-    const newCorridorPayload = {
+    // Insert new corridor record into PostgreSQL with graceful delete_status fallback
+    const basePayload = {
       road_code: formattedRoadCode,
       road_name: road_name.trim(),
       from_location: from_location?.trim() || null,
@@ -269,18 +269,38 @@ export async function POST(request: Request) {
       length_km: Math.round(numericLength * 1000) / 1000,
       configuration: configuration || '2-Lane',
       status: 'ACTIVE',
-      delete_status: 'KEEP',
     };
 
-    const { data: inserted, error: insertError } = await supabase
-      .from('highways')
-      .insert([newCorridorPayload])
-      .select()
-      .single();
+    let insertedRecord = null;
+    let insertErrMessage = '';
 
-    if (insertError) {
+    // Attempt 1: Try insert with delete_status
+    const { data: res1, error: err1 } = await supabase
+      .from('highways')
+      .insert([{ ...basePayload, delete_status: 'KEEP' }])
+      .select();
+
+    if (res1 && res1.length > 0) {
+      insertedRecord = res1[0];
+    } else if (err1 && err1.message?.includes('delete_status')) {
+      // Attempt 2: Fallback without delete_status if column is not yet in Supabase schema cache
+      const { data: res2, error: err2 } = await supabase
+        .from('highways')
+        .insert([basePayload])
+        .select();
+
+      if (res2 && res2.length > 0) {
+        insertedRecord = res2[0];
+      } else if (err2) {
+        insertErrMessage = err2.message;
+      }
+    } else if (err1) {
+      insertErrMessage = err1.message;
+    }
+
+    if (!insertedRecord) {
       return NextResponse.json(
-        { success: false, message: `Database insert failed: ${insertError.message}` },
+        { success: false, message: `Database insert failed: ${insertErrMessage || 'Unknown error inserting highway.'}` },
         { status: 500 }
       );
     }
@@ -288,7 +308,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: `Highway ${formattedRoadCode} created successfully.`,
-      corridor: inserted,
+      corridor: insertedRecord,
     });
   } catch (err: any) {
     return NextResponse.json(

@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS public.highways (
     length_km DECIMAL(10, 3) NOT NULL CHECK (length_km >= 0),
     configuration VARCHAR(100) DEFAULT '2-Lane',
     status VARCHAR(50) DEFAULT 'ACTIVE',
+    delete_status VARCHAR(50) DEFAULT 'KEEP',
     start_latitude DECIMAL(10, 7),
     start_longitude DECIMAL(10, 7),
     end_latitude DECIMAL(10, 7),
