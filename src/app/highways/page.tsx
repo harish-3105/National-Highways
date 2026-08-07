@@ -10,9 +10,11 @@ import { HighwaysGrid } from '@/components/highways/HighwaysGrid';
 import { AddHighwayModal } from '@/components/highways/AddHighwayModal';
 import { EditHighwayModal } from '@/components/highways/EditHighwayModal';
 import { DeleteHighwayModal } from '@/components/highways/DeleteHighwayModal';
-import { Route, Upload, RefreshCw, Plus } from 'lucide-react';
+import { ExportHighwayModal } from '@/components/highways/ExportHighwayModal';
+import { Route, Upload, RefreshCw, Plus, Download } from 'lucide-react';
 
 export default function HighwaysPage() {
+  const [allCorridors, setAllCorridors] = useState<HighwayCorridor[]>([]);
   const [corridors, setCorridors] = useState<HighwayCorridor[]>([]);
   const [aggregates, setAggregates] = useState({
     totalCorridors: 0,
@@ -26,6 +28,10 @@ export default function HighwaysPage() {
   const [activeConfig, setActiveConfig] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<string>('length_desc');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+
+  // Selection & Export States
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
   // Modal Visibility States
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
@@ -62,6 +68,17 @@ export default function HighwaysPage() {
           }
         );
       }
+
+      // Also fetch un-filtered all corridors for complete export pool if search/filter active
+      if (debouncedSearch || activeConfig !== 'ALL') {
+        const resAll = await fetch('/api/highways');
+        const dataAll: HighwaysApiResponse = await resAll.json();
+        if (dataAll.success) {
+          setAllCorridors(dataAll.corridors || []);
+        }
+      } else {
+        setAllCorridors(data.corridors || []);
+      }
     } catch (err) {
       console.error('Failed to fetch highways:', err);
     } finally {
@@ -72,6 +89,20 @@ export default function HighwaysPage() {
   useEffect(() => {
     fetchHighways();
   }, [fetchHighways]);
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (selectAll: boolean) => {
+    if (selectAll) {
+      setSelectedIds(corridors.map((c) => c.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
@@ -92,7 +123,7 @@ export default function HighwaysPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <button
               onClick={() => fetchHighways()}
               disabled={loading}
@@ -103,8 +134,21 @@ export default function HighwaysPage() {
             </button>
 
             <button
+              onClick={() => setIsExportModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-xs cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export Catalog</span>
+              {selectedIds.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 bg-blue-500 text-white font-black text-[10px] rounded-full">
+                  {selectedIds.length}
+                </span>
+              )}
+            </button>
+
+            <button
               onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-xs cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Highway</span>
@@ -112,7 +156,7 @@ export default function HighwaysPage() {
 
             <Link
               href="/ingest"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-xs"
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Data Ingestion Engine</span>
@@ -131,7 +175,7 @@ export default function HighwaysPage() {
               Master Corridor Catalog & Management
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Verified ground-truth inventory with live Add, Edit, and Soft-Delete capabilities.
+              Verified ground-truth inventory with live Add, Edit, Soft-Delete, and Custom Data Export.
             </p>
           </div>
         </div>
@@ -163,6 +207,9 @@ export default function HighwaysPage() {
           <HighwaysTable
             corridors={corridors}
             loading={loading}
+            selectedIds={selectedIds}
+            onToggleSelect={handleToggleSelect}
+            onSelectAll={handleSelectAll}
             onEdit={(h) => setEditingHighway(h)}
             onDelete={(h) => setDeletingHighway(h)}
           />
@@ -170,6 +217,8 @@ export default function HighwaysPage() {
           <HighwaysGrid
             corridors={corridors}
             loading={loading}
+            selectedIds={selectedIds}
+            onToggleSelect={handleToggleSelect}
             onEdit={(h) => setEditingHighway(h)}
             onDelete={(h) => setDeletingHighway(h)}
           />
@@ -195,6 +244,14 @@ export default function HighwaysPage() {
         isOpen={Boolean(deletingHighway)}
         onClose={() => setDeletingHighway(null)}
         onSuccess={() => fetchHighways()}
+      />
+
+      <ExportHighwayModal
+        allCorridors={allCorridors.length > 0 ? allCorridors : corridors}
+        filteredCorridors={corridors}
+        selectedIds={selectedIds}
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
       />
     </div>
   );

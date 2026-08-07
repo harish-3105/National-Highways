@@ -7,6 +7,8 @@ import { ArrowRight, MapPin, ShieldCheck, Ruler, Edit3, Trash2 } from 'lucide-re
 interface HighwaysGridProps {
   corridors: HighwayCorridor[];
   loading: boolean;
+  selectedIds: string[];
+  onToggleSelect: (id: string) => void;
   onEdit: (highway: HighwayCorridor) => void;
   onDelete: (highway: HighwayCorridor) => void;
 }
@@ -14,6 +16,8 @@ interface HighwaysGridProps {
 export const HighwaysGrid: React.FC<HighwaysGridProps> = ({
   corridors,
   loading,
+  selectedIds,
+  onToggleSelect,
   onEdit,
   onDelete,
 }) => {
@@ -53,71 +57,86 @@ export const HighwaysGrid: React.FC<HighwaysGridProps> = ({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {corridors.map((item) => (
-        <div
-          key={item.id || item.road_code}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-        >
-          <div>
-            {/* Top Header: Road Code & Lane Badge */}
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="px-3 py-1 bg-blue-900 text-white dark:bg-blue-600 rounded-lg font-extrabold text-xs tracking-wide">
-                {item.road_code}
-              </span>
-              <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold border ${getBadgeStyle(item.configuration)}`}>
-                {item.configuration}
-              </span>
+      {corridors.map((item) => {
+        const isSelected = selectedIds.includes(item.id);
+        return (
+          <div
+            key={item.id || item.road_code}
+            className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between ${
+              isSelected
+                ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20'
+                : 'border-slate-200 dark:border-slate-800'
+            }`}
+          >
+            <div>
+              {/* Top Header: Checkbox, Road Code & Lane Badge */}
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => onToggleSelect(item.id)}
+                    className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="px-3 py-1 bg-blue-900 text-white dark:bg-blue-600 rounded-lg font-extrabold text-xs tracking-wide">
+                    {item.road_code}
+                  </span>
+                </div>
+                <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold border ${getBadgeStyle(item.configuration)}`}>
+                  {item.configuration}
+                </span>
+              </div>
+
+              {/* Road Name */}
+              <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 line-clamp-2 mb-3" title={item.road_name}>
+                {item.road_name}
+              </h3>
+
+              {/* Route Endpoints Visual */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg mb-3">
+                <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 font-medium">
+                  <span>{item.from_location || 'Start'}</span>
+                  <ArrowRight className="w-4 h-4 text-blue-500" />
+                  <span>{item.to_location || 'End'}</span>
+                </div>
+              </div>
             </div>
 
-            {/* Road Name */}
-            <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 line-clamp-2 mb-3" title={item.road_name}>
-              {item.road_name}
-            </h3>
+            {/* Bottom Card Footer */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200">
+                <Ruler className="w-3.5 h-3.5 text-slate-400" />
+                <span>{item.length_km} km</span>
+              </div>
 
-            {/* Route Endpoints Visual */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg mb-3">
-              <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 font-medium">
-                <span>{item.from_location || 'Start'}</span>
-                <ArrowRight className="w-4 h-4 text-blue-500" />
-                <span>{item.to_location || 'End'}</span>
+              <div className="flex items-center gap-2">
+                {(item.dlp_count || 0) > 0 && (
+                  <span className="flex items-center gap-1 font-medium text-indigo-600 dark:text-indigo-400 mr-1">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    {item.dlp_count}
+                  </span>
+                )}
+
+                <button
+                  onClick={() => onEdit(item)}
+                  className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-md transition-colors cursor-pointer"
+                  title="Edit Corridor"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={() => onDelete(item)}
+                  className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/60 rounded-md transition-colors cursor-pointer"
+                  title="Soft-Delete Corridor"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
-
-          {/* Bottom Card Footer */}
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200">
-              <Ruler className="w-3.5 h-3.5 text-slate-400" />
-              <span>{item.length_km} km</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {(item.dlp_count || 0) > 0 && (
-                <span className="flex items-center gap-1 font-medium text-indigo-600 dark:text-indigo-400 mr-1">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  {item.dlp_count}
-                </span>
-              )}
-
-              <button
-                onClick={() => onEdit(item)}
-                className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-md transition-colors cursor-pointer"
-                title="Edit Corridor"
-              >
-                <Edit3 className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={() => onDelete(item)}
-                className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/60 rounded-md transition-colors cursor-pointer"
-                title="Soft-Delete Corridor"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

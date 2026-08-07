@@ -7,6 +7,9 @@ import { ArrowRight, MapPin, ShieldCheck, Edit3, Trash2 } from 'lucide-react';
 interface HighwaysTableProps {
   corridors: HighwayCorridor[];
   loading: boolean;
+  selectedIds: string[];
+  onToggleSelect: (id: string) => void;
+  onSelectAll: (selectAll: boolean) => void;
   onEdit: (highway: HighwayCorridor) => void;
   onDelete: (highway: HighwayCorridor) => void;
 }
@@ -14,6 +17,9 @@ interface HighwaysTableProps {
 export const HighwaysTable: React.FC<HighwaysTableProps> = ({
   corridors,
   loading,
+  selectedIds,
+  onToggleSelect,
+  onSelectAll,
   onEdit,
   onDelete,
 }) => {
@@ -30,6 +36,9 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
     }
     return 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800';
   };
+
+  const isAllSelected =
+    corridors.length > 0 && corridors.every((c) => selectedIds.includes(c.id));
 
   if (loading) {
     return (
@@ -58,6 +67,15 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
         <table className="w-full text-left border-collapse text-xs md:text-sm">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
+              <th className="py-3.5 px-4 w-10 text-center">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={(e) => onSelectAll(e.target.checked)}
+                  className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  title={isAllSelected ? 'Deselect All' : 'Select All'}
+                />
+              </th>
               <th className="py-3.5 px-4 font-semibold">Road Code</th>
               <th className="py-3.5 px-4 font-semibold">Corridor Title / Section</th>
               <th className="py-3.5 px-4 font-semibold">Route Endpoints</th>
@@ -69,12 +87,28 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
-            {corridors.map((item) => (
-              <tr
-                key={item.id || item.road_code}
-                className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
-              >
-                {/* Road Code */}
+            {corridors.map((item) => {
+              const isSelected = selectedIds.includes(item.id);
+              return (
+                <tr
+                  key={item.id || item.road_code}
+                  className={`transition-colors ${
+                    isSelected
+                      ? 'bg-blue-50/50 dark:bg-blue-950/30 hover:bg-blue-50/80'
+                      : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
+                  }`}
+                >
+                  {/* Select Checkbox */}
+                  <td className="py-3.5 px-4 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => onToggleSelect(item.id)}
+                      className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                  </td>
+
+                  {/* Road Code */}
                 <td className="py-3.5 px-4 font-bold text-blue-900 dark:text-blue-300 whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500" title="Active Corridor" />
@@ -148,7 +182,8 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
                   </div>
                 </td>
               </tr>
-            ))}
+            );
+          })}
           </tbody>
         </table>
       </div>
