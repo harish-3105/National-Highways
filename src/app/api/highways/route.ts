@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
-
 export interface HighwayCorridor {
   id: string;
   road_code: string;
@@ -15,6 +14,7 @@ export interface HighwayCorridor {
   length_km: number;
   configuration: string;
   status: string;
+  delete_status?: string;
   start_latitude: number | null;
   start_longitude: number | null;
   end_latitude: number | null;
@@ -36,47 +36,41 @@ export interface HighwaysApiResponse {
   };
 }
 
+function getSupabaseClient() {
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const rawKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    '';
+
+  const supabaseUrl = rawUrl.replace(/^["']|["']$/g, '').trim();
+  const supabaseKey = rawKey.replace(/^["']|["']$/g, '').trim();
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Server Config Error: Missing Supabase credentials.');
+  }
+
+  return createClient(supabaseUrl, supabaseKey, {
+    auth: { persistSession: false },
+  });
+}
+
+// ----------------------------------------------------------------------
+// GET: Fetch Active Highways Catalog & Aggregates
+// ----------------------------------------------------------------------
 export async function GET(request: Request) {
   try {
-    const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const rawKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      '';
-
-    const supabaseUrl = rawUrl.replace(/^["']|["']$/g, '').trim();
-    const supabaseKey = rawKey.replace(/^["']|["']$/g, '').trim();
-
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Server Config Error: Missing Supabase credentials.',
-          corridors: [],
-          aggregates: {
-            totalCorridors: 0,
-            totalLengthKm: 0,
-            laneDistribution: {},
-            corridorsWithDlp: 0,
-          },
-        },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: { persistSession: false },
-    });
-
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search')?.trim().toLowerCase() || '';
     const configFilter = searchParams.get('config')?.trim() || '';
     const sortBy = searchParams.get('sortBy') || 'length_desc';
 
-    // 1. Fetch all master highway corridors
-    let query = supabase.from('highways').select('*');
-
-    const { data: rawHighways, error: highwaysError } = await query;
+    // Fetch master highway corridors, excluding soft-deleted records
+    const { data: rawHighways, error: highwaysError } = await supabase
+      .from('highways')
+      .select('*')
+      .neq('status', 'DELETED');
 
     if (highwaysError) {
       return NextResponse.json(
@@ -95,9 +89,11 @@ export async function GET(request: Request) {
       );
     }
 
-    const allCorridors: HighwayCorridor[] = rawHighways || [];
+    const allCorridors: HighwayCorridor[] = (rawHighways || []).filter(
+      (c) => c.delete_status !== 'DELETED'
+    );
 
-    // 2. Fetch DLP contracts to count DLP coverage per highway
+    // Fetch DLP contracts to map DLP coverage counts
     const { data: dlpContracts } = await supabase
       .from('dlp_contracts')
       .select('highway_code');
@@ -118,11 +114,12 @@ export async function GET(request: Request) {
       dlp_count: dlpCountsMap.get(c.road_code.toUpperCase()) || 0,
     }));
 
-    // 3. Calculate Global KPI Aggregates (before user search filtering)
+    // Global KPI Aggregates
     const totalCorridors = enrichedCorridors.length;
-    const totalLengthKm = Math.round(
-      enrichedCorridors.reduce((sum, c) => sum + (Number(c.length_km) || 0), 0) * 1000
-    ) / 1000;
+    const totalLengthKm =
+      Math.round(
+        enrichedCorridors.reduce((sum, c) => sum + (Number(c.length_km) || 0), 0) * 1000
+      ) / 1000;
 
     const laneDistribution: Record<string, number> = {};
     let corridorsWithDlp = 0;
@@ -135,9 +132,8 @@ export async function GET(request: Request) {
       }
     });
 
-    // 4. Apply User Filters & Search
+    // Apply Search Filter
     let filtered = enrichedCorridors;
-
     if (search) {
       filtered = filtered.filter(
         (c) =>
@@ -148,13 +144,14 @@ export async function GET(request: Request) {
       );
     }
 
+    // Apply Configuration Filter
     if (configFilter && configFilter !== 'ALL') {
       filtered = filtered.filter(
         (c) => c.configuration.toLowerCase() === configFilter.toLowerCase()
       );
     }
 
-    // 5. Apply Sorting
+    // Apply Sorting
     filtered.sort((a, b) => {
       if (sortBy === 'length_desc') {
         return (Number(b.length_km) || 0) - (Number(a.length_km) || 0);
@@ -191,6 +188,240 @@ export async function GET(request: Request) {
           corridorsWithDlp: 0,
         },
       },
+      { status: 500 }
+    );
+  }
+}
+
+// ----------------------------------------------------------------------
+// POST: Add New Master Highway Corridor
+// ----------------------------------------------------------------------
+export async function POST(request: Request) {
+  try {
+    const supabase = getSupabaseClient();
+    const body = await request.json();
+
+    const {
+      road_code,
+      road_name,
+      from_location,
+      to_location,
+      from_chainage,
+      to_chainage,
+      length_km,
+      configuration,
+    } = body;
+
+    // Parameter Validation
+    if (!road_code || !road_code.trim()) {
+      return NextResponse.json(
+        { success: false, message: 'Road Code (e.g. NH-181) is required.' },
+        { status: 400 }
+      );
+    }
+
+    if (!road_name || !road_name.trim()) {
+      return NextResponse.json(
+        { success: false, message: 'Road Name / Section Title is required.' },
+        { status: 400 }
+      );
+    }
+
+    const numericLength = parseFloat(length_km);
+    if (isNaN(numericLength) || numericLength <= 0) {
+      return NextResponse.json(
+        { success: false, message: 'Length in km must be a valid positive number.' },
+        { status: 400 }
+      );
+    }
+
+    // Normalize road code to uppercase e.g. "nh-181" -> "NH-181"
+    const formattedRoadCode = road_code.trim().toUpperCase().startsWith('NH-')
+      ? road_code.trim().toUpperCase()
+      : `NH-${road_code.trim().replace(/^NH-?/i, '').toUpperCase()}`;
+
+    // Check collision on road_code
+    const { data: existing } = await supabase
+      .from('highways')
+      .select('id, status, delete_status')
+      .eq('road_code', formattedRoadCode)
+      .neq('status', 'DELETED')
+      .maybeSingle();
+
+    if (existing && existing.delete_status !== 'DELETED') {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Highway with Road Code "${formattedRoadCode}" already exists in the catalog.`,
+        },
+        { status: 409 }
+      );
+    }
+
+    // Insert new corridor record into PostgreSQL
+    const newCorridorPayload = {
+      road_code: formattedRoadCode,
+      road_name: road_name.trim(),
+      from_location: from_location?.trim() || null,
+      to_location: to_location?.trim() || null,
+      from_chainage: from_chainage?.trim() || '0',
+      to_chainage: to_chainage?.trim() || String(numericLength),
+      length_km: Math.round(numericLength * 1000) / 1000,
+      configuration: configuration || '2-Lane',
+      status: 'ACTIVE',
+      delete_status: 'KEEP',
+    };
+
+    const { data: inserted, error: insertError } = await supabase
+      .from('highways')
+      .insert([newCorridorPayload])
+      .select()
+      .single();
+
+    if (insertError) {
+      return NextResponse.json(
+        { success: false, message: `Database insert failed: ${insertError.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Highway ${formattedRoadCode} created successfully.`,
+      corridor: inserted,
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { success: false, message: `Server Error: ${err.message}` },
+      { status: 500 }
+    );
+  }
+}
+
+// ----------------------------------------------------------------------
+// PATCH: Edit Highway Corridor Details (road_code is read-only)
+// ----------------------------------------------------------------------
+export async function PATCH(request: Request) {
+  try {
+    const supabase = getSupabaseClient();
+    const body = await request.json();
+
+    const {
+      id,
+      road_name,
+      from_location,
+      to_location,
+      from_chainage,
+      to_chainage,
+      length_km,
+      configuration,
+      status,
+    } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: 'Corridor ID is required for edit.' },
+        { status: 400 }
+      );
+    }
+
+    if (!road_name || !road_name.trim()) {
+      return NextResponse.json(
+        { success: false, message: 'Road Name cannot be empty.' },
+        { status: 400 }
+      );
+    }
+
+    const numericLength = parseFloat(length_km);
+    if (isNaN(numericLength) || numericLength <= 0) {
+      return NextResponse.json(
+        { success: false, message: 'Length in km must be a positive number.' },
+        { status: 400 }
+      );
+    }
+
+    const updatePayload = {
+      road_name: road_name.trim(),
+      from_location: from_location?.trim() || null,
+      to_location: to_location?.trim() || null,
+      from_chainage: from_chainage?.trim() || '0',
+      to_chainage: to_chainage?.trim() || String(numericLength),
+      length_km: Math.round(numericLength * 1000) / 1000,
+      configuration: configuration || '2-Lane',
+      status: status || 'ACTIVE',
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: updated, error: updateError } = await supabase
+      .from('highways')
+      .update(updatePayload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      return NextResponse.json(
+        { success: false, message: `Database update failed: ${updateError.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Highway corridor updated successfully.`,
+      corridor: updated,
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { success: false, message: `Server Error: ${err.message}` },
+      { status: 500 }
+    );
+  }
+}
+
+// ----------------------------------------------------------------------
+// DELETE: Soft-Delete Highway Corridor (Sets delete_status = 'DELETED')
+// ----------------------------------------------------------------------
+export async function DELETE(request: Request) {
+  try {
+    const supabase = getSupabaseClient();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: 'Corridor ID parameter is required for deletion.' },
+        { status: 400 }
+      );
+    }
+
+    // Execute soft delete data keepsake retention update
+    const { data: softDeleted, error: deleteError } = await supabase
+      .from('highways')
+      .update({
+        delete_status: 'DELETED',
+        status: 'DELETED',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (deleteError) {
+      return NextResponse.json(
+        { success: false, message: `Database soft-delete failed: ${deleteError.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Highway corridor soft-deleted and archived in database.`,
+      corridor: softDeleted,
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { success: false, message: `Server Error: ${err.message}` },
       { status: 500 }
     );
   }

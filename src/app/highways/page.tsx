@@ -7,7 +7,10 @@ import { KpiHeaderCards } from '@/components/highways/KpiHeaderCards';
 import { FilterControls } from '@/components/highways/FilterControls';
 import { HighwaysTable } from '@/components/highways/HighwaysTable';
 import { HighwaysGrid } from '@/components/highways/HighwaysGrid';
-import { Route, Upload, RefreshCw } from 'lucide-react';
+import { AddHighwayModal } from '@/components/highways/AddHighwayModal';
+import { EditHighwayModal } from '@/components/highways/EditHighwayModal';
+import { DeleteHighwayModal } from '@/components/highways/DeleteHighwayModal';
+import { Route, Upload, RefreshCw, Plus } from 'lucide-react';
 
 export default function HighwaysPage() {
   const [corridors, setCorridors] = useState<HighwayCorridor[]>([]);
@@ -23,6 +26,11 @@ export default function HighwaysPage() {
   const [activeConfig, setActiveConfig] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<string>('length_desc');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+
+  // Modal Visibility States
+  const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [editingHighway, setEditingHighway] = useState<HighwayCorridor | null>(null);
+  const [deletingHighway, setDeletingHighway] = useState<HighwayCorridor | null>(null);
 
   // Debounce search input by 300ms
   useEffect(() => {
@@ -94,6 +102,14 @@ export default function HighwaysPage() {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-xs cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Highway</span>
+            </button>
+
             <Link
               href="/ingest"
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-xs"
@@ -112,10 +128,10 @@ export default function HighwaysPage() {
           <div>
             <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
               <Route className="w-6 h-6 text-blue-600" />
-              Master Corridor Catalog (Phase 1.1)
+              Master Corridor Catalog & Management
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Verified ground-truth inventory of National Highways across Tamil Nadu PWD divisions.
+              Verified ground-truth inventory with live Add, Edit, and Soft-Delete capabilities.
             </p>
           </div>
         </div>
@@ -144,11 +160,42 @@ export default function HighwaysPage() {
 
         {/* Section C: Master Catalog View */}
         {viewMode === 'table' ? (
-          <HighwaysTable corridors={corridors} loading={loading} />
+          <HighwaysTable
+            corridors={corridors}
+            loading={loading}
+            onEdit={(h) => setEditingHighway(h)}
+            onDelete={(h) => setDeletingHighway(h)}
+          />
         ) : (
-          <HighwaysGrid corridors={corridors} loading={loading} />
+          <HighwaysGrid
+            corridors={corridors}
+            loading={loading}
+            onEdit={(h) => setEditingHighway(h)}
+            onDelete={(h) => setDeletingHighway(h)}
+          />
         )}
       </main>
+
+      {/* Modals Suite */}
+      <AddHighwayModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => fetchHighways()}
+      />
+
+      <EditHighwayModal
+        highway={editingHighway}
+        isOpen={Boolean(editingHighway)}
+        onClose={() => setEditingHighway(null)}
+        onSuccess={() => fetchHighways()}
+      />
+
+      <DeleteHighwayModal
+        highway={deletingHighway}
+        isOpen={Boolean(deletingHighway)}
+        onClose={() => setDeletingHighway(null)}
+        onSuccess={() => fetchHighways()}
+      />
     </div>
   );
 }

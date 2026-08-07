@@ -2,14 +2,21 @@
 
 import React from 'react';
 import { HighwayCorridor } from '@/app/api/highways/route';
-import { ArrowRight, MapPin, ShieldCheck, Ruler } from 'lucide-react';
+import { ArrowRight, MapPin, ShieldCheck, Ruler, Edit3, Trash2 } from 'lucide-react';
 
 interface HighwaysGridProps {
   corridors: HighwayCorridor[];
   loading: boolean;
+  onEdit: (highway: HighwayCorridor) => void;
+  onDelete: (highway: HighwayCorridor) => void;
 }
 
-export const HighwaysGrid: React.FC<HighwaysGridProps> = ({ corridors, loading }) => {
+export const HighwaysGrid: React.FC<HighwaysGridProps> = ({
+  corridors,
+  loading,
+  onEdit,
+  onDelete,
+}) => {
   const getBadgeStyle = (config: string) => {
     const c = config?.toLowerCase() || '';
     if (c.includes('6-lane') || c.includes('6l')) {
@@ -84,14 +91,30 @@ export const HighwaysGrid: React.FC<HighwaysGridProps> = ({ corridors, loading }
               <span>{item.length_km} km</span>
             </div>
 
-            {(item.dlp_count || 0) > 0 ? (
-              <span className="flex items-center gap-1 font-medium text-indigo-600 dark:text-indigo-400">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                {item.dlp_count} DLP Stretches
-              </span>
-            ) : (
-              <span className="text-slate-400 italic">No DLP</span>
-            )}
+            <div className="flex items-center gap-2">
+              {(item.dlp_count || 0) > 0 && (
+                <span className="flex items-center gap-1 font-medium text-indigo-600 dark:text-indigo-400 mr-1">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  {item.dlp_count}
+                </span>
+              )}
+
+              <button
+                onClick={() => onEdit(item)}
+                className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-md transition-colors cursor-pointer"
+                title="Edit Corridor"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => onDelete(item)}
+                className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/60 rounded-md transition-colors cursor-pointer"
+                title="Soft-Delete Corridor"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       ))}

@@ -2,14 +2,21 @@
 
 import React from 'react';
 import { HighwayCorridor } from '@/app/api/highways/route';
-import { ArrowRight, MapPin, ShieldCheck } from 'lucide-react';
+import { ArrowRight, MapPin, ShieldCheck, Edit3, Trash2 } from 'lucide-react';
 
 interface HighwaysTableProps {
   corridors: HighwayCorridor[];
   loading: boolean;
+  onEdit: (highway: HighwayCorridor) => void;
+  onDelete: (highway: HighwayCorridor) => void;
 }
 
-export const HighwaysTable: React.FC<HighwaysTableProps> = ({ corridors, loading }) => {
+export const HighwaysTable: React.FC<HighwaysTableProps> = ({
+  corridors,
+  loading,
+  onEdit,
+  onDelete,
+}) => {
   const getBadgeStyle = (config: string) => {
     const c = config?.toLowerCase() || '';
     if (c.includes('6-lane') || c.includes('6l')) {
@@ -57,7 +64,8 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({ corridors, loading
               <th className="py-3.5 px-4 font-semibold">Chainage Span</th>
               <th className="py-3.5 px-4 font-semibold">Length</th>
               <th className="py-3.5 px-4 font-semibold">Lane Config</th>
-              <th className="py-3.5 px-4 font-semibold text-right">DLP Coverage</th>
+              <th className="py-3.5 px-4 font-semibold">DLP Coverage</th>
+              <th className="py-3.5 px-4 font-semibold text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
@@ -108,15 +116,36 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({ corridors, loading
                 </td>
 
                 {/* DLP Coverage */}
-                <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                <td className="py-3.5 px-4 whitespace-nowrap">
                   {(item.dlp_count || 0) > 0 ? (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                       <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
-                      {item.dlp_count} DLP Stretches
+                      {item.dlp_count} Stretches
                     </span>
                   ) : (
                     <span className="text-xs text-slate-400 italic">No Active DLP</span>
                   )}
+                </td>
+
+                {/* Actions Column */}
+                <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <button
+                      onClick={() => onEdit(item)}
+                      className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-md transition-colors cursor-pointer"
+                      title="Edit Corridor"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => onDelete(item)}
+                      className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/60 rounded-md transition-colors cursor-pointer"
+                      title="Soft-Delete Corridor"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
