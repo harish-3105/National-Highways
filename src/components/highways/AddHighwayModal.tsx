@@ -144,8 +144,9 @@ export const AddHighwayModal: React.FC<AddHighwayModalProps> = ({
       } else {
         setErrorMsg(data.message || 'Failed to add highway corridor.');
       }
-    } catch (err: any) {
-      setErrorMsg(`Server error: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(`Server error: ${msg}`);
     } finally {
       setLoading(false);
     }

@@ -8,7 +8,7 @@ export type DatasetType =
   | 'ACCIDENT_BLACKSPOTS'
   | 'LEGAL_CASES';
 
-export interface ParseResult<T = any> {
+export interface ParseResult<T = unknown> {
   success: boolean;
   datasetType: DatasetType;
   fileName: string;

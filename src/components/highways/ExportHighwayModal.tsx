@@ -85,8 +85,9 @@ export const ExportHighwayModal: React.FC<ExportHighwayModalProps> = ({
         setSuccessMsg('');
         onClose();
       }, 1200);
-    } catch (err: any) {
-      setErrorMsg(`Export failed: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(`Export failed: ${msg}`);
     } finally {
       setLoading(false);
     }

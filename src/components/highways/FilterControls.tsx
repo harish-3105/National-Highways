@@ -97,29 +97,35 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
         </div>
 
         {/* View Toggle */}
-        <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
-          <button
-            onClick={() => onViewModeChange('table')}
-            title="Table View"
-            className={`p-1.5 rounded-md transition-all ${
-              viewMode === 'table'
-                ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-            }`}
-          >
-            <Table className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => onViewModeChange('grid')}
-            title="Grid Card View"
-            className={`p-1.5 rounded-md transition-all ${
-              viewMode === 'grid'
-                ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-            }`}
-          >
-            <LayoutGrid className="w-4 h-4" />
-          </button>
+        {/* View Mode Toggle */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500 font-semibold hidden sm:inline">
+            {totalResults} corridor{totalResults === 1 ? '' : 's'}
+          </span>
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+            <button
+              onClick={() => onViewModeChange('table')}
+              title="Table View"
+              className={`p-1.5 rounded-md transition-all ${
+                viewMode === 'table'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+              }`}
+            >
+              <Table className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => onViewModeChange('grid')}
+              title="Grid Card View"
+              className={`p-1.5 rounded-md transition-all ${
+                viewMode === 'grid'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

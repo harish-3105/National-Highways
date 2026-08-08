@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { NavigationHeader } from '@/components/NavigationHeader';
 
 type DatasetType =
   | 'HIGHWAYS_MASTER'
@@ -37,11 +38,19 @@ const DATASET_OPTIONS: { value: DatasetType; label: string; description: string 
   },
 ];
 
+interface IngestionResultResponse {
+  success?: boolean;
+  insertedCount?: number;
+  message?: string;
+  errors?: string[];
+  dataPreview?: Record<string, unknown>[];
+}
+
 export default function IngestPage() {
   const [selectedType, setSelectedType] = useState<DatasetType>('HIGHWAYS_MASTER');
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [result, setResult] = useState<any | null>(null);
+  const [result, setResult] = useState<IngestionResultResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,16 +90,18 @@ export default function IngestPage() {
       } else {
         setResult(data);
       }
-    } catch (err: any) {
-      setError(`Network error: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Network error: ${msg}`);
     } finally {
       setIsUploading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-8 font-sans">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans">
+      <NavigationHeader />
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white">Data Ingestion Engine</h1>
           <p className="text-slate-400 mt-2">

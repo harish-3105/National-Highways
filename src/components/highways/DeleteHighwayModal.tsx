@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { HighwayCorridor } from '@/app/api/highways/route';
-import { AlertTriangle, X, Trash2 } from 'lucide-react';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 
 interface DeleteHighwayModalProps {
   highway: HighwayCorridor | null;
@@ -50,8 +50,9 @@ export const DeleteHighwayModal: React.FC<DeleteHighwayModalProps> = ({
       } else {
         setErrorMsg(data.message || 'Failed to soft-delete highway corridor.');
       }
-    } catch (err: any) {
-      setErrorMsg(`Server error: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(`Server error: ${msg}`);
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { HighwayCorridor, HighwaysApiResponse } from '@/app/api/highways/route';
 import { KpiHeaderCards } from '@/components/highways/KpiHeaderCards';
 import { FilterControls } from '@/components/highways/FilterControls';
@@ -11,7 +10,8 @@ import { AddHighwayModal } from '@/components/highways/AddHighwayModal';
 import { EditHighwayModal } from '@/components/highways/EditHighwayModal';
 import { DeleteHighwayModal } from '@/components/highways/DeleteHighwayModal';
 import { ExportHighwayModal } from '@/components/highways/ExportHighwayModal';
-import { Route, Upload, RefreshCw, Plus, Download } from 'lucide-react';
+import { NavigationHeader } from '@/components/NavigationHeader';
+import { Route, RefreshCw, Plus } from 'lucide-react';
 
 export default function HighwaysPage() {
   const [allCorridors, setAllCorridors] = useState<HighwayCorridor[]>([]);
@@ -106,64 +106,8 @@ export default function HighwaysPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-      {/* Global Top Navbar */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm font-bold">
-              NH
-            </div>
-            <div>
-              <h1 className="font-bold text-base text-slate-900 dark:text-slate-100 leading-tight">
-                Tamil Nadu National Highways
-              </h1>
-              <p className="text-xs text-slate-500 font-medium">
-                Corridor Catalog & Infrastructure Inventory
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => fetchHighways()}
-              disabled={loading}
-              className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 transition-all cursor-pointer"
-              title="Refresh Data"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-
-            <button
-              onClick={() => setIsExportModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-xs cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export Catalog</span>
-              {selectedIds.length > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 bg-blue-500 text-white font-black text-[10px] rounded-full">
-                  {selectedIds.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-xs cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Highway</span>
-            </button>
-
-            <Link
-              href="/ingest"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-xs"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              <span>Data Ingestion Engine</span>
-            </Link>
-          </div>
-        </div>
-      </header>
+      {/* Global Navigation Header */}
+      <NavigationHeader />
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -47,13 +47,13 @@ export function generateExportFile(
 
   // Format rows into key-value objects matching active column labels
   const formattedData = data.map((corridor) => {
-    const rowObj: Record<string, any> = {};
+    const rowObj: Record<string, unknown> = {};
     activeColumns.forEach((col) => {
-      let val = (corridor as any)[col.key];
+      let val = (corridor as unknown as Record<string, unknown>)[col.key];
       if (val === null || val === undefined) {
         val = '';
       } else if (col.key === 'created_at' || col.key === 'updated_at') {
-        val = new Date(val).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+        val = new Date(val as string).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
       }
       rowObj[col.label] = val;
     });

@@ -140,8 +140,9 @@ export const EditHighwayModal: React.FC<EditHighwayModalProps> = ({
       } else {
         setErrorMsg(data.message || 'Failed to update highway corridor.');
       }
-    } catch (err: any) {
-      setErrorMsg(`Server error: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(`Server error: ${msg}`);
     } finally {
       setLoading(false);
     }
