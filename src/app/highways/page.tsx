@@ -11,7 +11,7 @@ import { EditHighwayModal } from '@/components/highways/EditHighwayModal';
 import { DeleteHighwayModal } from '@/components/highways/DeleteHighwayModal';
 import { ExportHighwayModal } from '@/components/highways/ExportHighwayModal';
 import { NavigationHeader } from '@/components/NavigationHeader';
-import { Route, RefreshCw, Plus } from 'lucide-react';
+import { Route, RefreshCw, Plus, Download } from 'lucide-react';
 
 export default function HighwaysPage() {
   const [allCorridors, setAllCorridors] = useState<HighwayCorridor[]>([]);
@@ -121,6 +121,31 @@ export default function HighwaysPage() {
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               Verified ground-truth inventory with live Add, Edit, Soft-Delete, and Custom Data Export.
             </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => fetchHighways()}
+              disabled={loading}
+              className="p-2.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
+              title="Refresh Catalog"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+
+            <button
+              onClick={() => setIsExportModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <Download className="w-4 h-4" /> Export Catalog
+            </button>
+
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Add Highway
+            </button>
           </div>
         </div>
 
