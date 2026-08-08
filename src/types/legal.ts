@@ -61,7 +61,7 @@ export interface CaseEntryFormData {
 
   // Section 2 - Case Information
   caseNumber: string;
-  caseYear: string;
+  caseYear: string; // 4 digit string
   category: CategoryType;
   nameOfCourt: string;
   nameOfRespondent: string;
@@ -81,7 +81,7 @@ export interface CaseEntryFormData {
   // If Counter Affidavit Filed = NO
   actionToTakeForCounterAffidavit?: string;
 
-  // Module 2 - Converted Case Proceedings
+  // Module 2 - Converted Case Proceedings (Collapsible)
   convertedCase?: ConvertedCaseProceedingsData;
 
   // Metadata
