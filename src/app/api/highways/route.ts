@@ -14,11 +14,10 @@ export interface HighwayCorridor {
   length_km: number;
   configuration: string;
   status: string;
-  delete_status?: string;
-  start_latitude: number | null;
-  start_longitude: number | null;
-  end_latitude: number | null;
-  end_longitude: number | null;
+  start_latitude?: number | null;
+  start_longitude?: number | null;
+  end_latitude?: number | null;
+  end_longitude?: number | null;
   created_at: string;
   updated_at: string;
   dlp_count?: number;
@@ -73,10 +72,11 @@ export async function GET(request: Request) {
       const { data: rawHighways } = await supabase
         .from('highways')
         .select('*')
-        .neq('status', 'DELETED');
+        .neq('status', 'DELETED')
+        .order('created_at', { ascending: false });
 
       if (rawHighways) {
-        allCorridors = rawHighways.filter((c) => c.delete_status !== 'DELETED');
+        allCorridors = rawHighways;
 
         const { data: dlpContracts } = await supabase.from('dlp_contracts').select('highway_code');
         const dlpCountsMap = new Map<string, number>();
@@ -191,7 +191,6 @@ export async function POST(request: Request) {
       length_km: Number(length_km) || 0,
       configuration: configuration || '2-Lane',
       status: 'ACTIVE',
-      delete_status: 'ACTIVE',
       updated_at: new Date().toISOString(),
     };
 
@@ -200,10 +199,16 @@ export async function POST(request: Request) {
       if (!error && data && data[0]) {
         return NextResponse.json({ success: true, corridor: data[0] });
       }
+      if (error) {
+        return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+      }
     } else {
       const { data, error } = await supabase.from('highways').insert([payload]).select();
       if (!error && data && data[0]) {
         return NextResponse.json({ success: true, corridor: data[0] });
+      }
+      if (error) {
+        return NextResponse.json({ success: false, message: error.message }, { status: 500 });
       }
     }
 
@@ -227,7 +232,7 @@ export async function DELETE(request: Request) {
     if (supabase) {
       const { error } = await supabase
         .from('highways')
-        .update({ delete_status: 'DELETED', status: 'DELETED', updated_at: new Date().toISOString() })
+        .update({ status: 'DELETED', updated_at: new Date().toISOString() })
         .eq('id', id);
 
       if (error) {
@@ -235,7 +240,7 @@ export async function DELETE(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, message: `Highway ${id} soft-deleted successfully` });
+    return NextResponse.json({ success: true, message: `Highway ${id} deleted successfully` });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, message: msg }, { status: 500 });
