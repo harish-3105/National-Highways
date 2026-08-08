@@ -175,13 +175,39 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { road_code, road_name, from_location, to_location, from_chainage, to_chainage, length_km, configuration } = body;
+    const { id, road_code, road_name, from_location, to_location, from_chainage, to_chainage, length_km, configuration } = body;
 
-    if (!road_code || !road_name) {
-      return NextResponse.json({ success: false, message: 'Road code and road name are required' }, { status: 400 });
+    // UPDATE / EDIT MODE
+    if (id) {
+      const updatePayload: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (road_code) updatePayload.road_code = road_code.trim().toUpperCase();
+      if (road_name) updatePayload.road_name = road_name.trim();
+      if (from_location !== undefined) updatePayload.from_location = from_location?.trim() || null;
+      if (to_location !== undefined) updatePayload.to_location = to_location?.trim() || null;
+      if (from_chainage !== undefined) updatePayload.from_chainage = from_chainage?.trim() || null;
+      if (to_chainage !== undefined) updatePayload.to_chainage = to_chainage?.trim() || null;
+      if (length_km !== undefined) updatePayload.length_km = Number(length_km) || 0;
+      if (configuration) updatePayload.configuration = configuration;
+      if (body.status) updatePayload.status = body.status;
+
+      const { data, error } = await supabase.from('highways').update(updatePayload).eq('id', id).select();
+      if (!error && data && data[0]) {
+        return NextResponse.json({ success: true, corridor: data[0] });
+      }
+      if (error) {
+        return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+      }
     }
 
-    const payload = {
+    // CREATE / INSERT MODE
+    if (!road_code || !road_name) {
+      return NextResponse.json({ success: false, message: 'Road code and road name are required for new highways' }, { status: 400 });
+    }
+
+    const insertPayload = {
       road_code: road_code.trim().toUpperCase(),
       road_name: road_name.trim(),
       from_location: from_location?.trim() || null,
@@ -194,30 +220,23 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString(),
     };
 
-    if (body.id) {
-      const { data, error } = await supabase.from('highways').update(payload).eq('id', body.id).select();
-      if (!error && data && data[0]) {
-        return NextResponse.json({ success: true, corridor: data[0] });
-      }
-      if (error) {
-        return NextResponse.json({ success: false, message: error.message }, { status: 500 });
-      }
-    } else {
-      const { data, error } = await supabase.from('highways').insert([payload]).select();
-      if (!error && data && data[0]) {
-        return NextResponse.json({ success: true, corridor: data[0] });
-      }
-      if (error) {
-        return NextResponse.json({ success: false, message: error.message }, { status: 500 });
-      }
+    const { data, error } = await supabase.from('highways').insert([insertPayload]).select();
+    if (!error && data && data[0]) {
+      return NextResponse.json({ success: true, corridor: data[0] });
+    }
+    if (error) {
+      return NextResponse.json({ success: false, message: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, corridor: { ...payload, id: `hw-${Date.now()}` } });
+    return NextResponse.json({ success: true, corridor: { ...insertPayload, id: `hw-${Date.now()}` } });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, message: msg }, { status: 500 });
   }
 }
+
+export const PATCH = POST;
+export const PUT = POST;
 
 export async function DELETE(request: Request) {
   try {

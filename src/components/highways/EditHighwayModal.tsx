@@ -121,6 +121,7 @@ export const EditHighwayModal: React.FC<EditHighwayModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: highway.id,
+          road_code: highway.road_code,
           road_name: roadName,
           from_location: fromLocation,
           to_location: toLocation,
