@@ -84,7 +84,11 @@ export async function GET(req: NextRequest) {
     try {
       const supabase = await createClient();
       if (supabase) {
-        let query = supabase.from('legal_cases').select('*').order('created_at', { ascending: false });
+        let query = supabase
+          .from('legal_cases')
+          .select('*')
+          .neq('delete_status', 'DELETED')
+          .order('created_at', { ascending: false });
 
         if (circle) query = query.eq('circle', circle);
         if (division) query = query.eq('division', division);
@@ -123,10 +127,9 @@ export async function GET(req: NextRequest) {
         }
       }
     } catch {
-      // Supabase disconnected/unconfigured fallback
+      // Supabase offline fallback
     }
 
-    // Fallback to sample data if Supabase offline/empty
     let filtered = SAMPLE_LEGAL_CASES;
     if (circle) filtered = filtered.filter((c) => c.circle === circle);
     if (division) filtered = filtered.filter((c) => c.division === division);
@@ -141,7 +144,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, cases: filtered });
-  } catch (err: unknown) {
+  } catch {
     return NextResponse.json({ success: true, cases: SAMPLE_LEGAL_CASES });
   }
 }
@@ -152,7 +155,7 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient();
 
     if (supabase) {
-      const payload = {
+      const payload: Record<string, unknown> = {
         circle: body.circle,
         division: body.division,
         case_number: body.caseNumber,
@@ -171,16 +174,58 @@ export async function POST(req: NextRequest) {
         action_to_take_counter_affidavit: body.actionToTakeForCounterAffidavit,
         converted_case: body.convertedCase,
         status: body.status || 'PENDING',
+        updated_at: new Date().toISOString(),
       };
 
-      const { data, error } = await supabase.from('legal_cases').insert([payload]).select();
-      if (!error && data && data[0]) {
-        return NextResponse.json({ success: true, case: data[0] });
+      // Check if updating an existing record (id present and not a sample id)
+      if (body.id && !body.id.startsWith('lc-')) {
+        const { data, error } = await supabase
+          .from('legal_cases')
+          .update(payload)
+          .eq('id', body.id)
+          .select();
+
+        if (!error && data && data[0]) {
+          return NextResponse.json({ success: true, case: data[0], mode: 'UPDATE' });
+        }
+      } else {
+        // Insert new record
+        const { data, error } = await supabase.from('legal_cases').insert([payload]).select();
+        if (!error && data && data[0]) {
+          return NextResponse.json({ success: true, case: data[0], mode: 'CREATE' });
+        }
       }
     }
 
-    // Fallback success response for client
-    return NextResponse.json({ success: true, case: { ...body, id: `lc-${Date.now()}` } });
+    return NextResponse.json({ success: true, case: { ...body, id: body.id || `lc-${Date.now()}` } });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Case ID is required for deletion' }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+    if (supabase && !id.startsWith('lc-')) {
+      const { error } = await supabase
+        .from('legal_cases')
+        .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
+    }
+
+    return NextResponse.json({ success: true, message: `Case ${id} successfully deleted` });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });

@@ -70,7 +70,12 @@ export const LegalDashboard: React.FC = () => {
   const handleDelete = async (id?: string) => {
     if (!id) return;
     if (confirm('Are you sure you want to delete this legal case record?')) {
-      setCases((prev) => prev.filter((c) => c.id !== id));
+      try {
+        await fetch(`/api/legal?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+        setCases((prev) => prev.filter((c) => c.id !== id));
+      } catch (err) {
+        console.error('Failed to delete case:', err);
+      }
     }
   };
 

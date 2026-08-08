@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS legal_cases (
   converted_case JSONB,
   lawyer_id UUID REFERENCES lawyers(id),
   status VARCHAR(50) DEFAULT 'PENDING',
+  delete_status VARCHAR(20) DEFAULT 'ACTIVE',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -40,6 +41,7 @@ CREATE TABLE IF NOT EXISTS legal_cases (
 CREATE INDEX IF NOT EXISTS idx_legal_cases_circle_div ON legal_cases(circle, division);
 CREATE INDEX IF NOT EXISTS idx_legal_cases_case_num ON legal_cases(case_number);
 CREATE INDEX IF NOT EXISTS idx_legal_cases_status ON legal_cases(status);
+CREATE INDEX IF NOT EXISTS idx_legal_cases_delete_status ON legal_cases(delete_status);
 
 ALTER TABLE legal_cases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lawyers ENABLE ROW LEVEL SECURITY;
