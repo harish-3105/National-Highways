@@ -30,101 +30,8 @@ export interface DLPContractItem {
   status: 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED';
 }
 
-const SAMPLE_DLP_CONTRACTS: DLPContractItem[] = [
-  {
-    id: 'dlp-1',
-    highway_code: 'NH-181',
-    stretch_name: 'Coimbatore - Mettupalayam Stretch',
-    from_km: 0,
-    to_km: 35.4,
-    length_km: 35.4,
-    contractor_name: 'L&T Transportation Infrastructure Ltd',
-    contract_mode: 'EPC',
-    work_description: 'Strengthening and 4-laning with paved shoulders',
-    doc_date: '2023-04-15',
-    dlp_expiry_date: '2026-09-15',
-    days_remaining: 39,
-    status: 'EXPIRING_SOON',
-  },
-  {
-    id: 'dlp-2',
-    highway_code: 'NH-181',
-    stretch_name: 'Mettupalayam - Coonoor Pass',
-    from_km: 35.4,
-    to_km: 70.0,
-    length_km: 34.6,
-    contractor_name: 'GVR Infra Projects Ltd',
-    contract_mode: 'STMC',
-    work_description: 'Hill slope stabilization & retaining wall renewal',
-    doc_date: '2024-01-10',
-    dlp_expiry_date: '2027-01-10',
-    days_remaining: 156,
-    status: 'ACTIVE',
-  },
-  {
-    id: 'dlp-3',
-    highway_code: 'NH-44',
-    stretch_name: 'Hosur - Dharmapuri Section',
-    from_km: 0,
-    to_km: 84.5,
-    length_km: 84.5,
-    contractor_name: 'KNR Constructions Ltd',
-    contract_mode: 'PBMC',
-    work_description: 'Flexible pavement resurfacing & toll plaza maintenance',
-    doc_date: '2022-08-01',
-    dlp_expiry_date: '2026-08-01',
-    days_remaining: -6,
-    status: 'EXPIRED',
-  },
-  {
-    id: 'dlp-4',
-    highway_code: 'NH-44',
-    stretch_name: 'Dharmapuri - Salem Corridor',
-    from_km: 84.5,
-    to_km: 148.0,
-    length_km: 63.5,
-    contractor_name: 'IRB Infrastructure Developers',
-    contract_mode: 'EPC',
-    work_description: 'Rigid pavement construction & flyover junction renewal',
-    doc_date: '2023-11-20',
-    dlp_expiry_date: '2026-10-21',
-    days_remaining: 75,
-    status: 'EXPIRING_SOON',
-  },
-  {
-    id: 'dlp-5',
-    highway_code: 'NH-48',
-    stretch_name: 'Chennai - Kanchipuram Express Corridor',
-    from_km: 0,
-    to_km: 68.0,
-    length_km: 68.0,
-    contractor_name: 'GMR Highways Ltd',
-    contract_mode: 'EPC',
-    work_description: '6-Laning expansion and stormwater drain integration',
-    doc_date: '2024-03-01',
-    dlp_expiry_date: '2027-03-01',
-    days_remaining: 206,
-    status: 'ACTIVE',
-  },
-  {
-    id: 'dlp-6',
-    highway_code: 'NH-38',
-    stretch_name: 'Tiruvannamalai - Villupuram Stretch',
-    from_km: 62.0,
-    to_km: 120.0,
-    length_km: 58.0,
-    contractor_name: 'Welspun Enterprises Ltd',
-    contract_mode: 'Annual Plan',
-    work_description: 'Periodic overlay & safety signage replacement',
-    doc_date: '2023-09-10',
-    dlp_expiry_date: '2026-08-29',
-    days_remaining: 22,
-    status: 'EXPIRING_SOON',
-  },
-];
-
 export default function DlpPage() {
-  const [contracts, setContracts] = useState<DLPContractItem[]>(SAMPLE_DLP_CONTRACTS);
+  const [contracts, setContracts] = useState<DLPContractItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED'>('ALL');
   const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeFilter>({
@@ -140,7 +47,7 @@ export default function DlpPage() {
         setLoading(true);
         const res = await fetch('/api/dlp');
         const data = await res.json();
-        if (data.success && data.contracts && data.contracts.length > 0) {
+        if (data.success && data.contracts) {
           setContracts(data.contracts);
         }
       } catch (err) {
