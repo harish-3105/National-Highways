@@ -384,10 +384,10 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
               2. Summary Breakdown Metrics (Excel Columns 6-24)
             </h4>
 
-            {/* DLP & STMC */}
+            {/* Category Breakdown Boxes */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-3">
-                <span className="font-bold text-emerald-800 dark:text-emerald-300 block text-xs">Under DLP Guarantee</span>
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">Under DLP Guarantee</span>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Contracts Count</label>
@@ -395,7 +395,7 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                       type="number"
                       value={dlpContractCount}
                       onChange={(e) => setDlpContractCount(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg font-bold"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold"
                     />
                   </div>
                   <div>
@@ -405,7 +405,7 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                       step="0.001"
                       value={dlpLengthKm}
                       onChange={(e) => setDlpLengthKm(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg font-bold text-emerald-700"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-blue-600 dark:text-blue-400"
                     />
                   </div>
                 </div>
@@ -416,7 +416,7 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                     placeholder="e.g. Km 12.650 to Km 20.00..."
                     value={dlpChainage}
                     onChange={(e) => setDlpChainage(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg font-medium text-[11px]"
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-[11px]"
                   />
                 </div>
                 <div>
@@ -425,13 +425,13 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                     type="date"
                     value={dlpExpiryDate}
                     onChange={(e) => setDlpExpiryDate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg font-bold"
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold"
                   />
                 </div>
               </div>
 
-              <div className="bg-blue-50/50 dark:bg-blue-950/20 p-3.5 rounded-xl border border-blue-200 dark:border-blue-800 space-y-3">
-                <span className="font-bold text-blue-900 dark:text-blue-300 block text-xs">Under STMC</span>
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">Under STMC</span>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Contracts Count</label>
@@ -439,7 +439,7 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                       type="number"
                       value={stmcContractCount}
                       onChange={(e) => setStmcContractCount(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-800 rounded-lg font-bold"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold"
                     />
                   </div>
                   <div>
@@ -449,7 +449,7 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                       step="0.001"
                       value={stmcLengthKm}
                       onChange={(e) => setStmcLengthKm(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-800 rounded-lg font-bold text-blue-700"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-blue-600 dark:text-blue-400"
                     />
                   </div>
                 </div>
@@ -460,7 +460,7 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                     placeholder="e.g. Km 139/0 to 141/0..."
                     value={stmcChainage}
                     onChange={(e) => setStmcChainage(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-800 rounded-lg font-medium text-[11px]"
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-[11px]"
                   />
                 </div>
                 <div>
@@ -469,7 +469,7 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                     type="date"
                     value={stmcExpiryDate}
                     onChange={(e) => setStmcExpiryDate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-800 rounded-lg font-bold"
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold"
                   />
                 </div>
               </div>
@@ -477,8 +477,8 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
 
             {/* Construction & PBMC */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-orange-50/50 dark:bg-orange-950/20 p-3.5 rounded-xl border border-orange-200 dark:border-orange-800 space-y-3">
-                <span className="font-bold text-orange-900 dark:text-orange-300 block text-xs">Under Construction / Tender</span>
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">Under Construction / Tender</span>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Projects Count</label>
@@ -486,7 +486,7 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                       type="number"
                       value={constructionProjectCount}
                       onChange={(e) => setConstructionProjectCount(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-orange-300 dark:border-orange-800 rounded-lg font-bold"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold"
                     />
                   </div>
                   <div>
@@ -496,7 +496,7 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                       step="0.001"
                       value={constructionLengthKm}
                       onChange={(e) => setConstructionLengthKm(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-orange-300 dark:border-orange-800 rounded-lg font-bold text-orange-700"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-blue-600 dark:text-blue-400"
                     />
                   </div>
                 </div>
@@ -507,13 +507,13 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                     placeholder="e.g. Km 0.000 to Km 12.300..."
                     value={constructionChainage}
                     onChange={(e) => setConstructionChainage(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-orange-300 dark:border-orange-800 rounded-lg font-medium text-[11px]"
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-[11px]"
                   />
                 </div>
               </div>
 
-              <div className="bg-purple-50/50 dark:bg-purple-950/20 p-3.5 rounded-xl border border-purple-200 dark:border-purple-800 space-y-3">
-                <span className="font-bold text-purple-900 dark:text-purple-300 block text-xs">Under PBMC</span>
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">Under PBMC</span>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Projects Count</label>
@@ -521,7 +521,7 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                       type="number"
                       value={pbmcProjectCount}
                       onChange={(e) => setPbmcProjectCount(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-800 rounded-lg font-bold"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold"
                     />
                   </div>
                   <div>
@@ -531,7 +531,7 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                       step="0.001"
                       value={pbmcLengthKm}
                       onChange={(e) => setPbmcLengthKm(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-800 rounded-lg font-bold text-purple-700"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-blue-600 dark:text-blue-400"
                     />
                   </div>
                 </div>
@@ -542,7 +542,7 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                     placeholder="e.g. Km 0/0-31/8..."
                     value={pbmcChainage}
                     onChange={(e) => setPbmcChainage(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-800 rounded-lg font-medium text-[11px]"
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-[11px]"
                   />
                 </div>
               </div>

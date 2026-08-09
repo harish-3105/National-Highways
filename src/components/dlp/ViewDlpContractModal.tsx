@@ -138,13 +138,13 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* DLP Breakdown */}
-              <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-2">
-                <span className="font-bold text-emerald-800 dark:text-emerald-300 block text-xs">
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">
                   Under DLP Guarantee (Cols 6-9)
                 </span>
                 <div className="grid grid-cols-2 gap-2">
                   <div><strong className="text-slate-500">No. of Contracts:</strong> <span className="font-bold">{contract.dlp_contract_count ?? 0}</span></div>
-                  <div><strong className="text-slate-500">Length under DLP:</strong> <span className="font-bold text-emerald-700">{contract.dlp_length_km ?? 0} km</span></div>
+                  <div><strong className="text-slate-500">Length under DLP:</strong> <span className="font-bold text-blue-600 dark:text-blue-400">{contract.dlp_length_km ?? 0} km</span></div>
                 </div>
                 {contract.dlp_chainage && (
                   <div>
@@ -154,18 +154,18 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
                 )}
                 <div>
                   <strong className="text-slate-500 block">DLP Till Date(s) (Col 9):</strong>
-                  <span className="font-bold text-emerald-800 dark:text-emerald-300">{contract.dlp_expiry_date || 'N/A'}</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{contract.dlp_expiry_date || 'N/A'}</span>
                 </div>
               </div>
 
               {/* STMC Breakdown */}
-              <div className="bg-blue-50/50 dark:bg-blue-950/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800 space-y-2">
-                <span className="font-bold text-blue-900 dark:text-blue-300 block text-xs">
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">
                   Short-Term Maintenance (STMC) (Cols 13-16)
                 </span>
                 <div className="grid grid-cols-2 gap-2">
                   <div><strong className="text-slate-500">No. of Contracts:</strong> <span className="font-bold">{contract.stmc_contract_count ?? 0}</span></div>
-                  <div><strong className="text-slate-500">Length under STMC:</strong> <span className="font-bold text-blue-700">{contract.stmc_length_km ?? 0} km</span></div>
+                  <div><strong className="text-slate-500">Length under STMC:</strong> <span className="font-bold text-blue-600 dark:text-blue-400">{contract.stmc_length_km ?? 0} km</span></div>
                 </div>
                 {contract.stmc_chainage && (
                   <div>
@@ -176,19 +176,19 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
                 {contract.stmc_expiry_date && (
                   <div>
                     <strong className="text-slate-500 block">STMC Expiry Date(s) (Col 16):</strong>
-                    <span className="font-bold text-blue-800 dark:text-blue-300">{contract.stmc_expiry_date}</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{contract.stmc_expiry_date}</span>
                   </div>
                 )}
               </div>
 
               {/* PBMC Breakdown */}
-              <div className="bg-purple-50/50 dark:bg-purple-950/20 p-4 rounded-xl border border-purple-200 dark:border-purple-800 space-y-2">
-                <span className="font-bold text-purple-900 dark:text-purple-300 block text-xs">
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">
                   Performance-Based Maintenance (PBMC) (Cols 17-20)
                 </span>
                 <div className="grid grid-cols-2 gap-2">
                   <div><strong className="text-slate-500">No. of Projects:</strong> <span className="font-bold">{contract.pbmc_project_count ?? 0}</span></div>
-                  <div><strong className="text-slate-500">Length under PBMC:</strong> <span className="font-bold text-purple-700">{contract.pbmc_length_km ?? 0} km</span></div>
+                  <div><strong className="text-slate-500">Length under PBMC:</strong> <span className="font-bold text-blue-600 dark:text-blue-400">{contract.pbmc_length_km ?? 0} km</span></div>
                 </div>
                 {contract.pbmc_chainage && (
                   <div>
@@ -199,19 +199,19 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
                 {contract.pbmc_expiry_date && (
                   <div>
                     <strong className="text-slate-500 block">PBMC Expiry Date(s) (Col 20):</strong>
-                    <span className="font-bold text-purple-800 dark:text-purple-300">{contract.pbmc_expiry_date}</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{contract.pbmc_expiry_date}</span>
                   </div>
                 )}
               </div>
 
               {/* Construction Breakdown */}
-              <div className="bg-orange-50/50 dark:bg-orange-950/20 p-4 rounded-xl border border-orange-200 dark:border-orange-800 space-y-2">
-                <span className="font-bold text-orange-900 dark:text-orange-300 block text-xs">
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">
                   Under Construction / Tender Projects (Cols 10-12)
                 </span>
                 <div className="grid grid-cols-2 gap-2">
                   <div><strong className="text-slate-500">No. of Projects:</strong> <span className="font-bold">{contract.construction_project_count ?? 0}</span></div>
-                  <div><strong className="text-slate-500">Length in km:</strong> <span className="font-bold text-orange-700">{contract.construction_length_km ?? 0} km</span></div>
+                  <div><strong className="text-slate-500">Length in km:</strong> <span className="font-bold text-blue-600 dark:text-blue-400">{contract.construction_length_km ?? 0} km</span></div>
                 </div>
                 {contract.construction_chainage && (
                   <div>
