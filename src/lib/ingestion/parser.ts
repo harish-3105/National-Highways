@@ -45,20 +45,27 @@ export interface DLPRow {
   length_km: number;
   dlp_contract_count?: number;
   dlp_length_km?: number;
-  stmc_contract_count?: number;
-  stmc_length_km?: number;
-  stmc_expiry_date?: string;
+  dlp_chainage?: string;
+  dlp_expiry_date?: string;
   construction_project_count?: number;
   construction_length_km?: number;
+  construction_chainage?: string;
+  stmc_contract_count?: number;
+  stmc_length_km?: number;
+  stmc_chainage?: string;
+  stmc_expiry_date?: string;
   pbmc_project_count?: number;
   pbmc_length_km?: number;
+  pbmc_chainage?: string;
+  pbmc_expiry_date?: string;
   no_dlp_length_km?: number;
+  no_dlp_chainage?: string;
+  no_dlp_expiry_date?: string;
   uncontracted_after_2027_km?: number;
   contractor_name: string;
   contract_mode: string;
   work_description?: string;
   doc_date?: string;
-  dlp_expiry_date?: string;
   days_remaining?: number;
   status: string;
 }
@@ -387,17 +394,38 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       if (/STMC/i.test(rowStr)) mode = 'STMC';
       else if (/PBMC/i.test(rowStr)) mode = 'PBMC';
 
+      // DLP (Cols 6, 7, 8, 9)
       const dlpCount = parseSafeInteger(row[6]);
       const dlpLen = parseChainageValue(row[7]) || 0;
-      const stmcCount = parseSafeInteger(row[10]);
-      const stmcLen = parseChainageValue(row[12]) || 0;
-      const constructionCount = parseSafeInteger(row[13]);
-      const constructionLen = parseChainageValue(row[14]) || 0;
-      const pbmcCount = parseSafeInteger(row[15]);
-      const pbmcLen = parseChainageValue(row[16]) || 0;
+      const dlpChainage = cleanString(row[8]);
+      const dlpExpiryStr = cleanString(row[9]);
+
+      // Construction (Cols 10, 11, 12)
+      const constructionCount = parseSafeInteger(row[10]);
+      const constructionChainage = cleanString(row[11]);
+      const constructionLen = parseChainageValue(row[12]) || 0;
+
+      // STMC (Cols 13, 14, 15, 16)
+      const stmcCount = parseSafeInteger(row[13]);
+      const stmcLen = parseChainageValue(row[14]) || 0;
+      const stmcChainage = cleanString(row[15]);
+      const stmcExpiryStr = cleanString(row[16]);
+
+      // PBMC (Cols 17, 18, 19, 20)
+      const pbmcCount = parseSafeInteger(row[17]);
+      const pbmcLen = parseChainageValue(row[18]) || 0;
+      const pbmcChainage = cleanString(row[19]);
+      const pbmcExpiryStr = cleanString(row[20]);
+
+      // No DLP (Cols 21, 22, 23)
       const noDlpLen = parseChainageValue(row[21]) || 0;
+      const noDlpChainage = cleanString(row[22]);
+      const noDlpExpiryStr = cleanString(row[23]);
+
+      // Uncontracted (Col 24)
       const uncontractedLen = parseChainageValue(row[24]) || 0;
 
+      // Remarks (Col 25)
       let remarks = cleanString(row[25]) || cleanString(row[row.length - 1]);
       if (!remarks || remarks === '-' || /^\d+(\.\d+)?$/.test(remarks)) {
         remarks = cleanString(row[18]) || cleanString(row[17]) || cleanString(row[16]);
@@ -418,15 +446,22 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
         length_km: totalLen,
         dlp_contract_count: dlpCount,
         dlp_length_km: dlpLen,
-        dlp_expiry_date: dlpDateStr || undefined,
-        stmc_contract_count: stmcCount,
-        stmc_length_km: stmcLen,
-        stmc_expiry_date: dlpDateStr || undefined,
+        dlp_chainage: dlpChainage,
+        dlp_expiry_date: dlpExpiryStr || dlpDateStr || undefined,
         construction_project_count: constructionCount,
         construction_length_km: constructionLen,
+        construction_chainage: constructionChainage,
+        stmc_contract_count: stmcCount,
+        stmc_length_km: stmcLen,
+        stmc_chainage: stmcChainage,
+        stmc_expiry_date: stmcExpiryStr,
         pbmc_project_count: pbmcCount,
         pbmc_length_km: pbmcLen,
+        pbmc_chainage: pbmcChainage,
+        pbmc_expiry_date: pbmcExpiryStr,
         no_dlp_length_km: noDlpLen,
+        no_dlp_chainage: noDlpChainage,
+        no_dlp_expiry_date: noDlpExpiryStr,
         uncontracted_after_2027_km: uncontractedLen,
         contractor_name: `${col1.trim()} Division (Contractor DLP)`,
         contract_mode: mode,

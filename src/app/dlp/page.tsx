@@ -37,22 +37,37 @@ export interface DLPContractItem {
   from_km: number;
   to_km: number;
   length_km: number;
+
+  // 100% Complete Excel Breakdown Sub-Columns
   dlp_contract_count?: number;
   dlp_length_km?: number;
-  stmc_contract_count?: number;
-  stmc_length_km?: number;
-  stmc_expiry_date?: string;
+  dlp_chainage?: string;
+  dlp_expiry_date: string;
+
   construction_project_count?: number;
   construction_length_km?: number;
+  construction_chainage?: string;
+
+  stmc_contract_count?: number;
+  stmc_length_km?: number;
+  stmc_chainage?: string;
+  stmc_expiry_date?: string;
+
   pbmc_project_count?: number;
   pbmc_length_km?: number;
+  pbmc_chainage?: string;
+  pbmc_expiry_date?: string;
+
   no_dlp_length_km?: number;
+  no_dlp_chainage?: string;
+  no_dlp_expiry_date?: string;
+
   uncontracted_after_2027_km?: number;
+
   contractor_name: string;
   contract_mode: 'EPC' | 'STMC' | 'PBMC' | 'Annual Plan' | string;
   work_description: string;
   doc_date: string;
-  dlp_expiry_date: string;
   days_remaining: number;
   status: 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | 'DELETED';
 }

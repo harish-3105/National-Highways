@@ -39,7 +39,6 @@ export async function GET(req: NextRequest) {
             ? 'EXPIRING_SOON'
             : 'ACTIVE';
 
-          // Extract Division Name from stretch_name or direct field
           let extractedDivision = item.division_name || '';
           if (!extractedDivision && item.stretch_name) {
             const match = item.stretch_name.match(/^([^ -]+(?:\s+Division)?)/i);
@@ -57,40 +56,49 @@ export async function GET(req: NextRequest) {
             to_km: Number(item.to_km || 0),
             length_km: Number(item.length_km || 0),
 
-            // Full Excel Breakdown Fields
+            // 100% Complete Excel Breakdown Sub-Columns
             dlp_contract_count: Number(item.dlp_contract_count ?? details.dlp_contract_count ?? 0),
             dlp_length_km: Number(item.dlp_length_km ?? details.dlp_length_km ?? 0),
-            stmc_contract_count: Number(item.stmc_contract_count ?? details.stmc_contract_count ?? 0),
-            stmc_length_km: Number(item.stmc_length_km ?? details.stmc_length_km ?? 0),
-            stmc_expiry_date: item.stmc_expiry_date || details.stmc_expiry_date || item.dlp_expiry_date || '',
+            dlp_chainage: item.dlp_chainage || details.dlp_chainage || '',
+            dlp_expiry_date: item.dlp_expiry_date || details.dlp_expiry_date || '',
+
             construction_project_count: Number(item.construction_project_count ?? details.construction_project_count ?? 0),
             construction_length_km: Number(item.construction_length_km ?? details.construction_length_km ?? 0),
+            construction_chainage: item.construction_chainage || details.construction_chainage || '',
+
+            stmc_contract_count: Number(item.stmc_contract_count ?? details.stmc_contract_count ?? 0),
+            stmc_length_km: Number(item.stmc_length_km ?? details.stmc_length_km ?? 0),
+            stmc_chainage: item.stmc_chainage || details.stmc_chainage || '',
+            stmc_expiry_date: item.stmc_expiry_date || details.stmc_expiry_date || '',
+
             pbmc_project_count: Number(item.pbmc_project_count ?? details.pbmc_project_count ?? 0),
             pbmc_length_km: Number(item.pbmc_length_km ?? details.pbmc_length_km ?? 0),
+            pbmc_chainage: item.pbmc_chainage || details.pbmc_chainage || '',
+            pbmc_expiry_date: item.pbmc_expiry_date || details.pbmc_expiry_date || '',
+
             no_dlp_length_km: Number(item.no_dlp_length_km ?? details.no_dlp_length_km ?? 0),
+            no_dlp_chainage: item.no_dlp_chainage || details.no_dlp_chainage || '',
+            no_dlp_expiry_date: item.no_dlp_expiry_date || details.no_dlp_expiry_date || '',
+
             uncontracted_after_2027_km: Number(item.uncontracted_after_2027_km ?? details.uncontracted_after_2027_km ?? 0),
 
             contractor_name: item.contractor_name || 'Assigned Contractor',
             contract_mode: item.contract_mode || 'EPC',
             work_description: item.work_description || '',
             doc_date: item.doc_date || '',
-            dlp_expiry_date: item.dlp_expiry_date || '',
             days_remaining: daysRemaining,
             status: currentStatus as any,
           };
         });
 
-        // Filter out DELETED status records
         formattedContracts = formattedContracts.filter((c) => (c.status as string) !== 'DELETED');
 
-        // Apply division filter
         if (division) {
           formattedContracts = formattedContracts.filter(
             (c) => c.division_name?.toLowerCase().includes(division.toLowerCase()) || c.stretch_name.toLowerCase().includes(division.toLowerCase())
           );
         }
 
-        // Apply search query filter
         if (search) {
           const term = search.toLowerCase();
           formattedContracts = formattedContracts.filter(
@@ -123,45 +131,46 @@ export async function POST(req: NextRequest) {
     const toKm = Number(body.to_km || 0);
     const lengthKm = Number(body.length_km || Math.abs(toKm - fromKm));
 
+    const breakdown = {
+      dlp_contract_count: Number(body.dlp_contract_count || 0),
+      dlp_length_km: Number(body.dlp_length_km || 0),
+      dlp_chainage: body.dlp_chainage || '',
+      dlp_expiry_date: body.dlp_expiry_date || '',
+
+      construction_project_count: Number(body.construction_project_count || 0),
+      construction_length_km: Number(body.construction_length_km || 0),
+      construction_chainage: body.construction_chainage || '',
+
+      stmc_contract_count: Number(body.stmc_contract_count || 0),
+      stmc_length_km: Number(body.stmc_length_km || 0),
+      stmc_chainage: body.stmc_chainage || '',
+      stmc_expiry_date: body.stmc_expiry_date || '',
+
+      pbmc_project_count: Number(body.pbmc_project_count || 0),
+      pbmc_length_km: Number(body.pbmc_length_km || 0),
+      pbmc_chainage: body.pbmc_chainage || '',
+      pbmc_expiry_date: body.pbmc_expiry_date || '',
+
+      no_dlp_length_km: Number(body.no_dlp_length_km || 0),
+      no_dlp_chainage: body.no_dlp_chainage || '',
+      no_dlp_expiry_date: body.no_dlp_expiry_date || '',
+
+      uncontracted_after_2027_km: Number(body.uncontracted_after_2027_km || 0),
+    };
+
     const payload = {
       highway_code: body.highway_code,
       stretch_name: body.stretch_name || `${body.division_name || ''} Division - ${body.highway_code} (Km ${fromKm} to ${toKm})`,
       from_km: fromKm,
       to_km: toKm,
       length_km: lengthKm,
-
-      // Breakdown Metrics
-      dlp_contract_count: Number(body.dlp_contract_count || 0),
-      dlp_length_km: Number(body.dlp_length_km || 0),
-      construction_project_count: Number(body.construction_project_count || 0),
-      construction_length_km: Number(body.construction_length_km || 0),
-      stmc_contract_count: Number(body.stmc_contract_count || 0),
-      stmc_length_km: Number(body.stmc_length_km || 0),
-      stmc_expiry_date: body.stmc_expiry_date || null,
-      pbmc_project_count: Number(body.pbmc_project_count || 0),
-      pbmc_length_km: Number(body.pbmc_length_km || 0),
-      no_dlp_length_km: Number(body.no_dlp_length_km || 0),
-      uncontracted_after_2027_km: Number(body.uncontracted_after_2027_km || 0),
-
       contractor_name: body.contractor_name || `${body.division_name || ''} Division Contractor`,
       contract_mode: body.contract_mode || 'EPC',
       work_description: body.work_description || '',
       doc_date: body.doc_date || null,
       dlp_expiry_date: body.dlp_expiry_date || null,
       status: 'ACTIVE',
-      contract_details: {
-        dlp_contract_count: Number(body.dlp_contract_count || 0),
-        dlp_length_km: Number(body.dlp_length_km || 0),
-        construction_project_count: Number(body.construction_project_count || 0),
-        construction_length_km: Number(body.construction_length_km || 0),
-        stmc_contract_count: Number(body.stmc_contract_count || 0),
-        stmc_length_km: Number(body.stmc_length_km || 0),
-        stmc_expiry_date: body.stmc_expiry_date || null,
-        pbmc_project_count: Number(body.pbmc_project_count || 0),
-        pbmc_length_km: Number(body.pbmc_length_km || 0),
-        no_dlp_length_km: Number(body.no_dlp_length_km || 0),
-        uncontracted_after_2027_km: Number(body.uncontracted_after_2027_km || 0),
-      },
+      contract_details: breakdown,
     };
 
     if (supabase) {
@@ -171,7 +180,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, contract: { ...payload, id: `dlp-${Date.now()}` } });
+    return NextResponse.json({ success: true, contract: { ...payload, ...breakdown, id: `dlp-${Date.now()}` } });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
@@ -193,44 +202,45 @@ export async function PUT(req: NextRequest) {
     const toKm = Number(body.to_km || 0);
     const lengthKm = Number(body.length_km || Math.abs(toKm - fromKm));
 
+    const breakdown = {
+      dlp_contract_count: Number(body.dlp_contract_count || 0),
+      dlp_length_km: Number(body.dlp_length_km || 0),
+      dlp_chainage: body.dlp_chainage || '',
+      dlp_expiry_date: body.dlp_expiry_date || '',
+
+      construction_project_count: Number(body.construction_project_count || 0),
+      construction_length_km: Number(body.construction_length_km || 0),
+      construction_chainage: body.construction_chainage || '',
+
+      stmc_contract_count: Number(body.stmc_contract_count || 0),
+      stmc_length_km: Number(body.stmc_length_km || 0),
+      stmc_chainage: body.stmc_chainage || '',
+      stmc_expiry_date: body.stmc_expiry_date || '',
+
+      pbmc_project_count: Number(body.pbmc_project_count || 0),
+      pbmc_length_km: Number(body.pbmc_length_km || 0),
+      pbmc_chainage: body.pbmc_chainage || '',
+      pbmc_expiry_date: body.pbmc_expiry_date || '',
+
+      no_dlp_length_km: Number(body.no_dlp_length_km || 0),
+      no_dlp_chainage: body.no_dlp_chainage || '',
+      no_dlp_expiry_date: body.no_dlp_expiry_date || '',
+
+      uncontracted_after_2027_km: Number(body.uncontracted_after_2027_km || 0),
+    };
+
     const payload = {
       highway_code: body.highway_code,
       stretch_name: body.stretch_name || `${body.division_name || ''} Division - ${body.highway_code} (Km ${fromKm} to ${toKm})`,
       from_km: fromKm,
       to_km: toKm,
       length_km: lengthKm,
-
-      // Breakdown Metrics
-      dlp_contract_count: Number(body.dlp_contract_count || 0),
-      dlp_length_km: Number(body.dlp_length_km || 0),
-      construction_project_count: Number(body.construction_project_count || 0),
-      construction_length_km: Number(body.construction_length_km || 0),
-      stmc_contract_count: Number(body.stmc_contract_count || 0),
-      stmc_length_km: Number(body.stmc_length_km || 0),
-      stmc_expiry_date: body.stmc_expiry_date || null,
-      pbmc_project_count: Number(body.pbmc_project_count || 0),
-      pbmc_length_km: Number(body.pbmc_length_km || 0),
-      no_dlp_length_km: Number(body.no_dlp_length_km || 0),
-      uncontracted_after_2027_km: Number(body.uncontracted_after_2027_km || 0),
-
       contractor_name: body.contractor_name,
       contract_mode: body.contract_mode,
       work_description: body.work_description,
       doc_date: body.doc_date || null,
       dlp_expiry_date: body.dlp_expiry_date || null,
-      contract_details: {
-        dlp_contract_count: Number(body.dlp_contract_count || 0),
-        dlp_length_km: Number(body.dlp_length_km || 0),
-        construction_project_count: Number(body.construction_project_count || 0),
-        construction_length_km: Number(body.construction_length_km || 0),
-        stmc_contract_count: Number(body.stmc_contract_count || 0),
-        stmc_length_km: Number(body.stmc_length_km || 0),
-        stmc_expiry_date: body.stmc_expiry_date || null,
-        pbmc_project_count: Number(body.pbmc_project_count || 0),
-        pbmc_length_km: Number(body.pbmc_length_km || 0),
-        no_dlp_length_km: Number(body.no_dlp_length_km || 0),
-        uncontracted_after_2027_km: Number(body.uncontracted_after_2027_km || 0),
-      },
+      contract_details: breakdown,
     };
 
     if (supabase && !id.startsWith('dlp-')) {
@@ -240,7 +250,7 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, contract: { ...body, ...payload } });
+    return NextResponse.json({ success: true, contract: { ...body, ...payload, ...breakdown } });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
