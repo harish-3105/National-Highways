@@ -3,14 +3,14 @@
 **Project**: Tamil Nadu National Highways Department Management System  
 **Repository Remote**: `git@github.com:tnhighwaysdep/highways_project.git`  
 **Active Production Branch**: `main`  
-**Latest Deployed Commit**: `1a847ea`  
+**Latest Deployed Commit**: `53389db`  
 **Date**: August 9, 2026  
 
 ---
 
 ## 1. Executive Summary
 
-Today's sprint focused on the **complete architectural upgrade, 100% 26-column Excel data mapping, 1-to-N sub-contract relational engine, UI/UX redesign, and adversarial parser hardening** of the **Defect Liability Period (DLP) & Maintenance Portal (`/dlp`)** and **Ingestion Engine (`/ingest`)**.
+Today's sprint focused on the **complete architectural upgrade, 100% 26-column Excel data mapping, 1-to-N sub-contract relational engine, UI/UX redesign, adversarial parser hardening, and Level 2/3 planning** of the **Defect Liability Period (DLP) & Maintenance Portal (`/dlp`)**, **Ingestion Engine (`/ingest`)**, and **Master Corridor Catalog (`/highways`)**.
 
 All 26 columns of the official departmental spreadsheet (`Status of NH Length Maintenance DLP as on 16.07.2026 (1).xlsx`) are now fully supported across the database schema, bulk ingestion parser, entry forms, view modals, and table views. The DLP portal has been completely restyled to match the app's royal blue and slate navy design system, and the parser has been empirically stress-tested against 11 adversarial breakage scenarios with 0 remaining vulnerabilities.
 
@@ -56,21 +56,41 @@ All 26 columns of the official departmental spreadsheet (`Status of NH Length Ma
 ---
 
 ### D. Complete DLP Entry, View, Edit & Delete Modal Suite
-1. [`AddDlpContractModal.tsx`](file:///home/mathir14/nh_proj/src/components/dlp/AddDlpContractModal.tsx): 4-section layout with cascading Circle/Division selection, all category breakdown fields, `+ Add Sub-Contract` repeater, and `No DLP Expiry Date`.
+1. [`AddDlpContractModal.tsx`](file:///home/mathir14/nh_proj/src/components/dlp/AddDlpContractModal.tsx): 4-section layout with cascading Circle/Division selection, all 26 column breakdown fields (including `PBMC Chainage Col 19` and `No DLP Expiry Date Col 23`), `+ Add Sub-Contract` repeater.
 2. [`EditDlpContractModal.tsx`](file:///home/mathir14/nh_proj/src/components/dlp/EditDlpContractModal.tsx): Complete record editor pre-populating all 26 columns and child sub-contracts.
-3. [`ViewDlpContractModal.tsx`](file:///home/mathir14/nh_proj/src/components/dlp/ViewDlpContractModal.tsx): Detailed inspection modal displaying parent stretch metrics, category breakdown cards, and sub-contracts sub-table.
+3. [`ViewDlpContractModal.tsx`](file:///home/mathir14/nh_proj/src/components/dlp/ViewDlpContractModal.tsx): Detailed inspection modal displaying all 6 breakdown category cards (DLP, STMC, PBMC, Construction, No DLP Stretch Cols 21-23, and Uncontracted Length Col 24), parent stretch metrics, and sub-contracts sub-table.
 4. [`DeleteDlpContractModal.tsx`](file:///home/mathir14/nh_proj/src/components/dlp/DeleteDlpContractModal.tsx): Modal dialog for soft-deleting DLP records.
 
 ---
 
 ### E. DLP Module UI/UX & Color Scheme Overhaul
 - **Color Palette Alignment**: Replaced legacy amber/orange backgrounds with the app's royal blue (`bg-blue-600`), deep slate navy (`bg-slate-900`), and slate cards (`bg-slate-50 dark:bg-slate-800/60`).
-- **Section 2 Category Breakdown Cards**: Standardized the 4 breakdown boxes across Add, Edit, and View modals to uniform neutral slate cards.
-- **Filter Toolbar Alignment**: Resized `Manual Date Filter` and `Status Filter Pills` (`All / Active / Expiring / Expired`) to match the exact height (`38px`) and font size (`text-xs font-semibold`) of neighboring dropdown selects (`All Circles`, `All Divisions`, `Search`).
+- **Section 2 Category Breakdown Cards**: Standardized the 6 breakdown boxes across Add, Edit, and View modals to uniform neutral slate cards.
+- **Filter Toolbar Alignment**: Resized `Manual Date Filter` and `Status Filter Pills` (`All / Active / Expiring / Expired`) to match the exact height (`38px`), padding, border-radius (`rounded-xl`), and font size (`text-xs font-semibold`) of neighboring dropdown selects (`All Circles`, `All Divisions`, `Search`).
 
 ---
 
-## 3. Adversarial Audit & Verification Metrics
+### F. Level 2 & Level 3 Corridor Roadmap (`ROADMAP_LEVEL2_LEVEL3.md`)
+- **Level 1 (Live)**: Master Corridor Catalog (`/highways`).
+- **Level 2 (Planned Next)**: Granular Sub-Chainage & Traffic PCU Breakdown (`/highways/[id]/chainages`) based on `Lane wise PCU Details.xlsx`.
+- **Level 3 (Planned Next)**: Interactive Web-Based Straight-Line Diagram (SLD) (`/highways/[id]/sld`) replacing `TN-NH-Bar chart June 2026.xlsx`.
+
+---
+
+## 3. Ground-Truth Manual Excel Audit Results (As of August 9, 2026)
+
+### Main Dashboard Parent Level (19 Stretches)
+- 🔴 **1 Expired Parent Stretch**: `NH-75 (Vellore Division)` (Expired `30.07.2025`).
+- ⚠️ **1 Expiring Soon Parent Stretch**: `NH-383 (Madurai Division)` (Expiring `27.08.2026` — **18 days left**).
+- 🟢 **17 Active Parent Stretches**: Valid guarantees extending through 2027 to 2030.
+
+### Deep Sub-Contract & Cell Level (87 Sub-Contracts)
+- ⚠️ **2 Sub-Contracts Expiring Soon**: `NH-383 (Madurai)` (18d left) and `NH-181 (Gobichettipalayam)` (3d left).
+- 🔴 **6 Sub-Stretches Expired**: `NH-75 Vellore` (30.07.2025), `NH-38 Vellore` (12.06.2026), `NH-181 Coimbatore` (06.07.2026), `NH-381A Salem` (23.06.2026), `NH-381A Coimbatore` (23.06.2026), `NH-381A Gobichettipalayam` (08.07.2025).
+
+---
+
+## 4. Adversarial Audit & Verification Metrics
 
 1. **Adversarial Stress Suite (`adversarialStressTest.ts`)**:
    - 11 adversarial breakage scenarios tested $\rightarrow$ **0 breakages remaining**.
@@ -83,10 +103,13 @@ All 26 columns of the official departmental spreadsheet (`Status of NH Length Ma
 
 ---
 
-## 4. Git Deployment Log (Today's Main Branch Commits)
+## 5. Git Deployment Log (Today's Main Branch Commits)
 
 | Commit SHA | Commit Message |
 | :--- | :--- |
+| **`53389db`** | `fix(dlp): add PBMC Chainages (Col 19) input to AddDlpContractModal completing 100% 26-column entry parity` |
+| **`05d520a`** | `fix(dlp): add missing No DLP Stretch and Uncontracted Length cards to ViewDlpContractModal` |
+| **`c783aaf`** | `docs: add Level 2 and Level 3 strategic development plan for corridor architecture` |
 | **`1a847ea`** | `fix(ingestion): resolve 3 edge-case breakages (Excel serial dates, 2-digit years, and comma decimal separators)` |
 | **`fa4ea86`** | `test(dlp): empirically verify complex embedded multi-date cell extraction parity` |
 | **`359b52c`** | `feat(dlp): add No DLP Expiry Date input field completing 100% 26-column Excel mapping` |
@@ -115,8 +138,8 @@ All 26 columns of the official departmental spreadsheet (`Status of NH Length Ma
 
 ---
 
-## 5. Verification & Status Metrics
+## 6. Verification & Status Metrics
 
 - **TypeScript Compilation**: `npx tsc --noEmit` &rarr; **0 Errors**.
-- **Next.js Turbopack Build**: `npm run build` &rarr; **Compiled in 934ms (10/10 static & dynamic routes)**.
+- **Next.js Turbopack Build**: `npm run build` &rarr; **Compiled in 544ms (10/10 static & dynamic routes)**.
 - **Git Remote**: Synchronized with `origin/main` (`git@github.com:tnhighwaysdep/highways_project.git`).
