@@ -208,17 +208,17 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="bg-amber-600 text-white px-6 py-4 flex items-center justify-between">
+        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <ShieldCheck className="w-6 h-6 text-amber-200 shrink-0" />
+            <ShieldCheck className="w-6 h-6 text-blue-400 shrink-0" />
             <div>
               <h3 className="font-extrabold text-base text-white">Add DLP & Maintenance Record</h3>
-              <p className="text-xs text-amber-100">Log full 26-column Excel metrics & granular sub-contracts</p>
+              <p className="text-xs text-slate-300">Log full 26-column Excel metrics & granular sub-contracts</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-amber-100 hover:text-white rounded-lg transition-colors cursor-pointer"
+            className="p-1 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -234,7 +234,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
 
           {/* Section 1: Circle & Division Cascading Selection */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
-            <h4 className="font-bold text-xs text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+            <h4 className="font-bold text-xs text-blue-700 dark:text-blue-400 uppercase tracking-wider">
               1. Circle, Division & Chainages
             </h4>
 
@@ -733,7 +733,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center gap-1.5 px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
             >
               {loading ? (
                 <>

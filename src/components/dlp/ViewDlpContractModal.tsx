@@ -69,21 +69,21 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="bg-amber-600 text-white px-6 py-4 flex items-center justify-between">
+        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <ShieldCheck className="w-6 h-6 text-amber-200 shrink-0" />
+            <ShieldCheck className="w-6 h-6 text-blue-400 shrink-0" />
             <div>
               <h3 className="font-extrabold text-base text-white">
                 Complete Departmental Stretch Record & Granular Sub-Contracts
               </h3>
-              <span className="text-xs text-amber-100">
+              <span className="text-xs text-slate-300">
                 {contract.highway_code} &bull; {contract.division_name || 'General'} Division &bull; 1-to-N Sub-Contract Model
               </span>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-amber-100 hover:text-white rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -94,7 +94,7 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
           {/* Status Bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-amber-600 text-white px-3 py-1 rounded-lg font-bold text-xs">
+              <span className="bg-blue-600 text-white px-3 py-1 rounded-lg font-bold text-xs">
                 {contract.highway_code}
               </span>
               <span className="bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-lg font-bold text-xs">
@@ -109,7 +109,7 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
 
           {/* Section 1: Stretch & Chainage Particulars */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
-            <h4 className="font-bold text-xs text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+            <h4 className="font-bold text-xs text-blue-700 dark:text-blue-400 uppercase tracking-wider">
               Section 1 &ndash; Stretch & Chainage Particulars (Cols 0 to 5)
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -132,7 +132,7 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
 
           {/* Section 2: Complete Maintenance Category Breakdown */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-4">
-            <h4 className="font-bold text-xs text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+            <h4 className="font-bold text-xs text-blue-700 dark:text-blue-400 uppercase tracking-wider">
               Section 2 &ndash; Category Breakdown Summary (Cols 6 to 24)
             </h4>
 
@@ -207,15 +207,15 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
               {/* Construction Breakdown */}
               <div className="bg-orange-50/50 dark:bg-orange-950/20 p-4 rounded-xl border border-orange-200 dark:border-orange-800 space-y-2">
                 <span className="font-bold text-orange-900 dark:text-orange-300 block text-xs">
-                  Under Construction / Tender (Cols 10-12)
+                  Under Construction / Tender Projects (Cols 10-12)
                 </span>
                 <div className="grid grid-cols-2 gap-2">
                   <div><strong className="text-slate-500">No. of Projects:</strong> <span className="font-bold">{contract.construction_project_count ?? 0}</span></div>
-                  <div><strong className="text-slate-500">Construction Length:</strong> <span className="font-bold text-orange-700">{contract.construction_length_km ?? 0} km</span></div>
+                  <div><strong className="text-slate-500">Length in km:</strong> <span className="font-bold text-orange-700">{contract.construction_length_km ?? 0} km</span></div>
                 </div>
                 {contract.construction_chainage && (
                   <div>
-                    <strong className="text-slate-500 block">Construction Specific Chainages (Col 11):</strong>
+                    <strong className="text-slate-500 block">Construction Chainages (Col 11):</strong>
                     <span className="font-semibold text-slate-800 dark:text-slate-200">{contract.construction_chainage}</span>
                   </div>
                 )}
@@ -224,9 +224,9 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
           </div>
 
           {/* Section 3: Granular Sub-Contracts Relational Table */}
-          <div className="border border-amber-300 dark:border-amber-800 rounded-xl p-4 space-y-3 bg-amber-50/30 dark:bg-amber-950/10">
-            <h4 className="font-bold text-xs text-amber-800 dark:text-amber-300 uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-amber-600" />
+          <div className="border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-3 bg-blue-50/20 dark:bg-blue-950/10">
+            <h4 className="font-bold text-xs text-blue-800 dark:text-blue-300 uppercase tracking-wider flex items-center gap-2">
+              <Layers className="w-4 h-4 text-blue-600" />
               Section 3 &ndash; Individual Sub-Contracts ({subContracts.length} Extracted Sub-Stretches)
             </h4>
 
@@ -264,7 +264,7 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
 
           {/* Section 4: Departmental Remarks & Proposals (Col 25) */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-2">
-            <h4 className="font-bold text-xs text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+            <h4 className="font-bold text-xs text-blue-700 dark:text-blue-400 uppercase tracking-wider">
               Section 4 &ndash; Departmental Remarks & Work Proposals (Col 25)
             </h4>
             <p className="bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap leading-relaxed">
@@ -277,7 +277,7 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
         <div className="bg-slate-50 dark:bg-slate-800/60 p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
           >
             Close Window
           </button>
