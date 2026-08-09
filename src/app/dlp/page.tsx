@@ -275,13 +275,6 @@ export default function DlpPage() {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
-            <Link
-              href="/ingest"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
-            >
-              <Upload className="w-4 h-4" /> Import Excel
-            </Link>
-
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
