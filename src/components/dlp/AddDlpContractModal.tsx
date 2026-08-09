@@ -2,6 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { DLPContractItem } from '@/app/dlp/page';
+import {
+  DLP_CIRCLE_OPTIONS,
+  DLP_CIRCLE_DIVISION_MAP,
+  getCircleForDivision,
+} from '@/lib/dlp/masterData';
 import { ShieldCheck, X, Plus } from 'lucide-react';
 
 interface AddDlpContractModalProps {
@@ -9,19 +14,6 @@ interface AddDlpContractModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
-
-const DIVISION_OPTIONS = [
-  'Vellore',
-  'Villupuram',
-  'Madurai',
-  'Trichy',
-  'Salem',
-  'Coimbatore',
-  'Gobichettipalayam',
-  'Chennai',
-  'Kanchipuram',
-  'Tirunelveli',
-];
 
 const CONTRACT_MODES = ['EPC', 'STMC', 'PBMC', 'BOT', 'HAM', 'Annual Plan', 'Special Repairs'];
 
@@ -31,31 +23,54 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
   onSuccess,
 }) => {
   const [highwayCode, setHighwayCode] = useState('');
-  const [divisionName, setDivisionName] = useState('Vellore');
+  const [circleName, setCircleName] = useState<string>('Salem');
+  const [divisionName, setDivisionName] = useState<string>('Salem');
   const [stretchName, setStretchName] = useState('');
   const [fromKm, setFromKm] = useState<number | ''>(0);
   const [toKm, setToKm] = useState<number | ''>(10);
+
   const [contractorName, setContractorName] = useState('');
   const [contractMode, setContractMode] = useState('EPC');
   const [workDescription, setWorkDescription] = useState('');
   const [docDate, setDocDate] = useState('');
   const [dlpExpiryDate, setDlpExpiryDate] = useState('');
 
-  // Full Breakdown Fields
+  // 100% Complete Breakdown Category Inputs
   const [dlpContractCount, setDlpContractCount] = useState<number>(0);
   const [dlpLengthKm, setDlpLengthKm] = useState<number>(0);
+  const [dlpChainage, setDlpChainage] = useState('');
+
   const [stmcContractCount, setStmcContractCount] = useState<number>(0);
   const [stmcLengthKm, setStmcLengthKm] = useState<number>(0);
+  const [stmcChainage, setStmcChainage] = useState('');
   const [stmcExpiryDate, setStmcExpiryDate] = useState('');
+
   const [constructionProjectCount, setConstructionProjectCount] = useState<number>(0);
   const [constructionLengthKm, setConstructionLengthKm] = useState<number>(0);
+  const [constructionChainage, setConstructionChainage] = useState('');
+
   const [pbmcProjectCount, setPbmcProjectCount] = useState<number>(0);
   const [pbmcLengthKm, setPbmcLengthKm] = useState<number>(0);
+  const [pbmcChainage, setPbmcChainage] = useState('');
+  const [pbmcExpiryDate, setPbmcExpiryDate] = useState('');
+
   const [noDlpLengthKm, setNoDlpLengthKm] = useState<number>(0);
+  const [noDlpChainage, setNoDlpChainage] = useState('');
+  const [noDlpExpiryDate, setNoDlpExpiryDate] = useState('');
+
   const [uncontractedAfter2027Km, setUncontractedAfter2027Km] = useState<number>(0);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Update available division options when Circle changes
+  const divisionOptions = DLP_CIRCLE_DIVISION_MAP[circleName] || [];
+
+  const handleCircleChange = (c: string) => {
+    setCircleName(c);
+    const divs = DLP_CIRCLE_DIVISION_MAP[c] || [];
+    if (divs.length > 0) setDivisionName(divs[0]);
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -98,22 +113,37 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
         from_km: Number(fromKm || 0),
         to_km: Number(toKm || 0),
         length_km: calculatedLength,
+
+        // All 26 Excel Sub-Columns
         dlp_contract_count: Number(dlpContractCount || 0),
         dlp_length_km: Number(dlpLengthKm || 0),
-        stmc_contract_count: Number(stmcContractCount || 0),
-        stmc_length_km: Number(stmcLengthKm || 0),
-        stmc_expiry_date: stmcExpiryDate || undefined,
+        dlp_chainage: dlpChainage.trim(),
+        dlp_expiry_date: dlpExpiryDate || undefined,
+
         construction_project_count: Number(constructionProjectCount || 0),
         construction_length_km: Number(constructionLengthKm || 0),
+        construction_chainage: constructionChainage.trim(),
+
+        stmc_contract_count: Number(stmcContractCount || 0),
+        stmc_length_km: Number(stmcLengthKm || 0),
+        stmc_chainage: stmcChainage.trim(),
+        stmc_expiry_date: stmcExpiryDate || undefined,
+
         pbmc_project_count: Number(pbmcProjectCount || 0),
         pbmc_length_km: Number(pbmcLengthKm || 0),
+        pbmc_chainage: pbmcChainage.trim(),
+        pbmc_expiry_date: pbmcExpiryDate || undefined,
+
         no_dlp_length_km: Number(noDlpLengthKm || 0),
+        no_dlp_chainage: noDlpChainage.trim(),
+        no_dlp_expiry_date: noDlpExpiryDate || undefined,
+
         uncontracted_after_2027_km: Number(uncontractedAfter2027Km || 0),
+
         contractor_name: contractorName.trim() || `${divisionName} Division (Contractor DLP)`,
         contract_mode: contractMode,
         work_description: workDescription.trim() || `Maintenance & DLP period under ${divisionName} Division (${contractMode})`,
         doc_date: docDate || undefined,
-        dlp_expiry_date: dlpExpiryDate || undefined,
       };
 
       const res = await fetch('/api/dlp', {
@@ -140,7 +170,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -149,7 +179,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
             <ShieldCheck className="w-6 h-6 text-amber-200 shrink-0" />
             <div>
               <h3 className="font-extrabold text-base text-white">Add DLP & Maintenance Record</h3>
-              <p className="text-xs text-amber-100">Log full Excel breakdown metrics for National Highway stretch</p>
+              <p className="text-xs text-amber-100">Log full 26-column Excel breakdown metrics for National Highway stretch</p>
             </div>
           </div>
           <button
@@ -168,12 +198,13 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
             </div>
           )}
 
-          {/* Section 1: Basic Identifiers */}
+          {/* Section 1: Circle & Division Cascading Selection */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
             <h4 className="font-bold text-xs text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-              1. Basic Identifiers & Chainages
+              1. Circle, Division & Chainages
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Highway Code <span className="text-red-500">*</span>
@@ -190,14 +221,31 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
 
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Highways Division <span className="text-red-500">*</span>
+                  Circle <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={circleName}
+                  onChange={(e) => handleCircleChange(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  {DLP_CIRCLE_OPTIONS.map((c) => (
+                    <option key={c} value={c}>
+                      {c} Circle
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Division <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={divisionName}
                   onChange={(e) => setDivisionName(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-amber-500"
                 >
-                  {DIVISION_OPTIONS.map((d) => (
+                  {divisionOptions.map((d) => (
                     <option key={d} value={d}>
                       {d} Division
                     </option>
@@ -212,7 +260,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="e.g. Vellore Division - NH-179A (Km 80/0 to 125/0)"
+                placeholder="e.g. Salem Division - NH-179A (Km 0 to 80)"
                 value={stretchName}
                 onChange={(e) => setStretchName(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-amber-500"
@@ -244,23 +292,23 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
 
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Total Stretch Length</label>
-                <div className="px-3 py-2 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-extrabold">
+                <div className="px-3 py-2 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-extrabold text-blue-600 dark:text-blue-400">
                   {calculatedLength} km
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Section 2: Complete Excel Breakdown Fields */}
+          {/* Section 2: Complete Category Sub-Chainages & Expiry Inputs */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-4">
             <h4 className="font-bold text-xs text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-              2. Maintenance Category Length Breakdown (Excel Fields)
+              2. Category-Specific Sub-Chainages & Expiry Dates (Excel Fields)
             </h4>
 
             {/* DLP & STMC */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-3">
-                <span className="font-bold text-emerald-800 dark:text-emerald-300 block text-xs">Under DLP</span>
+                <span className="font-bold text-emerald-800 dark:text-emerald-300 block text-xs">Under DLP Guarantee</span>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Contracts Count</label>
@@ -281,6 +329,16 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                       className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg font-bold text-emerald-700"
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">DLP Specific Chainages (Col 8)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Km 12.650 to Km 20.00..."
+                    value={dlpChainage}
+                    onChange={(e) => setDlpChainage(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg font-medium text-[11px]"
+                  />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">DLP Expiry Date</label>
@@ -315,6 +373,16 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                       className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-800 rounded-lg font-bold text-blue-700"
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">STMC Specific Chainages (Col 15)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Km 139/0 to 141/0..."
+                    value={stmcChainage}
+                    onChange={(e) => setStmcChainage(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-800 rounded-lg font-medium text-[11px]"
+                  />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">STMC Expiry Date</label>
@@ -353,6 +421,16 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Construction Chainages (Col 11)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Km 0.000 to Km 12.300..."
+                    value={constructionChainage}
+                    onChange={(e) => setConstructionChainage(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-orange-300 dark:border-orange-800 rounded-lg font-medium text-[11px]"
+                  />
+                </div>
               </div>
 
               <div className="bg-purple-50/50 dark:bg-purple-950/20 p-3.5 rounded-xl border border-purple-200 dark:border-purple-800 space-y-3">
@@ -378,20 +456,54 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">PBMC Specific Chainages (Col 19)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Km 0/0-31/8..."
+                    value={pbmcChainage}
+                    onChange={(e) => setPbmcChainage(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-800 rounded-lg font-medium text-[11px]"
+                  />
+                </div>
               </div>
             </div>
 
             {/* No DLP & Uncontracted */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Length with No DLP (km)</label>
-                <input
-                  type="number"
-                  step="0.001"
-                  value={noDlpLengthKm}
-                  onChange={(e) => setNoDlpLengthKm(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
-                />
+              <div className="bg-slate-100 dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">Length with No DLP</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">No DLP Length (km)</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={noDlpLengthKm}
+                      onChange={(e) => setNoDlpLengthKm(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Expiry Date (Col 23)</label>
+                    <input
+                      type="date"
+                      value={noDlpExpiryDate}
+                      onChange={(e) => setNoDlpExpiryDate(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg font-bold"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">No DLP Chainages (Col 22)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. km 78/000-110/200..."
+                    value={noDlpChainage}
+                    onChange={(e) => setNoDlpChainage(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg font-medium text-[11px]"
+                  />
+                </div>
               </div>
 
               <div>
@@ -407,7 +519,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
             </div>
           </div>
 
-          {/* Section 3: Contractor & Description */}
+          {/* Section 3: Contractor Info & Remarks */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
             <h4 className="font-bold text-xs text-amber-700 dark:text-amber-400 uppercase tracking-wider">
               3. Contract Info & Remarks
@@ -417,7 +529,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Contractor Name</label>
                 <input
                   type="text"
-                  placeholder="e.g. Vellore Division (Contractor DLP)"
+                  placeholder="e.g. Salem Division (Contractor DLP)"
                   value={contractorName}
                   onChange={(e) => setContractorName(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold"

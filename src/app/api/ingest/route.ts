@@ -105,6 +105,19 @@ export async function POST(request: Request) {
         'days_remaining',
         'status',
         'created_at',
+        'division_name',
+        'dlp_contract_count',
+        'dlp_length_km',
+        'construction_project_count',
+        'construction_length_km',
+        'stmc_contract_count',
+        'stmc_length_km',
+        'stmc_expiry_date',
+        'pbmc_project_count',
+        'pbmc_length_km',
+        'no_dlp_length_km',
+        'uncontracted_after_2027_km',
+        'contract_details',
       ];
       const isValidIsoDate = (val: any): boolean => {
         if (!val || typeof val !== 'string') return false;
