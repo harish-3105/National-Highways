@@ -8,6 +8,12 @@ import EditDlpContractModal from '@/components/dlp/EditDlpContractModal';
 import DeleteDlpContractModal from '@/components/dlp/DeleteDlpContractModal';
 import ViewDlpContractModal from '@/components/dlp/ViewDlpContractModal';
 import {
+  DLP_CIRCLE_OPTIONS,
+  DLP_CIRCLE_DIVISION_MAP,
+  ALL_DLP_DIVISIONS,
+  getCircleForDivision,
+} from '@/lib/dlp/masterData';
+import {
   ShieldCheck,
   Clock,
   AlertTriangle,
@@ -51,25 +57,13 @@ export interface DLPContractItem {
   status: 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | 'DELETED';
 }
 
-const DIVISION_OPTIONS = [
-  'Vellore',
-  'Villupuram',
-  'Madurai',
-  'Trichy',
-  'Salem',
-  'Coimbatore',
-  'Gobichettipalayam',
-  'Chennai',
-  'Kanchipuram',
-  'Tirunelveli',
-];
-
 export default function DlpPage() {
   const [contracts, setContracts] = useState<DLPContractItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Search & Filters
+  // Search & Circle / Division Filters
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCircle, setSelectedCircle] = useState('');
   const [selectedDivision, setSelectedDivision] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED'>('ALL');
   const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeFilter>({
@@ -110,10 +104,32 @@ export default function DlpPage() {
     fetchDlpContracts();
   }, [fetchDlpContracts]);
 
-  // Client-side date filtering
+  // Available division options based on selected Circle
+  const divisionOptions = selectedCircle
+    ? DLP_CIRCLE_DIVISION_MAP[selectedCircle] || []
+    : ALL_DLP_DIVISIONS;
+
+  // Client-side Circle, Division, and Date filtering
   const filtered = contracts.filter((c) => {
+    const divName = c.division_name || '';
+
+    // Circle Filter
+    if (selectedCircle) {
+      const circleOfItem = getCircleForDivision(divName);
+      if (circleOfItem !== selectedCircle) return false;
+    }
+
+    // Division Filter
+    if (selectedDivision && divName.toLowerCase() !== selectedDivision.toLowerCase()) {
+      if (!c.stretch_name.toLowerCase().includes(selectedDivision.toLowerCase())) {
+        return false;
+      }
+    }
+
+    // Date Range Filter
     if (dateRangeFilter.startDate && c.dlp_expiry_date < dateRangeFilter.startDate) return false;
     if (dateRangeFilter.endDate && c.dlp_expiry_date > dateRangeFilter.endDate) return false;
+
     return true;
   });
 
@@ -189,7 +205,7 @@ export default function DlpPage() {
               Defect Liability Period (DLP) & Maintenance Portal
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Active maintenance guarantees, STMC, PBMC, Construction & Uncontracted stretch logs across 100% of Excel metrics.
+              Active maintenance guarantees, STMC, PBMC, Construction & Uncontracted stretch logs across Circles & Divisions.
             </p>
           </div>
 
@@ -214,27 +230,44 @@ export default function DlpPage() {
 
         {/* Filter Bar */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 mb-6 shadow-xs space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
             {/* Search Input */}
-            <div className="relative">
+            <div className="relative col-span-1 sm:col-span-2 md:col-span-1">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
               <input
                 type="text"
-                placeholder="Search code, stretch, contractor, remarks..."
+                placeholder="Search code, stretch, contractor..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
 
-            {/* Division Filter */}
+            {/* Circle Filter */}
+            <select
+              value={selectedCircle}
+              onChange={(e) => {
+                setSelectedCircle(e.target.value);
+                setSelectedDivision('');
+              }}
+              className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="">All Circles</option>
+              {DLP_CIRCLE_OPTIONS.map((c) => (
+                <option key={c} value={c}>
+                  {c} Circle
+                </option>
+              ))}
+            </select>
+
+            {/* Division Filter (Cascading) */}
             <select
               value={selectedDivision}
               onChange={(e) => setSelectedDivision(e.target.value)}
               className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500"
             >
               <option value="">All Divisions</option>
-              {DIVISION_OPTIONS.map((d) => (
+              {divisionOptions.map((d) => (
                 <option key={d} value={d}>
                   {d} Division
                 </option>
@@ -255,7 +288,7 @@ export default function DlpPage() {
                 <button
                   key={st}
                   onClick={() => setStatusFilter(st)}
-                  className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                     statusFilter === st
                       ? 'bg-amber-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -300,10 +333,11 @@ export default function DlpPage() {
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-500">
                       <CalendarIcon className="w-8 h-8 text-slate-400 mx-auto mb-2 opacity-50" />
-                      <p className="font-bold text-sm">No DLP contracts match the selected search or date filter.</p>
+                      <p className="font-bold text-sm">No DLP contracts match the selected search, circle, or date filter.</p>
                       <button
                         onClick={() => {
                           setSearchTerm('');
+                          setSelectedCircle('');
                           setSelectedDivision('');
                           setStatusFilter('ALL');
                           setDateRangeFilter({ startDate: null, endDate: null, preset: null });
@@ -315,107 +349,111 @@ export default function DlpPage() {
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-4 px-6">
-                        <div className="font-extrabold text-blue-600">{item.highway_code}</div>
-                        <div className="text-slate-500 font-semibold text-[11px]">
-                          {item.division_name || 'General'} Division
-                        </div>
-                      </td>
+                  filtered.map((item) => {
+                    const circleName = getCircleForDivision(item.division_name || '');
+                    return (
+                      <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                        <td className="py-4 px-6">
+                          <div className="font-extrabold text-blue-600">{item.highway_code}</div>
+                          <div className="text-slate-500 font-semibold text-[11px]">
+                            {item.division_name || 'General'} Division
+                            {circleName ? <span className="text-slate-400 block text-[10px] font-normal">{circleName} Circle</span> : null}
+                          </div>
+                        </td>
 
-                      <td className="py-4 px-6">
-                        <div className="font-bold text-slate-900 dark:text-slate-100">{item.stretch_name}</div>
-                        <div className="text-slate-500 mt-0.5 text-[11px]">
-                          Km {item.from_km} to {item.to_km} ({item.length_km} km)
-                        </div>
-                      </td>
+                        <td className="py-4 px-6">
+                          <div className="font-bold text-slate-900 dark:text-slate-100">{item.stretch_name}</div>
+                          <div className="text-slate-500 mt-0.5 text-[11px]">
+                            Km {item.from_km} to {item.to_km} ({item.length_km} km)
+                          </div>
+                        </td>
 
-                      <td className="py-4 px-6">
-                        <div className="flex flex-wrap gap-1 max-w-[220px]">
-                          {item.dlp_length_km ? (
-                            <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 font-bold rounded text-[10px]">
-                              DLP: {item.dlp_length_km} km
-                            </span>
-                          ) : null}
-                          {item.stmc_length_km ? (
-                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200 font-bold rounded text-[10px]">
-                              STMC: {item.stmc_length_km} km
-                            </span>
-                          ) : null}
-                          {item.pbmc_length_km ? (
-                            <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200 font-bold rounded text-[10px]">
-                              PBMC: {item.pbmc_length_km} km
-                            </span>
-                          ) : null}
-                          {item.construction_length_km ? (
-                            <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-200 font-bold rounded text-[10px]">
-                              Const: {item.construction_length_km} km
-                            </span>
-                          ) : null}
-                          {item.no_dlp_length_km ? (
-                            <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold rounded text-[10px]">
-                              No DLP: {item.no_dlp_length_km} km
-                            </span>
-                          ) : null}
-                          {item.uncontracted_after_2027_km ? (
-                            <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 font-bold rounded text-[10px]">
-                              Uncontracted: {item.uncontracted_after_2027_km} km
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
+                        <td className="py-4 px-6">
+                          <div className="flex flex-wrap gap-1 max-w-[220px]">
+                            {item.dlp_length_km ? (
+                              <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 font-bold rounded text-[10px]">
+                                DLP: {item.dlp_length_km} km
+                              </span>
+                            ) : null}
+                            {item.stmc_length_km ? (
+                              <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200 font-bold rounded text-[10px]">
+                                STMC: {item.stmc_length_km} km
+                              </span>
+                            ) : null}
+                            {item.pbmc_length_km ? (
+                              <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200 font-bold rounded text-[10px]">
+                                PBMC: {item.pbmc_length_km} km
+                              </span>
+                            ) : null}
+                            {item.construction_length_km ? (
+                              <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-200 font-bold rounded text-[10px]">
+                                Const: {item.construction_length_km} km
+                              </span>
+                            ) : null}
+                            {item.no_dlp_length_km ? (
+                              <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold rounded text-[10px]">
+                                No DLP: {item.no_dlp_length_km} km
+                              </span>
+                            ) : null}
+                            {item.uncontracted_after_2027_km ? (
+                              <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 font-bold rounded text-[10px]">
+                                Uncontracted: {item.uncontracted_after_2027_km} km
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
 
-                      <td className="py-4 px-6 max-w-xs">
-                        <p className="text-slate-700 dark:text-slate-300 font-medium line-clamp-2 leading-relaxed text-[11px]">
-                          {item.work_description || 'N/A'}
-                        </p>
-                      </td>
+                        <td className="py-4 px-6 max-w-xs">
+                          <p className="text-slate-700 dark:text-slate-300 font-medium line-clamp-2 leading-relaxed text-[11px]">
+                            {item.work_description || 'N/A'}
+                          </p>
+                        </td>
 
-                      <td className="py-4 px-6 font-medium text-slate-700 dark:text-slate-300">
-                        <div className="flex items-center gap-1.5">
-                          <CalendarIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span>{item.dlp_expiry_date || 'N/A'}</span>
-                        </div>
-                      </td>
+                        <td className="py-4 px-6 font-medium text-slate-700 dark:text-slate-300">
+                          <div className="flex items-center gap-1.5">
+                            <CalendarIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>{item.dlp_expiry_date || 'N/A'}</span>
+                          </div>
+                        </td>
 
-                      <td className="py-4 px-6">{renderStatusBadge(item.days_remaining)}</td>
+                        <td className="py-4 px-6">{renderStatusBadge(item.days_remaining)}</td>
 
-                      <td className="py-4 px-6 text-right space-x-1">
-                        <button
-                          onClick={() => setSelectedContractForView(item)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors cursor-pointer"
-                          title="View Complete Departmental Record"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                        <td className="py-4 px-6 text-right space-x-1">
+                          <button
+                            onClick={() => setSelectedContractForView(item)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors cursor-pointer"
+                            title="View Complete Departmental Record"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
 
-                        <button
-                          onClick={() => triggerAlert(item)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors cursor-pointer"
-                          title="Trigger Expiry Alert Email"
-                        >
-                          <Mail className="w-4 h-4" />
-                        </button>
+                          <button
+                            onClick={() => triggerAlert(item)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors cursor-pointer"
+                            title="Trigger Expiry Alert Email"
+                          >
+                            <Mail className="w-4 h-4" />
+                          </button>
 
-                        <button
-                          onClick={() => setSelectedContractForEdit(item)}
-                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 rounded-lg transition-colors cursor-pointer"
-                          title="Edit Contract Record"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
+                          <button
+                            onClick={() => setSelectedContractForEdit(item)}
+                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 rounded-lg transition-colors cursor-pointer"
+                            title="Edit Contract Record"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
 
-                        <button
-                          onClick={() => setSelectedContractForDelete(item)}
-                          className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-lg transition-colors cursor-pointer"
-                          title="Archive Contract Record"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                          <button
+                            onClick={() => setSelectedContractForDelete(item)}
+                            className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-lg transition-colors cursor-pointer"
+                            title="Archive Contract Record"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
