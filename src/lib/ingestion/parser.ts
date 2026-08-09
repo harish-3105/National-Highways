@@ -38,7 +38,6 @@ export interface HighwayRow {
 
 export interface DLPRow {
   highway_code: string;
-  division_name?: string;
   stretch_name: string;
   from_km: number;
   to_km: number;
@@ -377,7 +376,6 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
 
       parsedData.push({
         highway_code: nhCode,
-        division_name: col1.trim(),
         stretch_name: stretchTitle,
         from_km: fromKmVal,
         to_km: toKmVal,

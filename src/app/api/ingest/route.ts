@@ -90,9 +90,14 @@ export async function POST(request: Request) {
         insertedCount = data?.length || 0;
       }
     } else if (datasetType === 'DLP_CONTRACTS') {
+      const cleanData = parseResult.data.map((item: any) => {
+        const { division_name, ...rest } = item;
+        return rest;
+      });
+
       const { data, error } = await supabase
         .from('dlp_contracts')
-        .insert(parseResult.data)
+        .insert(cleanData)
         .select();
 
       if (error) dbError = error;
