@@ -82,6 +82,9 @@ export async function GET(req: NextRequest) {
 
             uncontracted_after_2027_km: Number(item.uncontracted_after_2027_km ?? details.uncontracted_after_2027_km ?? 0),
 
+            // 1-to-N Child Sub-Contracts Array
+            sub_contracts: item.sub_contracts || details.sub_contracts || [],
+
             contractor_name: item.contractor_name || 'Assigned Contractor',
             contract_mode: item.contract_mode || 'EPC',
             work_description: item.work_description || '',
@@ -156,6 +159,7 @@ export async function POST(req: NextRequest) {
       no_dlp_expiry_date: body.no_dlp_expiry_date || '',
 
       uncontracted_after_2027_km: Number(body.uncontracted_after_2027_km || 0),
+      sub_contracts: body.sub_contracts || [],
     };
 
     const payload = {
@@ -227,6 +231,7 @@ export async function PUT(req: NextRequest) {
       no_dlp_expiry_date: body.no_dlp_expiry_date || '',
 
       uncontracted_after_2027_km: Number(body.uncontracted_after_2027_km || 0),
+      sub_contracts: body.sub_contracts || [],
     };
 
     const payload = {

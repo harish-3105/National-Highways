@@ -62,6 +62,7 @@ export interface DLPRow {
   no_dlp_chainage?: string;
   no_dlp_expiry_date?: string;
   uncontracted_after_2027_km?: number;
+  sub_contracts?: any[];
   contractor_name: string;
   contract_mode: string;
   work_description?: string;
@@ -434,6 +435,142 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
         remarks = `Maintenance & DLP period under ${col1.trim()} Division (${mode})`;
       }
 
+      const subContracts: any[] = [];
+
+      function parseIndianDates(str: string): string[] {
+        if (!str) return [];
+        const matches = [...String(str).matchAll(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/g)];
+        return matches.map((m) => `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`);
+      }
+
+      // 1. DLP Sub-Contracts
+      if (dlpLen > 0 || dlpChainage) {
+        const dates = parseIndianDates(dlpExpiryStr);
+        const chainages = dlpChainage.split(/(?=\d+\.)|\n|&/).map(cleanString).filter(Boolean);
+        const count = Math.max(dlpCount, dates.length, chainages.length, 1);
+        for (let k = 0; k < count; k++) {
+          const expDate = dates[k] || dates[0] || undefined;
+          let dRem = 0;
+          let st = 'ACTIVE';
+          if (expDate) {
+            dRem = Math.ceil((new Date(expDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            if (dRem < 0) st = 'EXPIRED';
+            else if (dRem <= 90) st = 'EXPIRING_SOON';
+          }
+          subContracts.push({
+            id: `sub-dlp-${i}-${k + 1}`,
+            maintenance_type: 'DLP',
+            sub_stretch_title: chainages[k] || dlpChainage || `DLP Stretch ${k + 1}`,
+            length_km: count === 1 ? dlpLen : Math.round((dlpLen / count) * 1000) / 1000,
+            contractor_name: `${col1.trim()} Division DLP Contractor`,
+            expiry_date: expDate,
+            days_remaining: dRem,
+            status: st,
+            remarks: `Under DLP Guarantee (${col1.trim()} Division)`,
+          });
+        }
+      }
+
+      // 2. STMC Sub-Contracts
+      if (stmcLen > 0 || stmcChainage) {
+        const dates = parseIndianDates(stmcExpiryStr);
+        const expDate = dates[0] || undefined;
+        let dRem = 0;
+        let st = 'ACTIVE';
+        if (expDate) {
+          dRem = Math.ceil((new Date(expDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          if (dRem < 0) st = 'EXPIRED';
+          else if (dRem <= 90) st = 'EXPIRING_SOON';
+        }
+        subContracts.push({
+          id: `sub-stmc-${i}-1`,
+          maintenance_type: 'STMC',
+          sub_stretch_title: stmcChainage || `STMC Stretch (${stmcLen} km)`,
+          length_km: stmcLen,
+          contractor_name: `${col1.trim()} Division STMC Contractor`,
+          expiry_date: expDate,
+          days_remaining: dRem,
+          status: st,
+          remarks: stmcExpiryStr || `Short-Term Maintenance Contract under ${col1.trim()} Division`,
+        });
+      }
+
+      // 3. Construction Sub-Contracts
+      if (constructionLen > 0 || constructionChainage) {
+        subContracts.push({
+          id: `sub-const-${i}-1`,
+          maintenance_type: 'CONSTRUCTION',
+          sub_stretch_title: constructionChainage || `Construction / Tender Stretch (${constructionLen} km)`,
+          length_km: constructionLen,
+          contractor_name: `${col1.trim()} Construction / Tender Agency`,
+          expiry_date: undefined,
+          days_remaining: 0,
+          status: 'ACTIVE',
+          remarks: `Length under Construction / Tender projects (${col1.trim()} Division)`,
+        });
+      }
+
+      // 4. PBMC Sub-Contracts
+      if (pbmcLen > 0 || pbmcChainage) {
+        const dates = parseIndianDates(pbmcExpiryStr);
+        const expDate = dates[0] || undefined;
+        let dRem = 0;
+        let st = 'ACTIVE';
+        if (expDate) {
+          dRem = Math.ceil((new Date(expDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          if (dRem < 0) st = 'EXPIRED';
+          else if (dRem <= 90) st = 'EXPIRING_SOON';
+        }
+        subContracts.push({
+          id: `sub-pbmc-${i}-1`,
+          maintenance_type: 'PBMC',
+          sub_stretch_title: pbmcChainage || `PBMC Stretch (${pbmcLen} km)`,
+          length_km: pbmcLen,
+          contractor_name: `${col1.trim()} Division PBMC Contractor`,
+          expiry_date: expDate,
+          days_remaining: dRem,
+          status: st,
+          remarks: `Performance-Based Maintenance Contract under ${col1.trim()} Division`,
+        });
+      }
+
+      // 5. No DLP Sub-Contracts
+      if (noDlpLen > 0 || noDlpChainage) {
+        const dates = parseIndianDates(noDlpExpiryStr);
+        const expDate = dates[0] || undefined;
+        let dRem = 0;
+        let st = 'ACTIVE';
+        if (expDate) {
+          dRem = Math.ceil((new Date(expDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          if (dRem < 0) st = 'EXPIRED';
+          else if (dRem <= 90) st = 'EXPIRING_SOON';
+        }
+        subContracts.push({
+          id: `sub-nodlp-${i}-1`,
+          maintenance_type: 'NO_DLP',
+          sub_stretch_title: noDlpChainage || `No DLP Stretch (${noDlpLen} km)`,
+          length_km: noDlpLen,
+          contractor_name: `Departmental Maintenance (${col1.trim()})`,
+          expiry_date: expDate,
+          days_remaining: dRem,
+          status: st,
+          remarks: `Length under NO DLP as on date`,
+        });
+      }
+
+      // 6. Uncontracted Sub-Contracts
+      if (uncontractedLen > 0) {
+        subContracts.push({
+          id: `sub-uncontracted-${i}-1`,
+          maintenance_type: 'UNCONTRACTED',
+          sub_stretch_title: `Uncontracted Length after 31.03.2027 (${uncontractedLen} km)`,
+          length_km: uncontractedLen,
+          contractor_name: `Pending Tender Sanction`,
+          expiry_date: '2027-03-31',
+          days_remaining: 234,
+          status: 'EXPIRING_SOON',
+          remarks: `Additional Length Required as DLP Expires Before 31.03.2027`,
+        });
       const chainageRange = (col3 || col4) ? ` (Km ${col3 || '0'} to ${col4 || '0'})` : '';
       const stretchTitle = `${col1 ? col1.trim() + ' Division - ' : ''}${nhCode}${chainageRange}`.trim();
 
@@ -463,6 +600,7 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
         no_dlp_chainage: noDlpChainage,
         no_dlp_expiry_date: noDlpExpiryStr,
         uncontracted_after_2027_km: uncontractedLen,
+        sub_contracts: subContracts,
         contractor_name: `${col1.trim()} Division (Contractor DLP)`,
         contract_mode: mode,
         work_description: remarks.replace(/\n+/g, ' ').trim(),
@@ -472,6 +610,7 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       });
     }
   }
+}
 
   result.totalRows = rawRows.length;
   result.validRows = parsedData.length;
@@ -631,4 +770,5 @@ function parseLegalCases(rawRows: any[][], result: ParseResult) {
   result.totalRows = rawRows.length;
   result.validRows = parsedData.length;
   result.data = parsedData;
+  return result;
 }

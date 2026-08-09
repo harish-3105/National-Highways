@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { DLPContractItem } from '@/app/dlp/page';
+import { DLPContractItem, DLPSubContract } from '@/app/dlp/page';
 import {
   DLP_CIRCLE_OPTIONS,
   DLP_CIRCLE_DIVISION_MAP,
   getCircleForDivision,
 } from '@/lib/dlp/masterData';
-import { Edit3, X, Save } from 'lucide-react';
+import { Edit3, X, Save, Plus, Trash2, Layers } from 'lucide-react';
 
 interface EditDlpContractModalProps {
   contract: DLPContractItem | null;
@@ -17,6 +17,7 @@ interface EditDlpContractModalProps {
 }
 
 const CONTRACT_MODES = ['EPC', 'STMC', 'PBMC', 'BOT', 'HAM', 'Annual Plan', 'Special Repairs'];
+const MAINTENANCE_TYPES = ['DLP', 'STMC', 'PBMC', 'CONSTRUCTION', 'NO_DLP', 'UNCONTRACTED'];
 
 export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
   contract,
@@ -62,6 +63,9 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
 
   const [uncontractedAfter2027Km, setUncontractedAfter2027Km] = useState<number>(0);
 
+  // 1-to-N Granular Child Sub-Contracts Dynamic Repeater List
+  const [subContracts, setSubContracts] = useState<DLPSubContract[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -106,6 +110,8 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
       setNoDlpExpiryDate(contract.no_dlp_expiry_date || '');
 
       setUncontractedAfter2027Km(contract.uncontracted_after_2027_km ?? 0);
+
+      setSubContracts(contract.sub_contracts || []);
     }
   }, [contract]);
 
@@ -116,6 +122,33 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
     setCircleName(c);
     const divs = DLP_CIRCLE_DIVISION_MAP[c] || [];
     if (divs.length > 0) setDivisionName(divs[0]);
+  };
+
+  const handleAddSubContract = () => {
+    const newSub: DLPSubContract = {
+      id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      maintenance_type: 'DLP',
+      sub_stretch_title: '',
+      from_km: 0,
+      to_km: 0,
+      length_km: 0,
+      contractor_name: '',
+      expiry_date: '',
+      remarks: '',
+    };
+    setSubContracts((prev) => [...prev, newSub]);
+  };
+
+  const handleRemoveSubContract = (index: number) => {
+    setSubContracts((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleUpdateSubContract = (index: number, field: keyof DLPSubContract, value: any) => {
+    setSubContracts((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
   };
 
   useEffect(() => {
@@ -182,6 +215,9 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
         no_dlp_expiry_date: noDlpExpiryDate || undefined,
 
         uncontracted_after_2027_km: Number(uncontractedAfter2027Km || 0),
+
+        // 1-to-N Granular Child Sub-Contracts Array
+        sub_contracts: subContracts,
 
         contractor_name: contractorName.trim() || `${divisionName} Division Contractor`,
         contract_mode: contractMode,
@@ -342,10 +378,10 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
             </div>
           </div>
 
-          {/* Section 2: Complete Category Sub-Chainages & Expiry Inputs */}
+          {/* Section 2: Summary Breakdown Metrics */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-4">
             <h4 className="font-bold text-xs text-blue-900 dark:text-blue-400 uppercase tracking-wider">
-              2. Category-Specific Sub-Chainages & Expiry Dates (Excel Fields)
+              2. Summary Breakdown Metrics (Excel Columns 6-24)
             </h4>
 
             {/* DLP & STMC */}
@@ -562,14 +598,136 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
             </div>
           </div>
 
-          {/* Section 3: Contractor Info & Remarks */}
+          {/* Section 3: 1-to-N Granular Sub-Contracts Dynamic Repeater */}
+          <div className="border border-blue-300 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/10 rounded-xl p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-bold text-xs text-blue-900 dark:text-blue-300 uppercase tracking-wider flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-blue-600" />
+                  3. Individual Maintenance Sub-Contracts (Granular Relational 1-to-N)
+                </h4>
+                <p className="text-[11px] text-slate-500">Log distinct sub-stretches with individual contractors, chainages, and expiry dates</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddSubContract}
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Sub-Contract</span>
+              </button>
+            </div>
+
+            {subContracts.length === 0 ? (
+              <div className="p-4 bg-white dark:bg-slate-800/80 rounded-xl border border-blue-200 dark:border-blue-900 text-center text-slate-500 text-xs">
+                No granular sub-contracts recorded yet. Click <strong>+ Add Sub-Contract</strong> above to log individual maintenance stretches.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {subContracts.map((sub, idx) => (
+                  <div
+                    key={sub.id || idx}
+                    className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3 shadow-xs"
+                  >
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                      <span className="font-extrabold text-blue-800 dark:text-blue-300 text-xs">
+                        Sub-Contract #{idx + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSubContract(idx)}
+                        className="text-red-500 hover:text-red-700 p-1 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Maintenance Type
+                        </label>
+                        <select
+                          value={sub.maintenance_type}
+                          onChange={(e) => handleUpdateSubContract(idx, 'maintenance_type', e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-xs"
+                        >
+                          {MAINTENANCE_TYPES.map((t) => (
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Sub-Stretch Chainage Title
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Km 12.650 to Km 20.00"
+                          value={sub.sub_stretch_title}
+                          onChange={(e) => handleUpdateSubContract(idx, 'sub_stretch_title', e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Sub-Stretch Length (km)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.001"
+                          value={sub.length_km || 0}
+                          onChange={(e) => handleUpdateSubContract(idx, 'length_km', Number(e.target.value))}
+                          className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-blue-600 dark:text-blue-400 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Sub-Contractor Name
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Apex Constructions Pvt Ltd"
+                          value={sub.contractor_name || ''}
+                          onChange={(e) => handleUpdateSubContract(idx, 'contractor_name', e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Specific Expiry Date
+                        </label>
+                        <input
+                          type="date"
+                          value={sub.expiry_date || ''}
+                          onChange={(e) => handleUpdateSubContract(idx, 'expiry_date', e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Section 4: Contractor Info & Remarks */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
             <h4 className="font-bold text-xs text-blue-900 dark:text-blue-400 uppercase tracking-wider">
-              3. Contract Info & Remarks
+              4. Overall Contract Info & Remarks
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Contractor Name</label>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Overall Contractor Name</label>
                 <input
                   type="text"
                   value={contractorName}

@@ -27,7 +27,24 @@ import {
   Eye,
   Edit3,
   Trash2,
+  ChevronDown,
+  ChevronRight,
+  Layers,
 } from 'lucide-react';
+
+export interface DLPSubContract {
+  id?: string;
+  maintenance_type: 'DLP' | 'STMC' | 'PBMC' | 'CONSTRUCTION' | 'NO_DLP' | 'UNCONTRACTED' | string;
+  sub_stretch_title: string;
+  from_km?: number;
+  to_km?: number;
+  length_km?: number;
+  contractor_name?: string;
+  expiry_date?: string;
+  days_remaining?: number;
+  status?: 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | string;
+  remarks?: string;
+}
 
 export interface DLPContractItem {
   id: string;
@@ -64,6 +81,9 @@ export interface DLPContractItem {
 
   uncontracted_after_2027_km?: number;
 
+  // 1-to-N Granular Child Sub-Contracts Array
+  sub_contracts?: DLPSubContract[];
+
   contractor_name: string;
   contract_mode: 'EPC' | 'STMC' | 'PBMC' | 'Annual Plan' | string;
   work_description: string;
@@ -86,6 +106,13 @@ export default function DlpPage() {
     endDate: null,
     preset: null,
   });
+
+  // Accordion Expand State
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+
+  const toggleRowExpand = (id: string) => {
+    setExpandedRows((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -155,7 +182,14 @@ export default function DlpPage() {
     setTimeout(() => setNotificationMsg(null), 5000);
   };
 
-  const renderStatusBadge = (days: number) => {
+  const renderStatusBadge = (days?: number) => {
+    if (days === undefined || days === null) {
+      return (
+        <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium text-[11px]">
+          Ongoing / N/A
+        </span>
+      );
+    }
     if (days <= 30) {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white font-extrabold shadow-xs text-xs">
@@ -366,107 +400,173 @@ export default function DlpPage() {
                 ) : (
                   filtered.map((item) => {
                     const circleName = getCircleForDivision(item.division_name || '');
+                    const isExpanded = !!expandedRows[item.id];
+                    const subCount = item.sub_contracts?.length || 0;
+
                     return (
-                      <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="py-4 px-6">
-                          <div className="font-extrabold text-blue-600">{item.highway_code}</div>
-                          <div className="text-slate-500 font-semibold text-[11px]">
-                            {item.division_name || 'General'} Division
-                            {circleName ? <span className="text-slate-400 block text-[10px] font-normal">{circleName} Circle</span> : null}
-                          </div>
-                        </td>
+                      <React.Fragment key={item.id}>
+                        <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-2">
+                              {subCount > 0 && (
+                                <button
+                                  onClick={() => toggleRowExpand(item.id)}
+                                  className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded transition-colors cursor-pointer"
+                                  title={isExpanded ? 'Collapse Sub-Contracts' : 'Expand Sub-Contracts'}
+                                >
+                                  {isExpanded ? <ChevronDown className="w-4 h-4 text-amber-600" /> : <ChevronRight className="w-4 h-4" />}
+                                </button>
+                              )}
+                              <div>
+                                <div className="font-extrabold text-blue-600 flex items-center gap-1.5">
+                                  <span>{item.highway_code}</span>
+                                  {subCount > 0 && (
+                                    <span className="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 rounded font-bold text-[10px] flex items-center gap-0.5">
+                                      <Layers className="w-2.5 h-2.5" />
+                                      {subCount}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-slate-500 font-semibold text-[11px]">
+                                  {item.division_name || 'General'} Division
+                                  {circleName ? <span className="text-slate-400 block text-[10px] font-normal">{circleName} Circle</span> : null}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
 
-                        <td className="py-4 px-6">
-                          <div className="font-bold text-slate-900 dark:text-slate-100">{item.stretch_name}</div>
-                          <div className="text-slate-500 mt-0.5 text-[11px]">
-                            Km {item.from_km} to {item.to_km} ({item.length_km} km)
-                          </div>
-                        </td>
+                          <td className="py-4 px-6">
+                            <div className="font-bold text-slate-900 dark:text-slate-100">{item.stretch_name}</div>
+                            <div className="text-slate-500 mt-0.5 text-[11px]">
+                              Km {item.from_km} to {item.to_km} ({item.length_km} km)
+                            </div>
+                          </td>
 
-                        <td className="py-4 px-6">
-                          <div className="flex flex-wrap gap-1 max-w-[220px]">
-                            {item.dlp_length_km ? (
-                              <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 font-bold rounded text-[10px]">
-                                DLP: {item.dlp_length_km} km
-                              </span>
-                            ) : null}
-                            {item.stmc_length_km ? (
-                              <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200 font-bold rounded text-[10px]">
-                                STMC: {item.stmc_length_km} km
-                              </span>
-                            ) : null}
-                            {item.pbmc_length_km ? (
-                              <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200 font-bold rounded text-[10px]">
-                                PBMC: {item.pbmc_length_km} km
-                              </span>
-                            ) : null}
-                            {item.construction_length_km ? (
-                              <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-200 font-bold rounded text-[10px]">
-                                Const: {item.construction_length_km} km
-                              </span>
-                            ) : null}
-                            {item.no_dlp_length_km ? (
-                              <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold rounded text-[10px]">
-                                No DLP: {item.no_dlp_length_km} km
-                              </span>
-                            ) : null}
-                            {item.uncontracted_after_2027_km ? (
-                              <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 font-bold rounded text-[10px]">
-                                Uncontracted: {item.uncontracted_after_2027_km} km
-                              </span>
-                            ) : null}
-                          </div>
-                        </td>
+                          <td className="py-4 px-6">
+                            <div className="flex flex-wrap gap-1 max-w-[220px]">
+                              {item.dlp_length_km ? (
+                                <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 font-bold rounded text-[10px]">
+                                  DLP: {item.dlp_length_km} km
+                                </span>
+                              ) : null}
+                              {item.stmc_length_km ? (
+                                <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200 font-bold rounded text-[10px]">
+                                  STMC: {item.stmc_length_km} km
+                                </span>
+                              ) : null}
+                              {item.pbmc_length_km ? (
+                                <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200 font-bold rounded text-[10px]">
+                                  PBMC: {item.pbmc_length_km} km
+                                </span>
+                              ) : null}
+                              {item.construction_length_km ? (
+                                <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-200 font-bold rounded text-[10px]">
+                                  Const: {item.construction_length_km} km
+                                </span>
+                              ) : null}
+                              {item.no_dlp_length_km ? (
+                                <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold rounded text-[10px]">
+                                  No DLP: {item.no_dlp_length_km} km
+                                </span>
+                              ) : null}
+                              {item.uncontracted_after_2027_km ? (
+                                <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 font-bold rounded text-[10px]">
+                                  Uncontracted: {item.uncontracted_after_2027_km} km
+                                </span>
+                              ) : null}
+                            </div>
+                          </td>
 
-                        <td className="py-4 px-6 max-w-xs">
-                          <p className="text-slate-700 dark:text-slate-300 font-medium line-clamp-2 leading-relaxed text-[11px]">
-                            {item.work_description || 'N/A'}
-                          </p>
-                        </td>
+                          <td className="py-4 px-6 max-w-xs">
+                            <p className="text-slate-700 dark:text-slate-300 font-medium line-clamp-2 leading-relaxed text-[11px]">
+                              {item.work_description || 'N/A'}
+                            </p>
+                          </td>
 
-                        <td className="py-4 px-6 font-medium text-slate-700 dark:text-slate-300">
-                          <div className="flex items-center gap-1.5">
-                            <CalendarIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span>{item.dlp_expiry_date || 'N/A'}</span>
-                          </div>
-                        </td>
+                          <td className="py-4 px-6 font-medium text-slate-700 dark:text-slate-300">
+                            <div className="flex items-center gap-1.5">
+                              <CalendarIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span>{item.dlp_expiry_date || 'N/A'}</span>
+                            </div>
+                          </td>
 
-                        <td className="py-4 px-6">{renderStatusBadge(item.days_remaining)}</td>
+                          <td className="py-4 px-6">{renderStatusBadge(item.days_remaining)}</td>
 
-                        <td className="py-4 px-6 text-right space-x-1">
-                          <button
-                            onClick={() => setSelectedContractForView(item)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors cursor-pointer"
-                            title="View Complete Departmental Record"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
+                          <td className="py-4 px-6 text-right space-x-1">
+                            <button
+                              onClick={() => setSelectedContractForView(item)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors cursor-pointer"
+                              title="View Complete Departmental Record"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setSelectedContractForEdit(item)}
+                              className="p-1.5 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950 rounded-lg transition-colors cursor-pointer"
+                              title="Edit Record"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setSelectedContractForDelete(item)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors cursor-pointer"
+                              title="Delete Record"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
 
-                          <button
-                            onClick={() => triggerAlert(item)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors cursor-pointer"
-                            title="Trigger Expiry Alert Email"
-                          >
-                            <Mail className="w-4 h-4" />
-                          </button>
+                        {/* Accordion Sub-Contracts Nested Row */}
+                        {isExpanded && subCount > 0 && (
+                          <tr className="bg-amber-50/40 dark:bg-amber-950/20">
+                            <td colSpan={7} className="px-8 py-3">
+                              <div className="border border-amber-200 dark:border-amber-900 rounded-xl p-3 bg-white dark:bg-slate-900 shadow-inner space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-extrabold text-amber-800 dark:text-amber-300 text-xs flex items-center gap-1.5">
+                                    <Layers className="w-3.5 h-3.5 text-amber-600" />
+                                    Granular Maintenance Sub-Contracts ({subCount} Sub-Stretches)
+                                  </span>
+                                  <span className="text-[10px] text-slate-500 font-medium">
+                                    1-to-N Sub-Contract Model
+                                  </span>
+                                </div>
 
-                          <button
-                            onClick={() => setSelectedContractForEdit(item)}
-                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 rounded-lg transition-colors cursor-pointer"
-                            title="Edit Contract Record"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-
-                          <button
-                            onClick={() => setSelectedContractForDelete(item)}
-                            className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-lg transition-colors cursor-pointer"
-                            title="Archive Contract Record"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
+                                <div className="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800">
+                                  <table className="w-full text-left text-[11px]">
+                                    <thead className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold uppercase text-[9px]">
+                                      <tr>
+                                        <th className="px-3 py-1.5">Type</th>
+                                        <th className="px-3 py-1.5">Sub-Stretch Title / Chainage</th>
+                                        <th className="px-3 py-1.5">Length</th>
+                                        <th className="px-3 py-1.5">Contractor / Agency</th>
+                                        <th className="px-3 py-1.5">Expiry Date</th>
+                                        <th className="px-3 py-1.5">Status</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                      {item.sub_contracts?.map((sub, idx) => (
+                                        <tr key={sub.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                                          <td className="px-3 py-1.5 whitespace-nowrap">
+                                            <span className="px-1.5 py-0.5 rounded font-extrabold text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
+                                              {sub.maintenance_type}
+                                            </span>
+                                          </td>
+                                          <td className="px-3 py-1.5 font-bold text-slate-900 dark:text-slate-100">{sub.sub_stretch_title}</td>
+                                          <td className="px-3 py-1.5 font-bold text-blue-600 dark:text-blue-400">{sub.length_km ?? 0} km</td>
+                                          <td className="px-3 py-1.5 text-slate-600 dark:text-slate-400">{sub.contractor_name || 'N/A'}</td>
+                                          <td className="px-3 py-1.5 font-bold text-slate-800 dark:text-slate-200">{sub.expiry_date || 'N/A'}</td>
+                                          <td className="px-3 py-1.5 whitespace-nowrap">{renderStatusBadge(sub.days_remaining)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })
                 )}

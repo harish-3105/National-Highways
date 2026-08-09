@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { DLPContractItem } from '@/app/dlp/page';
-import { X, ShieldCheck, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import { X, ShieldCheck, CheckCircle2, Clock, AlertTriangle, Layers } from 'lucide-react';
 
 interface ViewDlpContractModalProps {
   contract: DLPContractItem | null;
@@ -12,30 +12,58 @@ interface ViewDlpContractModalProps {
 export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ contract, onClose }) => {
   if (!contract) return null;
 
-  const renderStatusBadge = (days: number) => {
+  const renderStatusBadge = (days?: number) => {
+    if (days === undefined || days === null) {
+      return (
+        <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium text-[11px]">
+          Ongoing / N/A
+        </span>
+      );
+    }
     if (days <= 30) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-600 text-white font-extrabold text-xs">
-          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-          <span>{days < 0 ? 'Expired' : `Expiring Soon (${days}d left)`}</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-600 text-white font-extrabold text-[11px]">
+          <AlertTriangle className="w-3 h-3 shrink-0" />
+          <span>{days < 0 ? 'Expired' : `${days}d left`}</span>
         </span>
       );
     }
     if (days <= 90) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500 text-white font-extrabold text-xs">
-          <Clock className="w-3.5 h-3.5 shrink-0" />
-          <span>Expiring Soon ({days}d left)</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500 text-white font-extrabold text-[11px]">
+          <Clock className="w-3 h-3 shrink-0" />
+          <span>{days}d left</span>
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 font-bold border border-emerald-300 dark:border-emerald-800 text-xs">
-        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-        <span>Active ({days}d left)</span>
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 font-bold border border-emerald-300 dark:border-emerald-800 text-[11px]">
+        <CheckCircle2 className="w-3 h-3 shrink-0" />
+        <span>{days}d left</span>
       </span>
     );
   };
+
+  const renderTypeBadge = (type: string) => {
+    switch (type.toUpperCase()) {
+      case 'DLP':
+        return <span className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-extrabold text-[11px]">DLP</span>;
+      case 'STMC':
+        return <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-extrabold text-[11px]">STMC</span>;
+      case 'PBMC':
+        return <span className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 font-extrabold text-[11px]">PBMC</span>;
+      case 'CONSTRUCTION':
+        return <span className="px-2 py-0.5 rounded-md bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-300 font-extrabold text-[11px]">Construction</span>;
+      case 'NO_DLP':
+        return <span className="px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-extrabold text-[11px]">No DLP</span>;
+      case 'UNCONTRACTED':
+        return <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-extrabold text-[11px]">Uncontracted</span>;
+      default:
+        return <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-extrabold text-[11px]">{type}</span>;
+    }
+  };
+
+  const subContracts = contract.sub_contracts || [];
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
@@ -46,10 +74,10 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
             <ShieldCheck className="w-6 h-6 text-amber-200 shrink-0" />
             <div>
               <h3 className="font-extrabold text-base text-white">
-                Complete Excel Departmental Record Details
+                Complete Departmental Stretch Record & Granular Sub-Contracts
               </h3>
               <span className="text-xs text-amber-100">
-                {contract.highway_code} &bull; {contract.division_name || 'General'} Division &bull; 100% Column Capture
+                {contract.highway_code} &bull; {contract.division_name || 'General'} Division &bull; 1-to-N Sub-Contract Model
               </span>
             </div>
           </div>
@@ -105,11 +133,11 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
           {/* Section 2: Complete Maintenance Category Breakdown */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-4">
             <h4 className="font-bold text-xs text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-              Section 2 &ndash; Category Sub-Chainages & Expiry Dates (Cols 6 to 24)
+              Section 2 &ndash; Category Breakdown Summary (Cols 6 to 24)
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* DLP Breakdown (Cols 6, 7, 8, 9) */}
+              {/* DLP Breakdown */}
               <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-2">
                 <span className="font-bold text-emerald-800 dark:text-emerald-300 block text-xs">
                   Under DLP Guarantee (Cols 6-9)
@@ -130,7 +158,7 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
                 </div>
               </div>
 
-              {/* STMC Breakdown (Cols 13, 14, 15, 16) */}
+              {/* STMC Breakdown */}
               <div className="bg-blue-50/50 dark:bg-blue-950/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800 space-y-2">
                 <span className="font-bold text-blue-900 dark:text-blue-300 block text-xs">
                   Short-Term Maintenance (STMC) (Cols 13-16)
@@ -147,13 +175,13 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
                 )}
                 {contract.stmc_expiry_date && (
                   <div>
-                    <strong className="text-slate-500 block">STMC Expiry / DLP Date(s) (Col 16):</strong>
+                    <strong className="text-slate-500 block">STMC Expiry Date(s) (Col 16):</strong>
                     <span className="font-bold text-blue-800 dark:text-blue-300">{contract.stmc_expiry_date}</span>
                   </div>
                 )}
               </div>
 
-              {/* PBMC Breakdown (Cols 17, 18, 19, 20) */}
+              {/* PBMC Breakdown */}
               <div className="bg-purple-50/50 dark:bg-purple-950/20 p-4 rounded-xl border border-purple-200 dark:border-purple-800 space-y-2">
                 <span className="font-bold text-purple-900 dark:text-purple-300 block text-xs">
                   Performance-Based Maintenance (PBMC) (Cols 17-20)
@@ -176,7 +204,7 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
                 )}
               </div>
 
-              {/* Construction Breakdown (Cols 10, 11, 12) */}
+              {/* Construction Breakdown */}
               <div className="bg-orange-50/50 dark:bg-orange-950/20 p-4 rounded-xl border border-orange-200 dark:border-orange-800 space-y-2">
                 <span className="font-bold text-orange-900 dark:text-orange-300 block text-xs">
                   Under Construction / Tender (Cols 10-12)
@@ -192,41 +220,52 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
                   </div>
                 )}
               </div>
-
-              {/* No DLP Breakdown (Cols 21, 22, 23) */}
-              <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
-                <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">
-                  Length with No DLP (Cols 21-23)
-                </span>
-                <div><strong className="text-slate-500">Length as on date:</strong> <span className="font-bold text-slate-900 dark:text-slate-100">{contract.no_dlp_length_km ?? 0} km</span></div>
-                {contract.no_dlp_chainage && (
-                  <div>
-                    <strong className="text-slate-500 block">No DLP Specific Chainages (Col 22):</strong>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{contract.no_dlp_chainage}</span>
-                  </div>
-                )}
-                {contract.no_dlp_expiry_date && (
-                  <div>
-                    <strong className="text-slate-500 block">Date of Expiry of DLP (Col 23):</strong>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{contract.no_dlp_expiry_date}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Uncontracted Breakdown (Col 24) */}
-              <div className="bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-200 dark:border-amber-800 space-y-2">
-                <span className="font-bold text-amber-900 dark:text-amber-300 block text-xs">
-                  Additional Length Required (DLP Expires Before 31.03.2027) (Col 24)
-                </span>
-                <div><strong className="text-slate-500">Uncontracted Length:</strong> <span className="font-bold text-amber-700 text-sm">{contract.uncontracted_after_2027_km ?? 0} km</span></div>
-              </div>
             </div>
           </div>
 
-          {/* Section 3: Departmental Remarks & Proposals (Col 25) */}
+          {/* Section 3: Granular Sub-Contracts Relational Table */}
+          <div className="border border-amber-300 dark:border-amber-800 rounded-xl p-4 space-y-3 bg-amber-50/30 dark:bg-amber-950/10">
+            <h4 className="font-bold text-xs text-amber-800 dark:text-amber-300 uppercase tracking-wider flex items-center gap-2">
+              <Layers className="w-4 h-4 text-amber-600" />
+              Section 3 &ndash; Individual Sub-Contracts ({subContracts.length} Extracted Sub-Stretches)
+            </h4>
+
+            {subContracts.length === 0 ? (
+              <p className="text-slate-500 italic text-xs">No individual sub-contracts recorded.</p>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-extrabold uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th className="px-3 py-2">Type</th>
+                      <th className="px-3 py-2">Sub-Stretch Title / Chainages</th>
+                      <th className="px-3 py-2">Length</th>
+                      <th className="px-3 py-2">Contractor / Agency</th>
+                      <th className="px-3 py-2">Expiry Date</th>
+                      <th className="px-3 py-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {subContracts.map((sub, idx) => (
+                      <tr key={sub.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                        <td className="px-3 py-2 whitespace-nowrap">{renderTypeBadge(sub.maintenance_type)}</td>
+                        <td className="px-3 py-2 font-bold text-slate-900 dark:text-slate-100">{sub.sub_stretch_title}</td>
+                        <td className="px-3 py-2 font-bold text-blue-600 dark:text-blue-400">{sub.length_km ?? 0} km</td>
+                        <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{sub.contractor_name || 'N/A'}</td>
+                        <td className="px-3 py-2 font-bold text-slate-800 dark:text-slate-200">{sub.expiry_date || 'N/A'}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{renderStatusBadge(sub.days_remaining)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Section 4: Departmental Remarks & Proposals (Col 25) */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-2">
             <h4 className="font-bold text-xs text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-              Section 3 &ndash; Departmental Remarks & Work Proposals (Col 25)
+              Section 4 &ndash; Departmental Remarks & Work Proposals (Col 25)
             </h4>
             <p className="bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap leading-relaxed">
               {contract.work_description || 'No departmental remarks recorded.'}
