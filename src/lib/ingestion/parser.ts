@@ -447,7 +447,7 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
         dlp_contract_count: dlpCount,
         dlp_length_km: dlpLen,
         dlp_chainage: dlpChainage,
-        dlp_expiry_date: dlpExpiryStr || dlpDateStr || undefined,
+        dlp_expiry_date: parseIndianDate(dlpExpiryStr) || dlpDateStr || undefined,
         construction_project_count: constructionCount,
         construction_length_km: constructionLen,
         construction_chainage: constructionChainage,

@@ -106,10 +106,22 @@ export async function POST(request: Request) {
         'status',
         'created_at',
       ];
+      const isValidIsoDate = (val: any): boolean => {
+        if (!val || typeof val !== 'string') return false;
+        return /^\d{4}-\d{2}-\d{2}$/.test(val);
+      };
+
+      const dateCols = ['dlp_expiry_date', 'doc_date', 'stmc_expiry_date', 'pbmc_expiry_date', 'no_dlp_expiry_date'];
       const cleanData = parseResult.data.map((item: any) => {
         const payload: Record<string, any> = {};
         for (const col of allowedColumns) {
-          if (item[col] !== undefined) payload[col] = item[col];
+          if (item[col] !== undefined) {
+            if (dateCols.includes(col)) {
+              payload[col] = isValidIsoDate(item[col]) ? item[col] : null;
+            } else {
+              payload[col] = item[col];
+            }
+          }
         }
         return payload;
       });
