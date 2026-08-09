@@ -191,7 +191,7 @@ const cleanTitleOrGenerate = (rawStr: string, index: number, type: string): stri
 /**
  * Standardize Indian Date formats (DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY, MM.YYYY) to ISO YYYY-MM-DD
  */
-const parseIndianDate = (dstr: string): string | null => {
+export const parseIndianDate = (dstr: string): string | null => {
   if (!dstr) return null;
   const clean = cleanBullet(dstr);
   const m1 = clean.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
@@ -356,7 +356,7 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
   }
 }
 
-function getRawCellLines(val: any): string[] {
+export function getRawCellLines(val: any): string[] {
   if (val === null || val === undefined) return [];
   const rawStr = String(val).trim();
   if (!rawStr || rawStr === '-') return [];
