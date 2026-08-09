@@ -109,9 +109,24 @@ export default function DlpPage() {
 
   // Accordion Expand State
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const [allExpanded, setAllExpanded] = useState<boolean>(true);
 
   const toggleRowExpand = (id: string) => {
     setExpandedRows((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleExpandAll = () => {
+    if (allExpanded) {
+      setExpandedRows({});
+      setAllExpanded(false);
+    } else {
+      const next: Record<string, boolean> = {};
+      contracts.forEach((c) => {
+        next[c.id] = true;
+      });
+      setExpandedRows(next);
+      setAllExpanded(true);
+    }
   };
 
   // Modal States
@@ -134,6 +149,12 @@ export default function DlpPage() {
       const data = await res.json();
       if (data.success && data.contracts) {
         setContracts(data.contracts);
+        const initExpanded: Record<string, boolean> = {};
+        data.contracts.forEach((c: DLPContractItem) => {
+          initExpanded[c.id] = true;
+        });
+        setExpandedRows(initExpanded);
+        setAllExpanded(true);
       }
     } catch (err) {
       console.error('Failed to fetch DLP contracts:', err);
@@ -331,21 +352,32 @@ export default function DlpPage() {
               totalCount={contracts.length}
             />
 
-            {/* Status Pills */}
-            <div className="flex bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-1">
-              {(['ALL', 'ACTIVE', 'EXPIRING_SOON', 'EXPIRED'] as const).map((st) => (
-                <button
-                  key={st}
-                  onClick={() => setStatusFilter(st)}
-                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                    statusFilter === st
-                      ? 'bg-amber-600 text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {st === 'ALL' ? 'All' : st === 'ACTIVE' ? 'Active' : st === 'EXPIRING_SOON' ? 'Expiring' : 'Expired'}
-                </button>
-              ))}
+            {/* Status Pills & Expand All Toggle */}
+            <div className="flex items-center gap-2">
+              <div className="flex bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-1">
+                {(['ALL', 'ACTIVE', 'EXPIRING_SOON', 'EXPIRED'] as const).map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setStatusFilter(st)}
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                      statusFilter === st
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {st === 'ALL' ? 'All' : st === 'ACTIVE' ? 'Active' : st === 'EXPIRING_SOON' ? 'Expiring' : 'Expired'}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={toggleExpandAll}
+                className="py-2 px-3 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 font-extrabold rounded-xl text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                title={allExpanded ? 'Collapse All Sub-Contracts' : 'Expand All Sub-Contracts'}
+              >
+                <Layers className="w-3.5 h-3.5 text-amber-600" />
+                <span>{allExpanded ? 'Collapse All' : 'Expand All'}</span>
+              </button>
             </div>
           </div>
         </div>
