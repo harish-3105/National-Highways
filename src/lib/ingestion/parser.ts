@@ -129,10 +129,21 @@ const roundTo3Decimals = (num: number): number => {
 /**
  * Converts Indian chainage notation (e.g. 63/2, 110/2, 0/0, 60/600) into clean decimal numbers (63.2, 110.2, 0.0, 60.6)
  */
+/**
+ * Converts Indian chainage notation (e.g. 63/2, 110/2, 0/0, 60/600) into clean decimal numbers (63.2, 110.2, 0.0, 60.6)
+ * Handles thousand separator commas and decimal typos (e.g. 103,467 -> 103.467).
+ */
 const parseChainageValue = (val: any): number => {
   if (val === null || val === undefined) return 0;
-  const str = cleanString(val);
+  let str = cleanString(val);
   if (!str || str === '-') return 0;
+
+  // Handle thousand separator commas or decimal comma typos e.g. 103,467 -> 103.467
+  if (/^\d+,\d{3}$/.test(str)) {
+    str = str.replace(',', '.');
+  } else {
+    str = str.replace(/,/g, '');
+  }
 
   // Handle slash notation e.g. 63/2, 110/2, 60/600
   const slashMatch = str.match(/^(\d+)\/(\d+)$/);
@@ -189,25 +200,76 @@ const cleanTitleOrGenerate = (rawStr: string, index: number, type: string): stri
 };
 
 /**
- * Standardize Indian Date formats (DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY, MM.YYYY) to ISO YYYY-MM-DD
+ * Standardize Indian Date formats (DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY, MM.YYYY, YY, Excel Serial Numbers) to ISO YYYY-MM-DD.
+ * Handles invalid calendar dates (e.g. Feb 31st -> Feb 28th) and Excel raw serial numbers (e.g. 45800).
  */
-export const parseIndianDate = (dstr: string): string | null => {
-  if (!dstr) return null;
+export const parseIndianDate = (dval: any): string | null => {
+  if (dval === null || dval === undefined) return null;
+
+  // Handle Raw Excel Date Serial Numbers (e.g. 45800 -> 2025-06-03)
+  if (typeof dval === 'number' || (typeof dval === 'string' && /^\d{5}$/.test(dval.trim()))) {
+    const num = typeof dval === 'number' ? dval : parseInt(dval.trim(), 10);
+    if (num > 30000 && num < 70000) {
+      try {
+        const parsedObj = XLSX.SSF.parse_date_code(num);
+        if (parsedObj) {
+          const y = parsedObj.y;
+          const m = String(parsedObj.m).padStart(2, '0');
+          const d = String(parsedObj.d).padStart(2, '0');
+          return `${y}-${m}-${d}`;
+        }
+      } catch {
+        // Fallthrough if SSF parse fails
+      }
+    }
+  }
+
+  const dstr = String(dval);
   const clean = cleanBullet(dstr);
+
+  // Match DD.MM.YYYY or DD-MM-YYYY or DD/MM/YYYY
   const m1 = clean.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
   if (m1) {
-    const day = m1[1].padStart(2, '0');
-    const month = m1[2].padStart(2, '0');
-    const year = m1[3];
-    return `${year}-${month}-${day}`;
+    let day = parseInt(m1[1], 10);
+    let month = parseInt(m1[2], 10);
+    const year = parseInt(m1[3], 10);
+
+    if (month < 1 || month > 12) month = 1;
+    const maxDays = new Date(year, month, 0).getDate();
+    if (day > maxDays) day = maxDays;
+
+    const dayStr = String(day).padStart(2, '0');
+    const monthStr = String(month).padStart(2, '0');
+    return `${year}-${monthStr}-${dayStr}`;
   }
+
+  // Match 2-Digit Year Notation e.g. 24.05.27 -> 2027-05-24
+  const m2digit = clean.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2})\b/);
+  if (m2digit) {
+    let day = parseInt(m2digit[1], 10);
+    let month = parseInt(m2digit[2], 10);
+    const year = 2000 + parseInt(m2digit[3], 10);
+
+    if (month < 1 || month > 12) month = 1;
+    const maxDays = new Date(year, month, 0).getDate();
+    if (day > maxDays) day = maxDays;
+
+    const dayStr = String(day).padStart(2, '0');
+    const monthStr = String(month).padStart(2, '0');
+    return `${year}-${monthStr}-${dayStr}`;
+  }
+
+  // Match MM.YYYY e.g. 05.2027 -> 2027-05-31
   const m2 = clean.match(/(\d{1,2})[./-](\d{4})/);
   if (m2) {
-    const month = m2[1].padStart(2, '0');
-    const year = m2[2];
-    const lastDay = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
-    return `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+    let month = parseInt(m2[1], 10);
+    const year = parseInt(m2[2], 10);
+    if (month < 1 || month > 12) month = 1;
+    const lastDay = new Date(year, month, 0).getDate();
+    const monthStr = String(month).padStart(2, '0');
+    return `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
   }
+
   return null;
 };
 
