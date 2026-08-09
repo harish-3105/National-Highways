@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { CaseEntryFormData } from '@/types/legal';
 import CaseEntryForm from './CaseEntryForm';
 import CaseViewModal from './CaseViewModal';
+import DeleteLegalCaseModal from './DeleteLegalCaseModal';
 import {
   Search,
   Plus,
@@ -26,6 +27,7 @@ export const LegalDashboard: React.FC = () => {
   const [uiMode, setUiMode] = useState<'LIST' | 'FORM'>('LIST');
   const [selectedCaseForEdit, setSelectedCaseForEdit] = useState<CaseEntryFormData | null>(null);
   const [selectedCaseForView, setSelectedCaseForView] = useState<CaseEntryFormData | null>(null);
+  const [selectedCaseForDelete, setSelectedCaseForDelete] = useState<CaseEntryFormData | null>(null);
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,18 +67,6 @@ export const LegalDashboard: React.FC = () => {
   const handleEdit = (caseItem: CaseEntryFormData) => {
     setSelectedCaseForEdit(caseItem);
     setUiMode('FORM');
-  };
-
-  const handleDelete = async (id?: string) => {
-    if (!id) return;
-    if (confirm('Are you sure you want to delete this legal case record?')) {
-      try {
-        await fetch(`/api/legal?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-        setCases((prev) => prev.filter((c) => c.id !== id));
-      } catch (err) {
-        console.error('Failed to delete case:', err);
-      }
-    }
   };
 
   const handleSaveForm = async (formData: CaseEntryFormData) => {
@@ -293,9 +283,9 @@ export const LegalDashboard: React.FC = () => {
                       </button>
 
                       <button
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => setSelectedCaseForDelete(item)}
                         className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-lg transition-colors cursor-pointer"
-                        title="Delete Case Record"
+                        title="Archive Case Record"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -315,8 +305,17 @@ export const LegalDashboard: React.FC = () => {
           onClose={() => setSelectedCaseForView(null)}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteLegalCaseModal
+        caseData={selectedCaseForDelete}
+        isOpen={!!selectedCaseForDelete}
+        onClose={() => setSelectedCaseForDelete(null)}
+        onSuccess={() => fetchCases()}
+      />
     </div>
   );
 };
 
 export default LegalDashboard;
+
