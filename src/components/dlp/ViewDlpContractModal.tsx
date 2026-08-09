@@ -57,7 +57,7 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
       case 'NO_DLP':
         return <span className="px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-extrabold text-[11px]">No DLP</span>;
       case 'UNCONTRACTED':
-        return <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-extrabold text-[11px]">Uncontracted</span>;
+        return <span className="px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 font-extrabold text-[11px]">Uncontracted</span>;
       default:
         return <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-extrabold text-[11px]">{type}</span>;
     }

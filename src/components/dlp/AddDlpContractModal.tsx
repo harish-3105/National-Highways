@@ -249,7 +249,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                   placeholder="e.g. NH-179A"
                   value={highwayCode}
                   onChange={(e) => setHighwayCode(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -260,7 +260,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                 <select
                   value={circleName}
                   onChange={(e) => handleCircleChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {DLP_CIRCLE_OPTIONS.map((c) => (
                     <option key={c} value={c}>
@@ -277,7 +277,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                 <select
                   value={divisionName}
                   onChange={(e) => setDivisionName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {divisionOptions.map((d) => (
                     <option key={d} value={d}>
@@ -297,7 +297,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                 placeholder="e.g. Salem Division - NH-179A (Km 0 to 80)"
                 value={stretchName}
                 onChange={(e) => setStretchName(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -309,7 +309,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                   step="0.001"
                   value={fromKm}
                   onChange={(e) => setFromKm(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -320,7 +320,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                   step="0.001"
                   value={toKm}
                   onChange={(e) => setToKm(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -335,7 +335,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
 
           {/* Section 2: Complete Category Sub-Chainages & Expiry Inputs */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-4">
-            <h4 className="font-bold text-xs text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+            <h4 className="font-bold text-xs text-blue-700 dark:text-blue-400 uppercase tracking-wider">
               2. Summary Breakdown Metrics (Excel Columns 6-24)
             </h4>
 
@@ -350,7 +350,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                       type="number"
                       value={dlpContractCount}
                       onChange={(e) => setDlpContractCount(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg font-bold"
+                      className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold"
                     />
                   </div>
                   <div>
@@ -360,33 +360,33 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                       step="0.001"
                       value={dlpLengthKm}
                       onChange={(e) => setDlpLengthKm(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg font-bold text-emerald-700"
+                      className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold text-emerald-600"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">DLP Specific Chainages (Col 8)</label>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">DLP Chainages (Col 8)</label>
                   <input
                     type="text"
-                    placeholder="e.g. Km 12.650 to Km 20.00..."
+                    placeholder="e.g. Km 0/0 - 80/0"
                     value={dlpChainage}
                     onChange={(e) => setDlpChainage(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg font-medium text-[11px]"
+                    className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px]"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">DLP Expiry Date</label>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">DLP Till Date (Col 9)</label>
                   <input
                     type="date"
                     value={dlpExpiryDate}
                     onChange={(e) => setDlpExpiryDate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg font-bold"
+                    className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold"
                   />
                 </div>
               </div>
 
               <div className="bg-blue-50/50 dark:bg-blue-950/20 p-3.5 rounded-xl border border-blue-200 dark:border-blue-800 space-y-3">
-                <span className="font-bold text-blue-900 dark:text-blue-300 block text-xs">Under STMC</span>
+                <span className="font-bold text-blue-900 dark:text-blue-300 block text-xs">Short-Term Maintenance (STMC)</span>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Contracts Count</label>
@@ -394,7 +394,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                       type="number"
                       value={stmcContractCount}
                       onChange={(e) => setStmcContractCount(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-800 rounded-lg font-bold"
+                      className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold"
                     />
                   </div>
                   <div>
@@ -404,161 +404,145 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                       step="0.001"
                       value={stmcLengthKm}
                       onChange={(e) => setStmcLengthKm(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-800 rounded-lg font-bold text-blue-700"
+                      className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold text-blue-600"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">STMC Specific Chainages (Col 15)</label>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">STMC Chainages (Col 15)</label>
                   <input
                     type="text"
-                    placeholder="e.g. Km 139/0 to 141/0..."
+                    placeholder="e.g. Km 0/0 - 45/0"
                     value={stmcChainage}
                     onChange={(e) => setStmcChainage(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-800 rounded-lg font-medium text-[11px]"
+                    className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px]"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">STMC Expiry Date</label>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">STMC Expiry Date (Col 16)</label>
                   <input
                     type="date"
                     value={stmcExpiryDate}
                     onChange={(e) => setStmcExpiryDate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-800 rounded-lg font-bold"
+                    className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Construction & PBMC */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-orange-50/50 dark:bg-orange-950/20 p-3.5 rounded-xl border border-orange-200 dark:border-orange-800 space-y-3">
-                <span className="font-bold text-orange-900 dark:text-orange-300 block text-xs">Under Construction / Tender</span>
+            {/* PBMC, Construction & No DLP */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-purple-50/50 dark:bg-purple-950/20 p-3 rounded-xl border border-purple-200 dark:border-purple-800 space-y-2">
+                <span className="font-bold text-purple-900 dark:text-purple-300 block text-xs">PBMC Projects</span>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Projects Count</label>
-                    <input
-                      type="number"
-                      value={constructionProjectCount}
-                      onChange={(e) => setConstructionProjectCount(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-orange-300 dark:border-orange-800 rounded-lg font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Length (km)</label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      value={constructionLengthKm}
-                      onChange={(e) => setConstructionLengthKm(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-orange-300 dark:border-orange-800 rounded-lg font-bold text-orange-700"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Construction Chainages (Col 11)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Km 0.000 to Km 12.300..."
-                    value={constructionChainage}
-                    onChange={(e) => setConstructionChainage(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-orange-300 dark:border-orange-800 rounded-lg font-medium text-[11px]"
-                  />
-                </div>
-              </div>
-
-              <div className="bg-purple-50/50 dark:bg-purple-950/20 p-3.5 rounded-xl border border-purple-200 dark:border-purple-800 space-y-3">
-                <span className="font-bold text-purple-900 dark:text-purple-300 block text-xs">Under PBMC</span>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Projects Count</label>
+                    <label className="block text-[10px] font-bold text-slate-500">Count</label>
                     <input
                       type="number"
                       value={pbmcProjectCount}
                       onChange={(e) => setPbmcProjectCount(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-800 rounded-lg font-bold"
+                      className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Length (km)</label>
+                    <label className="block text-[10px] font-bold text-slate-500">Length (km)</label>
                     <input
                       type="number"
                       step="0.001"
                       value={pbmcLengthKm}
                       onChange={(e) => setPbmcLengthKm(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-800 rounded-lg font-bold text-purple-700"
+                      className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold text-purple-600"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">PBMC Specific Chainages (Col 19)</label>
+                  <label className="block text-[10px] font-bold text-slate-500">PBMC Expiry Date</label>
+                  <input
+                    type="date"
+                    value={pbmcExpiryDate}
+                    onChange={(e) => setPbmcExpiryDate(e.target.value)}
+                    className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-orange-50/50 dark:bg-orange-950/20 p-3 rounded-xl border border-orange-200 dark:border-orange-800 space-y-2">
+                <span className="font-bold text-orange-900 dark:text-orange-300 block text-xs">Under Construction</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500">Projects</label>
+                    <input
+                      type="number"
+                      value={constructionProjectCount}
+                      onChange={(e) => setConstructionProjectCount(Number(e.target.value))}
+                      className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500">Length (km)</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={constructionLengthKm}
+                      onChange={(e) => setConstructionLengthKm(Number(e.target.value))}
+                      className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold text-orange-600"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500">Construction Chainage</label>
                   <input
                     type="text"
-                    placeholder="e.g. Km 0/0-31/8..."
-                    value={pbmcChainage}
-                    onChange={(e) => setPbmcChainage(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-800 rounded-lg font-medium text-[11px]"
+                    placeholder="e.g. Km 8.770"
+                    value={constructionChainage}
+                    onChange={(e) => setConstructionChainage(e.target.value)}
+                    className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px]"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-slate-100 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">No DLP Stretch</span>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500">No DLP Length (km)</label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={noDlpLengthKm}
+                    onChange={(e) => setNoDlpLengthKm(Number(e.target.value))}
+                    className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500">No DLP Chainages</label>
+                  <input
+                    type="text"
+                    value={noDlpChainage}
+                    onChange={(e) => setNoDlpChainage(e.target.value)}
+                    className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px]"
                   />
                 </div>
               </div>
             </div>
 
-            {/* No DLP & Uncontracted */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-slate-100 dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
-                <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">Length with No DLP</span>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">No DLP Length (km)</label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      value={noDlpLengthKm}
-                      onChange={(e) => setNoDlpLengthKm(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Expiry Date (Col 23)</label>
-                    <input
-                      type="date"
-                      value={noDlpExpiryDate}
-                      onChange={(e) => setNoDlpExpiryDate(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg font-bold"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">No DLP Chainages (Col 22)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. km 78/000-110/200..."
-                    value={noDlpChainage}
-                    onChange={(e) => setNoDlpChainage(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg font-medium text-[11px]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Uncontracted Length After 31.03.2027 (km)</label>
-                <input
-                  type="number"
-                  step="0.001"
-                  value={uncontractedAfter2027Km}
-                  onChange={(e) => setUncontractedAfter2027Km(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-amber-700"
-                />
-              </div>
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Uncontracted Length After 31.03.2027 (km)</label>
+              <input
+                type="number"
+                step="0.001"
+                value={uncontractedAfter2027Km}
+                onChange={(e) => setUncontractedAfter2027Km(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-blue-700 dark:text-blue-400"
+              />
             </div>
           </div>
 
           {/* Section 3: 1-to-N Granular Sub-Contracts Dynamic Repeater */}
-          <div className="border border-amber-300 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-950/10 rounded-xl p-4 space-y-4">
+          <div className="border border-blue-200 dark:border-blue-800 bg-blue-50/20 dark:bg-blue-950/10 rounded-xl p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-bold text-xs text-amber-800 dark:text-amber-300 uppercase tracking-wider flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-amber-600" />
+                <h4 className="font-bold text-xs text-blue-800 dark:text-blue-300 uppercase tracking-wider flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-blue-600" />
                   3. Individual Maintenance Sub-Contracts (Granular Relational 1-to-N)
                 </h4>
                 <p className="text-[11px] text-slate-500">Log distinct sub-stretches with individual contractors, chainages, and expiry dates</p>
@@ -567,7 +551,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
               <button
                 type="button"
                 onClick={handleAddSubContract}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Sub-Contract</span>
@@ -575,7 +559,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
             </div>
 
             {subContracts.length === 0 ? (
-              <div className="p-4 bg-white dark:bg-slate-800/80 rounded-xl border border-amber-200 dark:border-amber-900 text-center text-slate-500 text-xs">
+              <div className="p-4 bg-white dark:bg-slate-800/80 rounded-xl border border-blue-200 dark:border-blue-900 text-center text-slate-500 text-xs">
                 No granular sub-contracts added yet. Click <strong>+ Add Sub-Contract</strong> above to log individual maintenance stretches.
               </div>
             ) : (
@@ -586,7 +570,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                     className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3 shadow-xs"
                   >
                     <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
-                      <span className="font-extrabold text-amber-700 dark:text-amber-400 text-xs">
+                      <span className="font-extrabold text-blue-700 dark:text-blue-400 text-xs">
                         Sub-Contract #{idx + 1}
                       </span>
                       <button
@@ -677,7 +661,7 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
 
           {/* Section 4: Contractor Info & Remarks */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
-            <h4 className="font-bold text-xs text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+            <h4 className="font-bold text-xs text-blue-700 dark:text-blue-400 uppercase tracking-wider">
               4. Overall Contract Info & Remarks
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
