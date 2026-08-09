@@ -164,23 +164,49 @@ const parseSafeInteger = (val: any): number => {
   return num;
 };
 
+const cleanBullet = (str: string): string => {
+  if (!str) return '';
+  const s = String(str).trim();
+  if (/^\d{1,2}\)\s*/.test(s)) return s.replace(/^\d{1,2}\)\s*/, '');
+  if (/^\d{1,2}\.\s+/.test(s)) return s.replace(/^\d{1,2}\.\s+/, '');
+  return s;
+};
+
+const cleanTitleOrGenerate = (rawStr: string, index: number, type: string): string => {
+  if (!rawStr) return `${type} Sub-Stretch ${index + 1}`;
+  let clean = cleanBullet(rawStr);
+  clean = clean.replace(/[,;]+$/, '').trim();
+
+  if (/^\d{1,2}[./-]\d{4}$/.test(clean) || /^\d{1,2}[./-]\d{1,2}[./-]\d{4}$/.test(clean) || /^\d{4}$/.test(clean)) {
+    return `${type} Sub-Stretch ${index + 1}`;
+  }
+
+  if (clean === '0' || clean === '-' || clean === 'N/A' || !clean) {
+    return `${type} Sub-Stretch ${index + 1}`;
+  }
+
+  return clean;
+};
+
 /**
- * Standardize Indian Date formats (DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY) to ISO YYYY-MM-DD
+ * Standardize Indian Date formats (DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY, MM.YYYY) to ISO YYYY-MM-DD
  */
 const parseIndianDate = (dstr: string): string | null => {
   if (!dstr) return null;
-  const m1 = dstr.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
+  const clean = cleanBullet(dstr);
+  const m1 = clean.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
   if (m1) {
     const day = m1[1].padStart(2, '0');
     const month = m1[2].padStart(2, '0');
     const year = m1[3];
     return `${year}-${month}-${day}`;
   }
-  const m2 = dstr.match(/(\d{1,2})[./-](\d{4})/);
+  const m2 = clean.match(/(\d{1,2})[./-](\d{4})/);
   if (m2) {
     const month = m2[1].padStart(2, '0');
     const year = m2[2];
-    return `${year}-${month}-01`;
+    const lastDay = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
+    return `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
   }
   return null;
 };
@@ -326,6 +352,16 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
   }
 }
 
+function getRawCellLines(val: any): string[] {
+  if (val === null || val === undefined) return [];
+  const rawStr = String(val).trim();
+  if (!rawStr || rawStr === '-') return [];
+  return rawStr
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 function parseDLPContracts(rawRows: any[][], result: ParseResult) {
   const parsedData: DLPRow[] = [];
   const now = new Date();
@@ -402,33 +438,43 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       // DLP (Cols 6, 7, 8, 9)
       const dlpCount = parseSafeInteger(row[6]);
       const dlpLen = parseChainageValue(row[7]) || 0;
-      const dlpChainage = cleanString(row[8]);
-      const dlpExpiryStr = cleanString(row[9]);
+      const dlpChainageLines = getRawCellLines(row[8]);
+      const dlpDateLines = getRawCellLines(row[9]);
+
+      const dlpChainage = dlpChainageLines.join(', ');
+      const dlpExpiryStr = dlpDateLines.join(', ');
 
       // Construction (Cols 10, 11, 12)
       const constructionCount = parseSafeInteger(row[10]);
-      const constructionChainage = cleanString(row[11]);
+      const constructionChainageLines = getRawCellLines(row[11]);
       const constructionLen = parseChainageValue(row[12]) || 0;
+      const constructionChainage = constructionChainageLines.join(', ');
 
       // STMC (Cols 13, 14, 15, 16)
       const stmcCount = parseSafeInteger(row[13]);
       const stmcLen = parseChainageValue(row[14]) || 0;
-      const stmcChainage = cleanString(row[15]);
-      const stmcExpiryStr = cleanString(row[16]);
+      const stmcChainageLines = getRawCellLines(row[15]);
+      const stmcDateLines = getRawCellLines(row[16]);
+      const stmcChainage = stmcChainageLines.join(', ');
+      const stmcExpiryStr = stmcDateLines.join(', ');
 
       // PBMC (Cols 17, 18, 19, 20)
       const pbmcCount = parseSafeInteger(row[17]);
       const pbmcLen = parseChainageValue(row[18]) || 0;
-      const pbmcChainage = cleanString(row[19]);
-      const pbmcExpiryStr = cleanString(row[20]);
+      const pbmcChainageLines = getRawCellLines(row[19]);
+      const pbmcDateLines = getRawCellLines(row[20]);
+      const pbmcChainage = pbmcChainageLines.join(', ');
+      const pbmcExpiryStr = pbmcDateLines.join(', ');
 
       // No DLP (Cols 21, 22, 23)
       const noDlpLen = parseChainageValue(row[21]) || 0;
-      const noDlpChainage = cleanString(row[22]);
-      const noDlpExpiryStr = cleanString(row[23]);
+      const noDlpChainageLines = getRawCellLines(row[22]);
+      const noDlpDateLines = getRawCellLines(row[23]);
+      const noDlpChainage = noDlpChainageLines.join(', ');
+      const noDlpExpiryStr = noDlpDateLines.join(', ');
 
-      // Uncontracted (Col 24)
-      const uncontractedLen = parseChainageValue(row[24]) || 0;
+      // Uncontracted (Col 24 or Col 31)
+      const uncontractedLen = parseChainageValue(row[24]) || parseChainageValue(row[31]) || 0;
 
       // Remarks (Col 25)
       let remarks = cleanString(row[25]) || cleanString(row[row.length - 1]);
@@ -441,19 +487,16 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
 
       const subContracts: any[] = [];
 
-      function parseIndianDates(str: string): string[] {
-        if (!str) return [];
-        const matches = [...String(str).matchAll(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/g)];
-        return matches.map((m) => `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`);
-      }
-
       // 1. DLP Sub-Contracts
-      if (dlpLen > 0 || dlpChainage) {
-        const dates = parseIndianDates(dlpExpiryStr);
-        const chainages = dlpChainage.split(/(?=\d+\.)|\n|&/).map(cleanString).filter(Boolean);
-        const count = Math.max(dlpCount, dates.length, chainages.length, 1);
+      if (dlpLen > 0 || dlpChainageLines.length > 0) {
+        const count = Math.max(dlpCount, dlpChainageLines.length, dlpDateLines.length, 1);
         for (let k = 0; k < count; k++) {
-          const expDate = dates[k] || dates[0] || undefined;
+          const rawTitle = dlpChainageLines[k] || dlpChainageLines[0] || '';
+          const title = cleanTitleOrGenerate(rawTitle, k, 'DLP');
+
+          const rawDateStr = dlpDateLines[k] || dlpDateLines[0] || dlpExpiryStr;
+          const expDate = parseIndianDate(rawDateStr) || undefined;
+
           let dRem = 0;
           let st = 'ACTIVE';
           if (expDate) {
@@ -464,8 +507,8 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
           subContracts.push({
             id: `sub-dlp-${i}-${k + 1}`,
             maintenance_type: 'DLP',
-            sub_stretch_title: chainages[k] || dlpChainage || `DLP Stretch ${k + 1}`,
-            length_km: count === 1 ? dlpLen : Math.round((dlpLen / count) * 1000) / 1000,
+            sub_stretch_title: title,
+            length_km: count === 1 ? dlpLen : roundTo3Decimals(dlpLen / count),
             contractor_name: `${col1.trim()} Division DLP Contractor`,
             expiry_date: expDate,
             days_remaining: dRem,
@@ -476,9 +519,11 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       }
 
       // 2. STMC Sub-Contracts
-      if (stmcLen > 0 || stmcChainage) {
-        const dates = parseIndianDates(stmcExpiryStr);
-        const expDate = dates[0] || undefined;
+      if (stmcLen > 0 || stmcChainageLines.length > 0) {
+        const rawTitle = stmcChainageLines[0] || stmcChainage || '';
+        const title = cleanTitleOrGenerate(rawTitle, 0, 'STMC');
+        const rawDateStr = stmcDateLines[0] || stmcExpiryStr;
+        const expDate = parseIndianDate(rawDateStr) || undefined;
         let dRem = 0;
         let st = 'ACTIVE';
         if (expDate) {
@@ -489,7 +534,7 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
         subContracts.push({
           id: `sub-stmc-${i}-1`,
           maintenance_type: 'STMC',
-          sub_stretch_title: stmcChainage || `STMC Stretch (${stmcLen} km)`,
+          sub_stretch_title: title,
           length_km: stmcLen,
           contractor_name: `${col1.trim()} Division STMC Contractor`,
           expiry_date: expDate,
@@ -500,11 +545,13 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       }
 
       // 3. Construction Sub-Contracts
-      if (constructionLen > 0 || constructionChainage) {
+      if (constructionLen > 0 || constructionChainageLines.length > 0) {
+        const rawTitle = constructionChainageLines[0] || constructionChainage || '';
+        const title = cleanTitleOrGenerate(rawTitle, 0, 'Construction');
         subContracts.push({
           id: `sub-const-${i}-1`,
           maintenance_type: 'CONSTRUCTION',
-          sub_stretch_title: constructionChainage || `Construction / Tender Stretch (${constructionLen} km)`,
+          sub_stretch_title: title,
           length_km: constructionLen,
           contractor_name: `${col1.trim()} Construction / Tender Agency`,
           expiry_date: undefined,
@@ -515,9 +562,11 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       }
 
       // 4. PBMC Sub-Contracts
-      if (pbmcLen > 0 || pbmcChainage) {
-        const dates = parseIndianDates(pbmcExpiryStr);
-        const expDate = dates[0] || undefined;
+      if (pbmcLen > 0 || pbmcChainageLines.length > 0) {
+        const rawTitle = pbmcChainageLines[0] || pbmcChainage || '';
+        const title = cleanTitleOrGenerate(rawTitle, 0, 'PBMC');
+        const rawDateStr = pbmcDateLines[0] || pbmcExpiryStr;
+        const expDate = parseIndianDate(rawDateStr) || undefined;
         let dRem = 0;
         let st = 'ACTIVE';
         if (expDate) {
@@ -528,7 +577,7 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
         subContracts.push({
           id: `sub-pbmc-${i}-1`,
           maintenance_type: 'PBMC',
-          sub_stretch_title: pbmcChainage || `PBMC Stretch (${pbmcLen} km)`,
+          sub_stretch_title: title,
           length_km: pbmcLen,
           contractor_name: `${col1.trim()} Division PBMC Contractor`,
           expiry_date: expDate,
@@ -539,9 +588,11 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       }
 
       // 5. No DLP Sub-Contracts
-      if (noDlpLen > 0 || noDlpChainage) {
-        const dates = parseIndianDates(noDlpExpiryStr);
-        const expDate = dates[0] || undefined;
+      if (noDlpLen > 0 || noDlpChainageLines.length > 0) {
+        const rawTitle = noDlpChainageLines[0] || noDlpChainage || '';
+        const title = cleanTitleOrGenerate(rawTitle, 0, 'No DLP');
+        const rawDateStr = noDlpDateLines[0] || noDlpChainageLines.find((s) => s.match(/\d{2}\.\d{2}\.\d{4}/)) || noDlpExpiryStr;
+        const expDate = parseIndianDate(rawDateStr) || undefined;
         let dRem = 0;
         let st = 'ACTIVE';
         if (expDate) {
@@ -552,7 +603,7 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
         subContracts.push({
           id: `sub-nodlp-${i}-1`,
           maintenance_type: 'NO_DLP',
-          sub_stretch_title: noDlpChainage || `No DLP Stretch (${noDlpLen} km)`,
+          sub_stretch_title: title,
           length_km: noDlpLen,
           contractor_name: `Departmental Maintenance (${col1.trim()})`,
           expiry_date: expDate,
@@ -575,6 +626,8 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
           status: 'EXPIRING_SOON',
           remarks: `Additional Length Required as DLP Expires Before 31.03.2027`,
         });
+      }
+
       const chainageRange = (col3 || col4) ? ` (Km ${col3 || '0'} to ${col4 || '0'})` : '';
       const stretchTitle = `${col1 ? col1.trim() + ' Division - ' : ''}${nhCode}${chainageRange}`.trim();
 
@@ -595,14 +648,14 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
         stmc_contract_count: stmcCount,
         stmc_length_km: stmcLen,
         stmc_chainage: stmcChainage,
-        stmc_expiry_date: stmcExpiryStr,
+        stmc_expiry_date: parseIndianDate(stmcExpiryStr) || undefined,
         pbmc_project_count: pbmcCount,
         pbmc_length_km: pbmcLen,
         pbmc_chainage: pbmcChainage,
-        pbmc_expiry_date: pbmcExpiryStr,
+        pbmc_expiry_date: parseIndianDate(pbmcExpiryStr) || undefined,
         no_dlp_length_km: noDlpLen,
         no_dlp_chainage: noDlpChainage,
-        no_dlp_expiry_date: noDlpExpiryStr,
+        no_dlp_expiry_date: parseIndianDate(noDlpExpiryStr) || undefined,
         uncontracted_after_2027_km: uncontractedLen,
         sub_contracts: subContracts,
         contractor_name: `${col1.trim()} Division (Contractor DLP)`,
@@ -614,7 +667,6 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       });
     }
   }
-}
 
   result.totalRows = rawRows.length;
   result.validRows = parsedData.length;
