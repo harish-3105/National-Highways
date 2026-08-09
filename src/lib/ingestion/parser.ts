@@ -226,9 +226,13 @@ export async function parseDatasetFile(
     rawRows = parsed.data;
   } else {
     workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-    const firstSheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[firstSheetName];
-    rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    const targetSheetName =
+      workbook.SheetNames.find((name) => /summary/i.test(name) && !/copy/i.test(name)) ||
+      workbook.SheetNames.find((name) => /summary/i.test(name)) ||
+      workbook.SheetNames.find((name) => !/copy/i.test(name)) ||
+      workbook.SheetNames[0];
+    const sheet = workbook.Sheets[targetSheetName];
+    rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
   }
 
   const result: ParseResult = {
@@ -362,6 +366,19 @@ function getRawCellLines(val: any): string[] {
     .filter(Boolean);
 }
 
+const normalizeNhCode = (col2: any): string => {
+  if (!col2) return '';
+  let str = String(col2).trim();
+  if (str.includes('/')) {
+    const parts = str.split('/');
+    str = parts[parts.length - 1].trim();
+  }
+  str = str.replace(/extn/i, 'E').replace(/ext/i, 'E').replace(/\s+/g, '');
+  const clean = str.replace(/[^0-9A-Z]/gi, '').toUpperCase();
+  if (!clean || clean === 'NHNO') return '';
+  return clean.startsWith('NH') ? clean : `NH-${clean}`;
+};
+
 function parseDLPContracts(rawRows: any[][], result: ParseResult) {
   const parsedData: DLPRow[] = [];
   const now = new Date();
@@ -410,10 +427,8 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
     }
 
     if (col2 && (col2.match(/\d+/) || rowStr.includes('DLP') || rowStr.includes('STMC') || rowStr.includes('PBMC'))) {
-      const nhNum = col2.replace(/[^0-9A-Z]/gi, '');
-      if (!nhNum || nhNum.toLowerCase() === 'nhno') continue;
-
-      const nhCode = `NH-${nhNum}`;
+      const nhCode = normalizeNhCode(col2);
+      if (!nhCode) continue;
       const fromKmVal = parseChainageValue(col3);
       const toKmVal = parseChainageValue(col4);
       const totalLen = parseChainageValue(col5) || roundTo3Decimals(Math.abs(toKmVal - fromKmVal)) || 0;
