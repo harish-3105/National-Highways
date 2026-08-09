@@ -220,6 +220,36 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ cont
                   </div>
                 )}
               </div>
+
+              {/* No DLP Breakdown */}
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">
+                  No DLP Stretch (Cols 21-23)
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div><strong className="text-slate-500">No DLP Length:</strong> <span className="font-bold text-blue-600 dark:text-blue-400">{contract.no_dlp_length_km ?? 0} km</span></div>
+                  <div><strong className="text-slate-500">Expiry Date (Col 23):</strong> <span className="font-bold text-slate-900 dark:text-slate-100">{contract.no_dlp_expiry_date || 'N/A'}</span></div>
+                </div>
+                {contract.no_dlp_chainage && (
+                  <div>
+                    <strong className="text-slate-500 block">No DLP Chainages (Col 22):</strong>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">{contract.no_dlp_chainage}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Uncontracted Length Breakdown */}
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">
+                  Uncontracted Length After 31.03.2027 (Col 24)
+                </span>
+                <div>
+                  <strong className="text-slate-500 block">Uncontracted Length:</strong>
+                  <span className="font-bold text-blue-600 dark:text-blue-400 text-sm">
+                    {contract.uncontracted_after_2027_km ?? 0} km
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
