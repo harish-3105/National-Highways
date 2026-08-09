@@ -142,6 +142,16 @@ const parseChainageValue = (val: any): number => {
   return isNaN(directNum) ? 0 : roundTo3Decimals(directNum);
 };
 
+const parseSafeInteger = (val: any): number => {
+  if (val === null || val === undefined) return 0;
+  const str = cleanString(val);
+  if (!str || str === '-') return 0;
+  if (str.includes('/') || str.length > 5) return 1;
+  const num = parseInt(str.replace(/[^0-9]/g, ''), 10);
+  if (isNaN(num) || num > 1000) return 1;
+  return num;
+};
+
 /**
  * Standardize Indian Date formats (DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY) to ISO YYYY-MM-DD
  */
@@ -377,13 +387,13 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       if (/STMC/i.test(rowStr)) mode = 'STMC';
       else if (/PBMC/i.test(rowStr)) mode = 'PBMC';
 
-      const dlpCount = parseInt(cleanString(row[6]).replace(/[^0-9]/g, ''), 10) || 0;
+      const dlpCount = parseSafeInteger(row[6]);
       const dlpLen = parseChainageValue(row[7]) || 0;
-      const stmcCount = parseInt(cleanString(row[10]).replace(/[^0-9]/g, ''), 10) || 0;
+      const stmcCount = parseSafeInteger(row[10]);
       const stmcLen = parseChainageValue(row[12]) || 0;
-      const constructionCount = parseInt(cleanString(row[13]).replace(/[^0-9]/g, ''), 10) || 0;
+      const constructionCount = parseSafeInteger(row[13]);
       const constructionLen = parseChainageValue(row[14]) || 0;
-      const pbmcCount = parseInt(cleanString(row[15]).replace(/[^0-9]/g, ''), 10) || 0;
+      const pbmcCount = parseSafeInteger(row[15]);
       const pbmcLen = parseChainageValue(row[16]) || 0;
       const noDlpLen = parseChainageValue(row[21]) || 0;
       const uncontractedLen = parseChainageValue(row[24]) || 0;
