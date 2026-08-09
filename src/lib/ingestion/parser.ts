@@ -315,7 +315,8 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
     }
 
     const col1 = rawCol1 || currentDivision;
-    const col2 = rawCol2 || currentNHNo;
+    const col2 = rawCol2; // Must explicitly be present on the row to filter out subtotal calculation rows
+
     const col3 = cleanString(row[3]); // From Chainage
     const col4 = cleanString(row[4]); // To Chainage
     const col5 = cleanString(row[5]); // Total Length
@@ -327,7 +328,10 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
     if (
       rowStrLower.includes('status of length') ||
       rowStrLower.includes('sub total') ||
+      rowStrLower.includes('subtotal') ||
+      rowStrLower.includes('division sub total') ||
       rowStrLower.includes('no.of contracts') ||
+      !col2 ||
       col2.toLowerCase().includes('nh no') ||
       col2.toLowerCase().includes('nhno') ||
       rowStrLower.includes('grand total')
