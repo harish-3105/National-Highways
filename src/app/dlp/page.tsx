@@ -339,12 +339,12 @@ export default function DlpPage() {
             />
 
             {/* Status Pills */}
-            <div className="flex bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-1">
+            <div className="h-[38px] flex items-center bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-1">
               {(['ALL', 'ACTIVE', 'EXPIRING_SOON', 'EXPIRED'] as const).map((st) => (
                 <button
                   key={st}
                   onClick={() => setStatusFilter(st)}
-                  className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                  className={`flex-1 h-full py-1 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center ${
                     statusFilter === st
                       ? 'bg-blue-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
