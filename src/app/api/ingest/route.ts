@@ -125,12 +125,32 @@ export async function POST(request: Request) {
       };
 
       const dateCols = ['dlp_expiry_date', 'doc_date', 'stmc_expiry_date', 'pbmc_expiry_date', 'no_dlp_expiry_date'];
+      const numCols = [
+        'from_km',
+        'to_km',
+        'length_km',
+        'dlp_contract_count',
+        'dlp_length_km',
+        'construction_project_count',
+        'construction_length_km',
+        'stmc_contract_count',
+        'stmc_length_km',
+        'pbmc_project_count',
+        'pbmc_length_km',
+        'no_dlp_length_km',
+        'uncontracted_after_2027_km',
+        'days_remaining',
+      ];
+
       const cleanData = parseResult.data.map((item: any) => {
         const payload: Record<string, any> = {};
         for (const col of allowedColumns) {
           if (item[col] !== undefined) {
             if (dateCols.includes(col)) {
               payload[col] = isValidIsoDate(item[col]) ? item[col] : null;
+            } else if (numCols.includes(col)) {
+              const val = Number(item[col] || 0);
+              payload[col] = isNaN(val) || val > 9999.999 ? 0 : Math.round(val * 1000) / 1000;
             } else {
               payload[col] = item[col];
             }

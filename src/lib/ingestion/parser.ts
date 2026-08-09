@@ -132,22 +132,26 @@ const roundTo3Decimals = (num: number): number => {
 const parseChainageValue = (val: any): number => {
   if (val === null || val === undefined) return 0;
   const str = cleanString(val);
-  if (!str) return 0;
+  if (!str || str === '-') return 0;
 
   // Handle slash notation e.g. 63/2, 110/2, 60/600
   const slashMatch = str.match(/^(\d+)\/(\d+)$/);
   if (slashMatch) {
     const whole = parseFloat(slashMatch[1]);
     const fracStr = slashMatch[2];
-    if (fracStr.length >= 3) {
-      return roundTo3Decimals(whole + parseFloat(fracStr) / 1000);
-    } else {
-      return roundTo3Decimals(whole + parseFloat(fracStr) / 10);
-    }
+    const valNum = fracStr.length >= 3 ? whole + parseFloat(fracStr) / 1000 : whole + parseFloat(fracStr) / 10;
+    return valNum > 9999 ? 0 : roundTo3Decimals(valNum);
   }
 
-  const directNum = parseFloat(str.replace(/[^0-9.]/g, ''));
-  return isNaN(directNum) ? 0 : roundTo3Decimals(directNum);
+  // Extract first valid decimal number e.g. 28.5 out of '28.5 km (Strengthening)'
+  const match = str.match(/(\d+(?:\.\d+)?)/);
+  if (match) {
+    const num = parseFloat(match[1]);
+    if (isNaN(num) || num > 9999) return 0;
+    return roundTo3Decimals(num);
+  }
+
+  return 0;
 };
 
 const parseSafeInteger = (val: any): number => {
