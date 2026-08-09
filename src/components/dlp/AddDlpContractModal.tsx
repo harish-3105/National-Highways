@@ -503,15 +503,26 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
 
               <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
                 <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">No DLP Stretch</span>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500">No DLP Length (km)</label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={noDlpLengthKm}
-                    onChange={(e) => setNoDlpLengthKm(Number(e.target.value))}
-                    className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold text-blue-600 dark:text-blue-400"
-                  />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500">No DLP Length (km)</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={noDlpLengthKm}
+                      onChange={(e) => setNoDlpLengthKm(Number(e.target.value))}
+                      className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold text-blue-600 dark:text-blue-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500">Expiry Date (Col 23)</label>
+                    <input
+                      type="date"
+                      value={noDlpExpiryDate}
+                      onChange={(e) => setNoDlpExpiryDate(e.target.value)}
+                      className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500">No DLP Chainages</label>
