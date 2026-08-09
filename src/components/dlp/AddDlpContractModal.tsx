@@ -456,7 +456,17 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500">PBMC Expiry Date</label>
+                  <label className="block text-[10px] font-bold text-slate-500">PBMC Chainages (Col 19)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Km 0/0 - 31/8"
+                    value={pbmcChainage}
+                    onChange={(e) => setPbmcChainage(e.target.value)}
+                    className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500">PBMC Expiry Date (Col 20)</label>
                   <input
                     type="date"
                     value={pbmcExpiryDate}
