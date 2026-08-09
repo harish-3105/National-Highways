@@ -3,14 +3,15 @@
 **Project**: Tamil Nadu National Highways Department Management System  
 **Repository Remote**: `git@github.com:tnhighwaysdep/highways_project.git`  
 **Active Production Branch**: `main`  
-**Latest Deployed Commit**: `a69a682`  
+**Latest Deployed Commit**: `4d9bac0`  
+
 **Date**: August 8, 2026  
 
 ---
 
 ## 1. Executive Overview
 
-The codebase has been fully consolidated, audited, built, and deployed to `main`. All legacy/archived code and temporary progress markdown files have been cleaned out from git tracking. All API endpoints have been purged of hardcoded sample/dummy fallback records, connecting directly to Supabase cloud database tables and returning clean empty arrays (`[]`) when database tables are empty.
+The codebase has been fully consolidated, audited, built, and deployed to `main`. All legacy/archived code and temporary progress markdown files have been cleaned out from git tracking. All API endpoints and React page components have been completely purged of hardcoded sample/dummy fallback records, connecting directly to Supabase cloud database tables and returning clean empty arrays (`[]`) when database tables are empty. All API routes have been aligned with the exact live Supabase database schemas for seamless Create, Read, Update, and Soft-Delete operations. All core modules (`/highways`, `/dlp`, `/legal`, `/ingest`) share a unified light/dark design system.
 
 ---
 
@@ -39,6 +40,7 @@ The codebase has been fully consolidated, audited, built, and deployed to `main`
 
 ### B. DLP & Warranty Contract Tracker (`/dlp`)
 - **Route**: [`src/app/dlp/page.tsx`](file:///home/mathir14/nh_proj/src/app/dlp/page.tsx)
+- **Purged Dummy Data**: Removed `SAMPLE_DLP_CONTRACTS` array completely. Initialized state to `[]` and updated fetch handler to set database items directly.
 - **UI Components**: 4-tier warranty status badges (`ACTIVE`, `EXPIRING_SOON`, `EXPIRED`, `UNDER_MAINTENANCE`), date range popover filter ([`DlpCalendarDateFilter.tsx`](file:///home/mathir14/nh_proj/src/components/dlp/DlpCalendarDateFilter.tsx)).
 - **Backend API**: [`src/app/api/dlp/route.ts`](file:///home/mathir14/nh_proj/src/app/api/dlp/route.ts) (returns pure DB records from `dlp_contracts` table without dummy fallbacks).
 
@@ -46,13 +48,22 @@ The codebase has been fully consolidated, audited, built, and deployed to `main`
 
 ### C. Master Highways Management Catalog (`/highways`)
 - **Route**: [`src/app/highways/page.tsx`](file:///home/mathir14/nh_proj/src/app/highways/page.tsx)
-- **UI Components**: Grid & Table views, KPI header summary cards, Search and configuration filter controls, CSV/Excel export modal.
-- **Backend API**: [`src/app/api/highways/route.ts`](file:///home/mathir14/nh_proj/src/app/api/highways/route.ts) (queries `highways` table, joins with `dlp_contracts` for contract count, soft-delete filtering, no dummy fallbacks).
+- **UI & Controls**: Grid & Table views, KPI header summary cards, Search and configuration filter controls. Mounted **Export Catalog** (`Download`) and **Add Highway** (`Plus`) action buttons in page header banner.
+- **Modals Suite**:
+  - [`AddHighwayModal.tsx`](file:///home/mathir14/nh_proj/src/components/highways/AddHighwayModal.tsx): Live modal form for creating highways with automatic chainage distance calculations.
+  - [`EditHighwayModal.tsx`](file:///home/mathir14/nh_proj/src/components/highways/EditHighwayModal.tsx): Edit modal form for updating corridor title, endpoints, and lane configurations.
+  - [`DeleteHighwayModal.tsx`](file:///home/mathir14/nh_proj/src/components/highways/DeleteHighwayModal.tsx): Soft-delete confirmation modal.
+  - [`ExportHighwayModal.tsx`](file:///home/mathir14/nh_proj/src/components/highways/ExportHighwayModal.tsx): Custom report exporter (Excel `.xlsx` / CSV `.csv`) with scope & parameter selectors.
+- **Backend API Handler**: [`src/app/api/highways/route.ts`](file:///home/mathir14/nh_proj/src/app/api/highways/route.ts)
+  - **Schema Alignment**: Exactly matched live table columns (`id`, `road_code`, `road_name`, `from_location`, `to_location`, `from_chainage`, `to_chainage`, `length_km`, `configuration`, `status`, `start_latitude`, `start_longitude`, `end_latitude`, `end_longitude`, `created_at`, `updated_at`).
+  - **HTTP Method Handlers**: Exported `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`.
+  - **Soft-Delete**: `DELETE` updates `status = 'DELETED'` directly on the database table.
 
 ---
 
 ### D. Data Ingestion Engine (`/ingest`)
 - **Route**: [`src/app/ingest/page.tsx`](file:///home/mathir14/nh_proj/src/app/ingest/page.tsx)
+- **Design System Parity**: Restyled with light/dark responsive theme (`bg-slate-50 dark:bg-slate-950`), custom upload dropzone, blue/emerald status badges, and Lucide icons (`UploadCloud`, `Database`, `FileSpreadsheet`).
 - **Engine**: [`src/lib/ingestion/parser.ts`](file:///home/mathir14/nh_proj/src/lib/ingestion/parser.ts) handles merged cells (`!merges`), chainage format conversions (e.g. `63/2` &rarr; `63.200`), date normalizations, and bulk Supabase inserts.
 
 ---
@@ -83,11 +94,19 @@ Located in `supabase/migrations/`:
 | **`7507f22`** | `feat(legal): fully migrated 100% of harish legal cases entry form, searchable selects, date pickers, and converted case accordion module` |
 | **`3e3bc28`** | `feat(legal): fully wired full DB CRUD (create, read, update, soft-delete) and schema 0005 delete_status support` |
 | **`a69a682`** | `chore(prod): completely purged hardcoded fallback dummy data across all API routes (legal, dlp, highways)` |
+| **`f5985a9`** | `chore(dlp): purged hardcoded SAMPLE_DLP_CONTRACTS array from DlpPage component` |
+| **`0e8db68`** | `feat(highways): mounted Add Highway and Export Catalog action buttons in highways page header` |
+| **`d4b21b8`** | `fix(highways): aligned highways API route to match exact live database schema (removed delete_status, district, division_name dependencies)` |
+| **`ba970d0`** | `fix(api): added PATCH and PUT route handlers to highways API and enabled editing highway details without re-requiring road_code` |
+| **`97cad17`** | `style(ingest): aligned Data Ingestion module theme and color scheme with unified light/dark design system` |
+| **`2e28daa`** | `fix(legal): fix print record duplication and render 100% full case details in CaseViewModal` |
+| **`4d9bac0`** | `feat(legal): add formal legal letterhead template for PDF export while preserving web modal UI` |
+
 
 ---
 
 ## 5. Build Verification Metrics
 
 - **TypeScript Compilation**: `npx tsc --noEmit` &rarr; **0 Errors**.
-- **Next.js Turbopack Build**: `npm run build` &rarr; **Compiled in 552ms (9/9 static & dynamic routes)**.
+- **Next.js Turbopack Build**: `npm run build` &rarr; **Compiled in 1819ms (9/9 static & dynamic routes)**.
 - **Git Remote**: Synchronized with `origin/main` (`git@github.com:tnhighwaysdep/highways_project.git`).
