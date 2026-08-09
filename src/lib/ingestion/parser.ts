@@ -38,6 +38,7 @@ export interface HighwayRow {
 
 export interface DLPRow {
   highway_code: string;
+  division_name?: string;
   stretch_name: string;
   from_km: number;
   to_km: number;
@@ -307,7 +308,7 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
     const rawCol1 = cleanString(row[1]); // Division
     const rawCol2 = cleanString(row[2]); // NH No
 
-    if (rawCol1 && !rawCol1.toLowerCase().includes('division') && !rawCol1.toLowerCase().includes('sub total')) {
+    if (rawCol1 && !rawCol1.toLowerCase().includes('division') && !rawCol1.toLowerCase().includes('sub total') && !rawCol1.toLowerCase().includes('status')) {
       currentDivision = rawCol1;
     }
     if (rawCol2 && !rawCol2.toLowerCase().includes('nh no')) {
@@ -329,7 +330,8 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       rowStrLower.includes('sub total') ||
       rowStrLower.includes('no.of contracts') ||
       col2.toLowerCase().includes('nh no') ||
-      col2.toLowerCase().includes('nhno')
+      col2.toLowerCase().includes('nhno') ||
+      rowStrLower.includes('grand total')
     ) {
       continue;
     }
@@ -344,9 +346,7 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       const toKmVal = parseChainageValue(col4);
       const totalLen = parseChainageValue(col5) || roundTo3Decimals(Math.abs(toKmVal - fromKmVal)) || 0;
 
-      const contractorMatch = rowStr.match(/(?:M\/s\.|Thiru\.|Contractor[:\s]*)([^,\n\.]+)/i);
       const dlpMatch = rowStr.match(/(\d{1,2}[./-]\d{1,2}[./-]\d{4})/);
-
       const dlpDateStr = dlpMatch ? parseIndianDate(dlpMatch[1]) : undefined;
 
       let daysRemaining = 0;
@@ -363,18 +363,28 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       if (/STMC/i.test(rowStr)) mode = 'STMC';
       else if (/PBMC/i.test(rowStr)) mode = 'PBMC';
 
+      // Extract clean remarks from the last text column
+      let remarks = cleanString(row[row.length - 1]);
+      if (!remarks || remarks === '-' || /^\d+(\.\d+)?$/.test(remarks)) {
+        remarks = cleanString(row[18]) || cleanString(row[17]) || cleanString(row[16]);
+      }
+      if (!remarks || remarks === '-' || /^\d+(\.\d+)?$/.test(remarks)) {
+        remarks = `Maintenance & DLP period under ${col1.trim()} Division (${mode})`;
+      }
+
       const chainageRange = (col3 || col4) ? ` (Km ${col3 || '0'} to ${col4 || '0'})` : '';
-      const stretchTitle = `${col1 ? col1 + ' Division - ' : ''}${col2}${chainageRange}`.trim();
+      const stretchTitle = `${col1 ? col1.trim() + ' Division - ' : ''}${nhCode}${chainageRange}`.trim();
 
       parsedData.push({
         highway_code: nhCode,
+        division_name: col1.trim(),
         stretch_name: stretchTitle,
         from_km: fromKmVal,
         to_km: toKmVal,
         length_km: totalLen,
-        contractor_name: contractorMatch ? contractorMatch[0].trim() : `${col1 || 'PWD'} Division Contractor`,
+        contractor_name: `${col1.trim()} Division (Contractor DLP)`,
         contract_mode: mode,
-        work_description: rowStr.slice(0, 500),
+        work_description: remarks.replace(/\n+/g, ' ').trim(),
         doc_date: undefined,
         dlp_expiry_date: dlpDateStr || undefined,
         days_remaining: daysRemaining,

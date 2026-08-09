@@ -8,25 +8,48 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const highwayCode = searchParams.get('highway_code');
+    const division = searchParams.get('division');
+    const search = searchParams.get('search');
+    const statusFilter = searchParams.get('status');
 
     const supabase = await createClient();
     if (supabase) {
       let query = supabase.from('dlp_contracts').select('*').order('dlp_expiry_date', { ascending: true });
+
       if (highwayCode) query = query.eq('highway_code', highwayCode);
+      if (statusFilter && statusFilter !== 'ALL') {
+        query = query.eq('status', statusFilter);
+      } else {
+        query = query.neq('status', 'DELETED');
+      }
 
       const { data, error } = await query;
       if (!error && data) {
         const today = new Date();
 
-        const formattedContracts: DLPContractItem[] = data.map((item: any) => {
+        let formattedContracts: DLPContractItem[] = data.map((item: any) => {
           const expiry = item.dlp_expiry_date ? new Date(item.dlp_expiry_date) : today;
           const diffTime = expiry.getTime() - today.getTime();
           const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          const status = daysRemaining < 0 ? 'EXPIRED' : daysRemaining <= 90 ? 'EXPIRING_SOON' : 'ACTIVE';
+          const currentStatus = item.status === 'DELETED' 
+            ? 'DELETED' 
+            : daysRemaining < 0 
+            ? 'EXPIRED' 
+            : daysRemaining <= 90 
+            ? 'EXPIRING_SOON' 
+            : 'ACTIVE';
+
+          // Extract Division Name from stretch_name if not directly stored
+          let extractedDivision = item.division_name || '';
+          if (!extractedDivision && item.stretch_name) {
+            const match = item.stretch_name.match(/^([^ -]+(?:\s+Division)?)/i);
+            if (match) extractedDivision = match[1].replace(/\s+Division$/i, '').trim();
+          }
 
           return {
             id: item.id,
             highway_code: item.highway_code,
+            division_name: extractedDivision || 'General',
             stretch_name: item.stretch_name || `Stretch ${item.highway_code}`,
             from_km: Number(item.from_km || 0),
             to_km: Number(item.to_km || 0),
@@ -37,9 +60,32 @@ export async function GET(req: NextRequest) {
             doc_date: item.doc_date || '',
             dlp_expiry_date: item.dlp_expiry_date || '',
             days_remaining: daysRemaining,
-            status: status as any,
+            status: currentStatus as any,
           };
         });
+
+        // Filter out DELETED status records
+        formattedContracts = formattedContracts.filter((c) => (c.status as string) !== 'DELETED');
+
+        // Apply division filter
+        if (division) {
+          formattedContracts = formattedContracts.filter(
+            (c) => c.division_name?.toLowerCase().includes(division.toLowerCase()) || c.stretch_name.toLowerCase().includes(division.toLowerCase())
+          );
+        }
+
+        // Apply search query filter
+        if (search) {
+          const term = search.toLowerCase();
+          formattedContracts = formattedContracts.filter(
+            (c) =>
+              c.highway_code.toLowerCase().includes(term) ||
+              c.stretch_name.toLowerCase().includes(term) ||
+              c.contractor_name.toLowerCase().includes(term) ||
+              c.work_description.toLowerCase().includes(term) ||
+              c.division_name?.toLowerCase().includes(term)
+          );
+        }
 
         return NextResponse.json({ success: true, contracts: formattedContracts });
       }
@@ -57,14 +103,102 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const supabase = await createClient();
 
+    const fromKm = Number(body.from_km || 0);
+    const toKm = Number(body.to_km || 0);
+    const lengthKm = Number(body.length_km || Math.abs(toKm - fromKm));
+
+    const payload = {
+      highway_code: body.highway_code,
+      stretch_name: body.stretch_name || `${body.division_name || ''} Division - ${body.highway_code} (Km ${fromKm} to ${toKm})`,
+      from_km: fromKm,
+      to_km: toKm,
+      length_km: lengthKm,
+      contractor_name: body.contractor_name || `${body.division_name || ''} Division Contractor`,
+      contract_mode: body.contract_mode || 'EPC',
+      work_description: body.work_description || '',
+      doc_date: body.doc_date || null,
+      dlp_expiry_date: body.dlp_expiry_date || null,
+      status: 'ACTIVE',
+    };
+
     if (supabase) {
-      const { data, error } = await supabase.from('dlp_contracts').insert([body]).select();
+      const { data, error } = await supabase.from('dlp_contracts').insert([payload]).select();
       if (!error && data && data[0]) {
         return NextResponse.json({ success: true, contract: data[0] });
       }
     }
 
-    return NextResponse.json({ success: true, contract: { ...body, id: `dlp-${Date.now()}` } });
+    return NextResponse.json({ success: true, contract: { ...payload, id: `dlp-${Date.now()}` } });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'DLP Contract ID is required' }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+
+    const fromKm = Number(body.from_km || 0);
+    const toKm = Number(body.to_km || 0);
+    const lengthKm = Number(body.length_km || Math.abs(toKm - fromKm));
+
+    const payload = {
+      highway_code: body.highway_code,
+      stretch_name: body.stretch_name || `${body.division_name || ''} Division - ${body.highway_code} (Km ${fromKm} to ${toKm})`,
+      from_km: fromKm,
+      to_km: toKm,
+      length_km: lengthKm,
+      contractor_name: body.contractor_name,
+      contract_mode: body.contract_mode,
+      work_description: body.work_description,
+      doc_date: body.doc_date || null,
+      dlp_expiry_date: body.dlp_expiry_date || null,
+    };
+
+    if (supabase && !id.startsWith('dlp-')) {
+      const { data, error } = await supabase.from('dlp_contracts').update(payload).eq('id', id).select();
+      if (!error && data && data[0]) {
+        return NextResponse.json({ success: true, contract: data[0] });
+      }
+    }
+
+    return NextResponse.json({ success: true, contract: { ...body, ...payload } });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  return PUT(req);
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Contract ID is required' }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+    if (supabase && !id.startsWith('dlp-')) {
+      const { error } = await supabase.from('dlp_contracts').update({ status: 'DELETED' }).eq('id', id);
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
+    }
+
+    return NextResponse.json({ success: true, message: `Contract ${id} successfully soft-deleted` });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
