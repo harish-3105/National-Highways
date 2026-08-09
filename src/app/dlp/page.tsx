@@ -6,6 +6,7 @@ import { DlpCalendarDateFilter, DateRangeFilter } from '@/components/dlp/DlpCale
 import AddDlpContractModal from '@/components/dlp/AddDlpContractModal';
 import EditDlpContractModal from '@/components/dlp/EditDlpContractModal';
 import DeleteDlpContractModal from '@/components/dlp/DeleteDlpContractModal';
+import ViewDlpContractModal from '@/components/dlp/ViewDlpContractModal';
 import {
   ShieldCheck,
   Clock,
@@ -17,6 +18,7 @@ import {
   Search,
   Plus,
   RefreshCw,
+  Eye,
   Edit3,
   Trash2,
 } from 'lucide-react';
@@ -29,6 +31,17 @@ export interface DLPContractItem {
   from_km: number;
   to_km: number;
   length_km: number;
+  dlp_contract_count?: number;
+  dlp_length_km?: number;
+  stmc_contract_count?: number;
+  stmc_length_km?: number;
+  stmc_expiry_date?: string;
+  construction_project_count?: number;
+  construction_length_km?: number;
+  pbmc_project_count?: number;
+  pbmc_length_km?: number;
+  no_dlp_length_km?: number;
+  uncontracted_after_2027_km?: number;
   contractor_name: string;
   contract_mode: 'EPC' | 'STMC' | 'PBMC' | 'Annual Plan' | string;
   work_description: string;
@@ -67,6 +80,7 @@ export default function DlpPage() {
 
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedContractForView, setSelectedContractForView] = useState<DLPContractItem | null>(null);
   const [selectedContractForEdit, setSelectedContractForEdit] = useState<DLPContractItem | null>(null);
   const [selectedContractForDelete, setSelectedContractForDelete] = useState<DLPContractItem | null>(null);
 
@@ -172,10 +186,10 @@ export default function DlpPage() {
           <div>
             <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
               <ShieldCheck className="w-6 h-6 text-amber-600" />
-              Defect Liability Period (DLP) Contracts Portal
+              Defect Liability Period (DLP) & Maintenance Portal
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Active maintenance guarantees, contractor DLP expiry notifications, STMC & PBMC stretch logs by Division.
+              Active maintenance guarantees, STMC, PBMC, Construction & Uncontracted stretch logs across 100% of Excel metrics.
             </p>
           </div>
 
@@ -262,8 +276,8 @@ export default function DlpPage() {
                 <tr className="bg-slate-100 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                   <th className="py-4 px-6">Highway & Division</th>
                   <th className="py-4 px-6">Stretch & Chainage</th>
-                  <th className="py-4 px-6">Contractor & Mode</th>
-                  <th className="py-4 px-6 max-w-sm">Work Description / Remarks</th>
+                  <th className="py-4 px-6">Length Breakdown (Excel Metrics)</th>
+                  <th className="py-4 px-6 max-w-xs">Departmental Remarks</th>
                   <th className="py-4 px-6">
                     <div className="flex items-center gap-1">
                       <CalendarIcon className="w-3.5 h-3.5 text-amber-600" />
@@ -309,34 +323,73 @@ export default function DlpPage() {
                           {item.division_name || 'General'} Division
                         </div>
                       </td>
+
                       <td className="py-4 px-6">
                         <div className="font-bold text-slate-900 dark:text-slate-100">{item.stretch_name}</div>
                         <div className="text-slate-500 mt-0.5 text-[11px]">
                           Km {item.from_km} to {item.to_km} ({item.length_km} km)
                         </div>
                       </td>
-                      <td className="py-4 px-6 font-semibold text-slate-700 dark:text-slate-300">
-                        <div className="flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate max-w-[150px]">{item.contractor_name}</span>
+
+                      <td className="py-4 px-6">
+                        <div className="flex flex-wrap gap-1 max-w-[220px]">
+                          {item.dlp_length_km ? (
+                            <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 font-bold rounded text-[10px]">
+                              DLP: {item.dlp_length_km} km
+                            </span>
+                          ) : null}
+                          {item.stmc_length_km ? (
+                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200 font-bold rounded text-[10px]">
+                              STMC: {item.stmc_length_km} km
+                            </span>
+                          ) : null}
+                          {item.pbmc_length_km ? (
+                            <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200 font-bold rounded text-[10px]">
+                              PBMC: {item.pbmc_length_km} km
+                            </span>
+                          ) : null}
+                          {item.construction_length_km ? (
+                            <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-200 font-bold rounded text-[10px]">
+                              Const: {item.construction_length_km} km
+                            </span>
+                          ) : null}
+                          {item.no_dlp_length_km ? (
+                            <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold rounded text-[10px]">
+                              No DLP: {item.no_dlp_length_km} km
+                            </span>
+                          ) : null}
+                          {item.uncontracted_after_2027_km ? (
+                            <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 font-bold rounded text-[10px]">
+                              Uncontracted: {item.uncontracted_after_2027_km} km
+                            </span>
+                          ) : null}
                         </div>
-                        <span className="inline-block mt-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 font-bold rounded text-[10px] text-slate-700 dark:text-slate-300">
-                          {item.contract_mode}
-                        </span>
                       </td>
-                      <td className="py-4 px-6 max-w-sm">
+
+                      <td className="py-4 px-6 max-w-xs">
                         <p className="text-slate-700 dark:text-slate-300 font-medium line-clamp-2 leading-relaxed text-[11px]">
                           {item.work_description || 'N/A'}
                         </p>
                       </td>
+
                       <td className="py-4 px-6 font-medium text-slate-700 dark:text-slate-300">
                         <div className="flex items-center gap-1.5">
                           <CalendarIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span>{item.dlp_expiry_date || 'N/A'}</span>
                         </div>
                       </td>
+
                       <td className="py-4 px-6">{renderStatusBadge(item.days_remaining)}</td>
+
                       <td className="py-4 px-6 text-right space-x-1">
+                        <button
+                          onClick={() => setSelectedContractForView(item)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors cursor-pointer"
+                          title="View Complete Departmental Record"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+
                         <button
                           onClick={() => triggerAlert(item)}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors cursor-pointer"
@@ -369,6 +422,12 @@ export default function DlpPage() {
           </div>
         </div>
       </main>
+
+      {/* View Modal */}
+      <ViewDlpContractModal
+        contract={selectedContractForView}
+        onClose={() => setSelectedContractForView(null)}
+      />
 
       {/* Add Modal */}
       <AddDlpContractModal

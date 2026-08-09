@@ -31,20 +31,22 @@ export async function GET(req: NextRequest) {
           const expiry = item.dlp_expiry_date ? new Date(item.dlp_expiry_date) : today;
           const diffTime = expiry.getTime() - today.getTime();
           const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          const currentStatus = item.status === 'DELETED' 
-            ? 'DELETED' 
-            : daysRemaining < 0 
-            ? 'EXPIRED' 
-            : daysRemaining <= 90 
-            ? 'EXPIRING_SOON' 
+          const currentStatus = item.status === 'DELETED'
+            ? 'DELETED'
+            : daysRemaining < 0
+            ? 'EXPIRED'
+            : daysRemaining <= 90
+            ? 'EXPIRING_SOON'
             : 'ACTIVE';
 
-          // Extract Division Name from stretch_name if not directly stored
+          // Extract Division Name from stretch_name or direct field
           let extractedDivision = item.division_name || '';
           if (!extractedDivision && item.stretch_name) {
             const match = item.stretch_name.match(/^([^ -]+(?:\s+Division)?)/i);
             if (match) extractedDivision = match[1].replace(/\s+Division$/i, '').trim();
           }
+
+          const details = item.contract_details || {};
 
           return {
             id: item.id,
@@ -54,6 +56,20 @@ export async function GET(req: NextRequest) {
             from_km: Number(item.from_km || 0),
             to_km: Number(item.to_km || 0),
             length_km: Number(item.length_km || 0),
+
+            // Full Excel Breakdown Fields
+            dlp_contract_count: Number(item.dlp_contract_count ?? details.dlp_contract_count ?? 0),
+            dlp_length_km: Number(item.dlp_length_km ?? details.dlp_length_km ?? 0),
+            stmc_contract_count: Number(item.stmc_contract_count ?? details.stmc_contract_count ?? 0),
+            stmc_length_km: Number(item.stmc_length_km ?? details.stmc_length_km ?? 0),
+            stmc_expiry_date: item.stmc_expiry_date || details.stmc_expiry_date || item.dlp_expiry_date || '',
+            construction_project_count: Number(item.construction_project_count ?? details.construction_project_count ?? 0),
+            construction_length_km: Number(item.construction_length_km ?? details.construction_length_km ?? 0),
+            pbmc_project_count: Number(item.pbmc_project_count ?? details.pbmc_project_count ?? 0),
+            pbmc_length_km: Number(item.pbmc_length_km ?? details.pbmc_length_km ?? 0),
+            no_dlp_length_km: Number(item.no_dlp_length_km ?? details.no_dlp_length_km ?? 0),
+            uncontracted_after_2027_km: Number(item.uncontracted_after_2027_km ?? details.uncontracted_after_2027_km ?? 0),
+
             contractor_name: item.contractor_name || 'Assigned Contractor',
             contract_mode: item.contract_mode || 'EPC',
             work_description: item.work_description || '',
@@ -113,12 +129,39 @@ export async function POST(req: NextRequest) {
       from_km: fromKm,
       to_km: toKm,
       length_km: lengthKm,
+
+      // Breakdown Metrics
+      dlp_contract_count: Number(body.dlp_contract_count || 0),
+      dlp_length_km: Number(body.dlp_length_km || 0),
+      construction_project_count: Number(body.construction_project_count || 0),
+      construction_length_km: Number(body.construction_length_km || 0),
+      stmc_contract_count: Number(body.stmc_contract_count || 0),
+      stmc_length_km: Number(body.stmc_length_km || 0),
+      stmc_expiry_date: body.stmc_expiry_date || null,
+      pbmc_project_count: Number(body.pbmc_project_count || 0),
+      pbmc_length_km: Number(body.pbmc_length_km || 0),
+      no_dlp_length_km: Number(body.no_dlp_length_km || 0),
+      uncontracted_after_2027_km: Number(body.uncontracted_after_2027_km || 0),
+
       contractor_name: body.contractor_name || `${body.division_name || ''} Division Contractor`,
       contract_mode: body.contract_mode || 'EPC',
       work_description: body.work_description || '',
       doc_date: body.doc_date || null,
       dlp_expiry_date: body.dlp_expiry_date || null,
       status: 'ACTIVE',
+      contract_details: {
+        dlp_contract_count: Number(body.dlp_contract_count || 0),
+        dlp_length_km: Number(body.dlp_length_km || 0),
+        construction_project_count: Number(body.construction_project_count || 0),
+        construction_length_km: Number(body.construction_length_km || 0),
+        stmc_contract_count: Number(body.stmc_contract_count || 0),
+        stmc_length_km: Number(body.stmc_length_km || 0),
+        stmc_expiry_date: body.stmc_expiry_date || null,
+        pbmc_project_count: Number(body.pbmc_project_count || 0),
+        pbmc_length_km: Number(body.pbmc_length_km || 0),
+        no_dlp_length_km: Number(body.no_dlp_length_km || 0),
+        uncontracted_after_2027_km: Number(body.uncontracted_after_2027_km || 0),
+      },
     };
 
     if (supabase) {
@@ -156,11 +199,38 @@ export async function PUT(req: NextRequest) {
       from_km: fromKm,
       to_km: toKm,
       length_km: lengthKm,
+
+      // Breakdown Metrics
+      dlp_contract_count: Number(body.dlp_contract_count || 0),
+      dlp_length_km: Number(body.dlp_length_km || 0),
+      construction_project_count: Number(body.construction_project_count || 0),
+      construction_length_km: Number(body.construction_length_km || 0),
+      stmc_contract_count: Number(body.stmc_contract_count || 0),
+      stmc_length_km: Number(body.stmc_length_km || 0),
+      stmc_expiry_date: body.stmc_expiry_date || null,
+      pbmc_project_count: Number(body.pbmc_project_count || 0),
+      pbmc_length_km: Number(body.pbmc_length_km || 0),
+      no_dlp_length_km: Number(body.no_dlp_length_km || 0),
+      uncontracted_after_2027_km: Number(body.uncontracted_after_2027_km || 0),
+
       contractor_name: body.contractor_name,
       contract_mode: body.contract_mode,
       work_description: body.work_description,
       doc_date: body.doc_date || null,
       dlp_expiry_date: body.dlp_expiry_date || null,
+      contract_details: {
+        dlp_contract_count: Number(body.dlp_contract_count || 0),
+        dlp_length_km: Number(body.dlp_length_km || 0),
+        construction_project_count: Number(body.construction_project_count || 0),
+        construction_length_km: Number(body.construction_length_km || 0),
+        stmc_contract_count: Number(body.stmc_contract_count || 0),
+        stmc_length_km: Number(body.stmc_length_km || 0),
+        stmc_expiry_date: body.stmc_expiry_date || null,
+        pbmc_project_count: Number(body.pbmc_project_count || 0),
+        pbmc_length_km: Number(body.pbmc_length_km || 0),
+        no_dlp_length_km: Number(body.no_dlp_length_km || 0),
+        uncontracted_after_2027_km: Number(body.uncontracted_after_2027_km || 0),
+      },
     };
 
     if (supabase && !id.startsWith('dlp-')) {

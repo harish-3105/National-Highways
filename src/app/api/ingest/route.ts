@@ -90,9 +90,28 @@ export async function POST(request: Request) {
         insertedCount = data?.length || 0;
       }
     } else if (datasetType === 'DLP_CONTRACTS') {
+      const allowedColumns = [
+        'id',
+        'highway_code',
+        'stretch_name',
+        'from_km',
+        'to_km',
+        'length_km',
+        'contractor_name',
+        'contract_mode',
+        'work_description',
+        'doc_date',
+        'dlp_expiry_date',
+        'days_remaining',
+        'status',
+        'created_at',
+      ];
       const cleanData = parseResult.data.map((item: any) => {
-        const { division_name, ...rest } = item;
-        return rest;
+        const payload: Record<string, any> = {};
+        for (const col of allowedColumns) {
+          if (item[col] !== undefined) payload[col] = item[col];
+        }
+        return payload;
       });
 
       const { data, error } = await supabase

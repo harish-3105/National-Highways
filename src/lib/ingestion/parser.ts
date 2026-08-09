@@ -38,10 +38,22 @@ export interface HighwayRow {
 
 export interface DLPRow {
   highway_code: string;
+  division_name?: string;
   stretch_name: string;
   from_km: number;
   to_km: number;
   length_km: number;
+  dlp_contract_count?: number;
+  dlp_length_km?: number;
+  stmc_contract_count?: number;
+  stmc_length_km?: number;
+  stmc_expiry_date?: string;
+  construction_project_count?: number;
+  construction_length_km?: number;
+  pbmc_project_count?: number;
+  pbmc_length_km?: number;
+  no_dlp_length_km?: number;
+  uncontracted_after_2027_km?: number;
   contractor_name: string;
   contract_mode: string;
   work_description?: string;
@@ -344,7 +356,6 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       if (!nhNum || nhNum.toLowerCase() === 'nhno') continue;
 
       const nhCode = `NH-${nhNum}`;
-
       const fromKmVal = parseChainageValue(col3);
       const toKmVal = parseChainageValue(col4);
       const totalLen = parseChainageValue(col5) || roundTo3Decimals(Math.abs(toKmVal - fromKmVal)) || 0;
@@ -366,8 +377,18 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
       if (/STMC/i.test(rowStr)) mode = 'STMC';
       else if (/PBMC/i.test(rowStr)) mode = 'PBMC';
 
-      // Extract clean remarks from the last text column
-      let remarks = cleanString(row[row.length - 1]);
+      const dlpCount = parseInt(cleanString(row[6]).replace(/[^0-9]/g, ''), 10) || 0;
+      const dlpLen = parseChainageValue(row[7]) || 0;
+      const stmcCount = parseInt(cleanString(row[10]).replace(/[^0-9]/g, ''), 10) || 0;
+      const stmcLen = parseChainageValue(row[12]) || 0;
+      const constructionCount = parseInt(cleanString(row[13]).replace(/[^0-9]/g, ''), 10) || 0;
+      const constructionLen = parseChainageValue(row[14]) || 0;
+      const pbmcCount = parseInt(cleanString(row[15]).replace(/[^0-9]/g, ''), 10) || 0;
+      const pbmcLen = parseChainageValue(row[16]) || 0;
+      const noDlpLen = parseChainageValue(row[21]) || 0;
+      const uncontractedLen = parseChainageValue(row[24]) || 0;
+
+      let remarks = cleanString(row[25]) || cleanString(row[row.length - 1]);
       if (!remarks || remarks === '-' || /^\d+(\.\d+)?$/.test(remarks)) {
         remarks = cleanString(row[18]) || cleanString(row[17]) || cleanString(row[16]);
       }
@@ -380,15 +401,27 @@ function parseDLPContracts(rawRows: any[][], result: ParseResult) {
 
       parsedData.push({
         highway_code: nhCode,
+        division_name: col1.trim(),
         stretch_name: stretchTitle,
         from_km: fromKmVal,
         to_km: toKmVal,
         length_km: totalLen,
+        dlp_contract_count: dlpCount,
+        dlp_length_km: dlpLen,
+        dlp_expiry_date: dlpDateStr || undefined,
+        stmc_contract_count: stmcCount,
+        stmc_length_km: stmcLen,
+        stmc_expiry_date: dlpDateStr || undefined,
+        construction_project_count: constructionCount,
+        construction_length_km: constructionLen,
+        pbmc_project_count: pbmcCount,
+        pbmc_length_km: pbmcLen,
+        no_dlp_length_km: noDlpLen,
+        uncontracted_after_2027_km: uncontractedLen,
         contractor_name: `${col1.trim()} Division (Contractor DLP)`,
         contract_mode: mode,
         work_description: remarks.replace(/\n+/g, ' ').trim(),
         doc_date: undefined,
-        dlp_expiry_date: dlpDateStr || undefined,
         days_remaining: daysRemaining,
         status: status,
       });

@@ -43,6 +43,19 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
   const [docDate, setDocDate] = useState('');
   const [dlpExpiryDate, setDlpExpiryDate] = useState('');
 
+  // Full Breakdown Fields
+  const [dlpContractCount, setDlpContractCount] = useState<number>(0);
+  const [dlpLengthKm, setDlpLengthKm] = useState<number>(0);
+  const [stmcContractCount, setStmcContractCount] = useState<number>(0);
+  const [stmcLengthKm, setStmcLengthKm] = useState<number>(0);
+  const [stmcExpiryDate, setStmcExpiryDate] = useState('');
+  const [constructionProjectCount, setConstructionProjectCount] = useState<number>(0);
+  const [constructionLengthKm, setConstructionLengthKm] = useState<number>(0);
+  const [pbmcProjectCount, setPbmcProjectCount] = useState<number>(0);
+  const [pbmcLengthKm, setPbmcLengthKm] = useState<number>(0);
+  const [noDlpLengthKm, setNoDlpLengthKm] = useState<number>(0);
+  const [uncontractedAfter2027Km, setUncontractedAfter2027Km] = useState<number>(0);
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -58,6 +71,18 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
       setWorkDescription(contract.work_description || '');
       setDocDate(contract.doc_date || '');
       setDlpExpiryDate(contract.dlp_expiry_date || '');
+
+      setDlpContractCount(contract.dlp_contract_count ?? 0);
+      setDlpLengthKm(contract.dlp_length_km ?? 0);
+      setStmcContractCount(contract.stmc_contract_count ?? 0);
+      setStmcLengthKm(contract.stmc_length_km ?? 0);
+      setStmcExpiryDate(contract.stmc_expiry_date || '');
+      setConstructionProjectCount(contract.construction_project_count ?? 0);
+      setConstructionLengthKm(contract.construction_length_km ?? 0);
+      setPbmcProjectCount(contract.pbmc_project_count ?? 0);
+      setPbmcLengthKm(contract.pbmc_length_km ?? 0);
+      setNoDlpLengthKm(contract.no_dlp_length_km ?? 0);
+      setUncontractedAfter2027Km(contract.uncontracted_after_2027_km ?? 0);
     }
   }, [contract]);
 
@@ -87,14 +112,29 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
       setLoading(true);
       setErrorMsg('');
 
+      const formattedHighwayCode = highwayCode.toUpperCase().startsWith('NH')
+        ? highwayCode.toUpperCase()
+        : `NH-${highwayCode.toUpperCase()}`;
+
       const payload = {
         id: contract.id,
-        highway_code: highwayCode.toUpperCase().startsWith('NH') ? highwayCode.toUpperCase() : `NH-${highwayCode.toUpperCase()}`,
+        highway_code: formattedHighwayCode,
         division_name: divisionName,
-        stretch_name: stretchName.trim() || `${divisionName} Division - ${highwayCode} (Km ${fromKm} to ${toKm})`,
+        stretch_name: stretchName.trim() || `${divisionName} Division - ${formattedHighwayCode} (Km ${fromKm} to ${toKm})`,
         from_km: Number(fromKm || 0),
         to_km: Number(toKm || 0),
         length_km: calculatedLength,
+        dlp_contract_count: Number(dlpContractCount || 0),
+        dlp_length_km: Number(dlpLengthKm || 0),
+        stmc_contract_count: Number(stmcContractCount || 0),
+        stmc_length_km: Number(stmcLengthKm || 0),
+        stmc_expiry_date: stmcExpiryDate || undefined,
+        construction_project_count: Number(constructionProjectCount || 0),
+        construction_length_km: Number(constructionLengthKm || 0),
+        pbmc_project_count: Number(pbmcProjectCount || 0),
+        pbmc_length_km: Number(pbmcLengthKm || 0),
+        no_dlp_length_km: Number(noDlpLengthKm || 0),
+        uncontracted_after_2027_km: Number(uncontractedAfter2027Km || 0),
         contractor_name: contractorName.trim() || `${divisionName} Division Contractor`,
         contract_mode: contractMode,
         work_description: workDescription.trim(),
@@ -126,7 +166,7 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -134,9 +174,9 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
           <div className="flex items-center gap-3">
             <Edit3 className="w-6 h-6 text-blue-400 shrink-0" />
             <div>
-              <h3 className="font-extrabold text-base text-white">Edit DLP Contract Record</h3>
+              <h3 className="font-extrabold text-base text-white">Edit DLP & Maintenance Record</h3>
               <p className="text-xs text-blue-200">
-                Editing Record #{contract.highway_code} ({contract.division_name || 'General'})
+                Editing Record #{contract.highway_code} ({contract.division_name || 'General'} Division)
               </p>
             </div>
           </div>
@@ -156,146 +196,292 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Section 1: Basic Identifiers */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
+            <h4 className="font-bold text-xs text-blue-900 dark:text-blue-400 uppercase tracking-wider">
+              1. Basic Identifiers & Chainages
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Highway Code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={highwayCode}
+                  onChange={(e) => setHighwayCode(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Highways Division <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={divisionName}
+                  onChange={(e) => setDivisionName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {DIVISION_OPTIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {d} Division
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Highway Code <span className="text-red-500">*</span>
+                Stretch Name / Title
               </label>
               <input
                 type="text"
-                required
-                value={highwayCode}
-                onChange={(e) => setHighwayCode(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                value={stretchName}
+                onChange={(e) => setStretchName(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Highways Division <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={divisionName}
-                onChange={(e) => setDivisionName(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {DIVISION_OPTIONS.map((d) => (
-                  <option key={d} value={d}>
-                    {d} Division
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">From Km</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={fromKm}
+                  onChange={(e) => setFromKm(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
 
-          <div>
-            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Stretch Title / Section Description
-            </label>
-            <input
-              type="text"
-              value={stretchName}
-              onChange={(e) => setStretchName(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">To Km</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={toKm}
+                  onChange={(e) => setToKm(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">From Km</label>
-              <input
-                type="number"
-                step="0.001"
-                value={fromKm}
-                onChange={(e) => setFromKm(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">To Km</label>
-              <input
-                type="number"
-                step="0.001"
-                value={toKm}
-                onChange={(e) => setToKm(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Calculated Length</label>
-              <div className="px-3 py-2 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-extrabold">
-                {calculatedLength} km
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Total Stretch Length</label>
+                <div className="px-3 py-2 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-extrabold text-blue-600 dark:text-blue-400">
+                  {calculatedLength} km
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Contractor / Agency Name</label>
-              <input
-                type="text"
-                value={contractorName}
-                onChange={(e) => setContractorName(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          {/* Section 2: Complete Excel Breakdown Fields */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-4">
+            <h4 className="font-bold text-xs text-blue-900 dark:text-blue-400 uppercase tracking-wider">
+              2. Maintenance Category Length Breakdown (Excel Fields)
+            </h4>
+
+            {/* DLP & STMC */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-3">
+                <span className="font-bold text-emerald-800 dark:text-emerald-300 block text-xs">Under DLP</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Contracts Count</label>
+                    <input
+                      type="number"
+                      value={dlpContractCount}
+                      onChange={(e) => setDlpContractCount(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Length (km)</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={dlpLengthKm}
+                      onChange={(e) => setDlpLengthKm(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg font-bold text-emerald-700"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">DLP Expiry Date</label>
+                  <input
+                    type="date"
+                    value={dlpExpiryDate}
+                    onChange={(e) => setDlpExpiryDate(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-blue-50/50 dark:bg-blue-950/20 p-3.5 rounded-xl border border-blue-200 dark:border-blue-800 space-y-3">
+                <span className="font-bold text-blue-900 dark:text-blue-300 block text-xs">Under STMC</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Contracts Count</label>
+                    <input
+                      type="number"
+                      value={stmcContractCount}
+                      onChange={(e) => setStmcContractCount(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-800 rounded-lg font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Length (km)</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={stmcLengthKm}
+                      onChange={(e) => setStmcLengthKm(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-800 rounded-lg font-bold text-blue-700"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">STMC Expiry Date</label>
+                  <input
+                    type="date"
+                    value={stmcExpiryDate}
+                    onChange={(e) => setStmcExpiryDate(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-800 rounded-lg font-bold"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Contract Maintenance Mode</label>
-              <select
-                value={contractMode}
-                onChange={(e) => setContractMode(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {CONTRACT_MODES.map((mode) => (
-                  <option key={mode} value={mode}>
-                    {mode}
-                  </option>
-                ))}
-              </select>
+            {/* Construction & PBMC */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-orange-50/50 dark:bg-orange-950/20 p-3.5 rounded-xl border border-orange-200 dark:border-orange-800 space-y-3">
+                <span className="font-bold text-orange-900 dark:text-orange-300 block text-xs">Under Construction / Tender</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Projects Count</label>
+                    <input
+                      type="number"
+                      value={constructionProjectCount}
+                      onChange={(e) => setConstructionProjectCount(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-orange-300 dark:border-orange-800 rounded-lg font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Length (km)</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={constructionLengthKm}
+                      onChange={(e) => setConstructionLengthKm(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-orange-300 dark:border-orange-800 rounded-lg font-bold text-orange-700"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-purple-50/50 dark:bg-purple-950/20 p-3.5 rounded-xl border border-purple-200 dark:border-purple-800 space-y-3">
+                <span className="font-bold text-purple-900 dark:text-purple-300 block text-xs">Under PBMC</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Projects Count</label>
+                    <input
+                      type="number"
+                      value={pbmcProjectCount}
+                      onChange={(e) => setPbmcProjectCount(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-800 rounded-lg font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Length (km)</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={pbmcLengthKm}
+                      onChange={(e) => setPbmcLengthKm(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-800 rounded-lg font-bold text-purple-700"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* No DLP & Uncontracted */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Length with No DLP (km)</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={noDlpLengthKm}
+                  onChange={(e) => setNoDlpLengthKm(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Uncontracted Length After 31.03.2027 (km)</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={uncontractedAfter2027Km}
+                  onChange={(e) => setUncontractedAfter2027Km(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-blue-600 dark:text-blue-400"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">DOC Date (Commencement)</label>
-              <input
-                type="date"
-                value={docDate}
-                onChange={(e) => setDocDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          {/* Section 3: Contract Info & Remarks */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
+            <h4 className="font-bold text-xs text-blue-900 dark:text-blue-400 uppercase tracking-wider">
+              3. Contract Info & Remarks
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Contractor Name</label>
+                <input
+                  type="text"
+                  value={contractorName}
+                  onChange={(e) => setContractorName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Primary Contract Mode</label>
+                <select
+                  value={contractMode}
+                  onChange={(e) => setContractMode(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold"
+                >
+                  {CONTRACT_MODES.map((mode) => (
+                    <option key={mode} value={mode}>
+                      {mode}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">DLP Expiry Date</label>
-              <input
-                type="date"
-                value={dlpExpiryDate}
-                onChange={(e) => setDlpExpiryDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Departmental Remarks & Work Scope</label>
+              <textarea
+                rows={3}
+                value={workDescription}
+                onChange={(e) => setWorkDescription(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-medium"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Work Description & Remarks</label>
-            <textarea
-              rows={3}
-              value={workDescription}
-              onChange={(e) => setWorkDescription(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-medium outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Modal Footer */}
+          {/* Footer */}
           <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition-colors cursor-pointer"
+              className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-semibold rounded-xl cursor-pointer"
             >
               Cancel
             </button>
@@ -303,7 +489,7 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center gap-1.5 px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
             >
               {loading ? (
                 <>
