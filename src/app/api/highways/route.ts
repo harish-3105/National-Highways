@@ -7,11 +7,18 @@ export interface HighwayCorridor {
   id: string;
   road_code: string;
   road_name: string;
+  old_nh_no?: string | null;
+  new_nh_no?: string | null;
   from_location: string | null;
   to_location: string | null;
   from_chainage: string | null;
   to_chainage: string | null;
   length_km: number;
+  length_less_than_2l?: number;
+  length_2l?: number;
+  length_2l_ps?: number;
+  length_4l?: number;
+  length_6l?: number;
   configuration: string;
   status: string;
   start_latitude?: number | null;
@@ -31,6 +38,13 @@ export interface HighwaysApiResponse {
     totalCorridors: number;
     totalLengthKm: number;
     laneDistribution: Record<string, number>;
+    laneLengthsKm: {
+      lessThan2l: number;
+      lane2l: number;
+      lane2lPs: number;
+      lane4l: number;
+      lane6l: number;
+    };
     corridorsWithDlp: number;
   };
 }
@@ -104,15 +118,35 @@ export async function GET(request: Request) {
       ) / 1000;
 
     const laneDistribution: Record<string, number> = {};
+    const laneLengthsKm = {
+      lessThan2l: 0,
+      lane2l: 0,
+      lane2lPs: 0,
+      lane4l: 0,
+      lane6l: 0,
+    };
     let corridorsWithDlp = 0;
 
     allCorridors.forEach((c) => {
       const cfg = c.configuration || '2-Lane';
       laneDistribution[cfg] = (laneDistribution[cfg] || 0) + 1;
+
+      laneLengthsKm.lessThan2l += Number(c.length_less_than_2l) || 0;
+      laneLengthsKm.lane2l += Number(c.length_2l) || 0;
+      laneLengthsKm.lane2lPs += Number(c.length_2l_ps) || 0;
+      laneLengthsKm.lane4l += Number(c.length_4l) || 0;
+      laneLengthsKm.lane6l += Number(c.length_6l) || 0;
+
       if ((c.dlp_count || 0) > 0) {
         corridorsWithDlp++;
       }
     });
+
+    laneLengthsKm.lessThan2l = Math.round(laneLengthsKm.lessThan2l * 1000) / 1000;
+    laneLengthsKm.lane2l = Math.round(laneLengthsKm.lane2l * 1000) / 1000;
+    laneLengthsKm.lane2lPs = Math.round(laneLengthsKm.lane2lPs * 1000) / 1000;
+    laneLengthsKm.lane4l = Math.round(laneLengthsKm.lane4l * 1000) / 1000;
+    laneLengthsKm.lane6l = Math.round(laneLengthsKm.lane6l * 1000) / 1000;
 
     // Filtering & Sorting
     let filtered = allCorridors;
@@ -121,6 +155,8 @@ export async function GET(request: Request) {
         (c) =>
           (c.road_code && c.road_code.toLowerCase().includes(search)) ||
           (c.road_name && c.road_name.toLowerCase().includes(search)) ||
+          (c.old_nh_no && c.old_nh_no.toLowerCase().includes(search)) ||
+          (c.new_nh_no && c.new_nh_no.toLowerCase().includes(search)) ||
           (c.from_location && c.from_location.toLowerCase().includes(search)) ||
           (c.to_location && c.to_location.toLowerCase().includes(search))
       );
@@ -145,6 +181,7 @@ export async function GET(request: Request) {
         totalCorridors,
         totalLengthKm,
         laneDistribution,
+        laneLengthsKm,
         corridorsWithDlp,
       },
     });
@@ -159,6 +196,7 @@ export async function GET(request: Request) {
           totalCorridors: 0,
           totalLengthKm: 0,
           laneDistribution: {},
+          laneLengthsKm: { lessThan2l: 0, lane2l: 0, lane2lPs: 0, lane4l: 0, lane6l: 0 },
           corridorsWithDlp: 0,
         },
       },
@@ -175,7 +213,24 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { id, road_code, road_name, from_location, to_location, from_chainage, to_chainage, length_km, configuration } = body;
+    const {
+      id,
+      road_code,
+      road_name,
+      old_nh_no,
+      new_nh_no,
+      from_location,
+      to_location,
+      from_chainage,
+      to_chainage,
+      length_km,
+      length_less_than_2l,
+      length_2l,
+      length_2l_ps,
+      length_4l,
+      length_6l,
+      configuration,
+    } = body;
 
     // UPDATE / EDIT MODE
     if (id) {
@@ -185,11 +240,18 @@ export async function POST(request: Request) {
 
       if (road_code) updatePayload.road_code = road_code.trim().toUpperCase();
       if (road_name) updatePayload.road_name = road_name.trim();
+      if (old_nh_no !== undefined) updatePayload.old_nh_no = old_nh_no?.trim() || null;
+      if (new_nh_no !== undefined) updatePayload.new_nh_no = new_nh_no?.trim() || null;
       if (from_location !== undefined) updatePayload.from_location = from_location?.trim() || null;
       if (to_location !== undefined) updatePayload.to_location = to_location?.trim() || null;
       if (from_chainage !== undefined) updatePayload.from_chainage = from_chainage?.trim() || null;
       if (to_chainage !== undefined) updatePayload.to_chainage = to_chainage?.trim() || null;
       if (length_km !== undefined) updatePayload.length_km = Number(length_km) || 0;
+      if (length_less_than_2l !== undefined) updatePayload.length_less_than_2l = Number(length_less_than_2l) || 0;
+      if (length_2l !== undefined) updatePayload.length_2l = Number(length_2l) || 0;
+      if (length_2l_ps !== undefined) updatePayload.length_2l_ps = Number(length_2l_ps) || 0;
+      if (length_4l !== undefined) updatePayload.length_4l = Number(length_4l) || 0;
+      if (length_6l !== undefined) updatePayload.length_6l = Number(length_6l) || 0;
       if (configuration) updatePayload.configuration = configuration;
       if (body.status) updatePayload.status = body.status;
 
@@ -210,11 +272,18 @@ export async function POST(request: Request) {
     const insertPayload = {
       road_code: road_code.trim().toUpperCase(),
       road_name: road_name.trim(),
+      old_nh_no: old_nh_no?.trim() || null,
+      new_nh_no: new_nh_no?.trim() || null,
       from_location: from_location?.trim() || null,
       to_location: to_location?.trim() || null,
       from_chainage: from_chainage?.trim() || null,
       to_chainage: to_chainage?.trim() || null,
       length_km: Number(length_km) || 0,
+      length_less_than_2l: Number(length_less_than_2l) || 0,
+      length_2l: Number(length_2l) || 0,
+      length_2l_ps: Number(length_2l_ps) || 0,
+      length_4l: Number(length_4l) || 0,
+      length_6l: Number(length_6l) || 0,
       configuration: configuration || '2-Lane',
       status: 'ACTIVE',
       updated_at: new Date().toISOString(),

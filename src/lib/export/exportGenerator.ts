@@ -9,14 +9,21 @@ export interface ExportColumnOption {
 }
 
 export const EXPORT_COLUMNS: ExportColumnOption[] = [
+  { key: 'old_nh_no', label: 'Old NH No.', category: 'core', defaultSelected: true },
+  { key: 'new_nh_no', label: 'New NH No.', category: 'core', defaultSelected: true },
   { key: 'road_code', label: 'Road Code (e.g. NH-181)', category: 'core', defaultSelected: true },
   { key: 'road_name', label: 'Corridor Section Title', category: 'core', defaultSelected: true },
   { key: 'from_location', label: 'Start Location', category: 'route', defaultSelected: true },
   { key: 'to_location', label: 'End Location', category: 'route', defaultSelected: true },
   { key: 'from_chainage', label: 'Start Chainage (Km)', category: 'route', defaultSelected: true },
   { key: 'to_chainage', label: 'End Chainage (Km)', category: 'route', defaultSelected: true },
-  { key: 'length_km', label: 'Length (km)', category: 'route', defaultSelected: true },
-  { key: 'configuration', label: 'Lane Configuration', category: 'core', defaultSelected: true },
+  { key: 'length_km', label: 'Total Length (km)', category: 'route', defaultSelected: true },
+  { key: 'length_less_than_2l', label: 'Length <2L (km)', category: 'route', defaultSelected: true },
+  { key: 'length_2l', label: 'Length 2L (km)', category: 'route', defaultSelected: true },
+  { key: 'length_2l_ps', label: 'Length 2L+PS (km)', category: 'route', defaultSelected: true },
+  { key: 'length_4l', label: 'Length 4L (km)', category: 'route', defaultSelected: true },
+  { key: 'length_6l', label: 'Length 6L (km)', category: 'route', defaultSelected: true },
+  { key: 'configuration', label: 'Primary Lane Configuration', category: 'core', defaultSelected: true },
   { key: 'status', label: 'Corridor Status', category: 'meta', defaultSelected: true },
   { key: 'dlp_count', label: 'Active DLP Warranty Count', category: 'meta', defaultSelected: false },
   { key: 'created_at', label: 'Created Timestamp', category: 'meta', defaultSelected: false },
@@ -72,7 +79,7 @@ export function generateExportFile(
   } else {
     // Generate XLSX workbook
     const worksheet = XLSX.utils.json_to_sheet(formattedData);
-    
+
     // Auto-fit column widths
     const colWidths = activeColumns.map((col) => {
       const maxContentLen = Math.max(
@@ -85,7 +92,7 @@ export function generateExportFile(
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Highway Catalog');
-    
+
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([excelBuffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

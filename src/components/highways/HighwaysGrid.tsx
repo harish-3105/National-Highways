@@ -2,13 +2,14 @@
 
 import React from 'react';
 import { HighwayCorridor } from '@/app/api/highways/route';
-import { ArrowRight, MapPin, ShieldCheck, Ruler, Edit3, Trash2 } from 'lucide-react';
+import { ArrowRight, MapPin, ShieldCheck, Ruler, Edit3, Trash2, Eye } from 'lucide-react';
 
 interface HighwaysGridProps {
   corridors: HighwayCorridor[];
   loading: boolean;
   selectedIds: string[];
   onToggleSelect: (id: string) => void;
+  onView?: (highway: HighwayCorridor) => void;
   onEdit: (highway: HighwayCorridor) => void;
   onDelete: (highway: HighwayCorridor) => void;
 }
@@ -18,6 +19,7 @@ export const HighwaysGrid: React.FC<HighwaysGridProps> = ({
   loading,
   selectedIds,
   onToggleSelect,
+  onView,
   onEdit,
   onDelete,
 }) => {
@@ -59,6 +61,9 @@ export const HighwaysGrid: React.FC<HighwaysGridProps> = ({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {corridors.map((item) => {
         const isSelected = selectedIds.includes(item.id);
+        const oldNh = item.old_nh_no && item.old_nh_no !== '-' ? item.old_nh_no : null;
+        const newNh = item.new_nh_no || item.road_code.replace(/^NH-?/, '');
+
         return (
           <div
             key={item.id || item.road_code}
@@ -69,7 +74,7 @@ export const HighwaysGrid: React.FC<HighwaysGridProps> = ({
             }`}
           >
             <div>
-              {/* Top Header: Checkbox, Road Code & Lane Badge */}
+              {/* Top Header: Checkbox, Road Code & Old/New Badges */}
               <div className="flex items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2">
                   <input
@@ -82,9 +87,16 @@ export const HighwaysGrid: React.FC<HighwaysGridProps> = ({
                     {item.road_code}
                   </span>
                 </div>
-                <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold border ${getBadgeStyle(item.configuration)}`}>
-                  {item.configuration}
-                </span>
+                <div className="flex items-center gap-1 text-[10px]">
+                  {oldNh && (
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium border border-slate-200 dark:border-slate-700">
+                      Old: {oldNh}
+                    </span>
+                  )}
+                  <span className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-800">
+                    New: {newNh}
+                  </span>
+                </div>
               </div>
 
               {/* Road Name */}
@@ -99,6 +111,38 @@ export const HighwaysGrid: React.FC<HighwaysGridProps> = ({
                   <ArrowRight className="w-4 h-4 text-blue-500" />
                   <span>{item.to_location || 'End'}</span>
                 </div>
+                <div className="mt-1 text-[11px] text-slate-400 font-mono">
+                  Km {item.from_chainage || '0'} → Km {item.to_chainage || '0'}
+                </div>
+              </div>
+
+              {/* Multi-Lane Breakdown Pills */}
+              <div className="flex items-center gap-1 flex-wrap mb-3 text-[10px]">
+                {Number(item.length_less_than_2l) > 0 && (
+                  <span className="px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 font-medium">
+                    &lt;2L: {item.length_less_than_2l}km
+                  </span>
+                )}
+                {Number(item.length_2l) > 0 && (
+                  <span className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border border-amber-300 font-medium">
+                    2L: {item.length_2l}km
+                  </span>
+                )}
+                {Number(item.length_2l_ps) > 0 && (
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 font-medium">
+                    2L+PS: {item.length_2l_ps}km
+                  </span>
+                )}
+                {Number(item.length_4l) > 0 && (
+                  <span className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 font-bold">
+                    4L: {item.length_4l}km
+                  </span>
+                )}
+                {Number(item.length_6l) > 0 && (
+                  <span className="px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 font-bold">
+                    6L: {item.length_6l}km
+                  </span>
+                )}
               </div>
             </div>
 
@@ -106,7 +150,7 @@ export const HighwaysGrid: React.FC<HighwaysGridProps> = ({
             <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
               <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200">
                 <Ruler className="w-3.5 h-3.5 text-slate-400" />
-                <span>{item.length_km} km</span>
+                <span>{item.length_km} km Total</span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -115,6 +159,16 @@ export const HighwaysGrid: React.FC<HighwaysGridProps> = ({
                     <ShieldCheck className="w-3.5 h-3.5" />
                     {item.dlp_count}
                   </span>
+                )}
+
+                {onView && (
+                  <button
+                    onClick={() => onView(item)}
+                    className="p-1.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
+                    title="View Passport Card"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
                 )}
 
                 <button

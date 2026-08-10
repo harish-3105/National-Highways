@@ -7,6 +7,13 @@ interface KpiHeaderCardsProps {
   totalCorridors: number;
   totalLengthKm: number;
   laneDistribution: Record<string, number>;
+  laneLengthsKm?: {
+    lessThan2l: number;
+    lane2l: number;
+    lane2lPs: number;
+    lane4l: number;
+    lane6l: number;
+  };
   corridorsWithDlp: number;
   loading?: boolean;
 }
@@ -15,6 +22,7 @@ export const KpiHeaderCards: React.FC<KpiHeaderCardsProps> = ({
   totalCorridors,
   totalLengthKm,
   laneDistribution,
+  laneLengthsKm,
   corridorsWithDlp,
   loading = false,
 }) => {
@@ -27,7 +35,7 @@ export const KpiHeaderCards: React.FC<KpiHeaderCardsProps> = ({
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Registered Highways
+            Master Corridors
           </span>
           <div className="p-2.5 bg-blue-50 dark:bg-blue-950/50 rounded-lg text-blue-600 dark:text-blue-400">
             <Route className="w-5 h-5" />
@@ -43,7 +51,7 @@ export const KpiHeaderCards: React.FC<KpiHeaderCardsProps> = ({
           )}
         </div>
         <div className="mt-2 flex items-center text-xs text-blue-600 dark:text-blue-400 font-medium">
-          Master Catalog Verified
+          Level 1 Ground-Truth Verified
         </div>
       </div>
 
@@ -51,7 +59,7 @@ export const KpiHeaderCards: React.FC<KpiHeaderCardsProps> = ({
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Total Network Length
+            State PWD Length
           </span>
           <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/50 rounded-lg text-emerald-600 dark:text-emerald-400">
             <Ruler className="w-5 h-5" />
@@ -67,15 +75,15 @@ export const KpiHeaderCards: React.FC<KpiHeaderCardsProps> = ({
           )}
         </div>
         <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-          Full TN Ground-Truth Distance
+          Full TN State NH Network
         </div>
       </div>
 
-      {/* Card 3: Predominant Lane Configurations */}
+      {/* Card 3: Multi-Lane Configuration Breakdown (km) */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Lane Configurations
+            Lane Breakdown (km)
           </span>
           <div className="p-2.5 bg-amber-50 dark:bg-amber-950/50 rounded-lg text-amber-600 dark:text-amber-400">
             <Layers className="w-5 h-5" />
@@ -84,6 +92,28 @@ export const KpiHeaderCards: React.FC<KpiHeaderCardsProps> = ({
         <div className="mt-3">
           {loading ? (
             <div className="h-8 w-32 bg-slate-100 dark:bg-slate-800 animate-pulse rounded" />
+          ) : laneLengthsKm ? (
+            <div className="flex items-center gap-1 flex-wrap text-[11px]">
+              {laneLengthsKm.lessThan2l > 0 && (
+                <span className="px-1.5 py-0.5 font-semibold rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200">
+                  &lt;2L: {laneLengthsKm.lessThan2l}km
+                </span>
+              )}
+              <span className="px-1.5 py-0.5 font-semibold rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border border-amber-300">
+                2L: {laneLengthsKm.lane2l}km
+              </span>
+              <span className="px-1.5 py-0.5 font-semibold rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200">
+                2L+PS: {laneLengthsKm.lane2lPs}km
+              </span>
+              <span className="px-1.5 py-0.5 font-bold rounded bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200">
+                4L: {laneLengthsKm.lane4l}km
+              </span>
+              {laneLengthsKm.lane6l > 0 && (
+                <span className="px-1.5 py-0.5 font-bold rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200">
+                  6L: {laneLengthsKm.lane6l}km
+                </span>
+              )}
+            </div>
           ) : (
             <div className="flex items-center gap-1.5 flex-wrap">
               {Object.entries(laneDistribution).map(([cfg, count]) => (
@@ -98,7 +128,7 @@ export const KpiHeaderCards: React.FC<KpiHeaderCardsProps> = ({
           )}
         </div>
         <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
-          4L, 2L+PS & 2-Lane Breakdown
+          State-wide Multi-Lane Distribution
         </div>
       </div>
 

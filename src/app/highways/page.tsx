@@ -8,18 +8,32 @@ import { HighwaysTable } from '@/components/highways/HighwaysTable';
 import { HighwaysGrid } from '@/components/highways/HighwaysGrid';
 import { AddHighwayModal } from '@/components/highways/AddHighwayModal';
 import { EditHighwayModal } from '@/components/highways/EditHighwayModal';
+import { ViewHighwayModal } from '@/components/highways/ViewHighwayModal';
 import { DeleteHighwayModal } from '@/components/highways/DeleteHighwayModal';
 import { ExportHighwayModal } from '@/components/highways/ExportHighwayModal';
 import { NavigationHeader } from '@/components/NavigationHeader';
-import { Route, RefreshCw, Plus, Download } from 'lucide-react';
+import { Route, RefreshCw, Plus, Download, Printer } from 'lucide-react';
 
 export default function HighwaysPage() {
   const [allCorridors, setAllCorridors] = useState<HighwayCorridor[]>([]);
   const [corridors, setCorridors] = useState<HighwayCorridor[]>([]);
-  const [aggregates, setAggregates] = useState({
+  const [aggregates, setAggregates] = useState<{
+    totalCorridors: number;
+    totalLengthKm: number;
+    laneDistribution: Record<string, number>;
+    laneLengthsKm?: {
+      lessThan2l: number;
+      lane2l: number;
+      lane2lPs: number;
+      lane4l: number;
+      lane6l: number;
+    };
+    corridorsWithDlp: number;
+  }>({
     totalCorridors: 0,
     totalLengthKm: 0,
-    laneDistribution: {} as Record<string, number>,
+    laneDistribution: {},
+    laneLengthsKm: { lessThan2l: 0, lane2l: 0, lane2lPs: 0, lane4l: 0, lane6l: 0 },
     corridorsWithDlp: 0,
   });
   const [loading, setLoading] = useState<boolean>(true);
@@ -35,6 +49,7 @@ export default function HighwaysPage() {
 
   // Modal Visibility States
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [viewingHighway, setViewingHighway] = useState<HighwayCorridor | null>(null);
   const [editingHighway, setEditingHighway] = useState<HighwayCorridor | null>(null);
   const [deletingHighway, setDeletingHighway] = useState<HighwayCorridor | null>(null);
 
@@ -104,6 +119,10 @@ export default function HighwaysPage() {
     }
   };
 
+  const handlePrintCatalog = () => {
+    window.print();
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       {/* Global Navigation Header */}
@@ -119,11 +138,11 @@ export default function HighwaysPage() {
               Master Corridor Catalog & Management
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Verified ground-truth inventory with live Add, Edit, Soft-Delete, and Custom Data Export.
+              Verified Level 1 ground-truth inventory with Old/New NH numbers, multi-lane breakdown, Add, Edit, Print, and Data Export.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap print:hidden">
             <button
               onClick={() => fetchHighways()}
               disabled={loading}
@@ -131,6 +150,14 @@ export default function HighwaysPage() {
               title="Refresh Catalog"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+
+            <button
+              onClick={handlePrintCatalog}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
+              title="Print Catalog Summary"
+            >
+              <Printer className="w-4 h-4 text-slate-600 dark:text-slate-400" /> Print Report
             </button>
 
             <button
@@ -154,22 +181,25 @@ export default function HighwaysPage() {
           totalCorridors={aggregates.totalCorridors}
           totalLengthKm={aggregates.totalLengthKm}
           laneDistribution={aggregates.laneDistribution}
+          laneLengthsKm={aggregates.laneLengthsKm}
           corridorsWithDlp={aggregates.corridorsWithDlp}
           loading={loading && corridors.length === 0}
         />
 
         {/* Section B: Filter & Search Bar */}
-        <FilterControls
-          search={search}
-          onSearchChange={setSearch}
-          activeConfig={activeConfig}
-          onConfigChange={setActiveConfig}
-          sortBy={sortBy}
-          onSortChange={setSortBy}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          totalResults={corridors.length}
-        />
+        <div className="print:hidden">
+          <FilterControls
+            search={search}
+            onSearchChange={setSearch}
+            activeConfig={activeConfig}
+            onConfigChange={setActiveConfig}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            totalResults={corridors.length}
+          />
+        </div>
 
         {/* Section C: Master Catalog View */}
         {viewMode === 'table' ? (
@@ -179,6 +209,7 @@ export default function HighwaysPage() {
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
             onSelectAll={handleSelectAll}
+            onView={(h) => setViewingHighway(h)}
             onEdit={(h) => setEditingHighway(h)}
             onDelete={(h) => setDeletingHighway(h)}
           />
@@ -188,6 +219,7 @@ export default function HighwaysPage() {
             loading={loading}
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
+            onView={(h) => setViewingHighway(h)}
             onEdit={(h) => setEditingHighway(h)}
             onDelete={(h) => setDeletingHighway(h)}
           />
@@ -199,6 +231,13 @@ export default function HighwaysPage() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={() => fetchHighways()}
+      />
+
+      <ViewHighwayModal
+        highway={viewingHighway}
+        isOpen={Boolean(viewingHighway)}
+        onClose={() => setViewingHighway(null)}
+        onEdit={(h) => setEditingHighway(h)}
       />
 
       <EditHighwayModal

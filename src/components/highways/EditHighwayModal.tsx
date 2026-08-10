@@ -32,12 +32,19 @@ export const EditHighwayModal: React.FC<EditHighwayModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const [oldNhNo, setOldNhNo] = useState('');
+  const [newNhNo, setNewNhNo] = useState('');
   const [roadName, setRoadName] = useState('');
   const [fromLocation, setFromLocation] = useState('');
   const [toLocation, setToLocation] = useState('');
   const [fromChainage, setFromChainage] = useState('0');
   const [toChainage, setToChainage] = useState('');
   const [lengthKm, setLengthKm] = useState('');
+  const [lengthLessThan2l, setLengthLessThan2l] = useState('0');
+  const [length2l, setLength2l] = useState('0');
+  const [length2lPs, setLength2lPs] = useState('0');
+  const [length4l, setLength4l] = useState('0');
+  const [length6l, setLength6l] = useState('0');
   const [configuration, setConfiguration] = useState('2-Lane');
 
   const [loading, setLoading] = useState(false);
@@ -45,12 +52,19 @@ export const EditHighwayModal: React.FC<EditHighwayModalProps> = ({
 
   useEffect(() => {
     if (highway && isOpen) {
+      setOldNhNo(highway.old_nh_no || '');
+      setNewNhNo(highway.new_nh_no || '');
       setRoadName(highway.road_name || '');
       setFromLocation(highway.from_location || '');
       setToLocation(highway.to_location || '');
       setFromChainage(highway.from_chainage || '0');
       setToChainage(highway.to_chainage || String(highway.length_km || ''));
       setLengthKm(String(highway.length_km || ''));
+      setLengthLessThan2l(String(highway.length_less_than_2l || 0));
+      setLength2l(String(highway.length_2l || 0));
+      setLength2lPs(String(highway.length_2l_ps || 0));
+      setLength4l(String(highway.length_4l || 0));
+      setLength6l(String(highway.length_6l || 0));
       setConfiguration(highway.configuration || '2-Lane');
       setErrorMsg('');
     }
@@ -122,12 +136,19 @@ export const EditHighwayModal: React.FC<EditHighwayModalProps> = ({
         body: JSON.stringify({
           id: highway.id,
           road_code: highway.road_code,
+          old_nh_no: oldNhNo,
+          new_nh_no: newNhNo,
           road_name: roadName,
           from_location: fromLocation,
           to_location: toLocation,
           from_chainage: fromChainage,
           to_chainage: toChainage || String(numLength),
           length_km: numLength,
+          length_less_than_2l: Number(lengthLessThan2l) || 0,
+          length_2l: Number(length2l) || 0,
+          length_2l_ps: Number(length2lPs) || 0,
+          length_4l: Number(length4l) || 0,
+          length_6l: Number(length6l) || 0,
           configuration,
           status: highway.status || 'ACTIVE',
         }),
@@ -152,7 +173,7 @@ export const EditHighwayModal: React.FC<EditHighwayModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -170,7 +191,7 @@ export const EditHighwayModal: React.FC<EditHighwayModalProps> = ({
                   {highway.road_code}
                 </span>
               </div>
-              <p className="text-xs text-slate-500">Update section title, endpoints, and configuration</p>
+              <p className="text-xs text-slate-500">Update NH numbers, endpoints, and multi-lane breakdown</p>
             </div>
           </div>
           <button
@@ -190,11 +211,11 @@ export const EditHighwayModal: React.FC<EditHighwayModalProps> = ({
             </div>
           )}
 
-          {/* Row 1: Read-Only Road Code Badge & Lane Config */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Row 1: Road Code, Old NH, New NH */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Road Code <span className="text-xs font-normal text-slate-400">(Read-Only)</span>
+                Road Code
               </label>
               <div className="px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-blue-900 dark:text-blue-300 cursor-not-allowed">
                 {highway.road_code}
@@ -203,18 +224,26 @@ export const EditHighwayModal: React.FC<EditHighwayModalProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Lane Configuration
+                Old NH No.
               </label>
-              <select
-                value={configuration}
-                onChange={(e) => setConfiguration(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="2-Lane">2-Lane</option>
-                <option value="2-Lane (Paved Shoulder)">2-Lane (Paved Shoulder)</option>
-                <option value="4-Lane">4-Lane</option>
-                <option value="6-Lane">6-Lane</option>
-              </select>
+              <input
+                type="text"
+                value={oldNhNo}
+                onChange={(e) => setOldNhNo(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                New NH No.
+              </label>
+              <input
+                type="text"
+                value={newNhNo}
+                onChange={(e) => setNewNhNo(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
           </div>
 
@@ -263,7 +292,7 @@ export const EditHighwayModal: React.FC<EditHighwayModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Length (km) <span className="text-red-500">*</span>
+                Total Length (km) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -297,6 +326,69 @@ export const EditHighwayModal: React.FC<EditHighwayModalProps> = ({
                 onChange={(e) => handleToChainageChange(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+          </div>
+
+          {/* Row 5: Multi-lane Breakdown Fields */}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
+              Multi-Lane Configuration Breakdown (km)
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              <div>
+                <label className="block text-[11px] font-medium text-slate-500 mb-1">&lt; 2-Lane</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={lengthLessThan2l}
+                  onChange={(e) => setLengthLessThan2l(e.target.value)}
+                  className="w-full px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-500 mb-1">2-Lane</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={length2l}
+                  onChange={(e) => setLength2l(e.target.value)}
+                  className="w-full px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-500 mb-1">2L + PS</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={length2lPs}
+                  onChange={(e) => setLength2lPs(e.target.value)}
+                  className="w-full px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-500 mb-1">4-Lane</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={length4l}
+                  onChange={(e) => setLength4l(e.target.value)}
+                  className="w-full px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-500 mb-1">6-Lane</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={length6l}
+                  onChange={(e) => setLength6l(e.target.value)}
+                  className="w-full px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100"
+                />
+              </div>
             </div>
           </div>
 

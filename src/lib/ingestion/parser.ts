@@ -22,11 +22,18 @@ export interface ParseResult<T = unknown> {
 export interface HighwayRow {
   road_code: string;
   road_name: string;
+  old_nh_no?: string;
+  new_nh_no?: string;
   from_location?: string;
   to_location?: string;
   from_chainage?: string;
   to_chainage?: string;
   length_km: number;
+  length_less_than_2l?: number;
+  length_2l?: number;
+  length_2l_ps?: number;
+  length_4l?: number;
+  length_6l?: number;
   configuration: string;
   status: string;
   delete_status?: string;
@@ -334,22 +341,23 @@ export async function parseDatasetFile(
 
 function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
   const parsedData: HighwayRow[] = [];
-  let currentRoadCode = '';
-  let currentRoadName = '';
 
   for (let i = 0; i < rawRows.length; i++) {
     const row = rawRows[i];
     if (!row || row.length === 0) continue;
 
     const col0 = cleanString(row[0]);
-    const col2 = cleanString(row[2]);
-    const col3 = cleanString(row[3]);
+    const col1 = cleanString(row[1]); // Old NH No.
+    const col2 = cleanString(row[2]); // New NH No.
+    const col3 = cleanString(row[3]); // Name of Section/Road
     const rowStr = row.map(cleanString).join(' ').toLowerCase();
 
     // Exclusion filter for summary / subtotal / title header rows
     if (
-      rowStr.includes('total length') ||
+      rowStr.includes('total') ||
       rowStr.includes('sub total') ||
+      rowStr.includes('summary') ||
+      col0.toLowerCase().includes('total') ||
       col2.toLowerCase().includes('new nh') ||
       col3.toLowerCase().includes('name of section') ||
       col2.toLowerCase().includes('nh no')
@@ -357,53 +365,66 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
       continue;
     }
 
-    if (col2) {
-      currentRoadCode = col2.toUpperCase().startsWith('NH') ? col2.toUpperCase() : `NH-${col2.toUpperCase()}`;
-    }
-    if (col3) {
-      currentRoadName = col3;
+    // Only process rows where col0 is a valid numeric S. No. (e.g. 1, 2, 3... 11)
+    if (!/^\d+$/.test(col0)) {
+      continue;
     }
 
-    if ((/^\d+$/.test(col0) && currentRoadCode) || (currentRoadCode.startsWith('NH') && /^\d+/.test(currentRoadCode.replace(/NH-?/i, '')))) {
-      const roadCode = currentRoadCode;
-      const roadName = currentRoadName || `National Highway ${currentRoadCode}`;
-      const lengthKm = roundTo3Decimals(parseChainageValue(row[6]) || parseChainageValue(row[4]) || 0);
+    const oldNhNo = col1 ? cleanString(col1) : '-';
+    const newNhNo = col2 ? cleanString(col2) : '';
 
-      // Scan all multi-lane breakdown columns: Col 8 (2L), Col 9 (2L+PS), Col 10 (4L), Col 11 (6L)
-      const l6 = parseChainageValue(row[11]);
-      const l4 = parseChainageValue(row[10]);
-      const l2ps = parseChainageValue(row[9]);
-      const l2 = parseChainageValue(row[8]);
+    if (!newNhNo && !col2) continue;
 
-      const maxLane = Math.max(l6, l4, l2ps, l2);
-      let config = '2-Lane';
-      if (maxLane > 0) {
-        if (maxLane === l6) config = '6-Lane';
-        else if (maxLane === l4) config = '4-Lane';
-        else if (maxLane === l2ps) config = '2-Lane (Paved Shoulder)';
-        else if (maxLane === l2) config = '2-Lane';
-      }
+    const roadCode = newNhNo
+      ? (newNhNo.toUpperCase().startsWith('NH') ? newNhNo.toUpperCase() : `NH-${newNhNo.toUpperCase()}`)
+      : (col2.toUpperCase().startsWith('NH') ? col2.toUpperCase() : `NH-${col2.toUpperCase()}`);
 
-      const fromLoc = roadName.split('-')[0]?.trim() || 'Start';
-      const toLoc = roadName.split('-').pop()?.trim() || 'End';
+    const roadName = col3 || `National Highway ${roadCode}`;
+    const lengthKm = roundTo3Decimals(parseChainageValue(row[6]) || parseChainageValue(row[4]) || 0);
 
-      parsedData.push({
-        road_code: roadCode,
-        road_name: roadName,
-        from_location: fromLoc,
-        to_location: toLoc,
-        from_chainage: cleanString(row[4]) || '0',
-        to_chainage: cleanString(row[5]) || '0',
-        length_km: lengthKm,
-        configuration: config,
-        status: 'ACTIVE',
-        delete_status: 'KEEP',
-        start_latitude: undefined,
-        start_longitude: undefined,
-        end_latitude: undefined,
-        end_longitude: undefined,
-      });
+    // Scan all multi-lane breakdown columns: Col 7 (>2L / <2L), Col 8 (2L), Col 9 (2L+PS), Col 10 (4L), Col 11 (6L)
+    const lLess2l = parseChainageValue(row[7]);
+    const l2 = parseChainageValue(row[8]);
+    const l2ps = parseChainageValue(row[9]);
+    const l4 = parseChainageValue(row[10]);
+    const l6 = parseChainageValue(row[11]);
+
+    const maxLane = Math.max(l6, l4, l2ps, l2, lLess2l);
+    let config = '2-Lane';
+    if (maxLane > 0) {
+      if (maxLane === l6) config = '6-Lane';
+      else if (maxLane === l4) config = '4-Lane';
+      else if (maxLane === l2ps) config = '2-Lane (Paved Shoulder)';
+      else if (maxLane === l2) config = '2-Lane';
+      else if (maxLane === lLess2l) config = '<2-Lane';
     }
+
+    const fromLoc = roadName.split('-')[0]?.trim() || 'Start';
+    const toLoc = roadName.split('-').pop()?.trim() || 'End';
+
+    parsedData.push({
+      road_code: roadCode,
+      road_name: roadName,
+      old_nh_no: oldNhNo,
+      new_nh_no: newNhNo || roadCode.replace(/^NH-?/, ''),
+      from_location: fromLoc,
+      to_location: toLoc,
+      from_chainage: cleanString(row[4]) || '0',
+      to_chainage: cleanString(row[5]) || '0',
+      length_km: lengthKm,
+      length_less_than_2l: lLess2l,
+      length_2l: l2,
+      length_2l_ps: l2ps,
+      length_4l: l4,
+      length_6l: l6,
+      configuration: config,
+      status: 'ACTIVE',
+      delete_status: 'KEEP',
+      start_latitude: undefined,
+      start_longitude: undefined,
+      end_latitude: undefined,
+      end_longitude: undefined,
+    });
   }
 
   result.totalRows = rawRows.length;
@@ -413,7 +434,7 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
   if (parsedData.length === 0) {
     result.success = false;
     result.errors.push(
-      'Could not find valid Highway Master rows. Expected columns: [Sl.No, NH No, Road Name, Length].'
+      'Could not find valid Highway Master rows. Expected columns: [Sl.No, Old NH No, New NH No, Road Name, Length].'
     );
   }
 }
