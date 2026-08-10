@@ -62,24 +62,22 @@ export async function GET(request: Request) {
     const plainNum = code.replace(/^NH-?/i, '');
     const searchCodes = Array.from(new Set([code, `NH-${plainNum}`, plainNum]));
 
-    let query = supabase
+    // Query all sub-chainages for matching codes without DB-level delete_status filter to avoid column-missing errors
+    const { data, error } = await supabase
       .from('highway_sub_chainages')
       .select('*')
       .in('highway_code', searchCodes)
       .order('from_km', { ascending: true });
 
-    if (!includeSoftDeleted) {
-      query = query.neq('delete_status', 'SOFT_DELETE');
-    }
-
-    const { data, error } = await query;
-
     if (error) {
+      console.error('Supabase query error in GET /api/sub-chainages:', error);
       return NextResponse.json({ success: false, message: error.message, subChainages: [] }, { status: 500 });
     }
 
-    // Secondary filter in memory to ensure soft deleted rows are excluded even if schema fallback occurs
-    const filteredData = (data || []).filter((item: any) => includeSoftDeleted || item.delete_status !== 'SOFT_DELETE');
+    // Perform safe in-memory filtering for soft deleted rows
+    const filteredData = (data || []).filter(
+      (item: any) => includeSoftDeleted || !item.delete_status || item.delete_status !== 'SOFT_DELETE'
+    );
 
     return NextResponse.json({
       success: true,
@@ -110,32 +108,7 @@ export async function POST(request: Request) {
     const parsedTo = Number(to_km) || 0;
     const parsedLen = Number(length_km) || Math.max(0, parsedTo - parsedFrom);
 
-    if (id) {
-      // UPDATE
-      const { data, error } = await supabase
-        .from('highway_sub_chainages')
-        .update({
-          division_name: division_name?.trim() || null,
-          stretch_name: stretch_name?.trim() || null,
-          from_km: parsedFrom,
-          to_km: parsedTo,
-          length_km: parsedLen,
-          lane_configuration: lane_configuration || '2-Lane',
-          pcu_count: Number(pcu_count) || 0,
-          dpr_status: dpr_status?.trim() || null,
-          delete_status: delete_status || 'KEEP',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .select();
-
-      if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
-      return NextResponse.json({ success: true, subChainage: data?.[0] });
-    }
-
-    // INSERT
-    const insertPayload = {
-      highway_code: highway_code.trim().toUpperCase(),
+    const payload: Record<string, unknown> = {
       division_name: division_name?.trim() || null,
       stretch_name: stretch_name?.trim() || null,
       from_km: parsedFrom,
@@ -144,12 +117,52 @@ export async function POST(request: Request) {
       lane_configuration: lane_configuration || '2-Lane',
       pcu_count: Number(pcu_count) || 0,
       dpr_status: dpr_status?.trim() || null,
-      delete_status: delete_status || 'KEEP',
-      created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase.from('highway_sub_chainages').insert([insertPayload]).select();
+    if (id) {
+      // UPDATE
+      let { data, error } = await supabase
+        .from('highway_sub_chainages')
+        .update({ ...payload, delete_status: delete_status || 'KEEP' })
+        .eq('id', id)
+        .select();
+
+      if (error && error.message?.includes('delete_status')) {
+        // Fallback without delete_status column
+        const { data: dataFallback, error: errorFallback } = await supabase
+          .from('highway_sub_chainages')
+          .update(payload)
+          .eq('id', id)
+          .select();
+        data = dataFallback;
+        error = errorFallback;
+      }
+
+      if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+      return NextResponse.json({ success: true, subChainage: data?.[0] });
+    }
+
+    // INSERT
+    const insertPayload = {
+      ...payload,
+      highway_code: highway_code.trim().toUpperCase(),
+      delete_status: delete_status || 'KEEP',
+      created_at: new Date().toISOString(),
+    };
+
+    let { data, error } = await supabase.from('highway_sub_chainages').insert([insertPayload]).select();
+
+    if (error && error.message?.includes('delete_status')) {
+      const { delete_status: _ds, ...insertFallback } = insertPayload;
+      const { data: dataFallback, error: errorFallback } = await supabase
+        .from('highway_sub_chainages')
+        .insert([insertFallback])
+        .select();
+      data = dataFallback;
+      error = errorFallback;
+    }
+
     if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
     return NextResponse.json({ success: true, subChainage: data?.[0] });
   } catch (err: unknown) {
@@ -178,14 +191,13 @@ export async function DELETE(request: Request) {
         const { error } = await supabase.from('highway_sub_chainages').delete().eq('id', id);
         if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
       } else {
-        // Soft Delete (Default)
+        // Soft Delete (Default) with fallback to hard delete if delete_status is missing
         const { error } = await supabase
           .from('highway_sub_chainages')
           .update({ delete_status: 'SOFT_DELETE', updated_at: new Date().toISOString() })
           .eq('id', id);
 
         if (error) {
-          // Fallback to hard delete if delete_status column is absent in schema
           const { error: hardErr } = await supabase.from('highway_sub_chainages').delete().eq('id', id);
           if (hardErr) return NextResponse.json({ success: false, message: hardErr.message }, { status: 500 });
         }
