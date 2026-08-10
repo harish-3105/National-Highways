@@ -287,7 +287,6 @@ export async function POST(request: Request) {
       length_6l: Number(length_6l) || 0,
       configuration: configuration || '2-Lane',
       status: 'ACTIVE',
-      delete_status: 'ACTIVE',
       updated_at: new Date().toISOString(),
     };
 
@@ -322,7 +321,7 @@ export async function DELETE(request: Request) {
     if (supabase) {
       const { error } = await supabase
         .from('highways')
-        .update({ status: 'DELETED', delete_status: 'DELETED', updated_at: new Date().toISOString() })
+        .update({ status: 'DELETED', updated_at: new Date().toISOString() })
         .eq('id', id);
 
       if (error) {
