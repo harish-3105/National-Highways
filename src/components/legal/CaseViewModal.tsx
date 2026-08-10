@@ -50,6 +50,19 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose 
 
         {/* Modal Scrollable Body */}
         <div className="legal-print-scrollable p-6 overflow-y-auto space-y-6 text-xs text-slate-800 dark:text-slate-200 print:p-6 print:text-slate-900">
+          {/* Departmental Print Letterhead Header */}
+          <div className="hidden print:block text-center border-b border-slate-300 pb-4 mb-4">
+            <h2 className="font-extrabold text-base text-slate-950 uppercase tracking-wide">
+              Highways Department &bull; Government of Tamil Nadu
+            </h2>
+            <p className="text-xs text-slate-700 font-semibold mt-0.5">
+              Legal Cell &bull; {caseData.circle} Circle ({caseData.division})
+            </p>
+            <p className="text-[11px] text-slate-600 font-mono mt-1">
+              Official Litigation Report &bull; Case No: {caseData.caseNumber} ({caseData.caseYear}) &bull; Printed: {new Date().toLocaleDateString('en-IN')}
+            </p>
+          </div>
+
           {/* Status Badges Header */}
           <div className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 print:bg-slate-100 print:border-slate-300">
             <span className="bg-blue-900 text-white px-3 py-1 rounded-lg font-bold text-xs">

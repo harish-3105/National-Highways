@@ -233,7 +233,14 @@ export const LegalDashboard: React.FC = () => {
                 filteredCases.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                     <td className="py-4 px-6">
-                      <div className="font-extrabold text-blue-600">{item.caseNumber}</div>
+                      <div className="font-extrabold text-blue-600 flex items-center gap-1.5">
+                        <span>{item.caseNumber}</span>
+                        {item.convertedCase?.enabled && (
+                          <span className="px-1.5 py-0.2 bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-extrabold text-[10px] rounded border border-purple-200 dark:border-purple-800">
+                            Converted Petition
+                          </span>
+                        )}
+                      </div>
                       <div className="text-slate-400 text-[11px] font-semibold">Year {item.caseYear}</div>
                     </td>
                     <td className="py-4 px-6">

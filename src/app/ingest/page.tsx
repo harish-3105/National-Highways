@@ -1,267 +1,333 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { NavigationHeader } from '@/components/NavigationHeader';
+import { DatasetType } from '@/lib/ingestion/parser';
 import {
-  UploadCloud,
-  Database,
+  FileSpreadsheet,
+  Upload,
   CheckCircle2,
   AlertCircle,
-  FileSpreadsheet,
   FileText,
+  Database,
   ArrowRight,
-  Layers,
+  Loader2,
 } from 'lucide-react';
 
-type DatasetType =
-  | 'HIGHWAYS_MASTER'
-  | 'HIGHWAY_SUB_CHAINAGES'
-  | 'DLP_CONTRACTS'
-  | 'HIGHWAY_MILESTONES'
-  | 'ACCIDENT_BLACKSPOTS'
-  | 'LEGAL_CASES';
-
-const DATASET_OPTIONS: { value: DatasetType; label: string; description: string }[] = [
+const DATASETS: { type: DatasetType; label: string; description: string; countHint: string }[] = [
   {
-    value: 'HIGHWAYS_MASTER',
-    label: 'Level 1: Highway Master Catalog (NH Length & Lanes)',
-    description: 'National highway codes, road names, total lengths in km, Old/New NH Nos, and multi-lane breakdown.',
+    type: 'HIGHWAYS_MASTER',
+    label: '1. Master Highway Corridors Catalog',
+    description: 'Level 1 Ground-Truth Highways (Road code, length, lane distribution, chainages)',
+    countHint: 'Primary catalog table (public.highways)',
   },
   {
-    value: 'HIGHWAY_SUB_CHAINAGES',
-    label: 'Level 2: Sub-Chainages & Traffic PCU Details',
-    description: 'Granular kilometer sub-stretches (From/To Km), lane statuses, traffic PCU volume, and DPR widening statuses.',
+    type: 'HIGHWAY_SUB_CHAINAGES',
+    label: '2. Sub-Chainages Breakdown (Level 2 Micro-Lanes & Traffic PCU)',
+    description: 'Level 2 Stretch-level lane geometry, traffic PCU, DPR proposals & pavement data',
+    countHint: 'Detailed stretch breakdown table (public.highway_sub_chainages)',
   },
   {
-    value: 'DLP_CONTRACTS',
-    label: 'DLP & Maintenance Contracts',
-    description: 'Contractor names, STMC/PBMC/EPC modes, DOC completion dates, and expiry dates.',
+    type: 'DLP_CONTRACTS',
+    label: '3. Defect Liability Period (DLP) & Maintenance Contracts',
+    description: 'Warranty maintenance contracts, contractors, DLP expiry dates & sub-contracts',
+    countHint: 'Warranty maintenance table (public.dlp_contracts)',
   },
   {
-    value: 'HIGHWAY_MILESTONES',
-    label: 'Highway Chainages & Milestones',
-    description: 'Linear milestone bar chart, town landmarks, traffic PCU volume, and ROW widths.',
+    type: 'HIGHWAY_MILESTONES',
+    label: '4. Highway Milestones & Chainage Points',
+    description: 'Point-level chainage locations, physical milestone markers & landmarks',
+    countHint: 'Chainage points table (public.highway_chainages)',
   },
   {
-    value: 'ACCIDENT_BLACKSPOTS',
-    label: 'Accident Blackspots & Hazards',
-    description: 'High-risk accident coordinates (lat/lng), severity ratings, and fatalities.',
+    type: 'ACCIDENT_BLACKSPOTS',
+    label: '5. Highway Safety & Accident Blackspots',
+    description: 'Blackspot identification, safety ratings, accident metrics & rectification status',
+    countHint: 'Safety analysis table (public.accident_blackspots)',
   },
   {
-    value: 'LEGAL_CASES',
-    label: 'Legal Cases & Land Acquisition',
-    description: 'Court case tracking numbers, court names, hearing dates, and legal counsel.',
+    type: 'LEGAL_CASES',
+    label: '6. Legal Cases & Court Proceedings Catalog',
+    description: 'High Court & District Court litigation, counter-affidavits & converted petitions',
+    countHint: 'Legal cases table (public.legal_cases)',
   },
 ];
 
-interface IngestionResultResponse {
-  success?: boolean;
-  insertedCount?: number;
-  message?: string;
-  errors?: string[];
-  dataPreview?: Record<string, unknown>[];
-}
-
 export default function IngestPage() {
-  const [selectedType, setSelectedType] = useState<DatasetType>('HIGHWAYS_MASTER');
+  const [selectedDataset, setSelectedDataset] = useState<DatasetType>('HIGHWAYS_MASTER');
   const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [result, setResult] = useState<IngestionResultResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [result, setResult] = useState<{
+    success: boolean;
+    message?: string;
+    insertedCount?: number;
+    totalRows?: number;
+    errors?: string[];
+    preview?: any[];
+  } | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selected = e.target.files[0];
+      setFile(selected);
       setResult(null);
-      setError(null);
     }
   };
 
-  const handleUpload = async (e: React.FormEvent) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    if (!file) {
-      setError('Please select a .xlsx, .xls, or .csv file to upload.');
-      return;
-    }
+    setIsDragging(true);
+  };
 
-    setIsUploading(true);
-    setError(null);
-    setResult(null);
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setFile(e.dataTransfer.files[0]);
+      setResult(null);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) return;
 
     try {
+      setIsUploading(true);
+      setUploadProgress(25);
+      setResult(null);
+
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('datasetType', selectedType);
+      formData.append('datasetType', selectedDataset);
 
-      const resp = await fetch('/api/ingest', {
+      setUploadProgress(50);
+      const res = await fetch('/api/ingest', {
         method: 'POST',
         body: formData,
       });
 
-      const data = await resp.json();
+      setUploadProgress(85);
+      const data = await res.json();
+      setUploadProgress(100);
 
-      if (!resp.ok || !data.success) {
-        setError(data.message || 'File validation failed.');
-        setResult(data);
+      if (res.ok && data.success) {
+        setResult({
+          success: true,
+          insertedCount: data.insertedCount,
+          totalRows: data.totalRows,
+          preview: data.preview,
+        });
+        setFile(null);
       } else {
-        setResult(data);
+        setResult({
+          success: false,
+          message: data.message || 'Ingestion failed.',
+          errors: data.errors || [],
+        });
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(`Network error: ${msg}`);
+    } catch (err: any) {
+      setResult({
+        success: false,
+        message: err.message || 'An unexpected error occurred during file upload.',
+      });
     } finally {
       setIsUploading(false);
+      setTimeout(() => setUploadProgress(0), 1000);
     }
   };
+
+  const currentDatasetInfo = DATASETS.find((d) => d.type === selectedDataset);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
       <NavigationHeader />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Page Banner Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Database className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              Automated Data Ingestion Engine
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Validate and upload Excel (<code className="text-blue-600 dark:text-blue-400 font-mono font-bold">.xlsx</code>, <code className="text-blue-600 dark:text-blue-400 font-mono font-bold">.xls</code>) or CSV (<code className="text-blue-600 dark:text-blue-400 font-mono font-bold">.csv</code>) datasets to your Supabase PostgreSQL cloud database.
-            </p>
+      <main className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+        {/* Banner */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black shadow-md text-lg">
+              <FileSpreadsheet className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="font-extrabold text-xl text-slate-900 dark:text-slate-100">
+                Automated Departmental Excel / CSV Ingestion Engine
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                Multi-sheet ground truth parser with automated Indian chainage normalization & batch PostgreSQL ingestion
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Upload Form Card */}
-        <form
-          onSubmit={handleUpload}
-          className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-6 shadow-sm"
-        >
-          {/* Section 1: Dataset Type Selection */}
-          <div>
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1.5">
-              <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              1. Select Target Dataset Table
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-6">
+          {/* Step 1: Select Target Dataset */}
+          <div className="space-y-2">
+            <label className="block font-bold text-xs uppercase text-slate-700 dark:text-slate-300 tracking-wider">
+              Step 1: Select Target PostgreSQL Dataset Table
             </label>
             <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value as DatasetType)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl p-3 text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer"
+              value={selectedDataset}
+              onChange={(e) => setSelectedDataset(e.target.value as DatasetType)}
+              className="w-full py-3 px-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
             >
-              {DATASET_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
+              {DATASETS.map((d) => (
+                <option key={d.type} value={d.type}>
+                  {d.label}
                 </option>
               ))}
             </select>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium">
-              {DATASET_OPTIONS.find((o) => o.value === selectedType)?.description}
-            </p>
+            {currentDatasetInfo && (
+              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-950/40 p-3 rounded-xl border border-blue-100 dark:border-blue-900">
+                📌 <strong>Target:</strong> {currentDatasetInfo.description} ({currentDatasetInfo.countHint})
+              </p>
+            )}
           </div>
 
-          {/* Section 2: File Dropzone Input */}
-          <div>
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1.5">
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              2. Select Spreadsheet / Document File (.xlsx, .xls, .csv)
+          {/* Step 2: Drag & Drop Dropzone */}
+          <div className="space-y-2">
+            <label className="block font-bold text-xs uppercase text-slate-700 dark:text-slate-300 tracking-wider">
+              Step 2: Attach Excel Sheet (.xlsx, .xls) or CSV File
             </label>
-            <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-6 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-100/60 dark:hover:bg-slate-800/80 transition-colors text-center cursor-pointer">
+
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all ${
+                isDragging
+                  ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-950/60 scale-[1.01]'
+                  : file
+                  ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20'
+                  : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 bg-slate-50/50 dark:bg-slate-800/40'
+              }`}
+            >
               <input
                 type="file"
                 accept=".xlsx,.xls,.csv"
                 onChange={handleFileChange}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
-              <div className="flex flex-col items-center justify-center space-y-2">
-                <div className="p-3 bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-full">
-                  <UploadCloud className="w-6 h-6" />
+
+              {file ? (
+                <div className="space-y-2">
+                  <FileText className="w-10 h-10 text-emerald-600 mx-auto" />
+                  <p className="font-extrabold text-sm text-slate-900 dark:text-slate-100">{file.name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                    Size: {(file.size / 1024).toFixed(1)} KB &bull; Type: {file.type || 'Excel/CSV Document'}
+                  </p>
                 </div>
-                {file ? (
+              ) : (
+                <div className="space-y-2">
+                  <Upload className="w-10 h-10 text-slate-400 mx-auto" />
+                  <p className="font-bold text-xs text-slate-700 dark:text-slate-300">
+                    Drag and drop your Excel or CSV file here, or click to browse
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    Supports Official Tamil Nadu Highways Master Sheets (.xlsx, .xls, .csv)
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Upload Progress Bar */}
+          {isUploading && (
+            <div className="space-y-1.5 animate-in fade-in duration-200">
+              <div className="flex justify-between text-xs font-bold text-blue-600 dark:text-blue-400">
+                <span>Parsing & Batch Ingesting to Supabase...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-600 transition-all duration-300 rounded-full"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Form Action Button */}
+          <div className="flex items-center justify-end pt-2">
+            <button
+              type="submit"
+              disabled={!file || isUploading}
+              className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-extrabold text-xs shadow-md transition-all cursor-pointer ${
+                !file || isUploading
+                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed shadow-none'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Validating & Batch Inserting into Supabase...</span>
+                </>
+              ) : (
+                <>
+                  <Database className="w-4 h-4" />
+                  <span>Start Automated Ingestion Pipeline</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+
+        {/* Results Banner */}
+        {result && (
+          <div className="animate-in fade-in zoom-in-95 duration-200">
+            {result.success ? (
+              <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-6 shadow-xs space-y-4">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
                   <div>
-                    <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center justify-center gap-2">
-                      <FileText className="w-4 h-4 text-emerald-600" />
-                      {file.name}
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      ({(file.size / 1024).toFixed(1)} KB) &bull; Click to change file
-                    </span>
+                    <h3 className="font-extrabold text-base text-emerald-900 dark:text-emerald-200">
+                      Ingestion Pipeline Completed Successfully!
+                    </h3>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">
+                      Inserted {result.insertedCount} records out of {result.totalRows} parsed rows into PostgreSQL database.
+                    </p>
                   </div>
-                ) : (
-                  <div>
-                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                      Click to browse or drag and drop spreadsheet file
-                    </span>
-                    <p className="text-xs text-slate-400 mt-0.5">Supports Microsoft Excel (.xlsx, .xls) and standard CSV (.csv)</p>
+                </div>
+
+                {result.preview && result.preview.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                      Sample Processed Records (First 5 Rows):
+                    </p>
+                    <pre className="p-4 bg-slate-900 text-emerald-300 rounded-xl text-[11px] font-mono overflow-x-auto max-h-60">
+                      {JSON.stringify(result.preview, null, 2)}
+                    </pre>
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-
-          {/* Submit Action Button */}
-          <button
-            type="submit"
-            disabled={isUploading || !file}
-            className={`w-full py-3.5 px-6 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center justify-center gap-2 ${
-              isUploading || !file
-                ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-slate-300 dark:border-slate-700'
-                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md'
-            }`}
-          >
-            {isUploading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Validating & Batch Inserting into Supabase...</span>
-              </>
             ) : (
-              <>
-                <span>Validate & Upload Dataset</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Error Feedback Banner */}
-        {error && (
-          <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 p-5 rounded-2xl text-red-900 dark:text-red-200 space-y-2">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-              <h3 className="font-bold text-sm text-red-900 dark:text-red-300">Schema Validation Error</h3>
-            </div>
-            <p className="text-xs font-semibold text-red-700 dark:text-red-300 pl-7">{error}</p>
-            {result?.errors && result.errors.length > 0 && (
-              <ul className="list-disc list-inside mt-2 text-xs text-red-600 dark:text-red-400 space-y-1 pl-7 font-mono">
-                {result.errors.map((errStr: string, idx: number) => (
-                  <li key={idx}>{errStr}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-
-        {/* Success Result & Data Preview Card */}
-        {result && result.success && (
-          <div className="bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-6 rounded-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <h3 className="font-bold text-emerald-900 dark:text-emerald-300 text-base">Ingestion Successful!</h3>
-              </div>
-              <span className="text-xs bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 px-3 py-1 rounded-full font-extrabold font-mono">
-                {result.insertedCount} rows inserted
-              </span>
-            </div>
-            <p className="text-xs text-emerald-800 dark:text-emerald-300 font-medium">{result.message}</p>
-
-            {result.dataPreview && result.dataPreview.length > 0 && (
-              <div className="space-y-2 pt-2 border-t border-emerald-200 dark:border-emerald-800/60">
-                <h4 className="text-[11px] font-extrabold text-emerald-900 dark:text-emerald-400 uppercase tracking-wider">
-                  PostgreSQL Inserted Preview (First 5 Rows):
-                </h4>
-                <div className="overflow-x-auto bg-slate-900 rounded-xl p-3 text-xs font-mono border border-slate-800 shadow-inner">
-                  <pre className="text-emerald-300 leading-relaxed">{JSON.stringify(result.dataPreview, null, 2)}</pre>
+              <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-2xl p-6 shadow-xs space-y-3">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="w-6 h-6 text-red-600 shrink-0" />
+                  <div>
+                    <h3 className="font-extrabold text-base text-red-900 dark:text-red-200">
+                      Ingestion Failed
+                    </h3>
+                    <p className="text-xs text-red-700 dark:text-red-300 font-medium">{result.message}</p>
+                  </div>
                 </div>
+
+                {result.errors && result.errors.length > 0 && (
+                  <ul className="list-disc list-inside text-xs text-red-600 dark:text-red-400 font-mono space-y-1 bg-red-100/50 dark:bg-red-950 p-3 rounded-xl border border-red-200 dark:border-red-900">
+                    {result.errors.map((err, idx) => (
+                      <li key={idx}>{err}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
           </div>

@@ -92,7 +92,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
           >
             <option value="length_desc">Sort: Length (Longest)</option>
             <option value="length_asc">Sort: Length (Shortest)</option>
-            <option value="road_code_asc">Sort: Road Code (A-Z)</option>
+            <option value="code_asc">Sort: Road Code (A-Z)</option>
           </select>
         </div>
 

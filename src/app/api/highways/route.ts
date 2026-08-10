@@ -262,6 +262,7 @@ export async function POST(request: Request) {
       if (error) {
         return NextResponse.json({ success: false, message: error.message }, { status: 500 });
       }
+      return NextResponse.json({ success: false, message: 'Corridor record not found for update' }, { status: 404 });
     }
 
     // CREATE / INSERT MODE
@@ -286,6 +287,7 @@ export async function POST(request: Request) {
       length_6l: Number(length_6l) || 0,
       configuration: configuration || '2-Lane',
       status: 'ACTIVE',
+      delete_status: 'ACTIVE',
       updated_at: new Date().toISOString(),
     };
 
@@ -320,7 +322,7 @@ export async function DELETE(request: Request) {
     if (supabase) {
       const { error } = await supabase
         .from('highways')
-        .update({ status: 'DELETED', updated_at: new Date().toISOString() })
+        .update({ status: 'DELETED', delete_status: 'DELETED', updated_at: new Date().toISOString() })
         .eq('id', id);
 
       if (error) {

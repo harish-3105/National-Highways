@@ -2,20 +2,69 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { parseDatasetFile, DatasetType } from '@/lib/ingestion/parser';
 
+export const dynamic = 'force-dynamic';
+
+function getSupabaseClient() {
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const rawKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    '';
+
+  const supabaseUrl = rawUrl.replace(/^["']|["']$/g, '').trim();
+  const supabaseKey = rawKey.replace(/^["']|["']$/g, '').trim();
+
+  if (!supabaseUrl || !supabaseKey) return null;
+
+  try {
+    return createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false },
+    });
+  } catch {
+    return null;
+  }
+}
+
+// Chunk helper to process large bulk payloads safely
+async function batchInsertOrUpsert(
+  supabase: any,
+  tableName: string,
+  dataArray: any[],
+  options: { onConflict?: string } = {}
+) {
+  const CHUNK_SIZE = 250;
+  let totalInserted = 0;
+  let lastError: any = null;
+
+  for (let i = 0; i < dataArray.length; i += CHUNK_SIZE) {
+    const chunk = dataArray.slice(i, i + CHUNK_SIZE);
+    let query = supabase.from(tableName);
+
+    if (options.onConflict) {
+      query = query.upsert(chunk, { onConflict: options.onConflict });
+    } else {
+      query = query.insert(chunk);
+    }
+
+    const { data, error } = await query.select('id');
+    if (error) {
+      lastError = error;
+      break;
+    }
+    totalInserted += data?.length || chunk.length;
+  }
+
+  return { totalInserted, error: lastError };
+}
+
 export async function POST(request: Request) {
   try {
-    // Read & sanitize environment variables per request
-    const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const rawKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-    const supabaseUrl = rawUrl.replace(/^["']|["']$/g, '').trim();
-    const supabaseKey = rawKey.replace(/^["']|["']$/g, '').trim();
-
-    if (!supabaseUrl || !supabaseKey) {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
       return NextResponse.json(
         {
           success: false,
-          message: `Server Config Error: URL present? ${Boolean(supabaseUrl)}, Key present? ${Boolean(supabaseKey)}. Please verify Vercel Environment Variables.`,
+          message: 'Supabase client could not be initialized. Check environment variables.',
         },
         { status: 500 }
       );
@@ -23,92 +72,52 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const datasetType = (formData.get('datasetType') as DatasetType) || 'HIGHWAYS_MASTER';
+    const datasetType = formData.get('datasetType') as DatasetType | null;
 
-    if (!file) {
+    if (!file || !datasetType) {
       return NextResponse.json(
-        { success: false, message: 'No file uploaded. Please select a .xlsx, .xls, or .csv file.' },
+        { success: false, message: 'File and datasetType are required fields.' },
         { status: 400 }
       );
     }
 
+    // 1. Parse file buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-
-    // 1. Parse and Validate File against Dataset Schema
     const parseResult = await parseDatasetFile(buffer, file.name, datasetType);
 
-    if (!parseResult.success || parseResult.validRows === 0) {
+    if (!parseResult.success) {
       return NextResponse.json(
         {
           success: false,
-          message: `Schema validation failed for dataset type "${datasetType}".`,
+          message: (parseResult as any).message || 'File parsing failed.',
           errors: parseResult.errors,
-          warnings: parseResult.warnings,
         },
         { status: 400 }
       );
     }
 
-    // 2. Direct Supabase Client
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: { persistSession: false },
-    });
+    if (!parseResult.data || parseResult.data.length === 0) {
+      return NextResponse.json(
+        { success: false, message: 'No valid data rows found in the uploaded file.' },
+        { status: 400 }
+      );
+    }
 
+    // 2. Perform Database Insertion / Upsert by Dataset Type
     let insertedCount = 0;
     let dbError: any = null;
 
     if (datasetType === 'HIGHWAYS_MASTER') {
-      // Deduplicate items by road_code while preserving the master record with the largest length_km
-      const uniqueMap = new Map();
-      parseResult.data.forEach((item: any) => {
-        const existing = uniqueMap.get(item.road_code);
-        if (!existing || item.length_km > existing.length_km) {
-          uniqueMap.set(item.road_code, item);
-        }
+      const result = await batchInsertOrUpsert(supabase, 'highways', parseResult.data, {
+        onConflict: 'road_code',
       });
-      const uniqueHighways = Array.from(uniqueMap.values());
-
-      const { data, error } = await supabase
-        .from('highways')
-        .upsert(uniqueHighways, { onConflict: 'road_code' })
-        .select();
-
-      if (error && error.message?.includes('delete_status')) {
-        // Fallback without delete_status field if column is missing from Supabase schema cache
-        const fallbackHighways = uniqueHighways.map(({ delete_status, ...rest }: any) => rest);
-        const { data: data2, error: error2 } = await supabase
-          .from('highways')
-          .upsert(fallbackHighways, { onConflict: 'road_code' })
-          .select();
-
-        if (error2) dbError = error2;
-        else insertedCount = data2?.length || 0;
-      } else if (error) {
-        dbError = error;
-      } else {
-        insertedCount = data?.length || 0;
-      }
+      insertedCount = result.totalInserted;
+      dbError = result.error;
     } else if (datasetType === 'HIGHWAY_SUB_CHAINAGES') {
-      let { data, error } = await supabase
-        .from('highway_sub_chainages')
-        .insert(parseResult.data)
-        .select();
-
-      if (error && (error.message?.includes('breakdown_type') || error.message?.includes('delete_status'))) {
-        const fallbackData = parseResult.data.map(({ breakdown_type, delete_status, ...rest }: any) => rest);
-        const { data: data2, error: error2 } = await supabase
-          .from('highway_sub_chainages')
-          .insert(fallbackData)
-          .select();
-
-        if (error2) dbError = error2;
-        else insertedCount = data2?.length || 0;
-      } else if (error) {
-        dbError = error;
-      } else {
-        insertedCount = data?.length || 0;
-      }
+      const result = await batchInsertOrUpsert(supabase, 'highway_sub_chainages', parseResult.data);
+      insertedCount = result.totalInserted;
+      dbError = result.error;
     } else if (datasetType === 'DLP_CONTRACTS') {
       const allowedColumns = [
         'id',
@@ -139,6 +148,7 @@ export async function POST(request: Request) {
         'uncontracted_after_2027_km',
         'contract_details',
       ];
+
       const isValidIsoDate = (val: any): boolean => {
         if (!val || typeof val !== 'string') return false;
         return /^\d{4}-\d{2}-\d{2}$/.test(val);
@@ -179,77 +189,93 @@ export async function POST(request: Request) {
         return payload;
       });
 
-      const { data, error } = await supabase
+      const { data: insertedDlp, error: dlpErr } = await supabase
         .from('dlp_contracts')
         .insert(cleanData)
-        .select();
+        .select('id, contract_details');
 
-      if (error) dbError = error;
-      else insertedCount = data?.length || 0;
+      if (dlpErr) {
+        dbError = dlpErr;
+      } else {
+        insertedCount = insertedDlp?.length || cleanData.length;
+
+        // Secondary insertion loop for dlp_sub_contracts relational table
+        const subContractsToInsert: any[] = [];
+        insertedDlp?.forEach((parentItem: any) => {
+          const details = parentItem.contract_details;
+          if (details && Array.isArray(details.sub_contracts)) {
+            details.sub_contracts.forEach((sub: any) => {
+              subContractsToInsert.push({
+                parent_contract_id: parentItem.id,
+                sub_contract_type: sub.type || sub.sub_contract_type || 'DLP',
+                sub_contract_title: sub.title || sub.sub_contract_title || 'Sub-Stretch',
+                from_km: Number(sub.from_km || 0),
+                to_km: Number(sub.to_km || 0),
+                length_km: Number(sub.length_km || 0),
+                contractor_name: sub.contractor_name || '',
+                expiry_date: isValidIsoDate(sub.expiry_date) ? sub.expiry_date : null,
+              });
+            });
+          }
+        });
+
+        if (subContractsToInsert.length > 0) {
+          await batchInsertOrUpsert(supabase, 'dlp_sub_contracts', subContractsToInsert);
+        }
+      }
     } else if (datasetType === 'HIGHWAY_MILESTONES') {
-      const { data, error } = await supabase
-        .from('highway_chainages')
-        .insert(parseResult.data)
-        .select();
-
-      if (error) dbError = error;
-      else insertedCount = data?.length || 0;
+      const result = await batchInsertOrUpsert(supabase, 'highway_chainages', parseResult.data);
+      insertedCount = result.totalInserted;
+      dbError = result.error;
     } else if (datasetType === 'ACCIDENT_BLACKSPOTS') {
-      const { data, error } = await supabase
-        .from('accident_blackspots')
-        .insert(parseResult.data)
-        .select();
-
-      if (error) dbError = error;
-      else insertedCount = data?.length || 0;
+      const result = await batchInsertOrUpsert(supabase, 'accident_blackspots', parseResult.data);
+      insertedCount = result.totalInserted;
+      dbError = result.error;
     } else if (datasetType === 'LEGAL_CASES') {
-      // Deduplicate items by case_number
       const uniqueCasesMap = new Map();
       parseResult.data.forEach((item: any) => {
         uniqueCasesMap.set(item.case_number, item);
       });
       const uniqueLegalCases = Array.from(uniqueCasesMap.values());
 
-      const { data, error } = await supabase
-        .from('legal_cases')
-        .upsert(uniqueLegalCases, { onConflict: 'case_number' })
-        .select();
-
-      if (error) dbError = error;
-      else insertedCount = data?.length || 0;
+      const result = await batchInsertOrUpsert(supabase, 'legal_cases', uniqueLegalCases, {
+        onConflict: 'case_number',
+      });
+      insertedCount = result.totalInserted;
+      dbError = result.error;
     }
 
     if (dbError) {
       return NextResponse.json(
         {
           success: false,
-          message: `Database error while inserting records into Supabase: ${dbError.message} (URL: ${supabaseUrl.slice(0, 25)}..., Key Length: ${supabaseKey.length})`,
-          details: dbError,
+          message: `Database insertion error: ${dbError.message}`,
         },
         { status: 500 }
       );
     }
 
-    // 3. Log Upload Activity
-    await supabase.from('dataset_uploads').insert({
-      dataset_type: datasetType,
-      file_name: file.name,
-      total_rows: parseResult.totalRows,
-      inserted_rows: insertedCount,
-      status: 'COMPLETED',
-    });
+    // 3. Log Upload Activity Safely
+    try {
+      await supabase.from('dataset_uploads').insert({
+        dataset_type: datasetType,
+        file_name: file.name,
+        total_rows: parseResult.totalRows,
+        inserted_rows: insertedCount,
+        status: 'COMPLETED',
+      });
+    } catch {
+      // ignore upload activity log error
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Successfully processed ${file.name}. Parsed ${parseResult.validRows} valid rows and inserted into PostgreSQL.`,
-      datasetType,
       insertedCount,
-      dataPreview: parseResult.data.slice(0, 5),
+      totalRows: parseResult.totalRows,
+      preview: parseResult.data.slice(0, 5),
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: `Server error during ingestion: ${error.message}` },
-      { status: 500 }
-    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ success: false, message: msg }, { status: 500 });
   }
 }

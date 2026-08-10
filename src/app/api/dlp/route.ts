@@ -94,7 +94,9 @@ export async function GET(req: NextRequest) {
           };
         });
 
-        formattedContracts = formattedContracts.filter((c) => (c.status as string) !== 'DELETED');
+        if (statusFilter !== 'DELETED') {
+          formattedContracts = formattedContracts.filter((c) => (c.status as string) !== 'DELETED');
+        }
 
         if (division) {
           formattedContracts = formattedContracts.filter(
@@ -174,6 +176,18 @@ export async function POST(req: NextRequest) {
       doc_date: body.doc_date || null,
       dlp_expiry_date: body.dlp_expiry_date || null,
       status: 'ACTIVE',
+      division_name: body.division_name || '',
+      dlp_contract_count: breakdown.dlp_contract_count,
+      dlp_length_km: breakdown.dlp_length_km,
+      construction_project_count: breakdown.construction_project_count,
+      construction_length_km: breakdown.construction_length_km,
+      stmc_contract_count: breakdown.stmc_contract_count,
+      stmc_length_km: breakdown.stmc_length_km,
+      stmc_expiry_date: breakdown.stmc_expiry_date || null,
+      pbmc_project_count: breakdown.pbmc_project_count,
+      pbmc_length_km: breakdown.pbmc_length_km,
+      no_dlp_length_km: breakdown.no_dlp_length_km,
+      uncontracted_after_2027_km: breakdown.uncontracted_after_2027_km,
       contract_details: breakdown,
     };
 

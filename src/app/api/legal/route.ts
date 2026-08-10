@@ -22,11 +22,18 @@ export async function GET(req: NextRequest) {
       if (circle) query = query.eq('circle', circle);
       if (division) query = query.eq('division', division);
       if (search) {
-        query = query.or(`case_number.ilike.%${search}%,name_of_court.ilike.%${search}%,name_of_respondent.ilike.%${search}%`);
+        const cleanSearch = search.replace(/[,()"]/g, '').trim();
+        if (cleanSearch) {
+          query = query.or(`case_number.ilike.%${cleanSearch}%,name_of_court.ilike.%${cleanSearch}%,name_of_respondent.ilike.%${cleanSearch}%`);
+        }
       }
 
       const { data, error } = await query;
-      if (!error && data) {
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message, cases: [] }, { status: 500 });
+      }
+
+      if (data) {
         const formattedCases: CaseEntryFormData[] = data.map((item: any) => ({
           id: item.id,
           circle: item.circle || 'Chennai',
@@ -88,6 +95,7 @@ export async function POST(req: NextRequest) {
         action_to_take_counter_affidavit: body.actionToTakeForCounterAffidavit,
         converted_case: body.convertedCase,
         status: body.status || 'PENDING',
+        delete_status: 'ACTIVE',
         updated_at: new Date().toISOString(),
       };
 
@@ -101,10 +109,16 @@ export async function POST(req: NextRequest) {
         if (!error && data && data[0]) {
           return NextResponse.json({ success: true, case: data[0], mode: 'UPDATE' });
         }
+        if (error) {
+          return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        }
       } else {
         const { data, error } = await supabase.from('legal_cases').insert([payload]).select();
         if (!error && data && data[0]) {
           return NextResponse.json({ success: true, case: data[0], mode: 'CREATE' });
+        }
+        if (error) {
+          return NextResponse.json({ success: false, error: error.message }, { status: 500 });
         }
       }
     }
