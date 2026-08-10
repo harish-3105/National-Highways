@@ -19,6 +19,9 @@ import {
   FileText,
   BarChart2,
   GitCommit,
+  Archive,
+  RotateCcw,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface ViewHighwayModalProps {
@@ -37,6 +40,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
   const [subChainages, setSubChainages] = useState<SubChainageStretch[]>([]);
   const [loadingSub, setLoadingSub] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'MACRO_PCU' | 'MICRO_LANE'>('MACRO_PCU');
+  const [showArchived, setShowArchived] = useState<boolean>(false);
 
   // Form states for adding/editing a sub-stretch
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
@@ -50,12 +54,16 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
   const [subFormError, setSubFormError] = useState<string>('');
   const [subFormLoading, setSubFormLoading] = useState<boolean>(false);
 
+  // Soft Delete Modal State
+  const [deletingSub, setDeletingSub] = useState<SubChainageStretch | null>(null);
+  const [softDeleteLoading, setSoftDeleteLoading] = useState<boolean>(false);
+
   const fetchSubChainages = useCallback(async () => {
     if (!highway) return;
     try {
       setLoadingSub(true);
       const res = await fetch(
-        `/api/sub-chainages?code=${encodeURIComponent(highway.road_code)}&type=${activeTab}`
+        `/api/sub-chainages?code=${encodeURIComponent(highway.road_code)}&type=${activeTab}&includeDeleted=${showArchived}`
       );
       const data = await res.json();
       if (data.success) {
@@ -66,25 +74,32 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
     } finally {
       setLoadingSub(false);
     }
-  }, [highway, activeTab]);
+  }, [highway, activeTab, showArchived]);
 
   useEffect(() => {
     if (isOpen && highway) {
       fetchSubChainages();
       setIsFormOpen(false);
       setEditingSubId(null);
+      setDeletingSub(null);
     }
   }, [isOpen, highway, fetchSubChainages]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose();
+        if (deletingSub) {
+          setDeletingSub(null);
+        } else if (isFormOpen) {
+          setIsFormOpen(false);
+        } else {
+          onClose();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, isFormOpen, deletingSub, onClose]);
 
   if (!isOpen || !highway) return null;
 
@@ -181,6 +196,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
           lane_configuration: subLaneConfig,
           pcu_count: Number(subPcu) || 0,
           dpr_status: subDpr,
+          delete_status: 'ACTIVE',
         }),
       });
 
@@ -199,23 +215,46 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
     }
   };
 
-  const handleDeleteSub = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this sub-chainage stretch?')) return;
+  const handleConfirmSoftDelete = async () => {
+    if (!deletingSub) return;
     try {
-      const res = await fetch(`/api/sub-chainages?id=${id}`, { method: 'DELETE' });
+      setSoftDeleteLoading(true);
+      const res = await fetch(`/api/sub-chainages?id=${deletingSub.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setDeletingSub(null);
+        fetchSubChainages();
+      }
+    } catch (err) {
+      console.error('Failed to soft delete sub-chainage:', err);
+    } finally {
+      setSoftDeleteLoading(false);
+    }
+  };
+
+  const handleRestoreSub = async (sub: SubChainageStretch) => {
+    try {
+      const res = await fetch('/api/sub-chainages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...sub,
+          delete_status: 'ACTIVE',
+        }),
+      });
       const data = await res.json();
       if (data.success) {
         fetchSubChainages();
       }
     } catch (err) {
-      console.error('Failed to delete sub-chainage:', err);
+      console.error('Failed to restore sub-chainage:', err);
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -415,7 +454,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
             </div>
 
             {/* Sub-Header Bar */}
-            <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700 flex-wrap gap-2">
               <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
                 {activeTab === 'MACRO_PCU' ? (
                   <span>Sheet &apos;PCU &apos;: Executive Traffic Census Ranges &amp; DPR Widening Proposals</span>
@@ -424,7 +463,21 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Archive Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowArchived(!showArchived)}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer border ${
+                    showArchived
+                      ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-800'
+                      : 'bg-slate-200/70 dark:bg-slate-700/70 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600'
+                  }`}
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  <span>{showArchived ? 'Hide Archived' : 'Show Archived'}</span>
+                </button>
+
                 <span className="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 text-xs font-bold rounded-lg border border-emerald-300 dark:border-emerald-800">
                   {subChainages.length} Stretches
                 </span>
@@ -569,26 +622,46 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
             ) : (
               <div className="space-y-2.5">
                 {subChainages.map((sub, idx) => {
+                  const isDeleted = sub.delete_status === 'DELETED' || sub.delete_status === 'SOFT_DELETE';
                   const pcuBadge = getPcuBadge(sub.pcu_count);
                   return (
                     <div
                       key={sub.id || idx}
-                      className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-slate-300 transition-all shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      className={`p-3 border rounded-xl transition-all shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        isDeleted
+                          ? 'bg-red-50/40 dark:bg-red-950/20 border-red-200 dark:border-red-900/40 opacity-75'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                      }`}
                     >
                       {/* Left: Chainage Span, Length, Lane & Division */}
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono font-bold text-xs text-blue-900 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
+                          <span
+                            className={`font-mono font-bold text-xs px-2 py-0.5 rounded border ${
+                              isDeleted
+                                ? 'bg-red-100 text-red-700 border-red-300 line-through'
+                                : 'bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                            }`}
+                          >
                             Km {sub.from_km} → Km {sub.to_km}
                           </span>
-                          <span className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
+
+                          <span className={`font-extrabold text-xs ${isDeleted ? 'text-red-700 line-through' : 'text-slate-800 dark:text-slate-200'}`}>
                             ({sub.length_km} km)
                           </span>
+
+                          {isDeleted && (
+                            <span className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-red-600 text-white uppercase tracking-wider">
+                              Soft Deleted
+                            </span>
+                          )}
+
                           {sub.lane_configuration && sub.lane_configuration !== 'Primary' && (
                             <span className="px-2 py-0.5 text-xs font-bold rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                               {sub.lane_configuration}
                             </span>
                           )}
+
                           {sub.division_name && (
                             <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                               Div: {sub.division_name}
@@ -598,7 +671,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
 
                         {/* DPR Remarks */}
                         {sub.dpr_status && (
-                          <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-3 italic">
+                          <p className={`text-[11px] line-clamp-3 italic ${isDeleted ? 'text-red-600/70' : 'text-slate-600 dark:text-slate-400'}`}>
                             &quot;{sub.dpr_status}&quot;
                           </p>
                         )}
@@ -611,20 +684,33 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                         </span>
 
                         <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleOpenEditSubForm(sub)}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded cursor-pointer"
-                            title="Edit Stretch"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSub(sub.id)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded cursor-pointer"
-                            title="Delete Stretch"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {isDeleted ? (
+                            <button
+                              onClick={() => handleRestoreSub(sub)}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 rounded-lg cursor-pointer"
+                              title="Restore Stretch to Active View"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Restore</span>
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleOpenEditSubForm(sub)}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-lg cursor-pointer transition-colors"
+                                title="Edit Stretch"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setDeletingSub(sub)}
+                                className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/60 rounded-lg cursor-pointer transition-colors"
+                                title="Soft Delete Stretch"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -647,6 +733,79 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
             Close Passport Card
           </button>
         </div>
+
+        {/* MODERN SOFT DELETE CONFIRMATION OVERLAY MODAL */}
+        {deletingSub && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200">
+            <div
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 animate-in zoom-in-95 duration-150"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 rounded-full shrink-0">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100">
+                    Confirm Soft Delete
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    This sub-stretch will be marked as <code className="text-red-600 font-bold bg-red-50 dark:bg-red-950/60 px-1 py-0.5 rounded">DELETED</code> in Supabase.
+                  </p>
+                </div>
+              </div>
+
+              {/* Stretch Details Preview Box */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-1.5">
+                <div className="flex items-center justify-between font-bold text-slate-800 dark:text-slate-200">
+                  <span className="font-mono text-blue-700 dark:text-blue-300">
+                    Km {deletingSub.from_km} → Km {deletingSub.to_km} ({deletingSub.length_km} km)
+                  </span>
+                  <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px]">
+                    {deletingSub.lane_configuration || '2-Lane'}
+                  </span>
+                </div>
+                {deletingSub.division_name && (
+                  <div className="text-slate-500 font-semibold">
+                    Division: {deletingSub.division_name}
+                  </div>
+                )}
+                {deletingSub.dpr_status && (
+                  <p className="text-slate-600 dark:text-slate-400 italic line-clamp-2">
+                    &quot;{deletingSub.dpr_status}&quot;
+                  </p>
+                )}
+              </div>
+
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl text-[11px] text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+                <span>
+                  <strong>Soft Delete Protocol</strong>: The data remains safely preserved in your database for audit logs. You can toggle <em>&quot;Show Archived&quot;</em> anytime to restore it.
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeletingSub(null)}
+                  disabled={softDeleteLoading}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmSoftDelete}
+                  disabled={softDeleteLoading}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm cursor-pointer flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{softDeleteLoading ? 'Soft Deleting...' : 'Confirm Soft Delete'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
