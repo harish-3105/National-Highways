@@ -7,6 +7,7 @@ import {
   Route,
   ShieldCheck,
   Gavel,
+  Receipt,
   Upload,
 } from 'lucide-react';
 
@@ -14,6 +15,7 @@ const NAV_ITEMS = [
   { href: '/highways', label: 'Corridors', icon: Route },
   { href: '/dlp', label: 'DLP Contracts', icon: ShieldCheck },
   { href: '/legal', label: 'Legal Cases', icon: Gavel },
+  { href: '/fee-bills', label: 'Legal Fee Bills', icon: Receipt },
   { href: '/ingest', label: 'Ingestion Engine', icon: Upload },
 ];
 
