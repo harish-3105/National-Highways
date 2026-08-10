@@ -35,6 +35,7 @@ async function batchInsertOrUpsert(
   const CHUNK_SIZE = 250;
   let totalInserted = 0;
   let lastError: any = null;
+  const allInsertedData: any[] = [];
 
   for (let i = 0; i < dataArray.length; i += CHUNK_SIZE) {
     const chunk = dataArray.slice(i, i + CHUNK_SIZE);
@@ -46,15 +47,18 @@ async function batchInsertOrUpsert(
       query = query.insert(chunk);
     }
 
-    const { data, error } = await query.select('id');
+    const { data, error } = await query.select();
     if (error) {
       lastError = error;
       break;
     }
+    if (data) {
+      allInsertedData.push(...data);
+    }
     totalInserted += data?.length || chunk.length;
   }
 
-  return { totalInserted, error: lastError };
+  return { totalInserted, data: allInsertedData, error: lastError };
 }
 
 export async function POST(request: Request) {
@@ -150,8 +154,11 @@ export async function POST(request: Request) {
       ];
 
       const isValidIsoDate = (val: any): boolean => {
-        if (!val || typeof val !== 'string') return false;
-        return /^\d{4}-\d{2}-\d{2}$/.test(val);
+        if (!val) return false;
+        if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+          return !isNaN(Date.parse(val));
+        }
+        return false;
       };
 
       const dateCols = ['dlp_expiry_date', 'doc_date', 'stmc_expiry_date', 'pbmc_expiry_date', 'no_dlp_expiry_date'];
@@ -180,7 +187,7 @@ export async function POST(request: Request) {
               payload[col] = isValidIsoDate(item[col]) ? item[col] : null;
             } else if (numCols.includes(col)) {
               const val = Number(item[col] || 0);
-              payload[col] = isNaN(val) || val > 9999.999 ? 0 : Math.round(val * 1000) / 1000;
+              payload[col] = isNaN(val) ? 0 : Math.round(val * 1000) / 1000;
             } else {
               payload[col] = item[col];
             }
@@ -189,19 +196,14 @@ export async function POST(request: Request) {
         return payload;
       });
 
-      const { data: insertedDlp, error: dlpErr } = await supabase
-        .from('dlp_contracts')
-        .insert(cleanData)
-        .select('id, contract_details');
+      const dlpResult = await batchInsertOrUpsert(supabase, 'dlp_contracts', cleanData);
+      insertedCount = dlpResult.totalInserted;
+      dbError = dlpResult.error;
 
-      if (dlpErr) {
-        dbError = dlpErr;
-      } else {
-        insertedCount = insertedDlp?.length || cleanData.length;
-
+      if (!dbError && dlpResult.data && dlpResult.data.length > 0) {
         // Secondary insertion loop for dlp_sub_contracts relational table
         const subContractsToInsert: any[] = [];
-        insertedDlp?.forEach((parentItem: any) => {
+        dlpResult.data.forEach((parentItem: any) => {
           const details = parentItem.contract_details;
           if (details && Array.isArray(details.sub_contracts)) {
             details.sub_contracts.forEach((sub: any) => {
@@ -233,10 +235,15 @@ export async function POST(request: Request) {
       dbError = result.error;
     } else if (datasetType === 'LEGAL_CASES') {
       const uniqueCasesMap = new Map();
+      const noCaseNumberRows: any[] = [];
       parseResult.data.forEach((item: any) => {
-        uniqueCasesMap.set(item.case_number, item);
+        if (item.case_number) {
+          uniqueCasesMap.set(item.case_number, item);
+        } else {
+          noCaseNumberRows.push(item);
+        }
       });
-      const uniqueLegalCases = Array.from(uniqueCasesMap.values());
+      const uniqueLegalCases = [...Array.from(uniqueCasesMap.values()), ...noCaseNumberRows];
 
       const result = await batchInsertOrUpsert(supabase, 'legal_cases', uniqueLegalCases, {
         onConflict: 'case_number',

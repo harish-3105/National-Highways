@@ -1,55 +1,56 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  MapPin,
-  ShieldCheck,
-  Briefcase,
-  FileSpreadsheet,
-  Building2,
-  DollarSign,
-} from 'lucide-react';
+import { Road, ShieldAlert, Scale, FileSpreadsheet, UploadCloud, Menu, X } from 'lucide-react';
 
-const NAV_ITEMS = [
+interface NavItem {
+  label: string;
+  href: string;
+  icon: React.ElementType;
+  description: string;
+}
+
+const NAV_ITEMS: NavItem[] = [
   {
     label: 'Corridors Catalog',
     href: '/highways',
-    icon: MapPin,
-    description: 'Level 1 Ground-Truth & Level 2 Sub-Chainages',
+    icon: Road,
+    description: 'Level 1 Highways & Level 2 Sub-Chainage PCU Data',
   },
   {
     label: 'DLP Maintenance',
     href: '/dlp',
-    icon: ShieldCheck,
-    description: 'Defect Liability Warranty Contracts',
+    icon: ShieldAlert,
+    description: 'Defect Liability Period & STMC/PBMC Stretches',
   },
   {
     label: 'Legal Cases',
     href: '/legal',
-    icon: Briefcase,
-    description: 'Madras High Court & Counter Affidavit Tracker',
+    icon: Scale,
+    description: 'Court Cases, Counter Affidavits & Status Tracking',
   },
   {
-    label: 'Legal Fee Bills',
+    label: 'Fee Bills Portal',
     href: '/fee-bills',
-    icon: DollarSign,
-    description: 'Advocate Fee Vouchers & Pendency Portal',
+    icon: FileSpreadsheet,
+    description: 'Lawyer Legal Assistance Bills & Pendency Tracking',
   },
   {
     label: 'Data Ingestion',
     href: '/ingest',
-    icon: FileSpreadsheet,
-    description: 'Excel / CSV Automated Ingestion Engine',
+    icon: UploadCloud,
+    description: 'Bulk Excel & CSV Data Upload Engine',
   },
 ];
 
 export function NavigationHeader() {
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-xs">
+    <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-xs print-hide">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
           {/* Logo & Header Title (Clickable Link) */}
@@ -76,7 +77,7 @@ export function NavigationHeader() {
             </div>
           </Link>
 
-          {/* Navigation Links */}
+          {/* Desktop Navigation Links */}
           <nav aria-label="Main Navigation" className="hidden md:flex items-center gap-1.5 overflow-x-auto">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
@@ -102,7 +103,51 @@ export function NavigationHeader() {
               );
             })}
           </nav>
+
+          {/* Mobile Hamburger Toggle Button */}
+          <div className="flex items-center md:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              aria-label="Toggle mobile menu"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <nav className="md:hidden py-3 border-t border-slate-200 dark:border-slate-800 space-y-1.5 animate-in slide-in-from-top-2 duration-150">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                pathname === item.href ||
+                (item.href !== '/highways' && pathname.startsWith(item.href));
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Icon className="w-5 h-5 shrink-0" />
+                  <div>
+                    <div className="text-xs font-extrabold">{item.label}</div>
+                    <div className="text-[10px] opacity-80 font-normal">{item.description}</div>
+                  </div>
+                </Link>
+              );
+            })}
+          </nav>
+        )}
       </div>
     </header>
   );

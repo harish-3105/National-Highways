@@ -100,7 +100,7 @@ export async function GET(request: Request) {
           if (paymentStatus && paymentStatus !== 'ALL' && b.paymentStatus !== paymentStatus) return false;
           if (pendencyStatus && pendencyStatus !== 'ALL' && b.currentPendency !== pendencyStatus) return false;
           if (search) {
-            const str = `${b.feeBillNumber} ${b.lawyerName} ${b.caseNumber} ${b.division} ${b.circle}`.toLowerCase();
+            const str = [b.feeBillNumber, b.lawyerName, b.caseNumber, b.division, b.circle].filter(Boolean).join(' ').toLowerCase();
             if (!str.includes(search)) return false;
           }
           return true;
@@ -118,7 +118,7 @@ export async function GET(request: Request) {
       if (paymentStatus && paymentStatus !== 'ALL' && b.paymentStatus !== paymentStatus) return false;
       if (pendencyStatus && pendencyStatus !== 'ALL' && b.currentPendency !== pendencyStatus) return false;
       if (search) {
-        const str = `${b.feeBillNumber} ${b.lawyerName} ${b.caseNumber} ${b.division} ${b.circle}`.toLowerCase();
+        const str = [b.feeBillNumber, b.lawyerName, b.caseNumber, b.division, b.circle].filter(Boolean).join(' ').toLowerCase();
         if (!str.includes(search)) return false;
       }
       return true;

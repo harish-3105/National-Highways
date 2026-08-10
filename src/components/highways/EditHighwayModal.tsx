@@ -19,7 +19,7 @@ function parseChainageValue(val: string): number | null {
     const km = parseFloat(parts[0]);
     const m = parseFloat(parts[1]);
     if (!isNaN(km) && !isNaN(m)) {
-      return km + (m >= 100 ? m / 1000 : m / 10);
+      return km + m / 1000;
     }
   }
   const parsed = parseFloat(cleaned);

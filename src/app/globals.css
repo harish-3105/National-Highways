@@ -27,7 +27,12 @@ body {
 
 /* Print CSS rules for Legal Record & document printing */
 @media print {
-  body * {
+  .no-print,
+  .print-hide {
+    display: none !important;
+  }
+
+  body:has(.legal-print-modal-wrapper) * {
     visibility: hidden !important;
   }
 

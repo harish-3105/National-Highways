@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, contracts: [] });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ success: false, error: msg, contracts: [] }, { status: 500 });
+    return NextResponse.json({ success: false, error: msg, message: msg, contracts: [] }, { status: 500 });
   }
 }
 
@@ -201,7 +201,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, contract: { ...payload, ...breakdown, id: `dlp-${Date.now()}` } });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+    return NextResponse.json({ success: false, error: msg, message: msg }, { status: 500 });
   }
 }
 
@@ -211,7 +211,7 @@ export async function PUT(req: NextRequest) {
     const { id } = body;
 
     if (!id) {
-      return NextResponse.json({ success: false, error: 'DLP Contract ID is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'DLP Contract ID is required', message: 'DLP Contract ID is required' }, { status: 400 });
     }
 
     const supabase = await createClient();
