@@ -118,15 +118,24 @@ export interface BlackspotRow {
 
 export interface LegalCaseRow {
   case_number: string;
-  title: string;
-  court_name: string;
-  case_type: string;
+  circle?: string;
+  division?: string;
+  case_year?: string;
+  category?: string;
+  name_of_court?: string;
+  name_of_respondent?: string;
+  case_pertains_to?: string;
+  nature_of_case?: string;
+  specify_nature_of_case?: string;
+  brief_of_prayer?: string;
+  case_details_present_status?: string;
+  counter_affidavit_filed?: string;
+  counter_affidavit_details?: any;
+  post_hearing_details?: any;
+  action_to_take_counter_affidavit?: string;
+  converted_case?: any;
   status: string;
-  petitioner?: string;
-  respondent?: string;
   lawyer_name?: string;
-  next_hearing_date?: string;
-  summary?: string;
 }
 
 /**
@@ -173,16 +182,16 @@ const parseChainageValue = (val: any): number => {
   if (slashMatch) {
     const whole = parseFloat(slashMatch[1]);
     const fracStr = slashMatch[2];
-    const valNum = fracStr.length >= 3 ? whole + parseFloat(fracStr) / 1000 : whole + parseFloat(fracStr) / 10;
-    return valNum > 9999 ? 0 : roundTo3Decimals(valNum);
+    const divisor = fracStr.length >= 3 ? 1000 : Math.pow(10, fracStr.length);
+    const valNum = whole + parseFloat(fracStr) / divisor;
+    return isNaN(valNum) ? 0 : roundTo3Decimals(valNum);
   }
 
   // Extract first valid decimal number e.g. 28.5 out of '28.5 km (Strengthening)'
   const match = str.match(/(\d+(?:\.\d+)?)/);
   if (match) {
     const num = parseFloat(match[1]);
-    if (isNaN(num) || num > 9999) return 0;
-    return roundTo3Decimals(num);
+    return isNaN(num) ? 0 : roundTo3Decimals(num);
   }
 
   return 0;
@@ -1047,22 +1056,36 @@ function parseLegalCases(rawRows: any[][], result: ParseResult) {
     if (!row || row.length === 0) continue;
 
     const caseNumber = cleanString(row[0]);
-    const title = cleanString(row[1]);
-    const courtName = cleanString(row[2]);
+    if (!caseNumber || caseNumber.toLowerCase().includes('case no')) continue;
 
-    if (caseNumber && title) {
-      parsedData.push({
-        case_number: caseNumber,
-        title: title,
-        court_name: courtName || 'High Court of Madras',
-        case_type: cleanString(row[3]) || 'Land Acquisition',
-        status: cleanString(row[4]).toUpperCase() || 'PENDING',
-        petitioner: cleanString(row[5]) || undefined,
-        respondent: cleanString(row[6]) || 'Highways Department',
-        lawyer_name: cleanString(row[7]) || undefined,
-        next_hearing_date: parseIndianDate(cleanString(row[8])) || undefined,
-      });
-    }
+    const circle = cleanString(row[1]) || 'Chennai';
+    const division = cleanString(row[2]) || 'Chennai City Division';
+    const caseYear = cleanString(row[3]) || '2024';
+    const category = cleanString(row[4]) || 'Filed Against Department';
+    const courtName = cleanString(row[5]) || cleanString(row[2]) || 'High Court of Madras';
+    const respondent = cleanString(row[6]) || 'Chief Engineer NH';
+    const casePertainsTo = cleanString(row[7]) || 'GOTN';
+    const natureOfCase = cleanString(row[8]) || 'Land Acquisition';
+    const prayer = cleanString(row[9]) || cleanString(row[1]);
+    const counterFiled = cleanString(row[10]).toLowerCase().startsWith('y') ? 'Yes' : 'No';
+    const lawyerName = cleanString(row[11]) || 'Panel Advocate';
+    const status = cleanString(row[12]).toUpperCase() || 'PENDING';
+
+    parsedData.push({
+      case_number: caseNumber,
+      circle: circle,
+      division: division,
+      case_year: caseYear,
+      category: category,
+      name_of_court: courtName,
+      name_of_respondent: respondent,
+      case_pertains_to: casePertainsTo,
+      nature_of_case: natureOfCase,
+      brief_of_prayer: prayer,
+      counter_affidavit_filed: counterFiled,
+      lawyer_name: lawyerName,
+      status: status === 'ACTIVE' || status === 'PENDING' || status === 'DISPOSED' ? status : 'PENDING',
+    });
   }
 
   result.totalRows = rawRows.length;
