@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { HighwayCorridor } from '@/app/api/highways/route';
-import { ArrowRight, MapPin, ShieldCheck, Edit3, Trash2, Eye } from 'lucide-react';
+import { ArrowRight, MapPin, ShieldCheck, Edit3, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface HighwaysTableProps {
   corridors: HighwayCorridor[];
@@ -25,6 +25,34 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState<boolean>(false);
+  const [canScrollRight, setCanScrollRight] = useState<boolean>(false);
+
+  const checkScrollState = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 2);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    checkScrollState();
+    window.addEventListener('resize', checkScrollState);
+    return () => window.removeEventListener('resize', checkScrollState);
+  }, [checkScrollState, corridors]);
+
+  const scrollTable = (direction: 'left' | 'right') => {
+    const el = containerRef.current;
+    if (!el) return;
+    const scrollAmount = 350;
+    el.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  };
+
   const getBadgeStyle = (config: string) => {
     const c = config?.toLowerCase() || '';
     if (c.includes('6-lane') || c.includes('6l')) {
@@ -65,7 +93,40 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm print:border-none print:shadow-none">
-      <div className="overflow-x-auto">
+      {/* Scroll Control Header Bar */}
+      <div className="flex items-center justify-between px-4 py-2 bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 text-xs print:hidden">
+        <span className="text-slate-500 font-medium flex items-center gap-1.5">
+          <span>💡 Slide table columns using <strong>Shift + Mouse Wheel</strong> or click the arrow controls</span>
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => scrollTable('left')}
+            disabled={!canScrollLeft}
+            className="p-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+            title="Slide Table Left"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Left</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollTable('right')}
+            disabled={!canScrollRight}
+            className="p-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+            title="Slide Table Right"
+          >
+            <span className="hidden sm:inline">Right</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <div
+        ref={containerRef}
+        onScroll={checkScrollState}
+        className="overflow-x-auto scroll-smooth"
+      >
         <table className="w-full text-left border-collapse text-xs md:text-sm">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
@@ -148,15 +209,13 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
                   </td>
 
                   {/* Chainage Span */}
-                  <td className="py-3.5 px-4 text-slate-500 font-mono text-xs whitespace-nowrap">
-                    Km {item.from_chainage || '0'} → Km {item.to_chainage || '0'}
+                  <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 whitespace-nowrap font-mono">
+                    Km {item.from_chainage || '0'} → {item.to_chainage || '0'}
                   </td>
 
-                  {/* Length */}
-                  <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
-                    <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md text-xs font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
-                      {item.length_km} km
-                    </span>
+                  {/* Total Length */}
+                  <td className="py-3.5 px-4 font-extrabold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                    {item.length_km} km
                   </td>
 
                   {/* Multi-Lane Breakdown */}
