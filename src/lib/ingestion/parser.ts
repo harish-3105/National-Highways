@@ -3,6 +3,7 @@ import Papa from 'papaparse';
 
 export type DatasetType =
   | 'HIGHWAYS_MASTER'
+  | 'HIGHWAY_SUB_CHAINAGES'
   | 'DLP_CONTRACTS'
   | 'HIGHWAY_MILESTONES'
   | 'ACCIDENT_BLACKSPOTS'
@@ -41,6 +42,19 @@ export interface HighwayRow {
   start_longitude?: number;
   end_latitude?: number;
   end_longitude?: number;
+}
+
+export interface SubChainageRow {
+  id?: string;
+  highway_code: string;
+  division_name?: string;
+  stretch_name?: string;
+  from_km: number;
+  to_km: number;
+  length_km: number;
+  lane_configuration: string;
+  pcu_count: number;
+  dpr_status?: string;
 }
 
 export interface DLPRow {
@@ -319,6 +333,9 @@ export async function parseDatasetFile(
     case 'HIGHWAYS_MASTER':
       parseHighwaysMaster(rawRows, result);
       break;
+    case 'HIGHWAY_SUB_CHAINAGES':
+      parseSubChainages(rawRows, result);
+      break;
     case 'DLP_CONTRACTS':
       parseDLPContracts(rawRows, result);
       break;
@@ -435,6 +452,81 @@ function parseHighwaysMaster(rawRows: any[][], result: ParseResult) {
     result.success = false;
     result.errors.push(
       'Could not find valid Highway Master rows. Expected columns: [Sl.No, Old NH No, New NH No, Road Name, Length].'
+    );
+  }
+}
+
+const parsePcuInteger = (val: any): number => {
+  if (val === null || val === undefined) return 0;
+  const str = cleanString(val);
+  if (!str || str === '-') return 0;
+  const num = parseInt(str.replace(/[^0-9]/g, ''), 10);
+  if (isNaN(num) || num > 1000000) return 0;
+  return num;
+};
+
+function parseSubChainages(rawRows: any[][], result: ParseResult) {
+  const parsedData: SubChainageRow[] = [];
+  let curDiv = '';
+  let curStretch = '';
+  let curCode = '';
+  let curPcu = 0;
+  let curDpr = '';
+
+  for (let i = 0; i < rawRows.length; i++) {
+    const row = rawRows[i];
+    if (!row || row.length === 0) continue;
+
+    const rowStr = row.map((v: any) => cleanString(v)).join(' ').toLowerCase();
+    if (
+      rowStr.includes('total') ||
+      rowStr.includes('national highways') ||
+      rowStr.includes('actual traffic count') ||
+      rowStr.includes('chianage from')
+    ) {
+      continue;
+    }
+
+    if (row[1]) curDiv = cleanString(row[1]);
+    if (row[2]) curStretch = cleanString(row[2]);
+    if (row[3]) {
+      const code = normalizeNhCode(row[3]);
+      if (code) curCode = code;
+    }
+    if (row[8]) {
+      const pcu = parsePcuInteger(row[8]);
+      if (pcu > 0) curPcu = pcu;
+    }
+    if (row[9]) curDpr = cleanString(row[9]);
+
+    const fromKm = parseChainageValue(row[4]);
+    const toKm = parseChainageValue(row[5]);
+    const laneConfig = cleanString(row[6]);
+    const lenKm = roundTo3Decimals(parseChainageValue(row[7]) || Math.max(0, toKm - fromKm));
+
+    if (curCode && (toKm > fromKm || lenKm > 0)) {
+      parsedData.push({
+        highway_code: curCode,
+        division_name: curDiv || undefined,
+        stretch_name: curStretch || undefined,
+        from_km: fromKm,
+        to_km: toKm,
+        length_km: lenKm,
+        lane_configuration: laneConfig || '2-Lane',
+        pcu_count: curPcu,
+        dpr_status: curDpr || undefined,
+      });
+    }
+  }
+
+  result.totalRows = rawRows.length;
+  result.validRows = parsedData.length;
+  result.data = parsedData;
+
+  if (parsedData.length === 0) {
+    result.success = false;
+    result.errors.push(
+      'Could not find valid Sub-Chainage rows. Expected columns: [Division, Stretch, NH No, From Km, To Km, Lane, Length, PCU, DPR Status].'
     );
   }
 }

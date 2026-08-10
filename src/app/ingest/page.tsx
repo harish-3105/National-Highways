@@ -15,6 +15,7 @@ import {
 
 type DatasetType =
   | 'HIGHWAYS_MASTER'
+  | 'HIGHWAY_SUB_CHAINAGES'
   | 'DLP_CONTRACTS'
   | 'HIGHWAY_MILESTONES'
   | 'ACCIDENT_BLACKSPOTS'
@@ -23,8 +24,13 @@ type DatasetType =
 const DATASET_OPTIONS: { value: DatasetType; label: string; description: string }[] = [
   {
     value: 'HIGHWAYS_MASTER',
-    label: 'Highway Master Dataset (NH Length & Lanes)',
-    description: 'National highway codes, road names, lengths in km, and lane configurations.',
+    label: 'Level 1: Highway Master Catalog (NH Length & Lanes)',
+    description: 'National highway codes, road names, total lengths in km, Old/New NH Nos, and multi-lane breakdown.',
+  },
+  {
+    value: 'HIGHWAY_SUB_CHAINAGES',
+    label: 'Level 2: Sub-Chainages & Traffic PCU Details',
+    description: 'Granular kilometer sub-stretches (From/To Km), lane statuses, traffic PCU volume, and DPR widening statuses.',
   },
   {
     value: 'DLP_CONTRACTS',

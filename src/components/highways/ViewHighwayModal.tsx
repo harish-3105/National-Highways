@@ -1,8 +1,23 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { HighwayCorridor } from '@/app/api/highways/route';
-import { X, Eye, Printer, Edit3, ArrowRight, ShieldCheck, Ruler, Layers, MapPin } from 'lucide-react';
+import { SubChainageStretch } from '@/app/api/sub-chainages/route';
+import {
+  X,
+  Eye,
+  Edit3,
+  ArrowRight,
+  ShieldCheck,
+  Ruler,
+  Layers,
+  MapPin,
+  Activity,
+  Plus,
+  Trash2,
+  AlertCircle,
+  FileText,
+} from 'lucide-react';
 
 interface ViewHighwayModalProps {
   highway: HighwayCorridor | null;
@@ -17,6 +32,45 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
   onClose,
   onEdit,
 }) => {
+  const [subChainages, setSubChainages] = useState<SubChainageStretch[]>([]);
+  const [loadingSub, setLoadingSub] = useState<boolean>(false);
+
+  // Form states for adding/editing a sub-stretch
+  const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+  const [editingSubId, setEditingSubId] = useState<string | null>(null);
+  const [subFromKm, setSubFromKm] = useState<string>('');
+  const [subToKm, setSubToKm] = useState<string>('');
+  const [subLaneConfig, setSubLaneConfig] = useState<string>('2-Lane');
+  const [subPcu, setSubPcu] = useState<string>('0');
+  const [subDivision, setSubDivision] = useState<string>('');
+  const [subDpr, setSubDpr] = useState<string>('');
+  const [subFormError, setSubFormError] = useState<string>('');
+  const [subFormLoading, setSubFormLoading] = useState<boolean>(false);
+
+  const fetchSubChainages = useCallback(async () => {
+    if (!highway) return;
+    try {
+      setLoadingSub(true);
+      const res = await fetch(`/api/sub-chainages?code=${encodeURIComponent(highway.road_code)}`);
+      const data = await res.json();
+      if (data.success) {
+        setSubChainages(data.subChainages || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch sub-chainages:', err);
+    } finally {
+      setLoadingSub(false);
+    }
+  }, [highway]);
+
+  useEffect(() => {
+    if (isOpen && highway) {
+      fetchSubChainages();
+      setIsFormOpen(false);
+      setEditingSubId(null);
+    }
+  }, [isOpen, highway, fetchSubChainages]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -45,20 +99,123 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
   const oldNh = highway.old_nh_no && highway.old_nh_no !== '-' ? highway.old_nh_no : null;
   const newNh = highway.new_nh_no || highway.road_code.replace(/^NH-?/, '');
 
-  const handlePrint = () => {
-    window.print();
+  const getPcuBadge = (pcu: number) => {
+    if (!pcu || pcu <= 0) {
+      return {
+        label: 'Unmeasured',
+        style: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700',
+      };
+    }
+    if (pcu < 5000) {
+      return {
+        label: `Normal (${pcu.toLocaleString()} PCU)`,
+        style: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+      };
+    }
+    if (pcu <= 15000) {
+      return {
+        label: `Moderate (${pcu.toLocaleString()} PCU)`,
+        style: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+      };
+    }
+    return {
+      label: `High Congestion (${pcu.toLocaleString()} PCU)`,
+      style: 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800 font-bold',
+    };
+  };
+
+  const handleOpenAddSubForm = () => {
+    setEditingSubId(null);
+    setSubFromKm('');
+    setSubToKm('');
+    setSubLaneConfig('2-Lane');
+    setSubPcu('0');
+    setSubDivision('');
+    setSubDpr('');
+    setSubFormError('');
+    setIsFormOpen(true);
+  };
+
+  const handleOpenEditSubForm = (sub: SubChainageStretch) => {
+    setEditingSubId(sub.id);
+    setSubFromKm(String(sub.from_km));
+    setSubToKm(String(sub.to_km));
+    setSubLaneConfig(sub.lane_configuration || '2-Lane');
+    setSubPcu(String(sub.pcu_count || 0));
+    setSubDivision(sub.division_name || '');
+    setSubDpr(sub.dpr_status || '');
+    setSubFormError('');
+    setIsFormOpen(true);
+  };
+
+  const handleSaveSubForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubFormError('');
+
+    const fromNum = parseFloat(subFromKm);
+    const toNum = parseFloat(subToKm);
+
+    if (isNaN(fromNum) || isNaN(toNum) || toNum < fromNum) {
+      setSubFormError('Valid chainage range (To Km >= From Km) is required.');
+      return;
+    }
+
+    try {
+      setSubFormLoading(true);
+      const res = await fetch('/api/sub-chainages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingSubId || undefined,
+          highway_code: highway.road_code,
+          division_name: subDivision,
+          from_km: fromNum,
+          to_km: toNum,
+          length_km: Math.round((toNum - fromNum) * 1000) / 1000,
+          lane_configuration: subLaneConfig,
+          pcu_count: Number(subPcu) || 0,
+          dpr_status: subDpr,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setIsFormOpen(false);
+        fetchSubChainages();
+      } else {
+        setSubFormError(data.message || 'Failed to save sub-stretch.');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setSubFormError(`Server error: ${msg}`);
+    } finally {
+      setSubFormLoading(false);
+    }
+  };
+
+  const handleDeleteSub = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this sub-chainage stretch?')) return;
+    try {
+      const res = await fetch(`/api/sub-chainages?id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        fetchSubChainages();
+      }
+    } catch (err) {
+      console.error('Failed to delete sub-chainage:', err);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200 print:p-0 print:bg-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:border-none print:w-full print:rounded-none"
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40 print:bg-white print:border-b-2 print:border-slate-900">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-100 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400 print:hidden">
+            <div className="p-2.5 bg-blue-100 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400">
               <Eye className="w-5 h-5" />
             </div>
             <div>
@@ -75,30 +232,21 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                   New NH: {newNh}
                 </span>
               </div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mt-1 print:text-lg">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mt-1">
                 {highway.road_name}
               </h2>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2 print:hidden">
-            <button
-              onClick={handlePrint}
-              className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
-              title="Print Highway Passport"
-            >
-              <Printer className="w-4 h-4 text-emerald-600" />
-              <span>Print</span>
-            </button>
-
+          <div className="flex items-center gap-2">
             <button
               onClick={() => {
                 onClose();
                 onEdit(highway);
               }}
               className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
-              title="Edit Highway"
+              title="Edit Master Highway"
             >
               <Edit3 className="w-4 h-4" />
               <span>Edit</span>
@@ -113,9 +261,9 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
           </div>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 print:overflow-visible">
-          {/* Key Metrics Grid */}
+        {/* Modal Body - Natural Scrolling Container */}
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs md:text-sm">
+          {/* SECTION 1: LEVEL 1 MASTER SUMMARY CARDS */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Total Length</span>
@@ -216,12 +364,227 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
               </div>
             </div>
           </div>
+
+          {/* SECTION 2: LEVEL 2 SUB-CHAINAGE & PCU BREAKDOWN ADDON */}
+          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 uppercase tracking-wide">
+                  <Activity className="w-4 h-4 text-emerald-600" />
+                  Level 2: Granular Sub-Chainages & PCU Traffic Breakdown
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Consecutive kilometer stretches, traffic density volume, and DPR status
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 text-xs font-bold rounded-lg border border-emerald-300 dark:border-emerald-800">
+                  {subChainages.length} Sub-Stretches
+                </span>
+
+                <button
+                  onClick={handleOpenAddSubForm}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Sub-Stretch
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Add / Edit Form Overlay inside Section */}
+            {isFormOpen && (
+              <form onSubmit={handleSaveSubForm} className="p-4 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-300 dark:border-slate-700 space-y-3 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">
+                    {editingSubId ? 'Edit Sub-Chainage Stretch' : 'Add New Sub-Chainage Stretch'}
+                  </h4>
+                  <button type="button" onClick={() => setIsFormOpen(false)} className="text-slate-400 hover:text-slate-600">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {subFormError && (
+                  <div className="p-2 bg-red-50 text-red-600 border border-red-200 rounded text-xs flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{subFormError}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">From Km</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      placeholder="0.0"
+                      value={subFromKm}
+                      onChange={(e) => setSubFromKm(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">To Km</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      placeholder="3.75"
+                      value={subToKm}
+                      onChange={(e) => setSubToKm(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Lane Status</label>
+                    <select
+                      value={subLaneConfig}
+                      onChange={(e) => setSubLaneConfig(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
+                    >
+                      <option value="2-Lane">2-Lane</option>
+                      <option value="2L+PS">2L+PS</option>
+                      <option value="4-Lane">4-Lane</option>
+                      <option value="6-Lane">6-Lane</option>
+                      <option value="<2-Lane">&lt;2-Lane</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Traffic PCU Count</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 8007"
+                      value={subPcu}
+                      onChange={(e) => setSubPcu(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Division Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Vellore"
+                      value={subDivision}
+                      onChange={(e) => setSubDivision(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">DPR Status / Remarks</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. DPR for 2L to 4L approved..."
+                      value={subDpr}
+                      onChange={(e) => setSubDpr(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <button type="button" onClick={() => setIsFormOpen(false)} className="px-3 py-1 bg-slate-200 text-slate-700 rounded text-xs">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={subFormLoading} className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-bold">
+                    {subFormLoading ? 'Saving...' : 'Save Sub-Stretch'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Sub-chainage Stretches List */}
+            {loadingSub ? (
+              <div className="p-6 text-center text-slate-500">
+                <div className="inline-block w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin mb-2" />
+                <p className="text-xs">Loading Level 2 Sub-Chainage Breakdown...</p>
+              </div>
+            ) : subChainages.length === 0 ? (
+              <div className="p-6 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-xl text-center">
+                <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">No Level 2 Sub-Chainages Uploaded Yet</h4>
+                <p className="text-[11px] text-slate-400 mt-1 max-w-md mx-auto">
+                  Upload <code className="text-blue-600 font-mono">Lane wise PCU Details.xlsx</code> in the Data Ingestion Engine or click <strong>&quot;+ Add Sub-Stretch&quot;</strong> above to start adding granular chainage stretches.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {subChainages.map((sub, idx) => {
+                  const pcuBadge = getPcuBadge(sub.pcu_count);
+                  return (
+                    <div
+                      key={sub.id || idx}
+                      className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-slate-300 transition-all shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      {/* Left: Chainage Span, Length, Lane & Division */}
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-bold text-xs text-blue-900 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
+                            Km {sub.from_km} → Km {sub.to_km}
+                          </span>
+                          <span className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
+                            ({sub.length_km} km)
+                          </span>
+                          <span className="px-2 py-0.5 text-xs font-bold rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                            {sub.lane_configuration}
+                          </span>
+                          {sub.division_name && (
+                            <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                              Div: {sub.division_name}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* DPR Remarks */}
+                        {sub.dpr_status && (
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 italic">
+                            &quot;{sub.dpr_status}&quot;
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Right: Traffic PCU Badge & Actions */}
+                      <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                        <span className={`px-2.5 py-1 text-xs font-semibold rounded-md border ${pcuBadge.style}`}>
+                          {pcuBadge.label}
+                        </span>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleOpenEditSubForm(sub)}
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                            title="Edit Sub-Stretch"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSub(sub.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            title="Delete Sub-Stretch"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40 print:hidden">
+        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
           <span className="text-xs text-slate-400 font-mono">
-            Tamil Nadu National Highways Dept &bull; Level 1 Catalog
+            Tamil Nadu National Highways Dept &bull; Level 1 Catalog & Level 2 Sub-Chainage Breakdown
           </span>
           <button
             onClick={onClose}

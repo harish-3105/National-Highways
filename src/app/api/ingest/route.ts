@@ -89,6 +89,14 @@ export async function POST(request: Request) {
       } else {
         insertedCount = data?.length || 0;
       }
+    } else if (datasetType === 'HIGHWAY_SUB_CHAINAGES') {
+      const { data, error } = await supabase
+        .from('highway_sub_chainages')
+        .insert(parseResult.data)
+        .select();
+
+      if (error) dbError = error;
+      else insertedCount = data?.length || 0;
     } else if (datasetType === 'DLP_CONTRACTS') {
       const allowedColumns = [
         'id',
