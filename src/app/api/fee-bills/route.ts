@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { FeeBillRecord } from '@/types/feeBill';
-import { SAMPLE_FEE_BILLS, derivePendencyStage } from '@/lib/feeBillMasterData';
+import { derivePendencyStage } from '@/lib/feeBillMasterData';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,8 +26,8 @@ function getSupabaseClient() {
   }
 }
 
-// Memory store fallback if DB table is initializing
-let inMemoryStore: FeeBillRecord[] = [...SAMPLE_FEE_BILLS];
+// In-memory fallback array for dev when DB table is not yet created
+let fallbackStore: FeeBillRecord[] = [];
 
 export async function GET(request: Request) {
   try {
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
         .select('*')
         .order('fee_bill_date', { ascending: false });
 
-      if (!error && data && data.length > 0) {
+      if (!error && Array.isArray(data)) {
         let mapped: FeeBillRecord[] = data.map((item: any) => ({
           id: item.id,
           feeBillNumber: item.fee_bill_number,
@@ -92,7 +92,7 @@ export async function GET(request: Request) {
           updatedAt: item.updated_at,
         }));
 
-        // Filter
+        // Apply filters
         mapped = mapped.filter((b) => {
           if (!includeDeleted && b.isDeleted) return false;
           if (circle && b.circle !== circle) return false;
@@ -110,8 +110,8 @@ export async function GET(request: Request) {
       }
     }
 
-    // In-memory fallback
-    let filtered = inMemoryStore.filter((b) => {
+    // Return real fallback store if DB table is initializing
+    let filtered = fallbackStore.filter((b) => {
       if (!includeDeleted && b.isDeleted) return false;
       if (circle && b.circle !== circle) return false;
       if (division && b.division !== division) return false;
@@ -127,7 +127,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, feeBills: filtered, totalCount: filtered.length });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ success: false, message: msg, feeBills: SAMPLE_FEE_BILLS }, { status: 500 });
+    return NextResponse.json({ success: false, message: msg, feeBills: [] }, { status: 500 });
   }
 }
 
@@ -137,11 +137,11 @@ export async function POST(request: Request) {
     const body: FeeBillRecord = await request.json();
 
     const derivedPendency = derivePendencyStage(body);
-
     const isDel = body.delete_status === 'DELETED' || body.delete_status === 'SOFT_DELETE';
+
     const record: FeeBillRecord = {
       ...body,
-      id: body.id || `fb-${Date.now()}`,
+      id: body.id && String(body.id).startsWith('fb-') ? body.id : (body.id || `fb-${Date.now()}`),
       currentPendency: derivedPendency,
       delete_status: body.delete_status || 'ACTIVE',
       isDeleted: isDel,
@@ -190,20 +190,32 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       };
 
-      const existingIndex = inMemoryStore.findIndex((b) => String(b.id) === String(record.id));
-      if (existingIndex >= 0) {
-        await supabase.from('fee_bills').update(payload).eq('id', record.id);
+      // Upsert into Supabase
+      const { data: existing } = await supabase
+        .from('fee_bills')
+        .select('id')
+        .eq('fee_bill_number', record.feeBillNumber)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from('fee_bills').update(payload).eq('id', existing.id);
+        record.id = existing.id;
       } else {
-        await supabase.from('fee_bills').insert([{ ...payload, created_at: new Date().toISOString() }]);
+        const { data: inserted } = await supabase
+          .from('fee_bills')
+          .insert([{ ...payload, created_at: new Date().toISOString() }])
+          .select('id')
+          .single();
+        if (inserted?.id) record.id = inserted.id;
       }
     }
 
-    // Sync in-memory store
-    const existingIndex = inMemoryStore.findIndex((b) => String(b.id) === String(record.id));
-    if (existingIndex >= 0) {
-      inMemoryStore[existingIndex] = record;
+    // Sync fallback store
+    const idx = fallbackStore.findIndex((b) => String(b.id) === String(record.id) || b.feeBillNumber === record.feeBillNumber);
+    if (idx >= 0) {
+      fallbackStore[idx] = record;
     } else {
-      inMemoryStore.unshift(record);
+      fallbackStore.unshift(record);
     }
 
     return NextResponse.json({ success: true, feeBill: record });
@@ -232,10 +244,10 @@ export async function DELETE(request: Request) {
         .eq('id', id);
     }
 
-    const idx = inMemoryStore.findIndex((b) => String(b.id) === String(id));
+    const idx = fallbackStore.findIndex((b) => String(b.id) === String(id));
     if (idx >= 0) {
-      inMemoryStore[idx].isDeleted = true;
-      inMemoryStore[idx].delete_status = 'DELETED';
+      fallbackStore[idx].isDeleted = true;
+      fallbackStore[idx].delete_status = 'DELETED';
     }
 
     return NextResponse.json({ success: true, message: 'Fee bill soft-deleted successfully' });
