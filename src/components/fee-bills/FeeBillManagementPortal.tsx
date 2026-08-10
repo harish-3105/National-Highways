@@ -25,33 +25,7 @@ export function FeeBillManagementPortal() {
   const [activeTab, setActiveTab] = useState<'list' | 'create' | 'pendency' | 'analytics' | 'settings'>('list');
   const [bills, setBills] = useState<FeeBillRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [masterData, setMasterData] = useState<FeeBillMasterDataConfig>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('fee_bill_master_data');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed && Array.isArray(parsed.circles) && Array.isArray(parsed.divisions)) {
-            return parsed;
-          }
-        }
-      } catch {
-        // fallback
-      }
-    }
-    return DEFAULT_MASTER_DATA;
-  });
-
-  const handleUpdateMasterData = (newData: FeeBillMasterDataConfig) => {
-    setMasterData(newData);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('fee_bill_master_data', JSON.stringify(newData));
-      } catch {
-        // error handling
-      }
-    }
-  };
+  const [masterData, setMasterData] = useState<FeeBillMasterDataConfig>(DEFAULT_MASTER_DATA);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,6 +40,20 @@ export function FeeBillManagementPortal() {
   const [auditingBill, setAuditingBill] = useState<FeeBillRecord | null>(null);
   const [deletingBill, setDeletingBill] = useState<FeeBillRecord | null>(null);
 
+  // Fetch Central Master Data Config from Database
+  const fetchMasterData = useCallback(async () => {
+    try {
+      const res = await fetch('/api/fee-bills/master-data');
+      const data = await res.json();
+      if (data.success && data.masterData) {
+        setMasterData(data.masterData);
+      }
+    } catch {
+      // keep fallback state
+    }
+  }, []);
+
+  // Fetch Fee Bills Ledger Records from Database
   const fetchFeeBills = useCallback(async () => {
     try {
       setLoading(true);
@@ -89,8 +77,23 @@ export function FeeBillManagementPortal() {
   }, [searchTerm, selectedCircle, selectedDivision, paymentStatusFilter, showArchived]);
 
   useEffect(() => {
+    fetchMasterData();
     fetchFeeBills();
-  }, [fetchFeeBills]);
+  }, [fetchMasterData, fetchFeeBills]);
+
+  // Persist updated master data centrally to database
+  const handleUpdateMasterData = async (newData: FeeBillMasterDataConfig) => {
+    setMasterData(newData);
+    try {
+      await fetch('/api/fee-bills/master-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newData),
+      });
+    } catch {
+      // error handling
+    }
+  };
 
   const handleSaveBill = async (record: FeeBillRecord) => {
     try {
