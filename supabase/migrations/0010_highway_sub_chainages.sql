@@ -12,9 +12,13 @@ CREATE TABLE IF NOT EXISTS public.highway_sub_chainages (
     lane_configuration VARCHAR(100) DEFAULT '2-Lane',
     pcu_count INTEGER DEFAULT 0,
     dpr_status TEXT,
+    delete_status VARCHAR(50) DEFAULT 'KEEP',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Ensure delete_status exists if table was already created
+ALTER TABLE public.highway_sub_chainages ADD COLUMN IF NOT EXISTS delete_status VARCHAR(50) DEFAULT 'KEEP';
 
 -- Index for fast lookup by highway code and chainage order
 CREATE INDEX IF NOT EXISTS idx_sub_chainages_code ON public.highway_sub_chainages(highway_code, from_km);

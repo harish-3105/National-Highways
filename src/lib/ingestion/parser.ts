@@ -55,6 +55,7 @@ export interface SubChainageRow {
   lane_configuration: string;
   pcu_count: number;
   dpr_status?: string;
+  delete_status?: string;
 }
 
 export interface DLPRow {
@@ -515,6 +516,7 @@ function parseSubChainages(rawRows: any[][], result: ParseResult) {
         lane_configuration: laneConfig || '2-Lane',
         pcu_count: curPcu,
         dpr_status: curDpr || undefined,
+        delete_status: 'KEEP',
       });
     }
   }
