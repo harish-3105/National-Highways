@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 export interface SubChainageStretch {
   id: string;
   highway_code: string;
+  breakdown_type?: 'MICRO_LANE' | 'MACRO_PCU' | string | null;
   division_name?: string | null;
   stretch_name?: string | null;
   from_km: number;
@@ -45,6 +46,7 @@ export async function GET(request: Request) {
     const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code')?.trim().toUpperCase() || searchParams.get('highwayCode')?.trim().toUpperCase() || '';
+    const typeParam = searchParams.get('type')?.trim().toUpperCase(); // 'MACRO_PCU' | 'MICRO_LANE'
     const includeDeleted = searchParams.get('includeDeleted') === 'true';
 
     if (!code) {
@@ -58,29 +60,40 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, subChainages: [] });
     }
 
-    // Try querying by clean NH code e.g. NH-181, NH-75 as well as plain number e.g. 181, 75
     const plainNum = code.replace(/^NH-?/i, '');
     const searchCodes = Array.from(new Set([code, `NH-${plainNum}`, plainNum]));
 
-    // Query all sub-chainages for matching codes
-    const { data, error } = await supabase
+    let query = supabase
       .from('highway_sub_chainages')
       .select('*')
       .in('highway_code', searchCodes)
       .order('from_km', { ascending: true });
+
+    if (typeParam) {
+      query = query.eq('breakdown_type', typeParam);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Supabase query error in GET /api/sub-chainages:', error);
       return NextResponse.json({ success: false, message: error.message, subChainages: [] }, { status: 500 });
     }
 
-    // Filter out rows marked as DELETED or SOFT_DELETE unless includeDeleted is requested
-    const filteredData = (data || []).filter(
+    let filteredData = (data || []).filter(
       (item: any) =>
         includeDeleted ||
         !item.delete_status ||
         (item.delete_status !== 'DELETED' && item.delete_status !== 'SOFT_DELETE')
     );
+
+    // If typeParam specified and schema didn't filter DB side, double check in memory
+    if (typeParam) {
+      const typeFiltered = filteredData.filter((item: any) => !item.breakdown_type || item.breakdown_type === typeParam);
+      if (typeFiltered.length > 0) {
+        filteredData = typeFiltered;
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -101,7 +114,20 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { id, highway_code, division_name, stretch_name, from_km, to_km, length_km, lane_configuration, pcu_count, dpr_status, delete_status } = body;
+    const {
+      id,
+      highway_code,
+      breakdown_type,
+      division_name,
+      stretch_name,
+      from_km,
+      to_km,
+      length_km,
+      lane_configuration,
+      pcu_count,
+      dpr_status,
+      delete_status,
+    } = body;
 
     if (!highway_code) {
       return NextResponse.json({ success: false, message: 'Highway code is required' }, { status: 400 });
@@ -112,6 +138,7 @@ export async function POST(request: Request) {
     const parsedLen = Number(length_km) || Math.max(0, parsedTo - parsedFrom);
 
     const payload: Record<string, unknown> = {
+      breakdown_type: breakdown_type || 'MICRO_LANE',
       division_name: division_name?.trim() || null,
       stretch_name: stretch_name?.trim() || null,
       from_km: parsedFrom,
@@ -155,8 +182,8 @@ export async function POST(request: Request) {
 
     let { data, error } = await supabase.from('highway_sub_chainages').insert([insertPayload]).select();
 
-    if (error && error.message?.includes('delete_status')) {
-      const { delete_status: _ds, ...insertFallback } = insertPayload;
+    if (error && (error.message?.includes('delete_status') || error.message?.includes('breakdown_type'))) {
+      const { delete_status: _ds, breakdown_type: _bt, ...insertFallback }: any = insertPayload;
       const { data: dataFallback, error: errorFallback } = await supabase
         .from('highway_sub_chainages')
         .insert([insertFallback])

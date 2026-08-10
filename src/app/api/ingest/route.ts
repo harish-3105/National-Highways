@@ -90,13 +90,25 @@ export async function POST(request: Request) {
         insertedCount = data?.length || 0;
       }
     } else if (datasetType === 'HIGHWAY_SUB_CHAINAGES') {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('highway_sub_chainages')
         .insert(parseResult.data)
         .select();
 
-      if (error) dbError = error;
-      else insertedCount = data?.length || 0;
+      if (error && (error.message?.includes('breakdown_type') || error.message?.includes('delete_status'))) {
+        const fallbackData = parseResult.data.map(({ breakdown_type, delete_status, ...rest }: any) => rest);
+        const { data: data2, error: error2 } = await supabase
+          .from('highway_sub_chainages')
+          .insert(fallbackData)
+          .select();
+
+        if (error2) dbError = error2;
+        else insertedCount = data2?.length || 0;
+      } else if (error) {
+        dbError = error;
+      } else {
+        insertedCount = data?.length || 0;
+      }
     } else if (datasetType === 'DLP_CONTRACTS') {
       const allowedColumns = [
         'id',

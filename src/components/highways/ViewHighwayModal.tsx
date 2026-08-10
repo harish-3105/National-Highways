@@ -17,6 +17,8 @@ import {
   Trash2,
   AlertCircle,
   FileText,
+  BarChart2,
+  GitCommit,
 } from 'lucide-react';
 
 interface ViewHighwayModalProps {
@@ -34,6 +36,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
 }) => {
   const [subChainages, setSubChainages] = useState<SubChainageStretch[]>([]);
   const [loadingSub, setLoadingSub] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'MACRO_PCU' | 'MICRO_LANE'>('MACRO_PCU');
 
   // Form states for adding/editing a sub-stretch
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
@@ -51,7 +54,9 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
     if (!highway) return;
     try {
       setLoadingSub(true);
-      const res = await fetch(`/api/sub-chainages?code=${encodeURIComponent(highway.road_code)}`);
+      const res = await fetch(
+        `/api/sub-chainages?code=${encodeURIComponent(highway.road_code)}&type=${activeTab}`
+      );
       const data = await res.json();
       if (data.success) {
         setSubChainages(data.subChainages || []);
@@ -61,7 +66,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
     } finally {
       setLoadingSub(false);
     }
-  }, [highway]);
+  }, [highway, activeTab]);
 
   useEffect(() => {
     if (isOpen && highway) {
@@ -128,7 +133,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
     setEditingSubId(null);
     setSubFromKm('');
     setSubToKm('');
-    setSubLaneConfig('2-Lane');
+    setSubLaneConfig(activeTab === 'MICRO_LANE' ? '2-Lane' : 'Primary');
     setSubPcu('0');
     setSubDivision('');
     setSubDpr('');
@@ -155,8 +160,8 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
     const fromNum = parseFloat(subFromKm);
     const toNum = parseFloat(subToKm);
 
-    if (isNaN(fromNum) || isNaN(toNum) || toNum < fromNum) {
-      setSubFormError('Valid chainage range (To Km >= From Km) is required.');
+    if (isNaN(fromNum) || isNaN(toNum) || toNum <= fromNum) {
+      setSubFormError('Valid chainage range (To Km > From Km) is required.');
       return;
     }
 
@@ -168,6 +173,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
         body: JSON.stringify({
           id: editingSubId || undefined,
           highway_code: highway.road_code,
+          breakdown_type: activeTab,
           division_name: subDivision,
           from_km: fromNum,
           to_km: toNum,
@@ -365,29 +371,69 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
             </div>
           </div>
 
-          {/* SECTION 2: LEVEL 2 SUB-CHAINAGE & PCU BREAKDOWN ADDON */}
+          {/* SECTION 2: LEVEL 2 DUAL-SHEET SUB-CHAINAGE & PCU BREAKDOWN ADDON */}
           <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 uppercase tracking-wide">
                   <Activity className="w-4 h-4 text-emerald-600" />
-                  Level 2: Granular Sub-Chainages & PCU Traffic Breakdown
+                  Level 2: Sub-Chainages & Traffic PCU Breakdown
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Consecutive kilometer stretches, traffic density volume, and DPR status
+                  Select view mode to switch between macro traffic census ranges and micro lane geometry
                 </p>
+              </div>
+
+              {/* View Mode Pills */}
+              <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('MACRO_PCU')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'MACRO_PCU'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  <span>Macro Traffic Census</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('MICRO_LANE')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'MICRO_LANE'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <GitCommit className="w-3.5 h-3.5" />
+                  <span>Micro Lane Geometry</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Sub-Header Bar */}
+            <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                {activeTab === 'MACRO_PCU' ? (
+                  <span>Sheet &apos;PCU &apos;: Executive Traffic Census Ranges &amp; DPR Widening Proposals</span>
+                ) : (
+                  <span>Sheet &apos;NH&apos;: Granular Carriageway Lane-Width Geometry Breakdown</span>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 text-xs font-bold rounded-lg border border-emerald-300 dark:border-emerald-800">
-                  {subChainages.length} Sub-Stretches
+                  {subChainages.length} Stretches
                 </span>
 
                 <button
                   onClick={handleOpenAddSubForm}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
                 >
-                  <Plus className="w-3.5 h-3.5" /> Add Sub-Stretch
+                  <Plus className="w-3.5 h-3.5" /> Add Stretch
                 </button>
               </div>
             </div>
@@ -397,7 +443,9 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
               <form onSubmit={handleSaveSubForm} className="p-4 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-300 dark:border-slate-700 space-y-3 animate-in fade-in duration-200">
                 <div className="flex items-center justify-between">
                   <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">
-                    {editingSubId ? 'Edit Sub-Chainage Stretch' : 'Add New Sub-Chainage Stretch'}
+                    {editingSubId
+                      ? `Edit ${activeTab === 'MACRO_PCU' ? 'Traffic Census' : 'Lane Geometry'} Stretch`
+                      : `Add New ${activeTab === 'MACRO_PCU' ? 'Traffic Census' : 'Lane Geometry'} Stretch`}
                   </h4>
                   <button type="button" onClick={() => setIsFormOpen(false)} className="text-slate-400 hover:text-slate-600">
                     <X className="w-4 h-4" />
@@ -430,7 +478,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                     <input
                       type="number"
                       step="0.001"
-                      placeholder="3.75"
+                      placeholder="22.0"
                       value={subToKm}
                       onChange={(e) => setSubToKm(e.target.value)}
                       className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
@@ -448,8 +496,10 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                       <option value="2-Lane">2-Lane</option>
                       <option value="2L+PS">2L+PS</option>
                       <option value="4-Lane">4-Lane</option>
+                      <option value="4L+PS">4L+PS</option>
                       <option value="6-Lane">6-Lane</option>
                       <option value="<2-Lane">&lt;2-Lane</option>
+                      <option value="Primary">Primary (Macro Range)</option>
                     </select>
                   </div>
 
@@ -457,7 +507,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                     <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Traffic PCU Count</label>
                     <input
                       type="number"
-                      placeholder="e.g. 8007"
+                      placeholder="e.g. 57428"
                       value={subPcu}
                       onChange={(e) => setSubPcu(e.target.value)}
                       className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
@@ -470,7 +520,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                     <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Division Name</label>
                     <input
                       type="text"
-                      placeholder="e.g. Vellore"
+                      placeholder="e.g. Coimbatore"
                       value={subDivision}
                       onChange={(e) => setSubDivision(e.target.value)}
                       className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
@@ -481,7 +531,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                     <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">DPR Status / Remarks</label>
                     <input
                       type="text"
-                      placeholder="e.g. DPR for 2L to 4L approved..."
+                      placeholder="e.g. DPR for 4-laning proposed..."
                       value={subDpr}
                       onChange={(e) => setSubDpr(e.target.value)}
                       className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
@@ -494,7 +544,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                     Cancel
                   </button>
                   <button type="submit" disabled={subFormLoading} className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-bold">
-                    {subFormLoading ? 'Saving...' : 'Save Sub-Stretch'}
+                    {subFormLoading ? 'Saving...' : 'Save Stretch'}
                   </button>
                 </div>
               </form>
@@ -509,9 +559,11 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
             ) : subChainages.length === 0 ? (
               <div className="p-6 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-xl text-center">
                 <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">No Level 2 Sub-Chainages Uploaded Yet</h4>
+                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  No {activeTab === 'MACRO_PCU' ? 'Macro Traffic Census' : 'Micro Lane Geometry'} Stretches Found
+                </h4>
                 <p className="text-[11px] text-slate-400 mt-1 max-w-md mx-auto">
-                  Upload <code className="text-blue-600 font-mono">Lane wise PCU Details.xlsx</code> in the Data Ingestion Engine or click <strong>&quot;+ Add Sub-Stretch&quot;</strong> above to start adding granular chainage stretches.
+                  Upload <code className="text-blue-600 font-mono">Lane wise PCU Details.xlsx</code> in the Data Ingestion Engine or click <strong>&quot;+ Add Stretch&quot;</strong> above to start adding granular chainage stretches.
                 </p>
               </div>
             ) : (
@@ -532,9 +584,11 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                           <span className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
                             ({sub.length_km} km)
                           </span>
-                          <span className="px-2 py-0.5 text-xs font-bold rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                            {sub.lane_configuration}
-                          </span>
+                          {sub.lane_configuration && sub.lane_configuration !== 'Primary' && (
+                            <span className="px-2 py-0.5 text-xs font-bold rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                              {sub.lane_configuration}
+                            </span>
+                          )}
                           {sub.division_name && (
                             <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                               Div: {sub.division_name}
@@ -544,7 +598,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
 
                         {/* DPR Remarks */}
                         {sub.dpr_status && (
-                          <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 italic">
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-3 italic">
                             &quot;{sub.dpr_status}&quot;
                           </p>
                         )}
@@ -559,15 +613,15 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => handleOpenEditSubForm(sub)}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                            title="Edit Sub-Stretch"
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded cursor-pointer"
+                            title="Edit Stretch"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDeleteSub(sub.id)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
-                            title="Delete Sub-Stretch"
+                            className="p-1 text-red-600 hover:bg-red-50 rounded cursor-pointer"
+                            title="Delete Stretch"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -584,7 +638,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
         {/* Modal Footer */}
         <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
           <span className="text-xs text-slate-400 font-mono">
-            Tamil Nadu National Highways Dept &bull; Level 1 Catalog & Level 2 Sub-Chainage Breakdown
+            Tamil Nadu National Highways Dept &bull; Level 1 Catalog &amp; Level 2 Dual-Sheet Breakdown
           </span>
           <button
             onClick={onClose}

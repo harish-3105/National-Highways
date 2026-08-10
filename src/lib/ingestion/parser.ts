@@ -47,6 +47,7 @@ export interface HighwayRow {
 export interface SubChainageRow {
   id?: string;
   highway_code: string;
+  breakdown_type?: 'MICRO_LANE' | 'MACRO_PCU';
   division_name?: string;
   stretch_name?: string;
   from_km: number;
@@ -335,7 +336,7 @@ export async function parseDatasetFile(
       parseHighwaysMaster(rawRows, result);
       break;
     case 'HIGHWAY_SUB_CHAINAGES':
-      parseSubChainages(rawRows, result);
+      parseSubChainages(workbook, rawRows, result);
       break;
     case 'DLP_CONTRACTS':
       parseDLPContracts(rawRows, result);
@@ -466,85 +467,119 @@ const parsePcuInteger = (val: any): number => {
   return num;
 };
 
-function parseSubChainages(rawRows: any[][], result: ParseResult) {
+function parseSubChainages(
+  workbook: XLSX.WorkBook | null,
+  rawRows: any[][],
+  result: ParseResult
+) {
   const parsedData: SubChainageRow[] = [];
-  let curDiv = '';
-  let curStretch = '';
-  let curCode = '';
-  let curPcu = 0;
-  let curDpr = '';
 
-  for (let i = 0; i < rawRows.length; i++) {
-    const row = rawRows[i];
-    if (!row || row.length === 0) continue;
+  let rowsNH: any[][] = rawRows;
+  let rowsPCU: any[][] = [];
 
-    const rowStr = row.map((v: any) => cleanString(v)).join(' ').toLowerCase();
-    const col4Str = cleanString(row[4]).toLowerCase();
+  if (workbook) {
+    const sheetNHName = workbook.SheetNames.find((name) => /^nh$/i.test(name.trim())) || workbook.SheetNames[0];
+    const sheetPCUName = workbook.SheetNames.find((name) => /^pcu/i.test(name.trim()));
 
-    // Strict Exclusion of Summary, Subtotal, Division Lengths & Headers
-    if (
-      rowStr.includes('total') ||
-      rowStr.includes('national highways') ||
-      rowStr.includes('actual traffic count') ||
-      rowStr.includes('chianage from') ||
-      col4Str.includes('length') ||
-      col4Str.includes('total') ||
-      col4Str.includes('division')
-    ) {
-      continue;
+    if (sheetNHName && workbook.Sheets[sheetNHName]) {
+      rowsNH = XLSX.utils.sheet_to_json(workbook.Sheets[sheetNHName], { header: 1, defval: '' });
     }
-
-    if (row[1]) curDiv = cleanString(row[1]);
-    if (row[2]) curStretch = cleanString(row[2]);
-    if (row[3]) {
-      const code = normalizeNhCode(row[3]);
-      if (code) curCode = code;
-    }
-    if (row[8]) {
-      const pcu = parsePcuInteger(row[8]);
-      if (pcu > 0) curPcu = pcu;
-    }
-    if (row[9]) curDpr = cleanString(row[9]);
-
-    // Ensure row[4] and row[5] are valid numeric chainage values
-    if (typeof row[4] === 'string' && /[a-zA-Z]/.test(row[4])) continue;
-    if (typeof row[5] === 'string' && /[a-zA-Z]/.test(row[5])) continue;
-
-    const fromKm = parseChainageValue(row[4]);
-    const toKm = parseChainageValue(row[5]);
-
-    if (isNaN(fromKm) || isNaN(toKm) || toKm <= fromKm) {
-      continue;
-    }
-
-    const laneConfig = cleanString(row[6]);
-    const lenKm = roundTo3Decimals(parseChainageValue(row[7]) || Math.max(0, toKm - fromKm));
-
-    if (curCode && toKm > fromKm) {
-      parsedData.push({
-        highway_code: curCode,
-        division_name: curDiv || undefined,
-        stretch_name: curStretch || undefined,
-        from_km: fromKm,
-        to_km: toKm,
-        length_km: lenKm,
-        lane_configuration: laneConfig || '2-Lane',
-        pcu_count: curPcu,
-        dpr_status: curDpr || undefined,
-        delete_status: 'ACTIVE',
-      });
+    if (sheetPCUName && workbook.Sheets[sheetPCUName]) {
+      rowsPCU = XLSX.utils.sheet_to_json(workbook.Sheets[sheetPCUName], { header: 1, defval: '' });
     }
   }
 
-  result.totalRows = rawRows.length;
+  const parseRowsForType = (rows: any[][], type: 'MICRO_LANE' | 'MACRO_PCU') => {
+    let curDiv = '';
+    let curStretch = '';
+    let curCode = '';
+    let curPcu = 0;
+    let curDpr = '';
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.length === 0) continue;
+
+      const rowStr = row.map((v: any) => cleanString(v)).join(' ').toLowerCase();
+      const col4Str = cleanString(row[4]).toLowerCase();
+
+      if (
+        rowStr.includes('total') ||
+        rowStr.includes('national highways') ||
+        rowStr.includes('actual traffic count') ||
+        rowStr.includes('chianage from') ||
+        col4Str.includes('length') ||
+        col4Str.includes('total') ||
+        col4Str.includes('division')
+      ) {
+        continue;
+      }
+
+      if (row[1]) curDiv = cleanString(row[1]);
+      if (row[2]) curStretch = cleanString(row[2]);
+      if (row[3]) {
+        const code = normalizeNhCode(row[3]);
+        if (code) curCode = code;
+      }
+
+      if (type === 'MICRO_LANE') {
+        if (row[8]) {
+          const pcu = parsePcuInteger(row[8]);
+          if (pcu > 0) curPcu = pcu;
+        }
+        if (row[9]) curDpr = cleanString(row[9]);
+      } else {
+        if (row[7]) {
+          const pcu = parsePcuInteger(row[7]);
+          if (pcu > 0) curPcu = pcu;
+        }
+        if (row[8]) curDpr = cleanString(row[8]);
+      }
+
+      if (typeof row[4] === 'string' && /[a-zA-Z]/.test(row[4])) continue;
+      if (typeof row[5] === 'string' && /[a-zA-Z]/.test(row[5])) continue;
+
+      const fromKm = parseChainageValue(row[4]);
+      const toKm = parseChainageValue(row[5]);
+
+      if (isNaN(fromKm) || isNaN(toKm) || toKm <= fromKm) {
+        continue;
+      }
+
+      const laneConfig = type === 'MICRO_LANE' ? cleanString(row[6]) : 'Primary';
+      const lenColIdx = type === 'MICRO_LANE' ? 7 : 6;
+      const lenKm = roundTo3Decimals(parseChainageValue(row[lenColIdx]) || Math.max(0, toKm - fromKm));
+
+      if (curCode && toKm > fromKm) {
+        parsedData.push({
+          highway_code: curCode,
+          breakdown_type: type,
+          division_name: curDiv || undefined,
+          stretch_name: curStretch || undefined,
+          from_km: fromKm,
+          to_km: toKm,
+          length_km: lenKm,
+          lane_configuration: laneConfig || '2-Lane',
+          pcu_count: curPcu,
+          dpr_status: curDpr || undefined,
+          delete_status: 'ACTIVE',
+        });
+      }
+    }
+  };
+
+  parseRowsForType(rowsNH, 'MICRO_LANE');
+  if (rowsPCU.length > 0) {
+    parseRowsForType(rowsPCU, 'MACRO_PCU');
+  }
+
+  result.totalRows = rowsNH.length + rowsPCU.length;
   result.validRows = parsedData.length;
   result.data = parsedData;
 
   if (parsedData.length === 0) {
     result.success = false;
-    result.errors.push(
-      'Could not find valid Sub-Chainage rows. Expected columns: [Division, Stretch, NH No, From Km, To Km, Lane, Length, PCU, DPR Status].'
-    );
+    result.errors.push('Could not find valid Sub-Chainage rows in sheets NH or PCU.');
   }
 }
 
