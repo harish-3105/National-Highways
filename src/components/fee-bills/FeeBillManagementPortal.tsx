@@ -25,7 +25,33 @@ export function FeeBillManagementPortal() {
   const [activeTab, setActiveTab] = useState<'list' | 'create' | 'pendency' | 'analytics' | 'settings'>('list');
   const [bills, setBills] = useState<FeeBillRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [masterData, setMasterData] = useState<FeeBillMasterDataConfig>(DEFAULT_MASTER_DATA);
+  const [masterData, setMasterData] = useState<FeeBillMasterDataConfig>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('fee_bill_master_data');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && Array.isArray(parsed.circles) && Array.isArray(parsed.divisions)) {
+            return parsed;
+          }
+        }
+      } catch {
+        // fallback
+      }
+    }
+    return DEFAULT_MASTER_DATA;
+  });
+
+  const handleUpdateMasterData = (newData: FeeBillMasterDataConfig) => {
+    setMasterData(newData);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('fee_bill_master_data', JSON.stringify(newData));
+      } catch {
+        // error handling
+      }
+    }
+  };
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -324,7 +350,7 @@ export function FeeBillManagementPortal() {
       )}
 
       {activeTab === 'settings' && (
-        <MasterDataManagement masterData={masterData} onUpdateMasterData={(newData) => setMasterData(newData)} />
+        <MasterDataManagement masterData={masterData} onUpdateMasterData={(newData) => handleUpdateMasterData(newData)} />
       )}
 
       {/* Modals Suite */}
