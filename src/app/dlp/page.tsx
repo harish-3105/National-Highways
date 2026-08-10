@@ -516,8 +516,8 @@ export default function DlpPage() {
                             </button>
                             <button
                               onClick={() => setSelectedContractForDelete(item)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors cursor-pointer"
-                              title="Delete Record"
+                              className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/60 rounded-md transition-colors cursor-pointer"
+                              title="Soft-Delete Record"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
