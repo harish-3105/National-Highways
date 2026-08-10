@@ -12,7 +12,7 @@ import { ViewHighwayModal } from '@/components/highways/ViewHighwayModal';
 import { DeleteHighwayModal } from '@/components/highways/DeleteHighwayModal';
 import { ExportHighwayModal } from '@/components/highways/ExportHighwayModal';
 import { NavigationHeader } from '@/components/NavigationHeader';
-import { Route, RefreshCw, Plus, Download, Printer } from 'lucide-react';
+import { Route, RefreshCw, Plus, Download } from 'lucide-react';
 
 export default function HighwaysPage() {
   const [allCorridors, setAllCorridors] = useState<HighwayCorridor[]>([]);
@@ -119,10 +119,6 @@ export default function HighwaysPage() {
     }
   };
 
-  const handlePrintCatalog = () => {
-    window.print();
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       {/* Global Navigation Header */}
@@ -142,7 +138,7 @@ export default function HighwaysPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap print:hidden">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <button
               onClick={() => fetchHighways()}
               disabled={loading}
@@ -150,14 +146,6 @@ export default function HighwaysPage() {
               title="Refresh Catalog"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-
-            <button
-              onClick={handlePrintCatalog}
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
-              title="Print Catalog Summary"
-            >
-              <Printer className="w-4 h-4 text-slate-600 dark:text-slate-400" /> Print Report
             </button>
 
             <button
