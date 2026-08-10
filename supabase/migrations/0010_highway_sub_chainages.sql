@@ -18,3 +18,8 @@ CREATE TABLE IF NOT EXISTS public.highway_sub_chainages (
 
 -- Index for fast lookup by highway code and chainage order
 CREATE INDEX IF NOT EXISTS idx_sub_chainages_code ON public.highway_sub_chainages(highway_code, from_km);
+
+-- Disable Row Level Security (RLS) to allow API route ingestion and CRUD operations
+ALTER TABLE public.highway_sub_chainages DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON public.highway_sub_chainages TO postgres, anon, authenticated, service_role;
+
