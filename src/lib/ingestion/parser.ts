@@ -479,11 +479,17 @@ function parseSubChainages(rawRows: any[][], result: ParseResult) {
     if (!row || row.length === 0) continue;
 
     const rowStr = row.map((v: any) => cleanString(v)).join(' ').toLowerCase();
+    const col4Str = cleanString(row[4]).toLowerCase();
+
+    // Strict Exclusion of Summary, Subtotal, Division Lengths & Headers
     if (
       rowStr.includes('total') ||
       rowStr.includes('national highways') ||
       rowStr.includes('actual traffic count') ||
-      rowStr.includes('chianage from')
+      rowStr.includes('chianage from') ||
+      col4Str.includes('length') ||
+      col4Str.includes('total') ||
+      col4Str.includes('division')
     ) {
       continue;
     }
@@ -500,12 +506,21 @@ function parseSubChainages(rawRows: any[][], result: ParseResult) {
     }
     if (row[9]) curDpr = cleanString(row[9]);
 
+    // Ensure row[4] and row[5] are valid numeric chainage values
+    if (typeof row[4] === 'string' && /[a-zA-Z]/.test(row[4])) continue;
+    if (typeof row[5] === 'string' && /[a-zA-Z]/.test(row[5])) continue;
+
     const fromKm = parseChainageValue(row[4]);
     const toKm = parseChainageValue(row[5]);
+
+    if (isNaN(fromKm) || isNaN(toKm) || toKm <= fromKm) {
+      continue;
+    }
+
     const laneConfig = cleanString(row[6]);
     const lenKm = roundTo3Decimals(parseChainageValue(row[7]) || Math.max(0, toKm - fromKm));
 
-    if (curCode && (toKm > fromKm || lenKm > 0)) {
+    if (curCode && toKm > fromKm) {
       parsedData.push({
         highway_code: curCode,
         division_name: curDiv || undefined,
