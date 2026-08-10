@@ -25,15 +25,17 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Print CSS rules for Legal Record & document printing */
+/* Print CSS rules for Legal Record & Fee Bill document printing */
 @media print {
   .no-print,
-  .print-hide {
+  .print-hide,
+  header,
+  nav {
     display: none !important;
   }
 
-  body:has(.legal-print-modal-wrapper) * {
-    visibility: hidden !important;
+  body * {
+    visibility: hidden;
   }
 
   .legal-print-modal-wrapper,
@@ -53,7 +55,7 @@ body {
     margin: 0 !important;
     box-shadow: none !important;
     display: block !important;
-    z-index: 99999 !important;
+    z-index: 999999 !important;
   }
 
   .legal-print-card {
@@ -75,11 +77,7 @@ body {
     max-height: none !important;
     height: auto !important;
     overflow: visible !important;
-    padding: 1rem !important;
-  }
-
-  .print-hide {
-    display: none !important;
+    padding: 0.5in !important;
   }
 }
 
