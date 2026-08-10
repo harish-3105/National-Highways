@@ -10,14 +10,18 @@ export async function GET(req: NextRequest) {
     const circle = searchParams.get('circle');
     const division = searchParams.get('division');
     const search = searchParams.get('search');
+    const includeDeleted = searchParams.get('includeDeleted') === 'true';
 
     const supabase = await createClient();
     if (supabase) {
       let query = supabase
         .from('legal_cases')
         .select('*')
-        .neq('delete_status', 'DELETED')
         .order('created_at', { ascending: false });
+
+      if (!includeDeleted) {
+        query = query.neq('delete_status', 'DELETED');
+      }
 
       if (circle) query = query.eq('circle', circle);
       if (division) query = query.eq('division', division);

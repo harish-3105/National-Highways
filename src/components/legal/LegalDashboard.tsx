@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   AlertCircle,
   RefreshCw,
+  Archive,
 } from 'lucide-react';
 import { CIRCLE_OPTIONS, CIRCLE_DIVISION_MAP } from '@/lib/legal/masterData';
 
@@ -34,6 +35,7 @@ export const LegalDashboard: React.FC = () => {
   const [filterCircle, setFilterCircle] = useState('');
   const [filterDivision, setFilterDivision] = useState('');
   const [filterCounterStatus, setFilterCounterStatus] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
 
   const fetchCases = useCallback(async () => {
     try {
@@ -42,6 +44,7 @@ export const LegalDashboard: React.FC = () => {
       if (filterCircle) params.set('circle', filterCircle);
       if (filterDivision) params.set('division', filterDivision);
       if (searchTerm) params.set('search', searchTerm);
+      if (showArchived) params.set('includeDeleted', 'true');
 
       const res = await fetch(`/api/legal?${params.toString()}`);
       const data = await res.json();
@@ -53,7 +56,7 @@ export const LegalDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [filterCircle, filterDivision, searchTerm]);
+  }, [filterCircle, filterDivision, searchTerm, showArchived]);
 
   useEffect(() => {
     fetchCases();
@@ -132,6 +135,19 @@ export const LegalDashboard: React.FC = () => {
             title="Refresh Cases"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+
+          <button
+            onClick={() => setShowArchived((v) => !v)}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+              showArchived
+                ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+            title={showArchived ? 'Hide Deleted Cases' : 'Show Deleted Cases'}
+          >
+            <Archive className="w-4 h-4" />
+            {showArchived ? 'Hide Archived' : 'Show Archived'}
           </button>
 
           <button

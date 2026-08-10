@@ -47,6 +47,9 @@ export default function HighwaysPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
+  // Archive Toggle
+  const [showArchived, setShowArchived] = useState(false);
+
   // Modal Visibility States
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [viewingHighway, setViewingHighway] = useState<HighwayCorridor | null>(null);
@@ -68,6 +71,7 @@ export default function HighwaysPage() {
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (activeConfig && activeConfig !== 'ALL') params.set('config', activeConfig);
       if (sortBy) params.set('sortBy', sortBy);
+      if (showArchived) params.set('includeDeleted', 'true');
 
       const res = await fetch(`/api/highways?${params.toString()}`);
       const data: HighwaysApiResponse = await res.json();
@@ -99,7 +103,7 @@ export default function HighwaysPage() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, activeConfig, sortBy]);
+  }, [debouncedSearch, activeConfig, sortBy, showArchived]);
 
   useEffect(() => {
     fetchHighways();
@@ -186,6 +190,8 @@ export default function HighwaysPage() {
             viewMode={viewMode}
             onViewModeChange={setViewMode}
             totalResults={corridors.length}
+            showArchived={showArchived}
+            onToggleArchived={() => setShowArchived((v) => !v)}
           />
         </div>
 

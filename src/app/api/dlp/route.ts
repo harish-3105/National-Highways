@@ -11,13 +11,16 @@ export async function GET(req: NextRequest) {
     const division = searchParams.get('division');
     const search = searchParams.get('search');
     const statusFilter = searchParams.get('status');
+    const includeDeleted = searchParams.get('includeDeleted') === 'true';
 
     const supabase = await createClient();
     if (supabase) {
       let query = supabase.from('dlp_contracts').select('*').order('dlp_expiry_date', { ascending: true });
 
       if (highwayCode) query = query.eq('highway_code', highwayCode);
-      if (statusFilter && statusFilter !== 'ALL') {
+      if (includeDeleted) {
+        // Show everything including DELETED records
+      } else if (statusFilter && statusFilter !== 'ALL') {
         query = query.eq('status', statusFilter);
       } else {
         query = query.neq('status', 'DELETED');

@@ -79,15 +79,16 @@ export async function GET(request: Request) {
     const search = searchParams.get('search')?.trim().toLowerCase() || '';
     const configFilter = searchParams.get('config')?.trim() || '';
     const sortBy = searchParams.get('sortBy') || 'length_desc';
+    const includeDeleted = searchParams.get('includeDeleted') === 'true';
 
     let allCorridors: HighwayCorridor[] = [];
 
     if (supabase) {
-      const { data: rawHighways } = await supabase
-        .from('highways')
-        .select('*')
-        .neq('status', 'DELETED')
-        .order('created_at', { ascending: false });
+      let query = supabase.from('highways').select('*').order('created_at', { ascending: false });
+      if (!includeDeleted) {
+        query = query.neq('status', 'DELETED');
+      }
+      const { data: rawHighways } = await query;
 
       if (rawHighways) {
         allCorridors = rawHighways;

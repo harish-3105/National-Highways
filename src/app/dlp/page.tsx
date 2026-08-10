@@ -32,6 +32,7 @@ import {
   ChevronRight,
   Layers,
   Upload,
+  Archive,
 } from 'lucide-react';
 
 export interface DLPSubContract {
@@ -123,6 +124,7 @@ export default function DlpPage() {
   const [selectedContractForDelete, setSelectedContractForDelete] = useState<DLPContractItem | null>(null);
 
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const fetchDlpContracts = useCallback(async () => {
     try {
@@ -131,6 +133,7 @@ export default function DlpPage() {
       if (searchTerm) params.set('search', searchTerm);
       if (selectedDivision) params.set('division', selectedDivision);
       if (statusFilter !== 'ALL') params.set('status', statusFilter);
+      if (showArchived) params.set('includeDeleted', 'true');
 
       const res = await fetch(`/api/dlp?${params.toString()}`);
       const data = await res.json();
@@ -147,7 +150,7 @@ export default function DlpPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, selectedDivision, statusFilter]);
+  }, [searchTerm, selectedDivision, statusFilter, showArchived]);
 
   useEffect(() => {
     fetchDlpContracts();
@@ -273,6 +276,19 @@ export default function DlpPage() {
               title="Refresh Contracts"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+
+            <button
+              onClick={() => setShowArchived((v) => !v)}
+              className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                showArchived
+                  ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+              title={showArchived ? 'Hide Archived Records' : 'Show Archived Records'}
+            >
+              <Archive className="w-4 h-4" />
+              {showArchived ? 'Hide Archived' : 'Show Archived'}
             </button>
 
             <button
