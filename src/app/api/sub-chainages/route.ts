@@ -73,7 +73,21 @@ export async function GET(request: Request) {
       query = query.eq('breakdown_type', typeParam);
     }
 
-    const { data, error } = await query;
+    let { data, error } = await query;
+
+    // Fallback: If typeParam filter returns 0 rows (because breakdown_type column is NULL in DB), fetch all rows for code
+    if ((!data || data.length === 0) && typeParam) {
+      const { data: fallbackData } = await supabase
+        .from('highway_sub_chainages')
+        .select('*')
+        .in('highway_code', searchCodes)
+        .order('from_km', { ascending: true });
+
+      if (fallbackData && fallbackData.length > 0) {
+        data = fallbackData;
+        error = null;
+      }
+    }
 
     if (error) {
       console.error('Supabase query error in GET /api/sub-chainages:', error);
@@ -87,9 +101,9 @@ export async function GET(request: Request) {
         (item.delete_status !== 'DELETED' && item.delete_status !== 'SOFT_DELETE')
     );
 
-    // If typeParam specified and schema didn't filter DB side, double check in memory
+    // Filter in-memory by typeParam if DB has breakdown_type populated
     if (typeParam) {
-      const typeFiltered = filteredData.filter((item: any) => !item.breakdown_type || item.breakdown_type === typeParam);
+      const typeFiltered = filteredData.filter((item: any) => item.breakdown_type === typeParam);
       if (typeFiltered.length > 0) {
         filteredData = typeFiltered;
       }
@@ -158,10 +172,11 @@ export async function POST(request: Request) {
         .eq('id', id)
         .select();
 
-      if (error && error.message?.includes('delete_status')) {
+      if (error && (error.message?.includes('delete_status') || error.message?.includes('breakdown_type'))) {
+        const { delete_status: _ds, breakdown_type: _bt, ...payloadFallback }: any = payload;
         const { data: dataFallback, error: errorFallback } = await supabase
           .from('highway_sub_chainages')
-          .update(payload)
+          .update(payloadFallback)
           .eq('id', id)
           .select();
         data = dataFallback;
