@@ -45,7 +45,7 @@ export async function GET(request: Request) {
     const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code')?.trim().toUpperCase() || searchParams.get('highwayCode')?.trim().toUpperCase() || '';
-    const includeSoftDeleted = searchParams.get('includeDeleted') === 'true';
+    const includeDeleted = searchParams.get('includeDeleted') === 'true';
 
     if (!code) {
       return NextResponse.json(
@@ -62,7 +62,7 @@ export async function GET(request: Request) {
     const plainNum = code.replace(/^NH-?/i, '');
     const searchCodes = Array.from(new Set([code, `NH-${plainNum}`, plainNum]));
 
-    // Query all sub-chainages for matching codes without DB-level delete_status filter to avoid column-missing errors
+    // Query all sub-chainages for matching codes
     const { data, error } = await supabase
       .from('highway_sub_chainages')
       .select('*')
@@ -74,9 +74,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, message: error.message, subChainages: [] }, { status: 500 });
     }
 
-    // Perform safe in-memory filtering for soft deleted rows
+    // Filter out rows marked as DELETED or SOFT_DELETE unless includeDeleted is requested
     const filteredData = (data || []).filter(
-      (item: any) => includeSoftDeleted || !item.delete_status || item.delete_status !== 'SOFT_DELETE'
+      (item: any) =>
+        includeDeleted ||
+        !item.delete_status ||
+        (item.delete_status !== 'DELETED' && item.delete_status !== 'SOFT_DELETE')
     );
 
     return NextResponse.json({
@@ -124,12 +127,11 @@ export async function POST(request: Request) {
       // UPDATE
       let { data, error } = await supabase
         .from('highway_sub_chainages')
-        .update({ ...payload, delete_status: delete_status || 'KEEP' })
+        .update({ ...payload, delete_status: delete_status || 'ACTIVE' })
         .eq('id', id)
         .select();
 
       if (error && error.message?.includes('delete_status')) {
-        // Fallback without delete_status column
         const { data: dataFallback, error: errorFallback } = await supabase
           .from('highway_sub_chainages')
           .update(payload)
@@ -147,7 +149,7 @@ export async function POST(request: Request) {
     const insertPayload = {
       ...payload,
       highway_code: highway_code.trim().toUpperCase(),
-      delete_status: delete_status || 'KEEP',
+      delete_status: delete_status || 'ACTIVE',
       created_at: new Date().toISOString(),
     };
 
@@ -191,10 +193,10 @@ export async function DELETE(request: Request) {
         const { error } = await supabase.from('highway_sub_chainages').delete().eq('id', id);
         if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
       } else {
-        // Soft Delete (Default) with fallback to hard delete if delete_status is missing
+        // Soft Delete: update delete_status to 'DELETED'
         const { error } = await supabase
           .from('highway_sub_chainages')
-          .update({ delete_status: 'SOFT_DELETE', updated_at: new Date().toISOString() })
+          .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
           .eq('id', id);
 
         if (error) {
@@ -204,7 +206,7 @@ export async function DELETE(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, message: 'Sub-chainage stretch deleted successfully' });
+    return NextResponse.json({ success: true, message: 'Sub-chainage stretch soft-deleted successfully' });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, message: msg }, { status: 500 });

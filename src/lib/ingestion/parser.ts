@@ -516,7 +516,7 @@ function parseSubChainages(rawRows: any[][], result: ParseResult) {
         lane_configuration: laneConfig || '2-Lane',
         pcu_count: curPcu,
         dpr_status: curDpr || undefined,
-        delete_status: 'KEEP',
+        delete_status: 'ACTIVE',
       });
     }
   }
