@@ -556,10 +556,10 @@ export default function DlpPage() {
                                         <tr key={sub.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                                           <td className="px-3 py-1.5 whitespace-nowrap">
                                             <span className="px-1.5 py-0.5 rounded font-extrabold text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
-                                              {sub.maintenance_type}
+                                              {sub.maintenance_type || (sub as any).sub_contract_type || (sub as any).type || 'DLP'}
                                             </span>
                                           </td>
-                                          <td className="px-3 py-1.5 font-bold text-slate-900 dark:text-slate-100">{sub.sub_stretch_title}</td>
+                                          <td className="px-3 py-1.5 font-bold text-slate-900 dark:text-slate-100">{sub.sub_stretch_title || (sub as any).sub_contract_title || (sub as any).title || 'Sub-Stretch'}</td>
                                           <td className="px-3 py-1.5 font-bold text-blue-600 dark:text-blue-400">{sub.length_km ?? 0} km</td>
                                           <td className="px-3 py-1.5 text-slate-600 dark:text-slate-400">{sub.contractor_name || 'N/A'}</td>
                                           <td className="px-3 py-1.5 font-bold text-slate-800 dark:text-slate-200">{sub.expiry_date || 'N/A'}</td>

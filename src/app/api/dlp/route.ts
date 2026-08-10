@@ -83,7 +83,19 @@ export async function GET(req: NextRequest) {
             uncontracted_after_2027_km: Number(item.uncontracted_after_2027_km ?? details.uncontracted_after_2027_km ?? 0),
 
             // 1-to-N Child Sub-Contracts Array
-            sub_contracts: item.sub_contracts || details.sub_contracts || [],
+            sub_contracts: (item.sub_contracts || details.sub_contracts || []).map((sub: any, idx: number) => ({
+              id: sub.id || `sub-${idx}`,
+              maintenance_type: sub.maintenance_type || sub.sub_contract_type || sub.type || 'DLP',
+              sub_stretch_title: sub.sub_stretch_title || sub.sub_contract_title || sub.title || `Sub-Stretch ${idx + 1}`,
+              from_km: Number(sub.from_km || 0),
+              to_km: Number(sub.to_km || 0),
+              length_km: Number(sub.length_km || 0),
+              contractor_name: sub.contractor_name || '',
+              expiry_date: sub.expiry_date || '',
+              days_remaining: typeof sub.days_remaining === 'number' ? sub.days_remaining : (sub.expiry_date ? Math.ceil((new Date(sub.expiry_date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : undefined),
+              status: sub.status || 'ACTIVE',
+              remarks: sub.remarks || '',
+            })),
 
             contractor_name: item.contractor_name || 'Assigned Contractor',
             contract_mode: item.contract_mode || 'EPC',
