@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Road, ShieldAlert, Scale, FileSpreadsheet, UploadCloud, Menu, X } from 'lucide-react';
+import { Road, ShieldAlert, Scale, FileSpreadsheet, UploadCloud, Users, Menu, X } from 'lucide-react';
 
 interface NavItem {
   label: string;
@@ -38,12 +38,19 @@ const NAV_ITEMS: NavItem[] = [
     description: 'Lawyer Legal Assistance Bills & Pendency Tracking',
   },
   {
+    label: 'Staff Portal',
+    href: '/staff',
+    icon: Users,
+    description: 'Personnel Directory & Organizational Unit Staff Records',
+  },
+  {
     label: 'Data Ingestion',
     href: '/ingest',
     icon: UploadCloud,
     description: 'Bulk Excel & CSV Data Upload Engine',
   },
 ];
+
 
 export function NavigationHeader() {
   const pathname = usePathname();
