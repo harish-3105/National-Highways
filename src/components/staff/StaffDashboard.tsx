@@ -188,82 +188,8 @@ export const StaffDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 4 KPI Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Total Staff */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Total Personnel
-            </p>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">
-              {activeStaffCount}
-            </h3>
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
-              Active Registered Staff
-            </p>
-          </div>
-          <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
-            <Users className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Card 2: Circles Covered */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Circles Deployed
-            </p>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">
-              {uniqueCircles}
-            </h3>
-            <p className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold mt-1">
-              State-wide Circles
-            </p>
-          </div>
-          <div className="p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
-            <MapPin className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Card 3: Divisions Covered */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Divisions Covered
-            </p>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">
-              {uniqueDivisions}
-            </h3>
-            <p className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
-              Active Divisions
-            </p>
-          </div>
-          <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
-            <Building className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Card 4: Soft-Deleted / Archived */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Archived Staff
-            </p>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">
-              {archivedStaffCount}
-            </h3>
-            <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold mt-1">
-              Soft-Deleted Records
-            </p>
-          </div>
-          <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
-            <Archive className="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
       {/* Toolbar & Filters */}
+
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
         {/* Search */}
         <div className="relative w-full md:w-80">
