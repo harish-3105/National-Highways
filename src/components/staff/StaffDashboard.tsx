@@ -12,6 +12,9 @@ import {
   Briefcase,
   Layers,
   Filter,
+  Archive,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { StaffMember, StaffMasterConfig } from "./StaffTypes";
 import { StaffTable } from "./StaffTable";
@@ -35,6 +38,8 @@ export const StaffDashboard: React.FC = () => {
   });
 
   const [loading, setLoading] = useState(true);
+  const [showArchived, setShowArchived] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCircle, setSelectedCircle] = useState("");
   const [selectedDivision, setSelectedDivision] = useState("");
@@ -53,8 +58,9 @@ export const StaffDashboard: React.FC = () => {
   const fetchStaffData = async () => {
     setLoading(true);
     try {
+      const url = showArchived ? "/api/staff?include_deleted=true" : "/api/staff";
       const [staffRes, masterRes] = await Promise.all([
-        fetch("/api/staff"),
+        fetch(url),
         fetch("/api/staff/master-data"),
       ]);
 
@@ -76,7 +82,19 @@ export const StaffDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchStaffData();
-  }, []);
+  }, [showArchived]);
+
+  // Restore staff record callback
+  const handleRestoreStaff = async (staff: StaffMember) => {
+    try {
+      const res = await fetch(`/api/staff?id=${staff.id}`, { method: "PATCH" });
+      if (res.ok) {
+        fetchStaffData();
+      }
+    } catch (err) {
+      console.error("Error restoring staff member:", err);
+    }
+  };
 
   // Filter staff list
   const filteredStaff = staffList.filter((m) => {
@@ -99,10 +117,10 @@ export const StaffDashboard: React.FC = () => {
   });
 
   // Calculate KPI metrics
-  const totalStaff = staffList.length;
+  const activeStaffCount = staffList.filter((s) => s.delete_status !== "DELETED").length;
+  const archivedStaffCount = staffList.filter((s) => s.delete_status === "DELETED").length;
   const uniqueCircles = new Set(staffList.map((s) => s.circle).filter(Boolean)).size;
   const uniqueDivisions = new Set(staffList.map((s) => s.division).filter(Boolean)).size;
-  const uniqueDesignations = new Set(staffList.map((s) => s.designation).filter(Boolean)).size;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-4 md:p-8 space-y-6">
@@ -123,6 +141,27 @@ export const StaffDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Show/Hide Archived Toggle Button */}
+          <button
+            onClick={() => setShowArchived(!showArchived)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition flex items-center gap-2 ${
+              showArchived
+                ? "bg-amber-500 text-white border-amber-600 shadow-sm"
+                : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+            title={showArchived ? "Hide Archived Staff Records" : "Show Soft-Deleted/Archived Staff Records"}
+          >
+            {showArchived ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-amber-500" />}
+            <span>{showArchived ? "Hide Archived" : "Show Archived"}</span>
+            {archivedStaffCount > 0 && (
+              <span className={`px-1.5 py-0.2 text-[10px] font-extrabold rounded-full ${
+                showArchived ? "bg-white text-amber-800" : "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300"
+              }`}>
+                {archivedStaffCount}
+              </span>
+            )}
+          </button>
+
           <button
             onClick={() => setIsMasterDataOpen(true)}
             className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-2 transition"
@@ -158,7 +197,7 @@ export const StaffDashboard: React.FC = () => {
               Total Personnel
             </p>
             <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">
-              {totalStaff}
+              {activeStaffCount}
             </h3>
             <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
               Active Registered Staff
@@ -205,21 +244,21 @@ export const StaffDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 4: Designations */}
+        {/* Card 4: Soft-Deleted / Archived */}
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Designation Roles
+              Archived Staff
             </p>
             <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">
-              {uniqueDesignations}
+              {archivedStaffCount}
             </h3>
             <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold mt-1">
-              Designation Types
+              Soft-Deleted Records
             </p>
           </div>
           <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
-            <Briefcase className="w-6 h-6" />
+            <Archive className="w-6 h-6" />
           </div>
         </div>
       </div>
@@ -320,6 +359,7 @@ export const StaffDashboard: React.FC = () => {
             setSelectedStaff(s);
             setIsDeleteOpen(true);
           }}
+          onRestore={handleRestoreStaff}
         />
       )}
 

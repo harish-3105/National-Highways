@@ -109,6 +109,30 @@ export async function PUT(request: NextRequest) {
   return POST(request);
 }
 
+export async function PATCH(request: NextRequest) {
+  try {
+    const supabase = getSupabaseClient();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ error: "Missing staff member id" }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from("staff_members")
+      .update({ delete_status: "ACTIVE", updated_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    return NextResponse.json({ success: true, message: "Staff member restored successfully" });
+  } catch (err: any) {
+    console.error("PATCH /api/staff error:", err);
+    return NextResponse.json({ error: err.message || "Failed to restore staff member" }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
@@ -132,7 +156,7 @@ export async function DELETE(request: NextRequest) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, message: "Staff member deleted successfully" });
+    return NextResponse.json({ success: true, message: "Staff member soft deleted successfully" });
   } catch (err: any) {
     console.error("DELETE /api/staff error:", err);
     return NextResponse.json({ error: err.message || "Failed to delete staff member" }, { status: 500 });
