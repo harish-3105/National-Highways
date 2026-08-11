@@ -63,6 +63,73 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  try {
+    const supabase = getSupabaseClient();
+    const { id, category, oldValue, newValue } = await request.json();
+
+    if (!newValue || typeof newValue !== "string" || newValue.trim() === "") {
+      return NextResponse.json({ error: "New option value is required" }, { status: 400 });
+    }
+
+    const cleanNewValue = newValue.trim();
+
+    if (id) {
+      // Get old item first
+      const { data: existing } = await supabase.from("staff_master_config").select("*").eq("id", id).single();
+      
+      const { data, error } = await supabase
+        .from("staff_master_config")
+        .update({ value: cleanNewValue })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === "23505") {
+          return NextResponse.json({ error: "An option with this name already exists" }, { status: 400 });
+        }
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      // Sync existing staff member records if category matches a column
+      if (existing && existing.category && existing.value) {
+        const catColumn = existing.category;
+        if (["office", "circle", "division", "sub_division", "section", "sub_section", "designation"].includes(catColumn)) {
+          await (supabase.from("staff_members") as any).update({ [catColumn]: cleanNewValue }).eq(catColumn, existing.value);
+        }
+      }
+
+      return NextResponse.json(data);
+    } else if (category && oldValue) {
+      const cleanCategory = category.trim().toLowerCase();
+      const cleanOldValue = oldValue.trim();
+
+      const { data, error } = await supabase
+        .from("staff_master_config")
+        .update({ value: cleanNewValue })
+        .eq("category", cleanCategory)
+        .eq("value", cleanOldValue)
+        .select();
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      // Sync staff members
+      if (["office", "circle", "division", "sub_division", "section", "sub_section", "designation"].includes(cleanCategory)) {
+        await (supabase.from("staff_members") as any).update({ [cleanCategory]: cleanNewValue }).eq(cleanCategory, cleanOldValue);
+      }
+
+
+      return NextResponse.json(data);
+    } else {
+      return NextResponse.json({ error: "Missing id or category/oldValue parameters" }, { status: 400 });
+    }
+  } catch (err: any) {
+    console.error("PUT /api/staff/master-data error:", err);
+    return NextResponse.json({ error: err.message || "Failed to update master data option" }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
