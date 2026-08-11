@@ -89,16 +89,17 @@ This document captures and tracks all proposed changes, architectural pivots, an
 - **Requested Change**: Remove the **Maintenance DLP Active** KPI card from the corridors dashboard (since DLP is handled separately in `/dlp`). Stakeholders want a different metric in its place; specific replacement KPI metric is to be confirmed by stakeholders.
 
 ### Change 6: New Staff Management Module (`/staff`) with Dynamic Master Data Dropdowns
-- **Module**: New Module — Staff Management
+- **Module**: New Module — Staff Management Portal
+- **Status**: ✅ **COMPLETED & DEPLOYED TO PRODUCTION** (August 11, 2026)
 - **Architectural Approach**: 
-  - **Dynamic Master Data Management** (matching `/fee-bills` architecture): Dropdown options for `Office`, `Circle`, `Division`, `Sub-Division`, `Section`, `Sub-Section`, and `Designation` will **not** be hardcoded.
-  - Users/Admins can dynamically add, edit, and configure their own dropdown options via a Master Data Config interface/modal.
-  - Streamlines departmental onboarding, eliminates guesswork on organizational titles, and grants total flexibility to administrators.
-- **Requested Capabilities**:
-  - Full CRUD lifecycle (Add, Edit, Delete, View, Search).
-  - Dashboard with standard table view, KPI summary metrics, search bar, and organizational hierarchy filters.
-  - Entry/Edit forms with dynamic dropdowns powered by the Master Data config.
-- **Fields Required**:
+  - **Dynamic Master Data Management** (matching `/fee-bills` architecture): Dropdown options for `Office`, `Circle`, `Division`, `Sub-Division`, `Section`, `Sub-Section`, and `Designation` start 100% clean with zero pre-configured hardcoded items.
+  - Users/Admins dynamically add, edit (inline pencil editing auto-syncing DB records), and remove (custom delete confirmation popup modal overlay) their own dropdown options via Master Data Config modal.
+- **Delivered Capabilities**:
+  - Database schema migration [`0014_staff_members_schema.sql`](file:///home/mathir14/nh_proj/supabase/migrations/0014_staff_members_schema.sql) (`staff_members` & `staff_master_config` tables).
+  - Backend API handlers [`/api/staff`](file:///home/mathir14/nh_proj/src/app/api/staff/route.ts) and [`/api/staff/master-data`](file:///home/mathir14/nh_proj/src/app/api/staff/master-data/route.ts) supporting GET, POST, PUT, PATCH (Restore), and DELETE (Soft & Hard delete).
+  - Full UI suite ([`StaffDashboard.tsx`](file:///home/mathir14/nh_proj/src/components/staff/StaffDashboard.tsx), [`StaffTable.tsx`](file:///home/mathir14/nh_proj/src/components/staff/StaffTable.tsx), [`AddStaffModal.tsx`](file:///home/mathir14/nh_proj/src/components/staff/AddStaffModal.tsx), [`EditStaffModal.tsx`](file:///home/mathir14/nh_proj/src/components/staff/EditStaffModal.tsx), [`ViewStaffModal.tsx`](file:///home/mathir14/nh_proj/src/components/staff/ViewStaffModal.tsx), [`DeleteStaffModal.tsx`](file:///home/mathir14/nh_proj/src/components/staff/DeleteStaffModal.tsx), [`StaffMasterDataModal.tsx`](file:///home/mathir14/nh_proj/src/components/staff/StaffMasterDataModal.tsx)).
+  - Instant search across all 10 fields, Circle/Division/Designation filters, **Show Archived** toggle with 1-click restore action, soft-delete notice confirmation modal, and top [`NavigationHeader`](file:///home/mathir14/nh_proj/src/components/NavigationHeader.tsx) integration.
+- **Fields Supported**:
   1. `office` (Office - Dynamic Master Dropdown)
   2. `circle` (Circle - Dynamic Master Dropdown)
   3. `division` (Division - Dynamic Master Dropdown)
@@ -109,6 +110,7 @@ This document captures and tracks all proposed changes, architectural pivots, an
   8. `name` (Staff Name)
   9. `contact_no` (Contact Number)
   10. `emailid` (Email ID)
+
 
 ### Change 7: Categorized Document Management / Vault (Tentative / Unconfirmed)
 - **Module**: Document Vault / File Attachment System
