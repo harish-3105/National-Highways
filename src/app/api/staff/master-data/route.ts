@@ -10,53 +10,6 @@ function getSupabaseClient() {
   return createClient(url, key);
 }
 
-// Default initial dropdown options if table is empty
-const DEFAULT_STAFF_MASTER_CONFIG = [
-  // Offices
-  { category: "office", value: "Chief Engineer Office (CE)" },
-  { category: "office", value: "Superintending Engineer Office (SE)" },
-  { category: "office", value: "Executive Engineer Office (EE)" },
-  { category: "office", value: "Assistant Executive Engineer Office (AEE)" },
-  // Circles
-  { category: "circle", value: "Chennai Circle" },
-  { category: "circle", value: "Coimbatore Circle" },
-  { category: "circle", value: "Madurai Circle" },
-  { category: "circle", value: "Salem Circle" },
-  { category: "circle", value: "Tiruchirappalli Circle" },
-  { category: "circle", value: "Tirunelveli Circle" },
-  // Divisions
-  { category: "division", value: "Chennai Division" },
-  { category: "division", value: "Vellore Division" },
-  { category: "division", value: "Coimbatore Division" },
-  { category: "division", value: "Madurai Division" },
-  { category: "division", value: "Salem Division" },
-  { category: "division", value: "Tiruchirappalli Division" },
-  { category: "division", value: "Tirunelveli Division" },
-  // Sub-Divisions
-  { category: "sub_division", value: "Sub Division I" },
-  { category: "sub_division", value: "Sub Division II" },
-  { category: "sub_division", value: "Sub Division III" },
-  // Sections
-  { category: "section", value: "Technical Section" },
-  { category: "section", value: "Planning & Design Section" },
-  { category: "section", value: "Execution & Quality Control" },
-  { category: "section", value: "Legal & Land Acquisition" },
-  // Sub-Sections
-  { category: "sub_section", value: "Sub Section A" },
-  { category: "sub_section", value: "Sub Section B" },
-  // Designations
-  { category: "designation", value: "Chief Engineer (CE)" },
-  { category: "designation", value: "Superintending Engineer (SE)" },
-  { category: "designation", value: "Executive Engineer (EE)" },
-  { category: "designation", value: "Assistant Executive Engineer (AEE)" },
-  { category: "designation", value: "Assistant Engineer (AE)" },
-  { category: "designation", value: "Junior Engineer (JE)" },
-  { category: "designation", value: "Divisional Accountant (DA)" },
-  { category: "designation", value: "Superintendent" },
-  { category: "designation", value: "Junior Assistant" },
-  { category: "designation", value: "Legal Officer" }
-];
-
 export async function GET() {
   try {
     const supabase = getSupabaseClient();
@@ -68,24 +21,13 @@ export async function GET() {
 
     if (error) {
       console.error("Error fetching staff master config:", error);
-      // Fallback to default if table doesn't exist yet
-      return NextResponse.json(groupMasterData(DEFAULT_STAFF_MASTER_CONFIG));
+      return NextResponse.json(groupMasterData([]));
     }
 
-    if (!data || data.length === 0) {
-      // Auto-seed default config if table is empty
-      const { error: seedError } = await supabase.from("staff_master_config").insert(DEFAULT_STAFF_MASTER_CONFIG);
-      if (!seedError) {
-        const { data: seededData } = await supabase.from("staff_master_config").select("*");
-        return NextResponse.json(groupMasterData(seededData || DEFAULT_STAFF_MASTER_CONFIG));
-      }
-      return NextResponse.json(groupMasterData(DEFAULT_STAFF_MASTER_CONFIG));
-    }
-
-    return NextResponse.json(groupMasterData(data));
+    return NextResponse.json(groupMasterData(data || []));
   } catch (err: any) {
     console.error("GET /api/staff/master-data error:", err);
-    return NextResponse.json(groupMasterData(DEFAULT_STAFF_MASTER_CONFIG));
+    return NextResponse.json(groupMasterData([]));
   }
 }
 
@@ -128,6 +70,13 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get("id");
     const category = searchParams.get("category");
     const value = searchParams.get("value");
+    const purgeAll = searchParams.get("purge_all") === "true";
+
+    if (purgeAll) {
+      const { error } = await supabase.from("staff_master_config").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true, message: "All options purged" });
+    }
 
     if (id) {
       const { error } = await supabase.from("staff_master_config").delete().eq("id", id);
