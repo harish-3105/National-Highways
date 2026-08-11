@@ -19,9 +19,11 @@ import {
   Search,
   AlertTriangle,
   Archive,
+  RefreshCw,
 } from 'lucide-react';
 
 export function FeeBillManagementPortal() {
+
   const [activeTab, setActiveTab] = useState<'list' | 'create' | 'pendency' | 'analytics' | 'settings'>('list');
   const [bills, setBills] = useState<FeeBillRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,17 +173,32 @@ export function FeeBillManagementPortal() {
           </div>
         </div>
 
-        <button
-          onClick={() => {
-            setEditingBill(null);
-            setActiveTab('create');
-          }}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md transition-colors cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Fee Bill Voucher</span>
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={() => {
+              fetchMasterData();
+              fetchFeeBills();
+            }}
+            disabled={loading}
+            className="p-2.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
+            title="Refresh Data"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+
+          <button
+            onClick={() => {
+              setEditingBill(null);
+              setActiveTab('create');
+            }}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Fee Bill Voucher</span>
+          </button>
+        </div>
       </div>
+
 
       {/* Main Tab Navigation */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto">
