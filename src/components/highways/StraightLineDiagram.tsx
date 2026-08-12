@@ -413,23 +413,23 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     <span>Visual Bar Chart</span>
                     <span className="text-[9px] text-slate-400 font-normal">(Bar Fill Neutral)</span>
                   </div>
-                  {/* Vertical Height Specification Key */}
+                  {/* Vertical Carriageway Width Specification Key */}
                   <div className="space-y-0.5 text-[9px]">
                     <div className="flex items-center gap-1.5 text-slate-300">
                       <span className="w-2.5 h-3 bg-slate-600 rounded-xs" />
-                      <span>6L (Height 84px)</span>
+                      <span>6L (Width 20m)</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-300">
                       <span className="w-2.5 h-2.5 bg-slate-600 rounded-xs" />
-                      <span>4L / 4L+PS (Height 68px)</span>
+                      <span>4L / 4L+PS (Width 14m)</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-300">
                       <span className="w-2.5 h-2 bg-slate-600 rounded-xs" />
-                      <span>2L + PS (Height 52px)</span>
+                      <span>2L + PS (Width 10m)</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-300">
                       <span className="w-2.5 h-1.5 bg-slate-600 rounded-xs" />
-                      <span>2L (Height 36px)</span>
+                      <span>2L (Width 7m)</span>
                     </div>
                   </div>
                 </div>
