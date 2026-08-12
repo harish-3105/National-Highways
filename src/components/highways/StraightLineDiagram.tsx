@@ -154,7 +154,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     return Array.from(new Set(ticks)).sort((a, b) => a - b);
   }, [minKm, maxKm, totalSpan]);
 
-  // Helper for lane color styling and Excel-like stepped bar heights
+  // Helper for lane color styling along continuous horizontal highway strip
   const getLaneStyle = (laneConfig: string) => {
     const norm = (laneConfig || '').toLowerCase();
     if (norm.includes('6l') || norm.includes('6-lane')) {
@@ -162,8 +162,6 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         bg: 'bg-purple-600 dark:bg-purple-500 text-white',
         border: 'border-purple-700',
         label: '6-Lane (6L)',
-        heightPx: 104, // Tallest stepped height
-        tierName: '6L (104px)',
       };
     }
     if (norm.includes('4l') || norm.includes('4-lane')) {
@@ -171,8 +169,6 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         bg: 'bg-blue-600 dark:bg-blue-500 text-white',
         border: 'border-blue-700',
         label: '4-Lane (4L)',
-        heightPx: 86, // 4-Lane height
-        tierName: '4L (86px)',
       };
     }
     if (norm.includes('2l+ps') || norm.includes('paved')) {
@@ -180,8 +176,6 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         bg: 'bg-emerald-600 dark:bg-emerald-500 text-white',
         border: 'border-emerald-700',
         label: '2L + Paved Shoulder',
-        heightPx: 68, // 2L+PS height
-        tierName: '2L+PS (68px)',
       };
     }
     if (norm.includes('2l') || norm.includes('2-lane')) {
@@ -189,16 +183,12 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         bg: 'bg-amber-600 dark:bg-amber-500 text-white',
         border: 'border-amber-700',
         label: '2-Lane (2L)',
-        heightPx: 50, // Standard 2L height
-        tierName: '2L (50px)',
       };
     }
     return {
       bg: 'bg-slate-600 dark:bg-slate-500 text-white',
       border: 'border-slate-700',
       label: '< 2-Lane',
-      heightPx: 32, // Thin single lane height
-      tierName: '<2L (32px)',
     };
   };
 
@@ -473,20 +463,20 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               })}
             </div>
 
-            {/* TRACK 3: Core Excel-Style Stepped Height Carriageway Lane Geometry Bar Chart */}
+            {/* TRACK 3: Core Continuous Horizontal Highway Carriageway Bar */}
             <div className="relative mb-6">
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-300 mb-2 flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <span className="px-2 py-0.5 bg-blue-950 text-blue-300 border border-blue-800 rounded font-extrabold">
-                    Carriageway Stepped Lane Profile
+                    Continuous Carriageway Highway Strip
                   </span>
-                  <span className="text-slate-400">(Bar height represents lane capacity: 6L=104px, 4L=86px, 2L+PS=68px, 2L=50px)</span>
+                  <span className="text-slate-400">(End-to-end connected horizontal stretch segments)</span>
                 </span>
-                <span>Linear Span: Km {minKm} → Km {maxKm} ({totalSpan.toFixed(2)} km)</span>
+                <span>Linear Alignment: Km {minKm} → Km {maxKm} ({totalSpan.toFixed(2)} km)</span>
               </div>
 
-              {/* The Stepped Linear Bar Span Baseline Container */}
-              <div className="relative h-[120px] bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden flex items-end p-1 shadow-inner">
+              {/* The Unbroken Linear Highway Bar Span Container */}
+              <div className="relative h-24 bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden shadow-inner flex items-center p-1">
                 {activeStretches.length === 0 ? (
                   <div className="w-full text-center text-xs text-slate-500 py-8">
                     No micro sub-chainage stretches defined for this corridor. Add stretches in Level 2 to render the SLD timeline.
@@ -500,11 +490,10 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     return (
                       <div
                         key={st.id || i}
-                        className={`absolute bottom-1 rounded-t-xl border-t border-x transition-all duration-200 cursor-pointer flex flex-col justify-between p-2 hover:ring-2 hover:ring-white hover:z-30 shadow-lg group ${style.bg} ${style.border}`}
+                        className={`absolute top-1 bottom-1 border-r last:border-r-0 transition-all duration-200 cursor-pointer flex flex-col justify-between p-2 hover:ring-2 hover:ring-white hover:z-30 shadow-md group ${style.bg} ${style.border}`}
                         style={{
                           left: `${leftPct}%`,
                           width: `${widthPct}%`,
-                          height: `${style.heightPx}px`,
                         }}
                         onMouseEnter={() => setHoveredStretch(st)}
                         onClick={() => setHoveredStretch(st)}
@@ -512,7 +501,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                         {/* Top: Stretch Bounds & Carriageway Width */}
                         <div className="flex items-center justify-between text-[10px] font-mono font-extrabold truncate">
                           <span className="bg-black/40 px-1.5 py-0.5 rounded text-white border border-white/20">
-                            Km {st.from_km} - {st.to_km}
+                            Km {st.from_km} → {st.to_km}
                           </span>
                           {st.carriageway_width && (
                             <span className="bg-black/40 px-1.5 py-0.5 rounded text-amber-200 border border-white/20 font-bold">
@@ -521,7 +510,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                           )}
                         </div>
 
-                        {/* Middle: Lane Config Label */}
+                        {/* Middle: Lane Config Title */}
                         <div className="text-[11px] font-extrabold tracking-tight truncate text-center my-auto drop-shadow-md">
                           {st.lane_configuration} ({st.length_km} km)
                         </div>
