@@ -408,49 +408,58 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               <span>Chainage Splits</span>
             </div>
 
-            {/* Row 3: Height-Matched Carriageway Width Caliper Arrow Gauge */}
-            <div className="h-[120px] border-b border-slate-800 px-2 py-1.5 flex flex-col justify-between shrink-0 select-none relative overflow-hidden bg-slate-950">
+            {/* Row 3: Height-Matched Clean Carriageway Width Dimension Arrow Gauge */}
+            <div className="h-[120px] border-b border-slate-800 px-2 py-1 flex flex-col justify-between shrink-0 select-none relative overflow-hidden bg-slate-950">
               {/* Horizontal Centerline Axis Guide Line */}
-              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/20 z-0 pointer-events-none" />
+              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/25 z-0 pointer-events-none" />
 
-              <div className="text-[9.5px] font-extrabold uppercase text-indigo-400 flex items-center justify-between z-10 px-1">
+              <div className="text-[9px] font-extrabold uppercase text-indigo-400 flex items-center justify-between z-10 px-1 pt-0.5">
                 <span className="flex items-center gap-1">
-                  <ArrowUpDown className="w-3.5 h-3.5 text-indigo-400" />
+                  <ArrowUpDown className="w-3 h-3 text-indigo-400" />
                   <span>Carriageway Gauge</span>
                 </span>
                 <span className="text-[8px] text-slate-400 font-normal">Match Height</span>
               </div>
 
-              {/* Height-Matched Dimension Arrows Gauge Columns */}
-              <div className="flex items-center justify-between gap-1 z-10 my-auto py-0.5 px-0.5">
+              {/* Height-Matched Clean Dimension Arrow Columns (Centered on Centerline Axis) */}
+              <div className="flex items-center justify-between gap-1 z-10 my-auto h-[92px] relative px-1">
                 {[
-                  { label: '6L', width: '20m', heightPx: 84, color: 'border-purple-400/80 text-purple-300 bg-purple-950/40' },
-                  { label: '4L', width: '14m', heightPx: 68, color: 'border-blue-400/80 text-blue-300 bg-blue-950/40' },
-                  { label: '2L+PS', width: '10m', heightPx: 52, color: 'border-emerald-400/80 text-emerald-300 bg-emerald-950/40' },
-                  { label: '2L', width: '7m', heightPx: 36, color: 'border-amber-400/80 text-amber-300 bg-amber-950/40' },
+                  { label: '6L', width: '20m', heightPx: 84, color: 'text-purple-400 border-purple-400' },
+                  { label: '4L', width: '14m', heightPx: 68, color: 'text-blue-400 border-blue-400' },
+                  { label: '2L+PS', width: '10m', heightPx: 52, color: 'text-emerald-400 border-emerald-400' },
+                  { label: '2L', width: '7m', heightPx: 36, color: 'text-amber-400 border-amber-400' },
                 ].map((spec) => (
                   <div
                     key={spec.label}
-                    className="flex flex-col items-center justify-center relative flex-1"
+                    className="flex flex-col items-center justify-center relative flex-1 h-full"
                     title={`${spec.label} (${spec.width} width) - Height: ${spec.heightPx}px`}
                   >
-                    {/* Vertical Height-Matched Dimension Arrow Box */}
+                    {/* Clean Vertical Double-Headed Dimension Arrow (Centered at Y=50%) */}
                     <div
-                      className={`w-full max-w-[36px] border rounded-xs relative flex flex-col justify-between items-center shadow-xs ${spec.color}`}
+                      className={`absolute top-1/2 -translate-y-1/2 w-0.5 bg-current flex flex-col justify-between items-center ${spec.color}`}
                       style={{ height: `${spec.heightPx}px` }}
                     >
                       {/* Top Arrowhead */}
-                      <div className="w-1.5 h-1.5 border-t-2 border-l-2 border-current rotate-45 mt-0.5" />
-                      {/* Center Text Badge */}
-                      <span className="text-[8.5px] font-extrabold font-mono leading-none z-10 my-auto drop-shadow-sm truncate px-0.5">
-                        {spec.label}
-                      </span>
+                      <div className="w-1.5 h-1.5 border-t-2 border-l-2 border-current rotate-45 -mt-1 shrink-0" />
+                      {/* Center Label (Only if height is tall enough, e.g. 6L / 4L) */}
+                      {spec.heightPx >= 68 && (
+                        <span className="text-[8px] font-extrabold font-mono leading-none z-10 my-auto bg-slate-950 px-0.5 rounded">
+                          {spec.label}
+                        </span>
+                      )}
                       {/* Bottom Arrowhead */}
-                      <div className="w-1.5 h-1.5 border-b-2 border-r-2 border-current rotate-45 mb-0.5" />
+                      <div className="w-1.5 h-1.5 border-b-2 border-r-2 border-current rotate-45 -mb-1 shrink-0" />
                     </div>
 
-                    {/* Width Dimension Subtext */}
-                    <span className="text-[8px] font-mono font-bold text-slate-400 mt-0.5">
+                    {/* Top Text Label for smaller arrows */}
+                    {spec.heightPx < 68 && (
+                      <span className={`absolute top-0 text-[8px] font-mono font-bold ${spec.color}`}>
+                        {spec.label}
+                      </span>
+                    )}
+
+                    {/* Bottom Width Subtext */}
+                    <span className="absolute bottom-0 text-[8px] font-mono font-bold text-slate-400">
                       {spec.width}
                     </span>
                   </div>
