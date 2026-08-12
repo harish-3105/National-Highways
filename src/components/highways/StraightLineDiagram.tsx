@@ -323,7 +323,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
       </header>
 
       {/* Main Canvas Workspace */}
-      <main className="flex-1 max-w-[1440px] w-full mx-auto p-4 md:p-6 space-y-6">
+      <main className="flex-1 max-w-[1440px] w-full mx-auto p-4 md:p-6 space-y-4">
         {/* Layer Visibility Filters Bar */}
         <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl flex items-center justify-between flex-wrap gap-3 print:hidden">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
@@ -378,111 +378,116 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
           </div>
         </div>
 
-        {/* Dynamic Horizontal Fixed-Width Cell Split SLD Board */}
+        {/* 1-TO-1 PERFECTLY ALIGNED MATRIX GRID SLD BOARD */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex print:border-black print:bg-white">
           
-          {/* LEFT FIXED SIDEBAR: Track Labels & Bar Height Specification Key */}
-          <div className="w-56 shrink-0 bg-slate-950 border-r border-slate-800 p-3 space-y-4 flex flex-col justify-between z-30 select-none">
-            <div className="space-y-4">
-              <div className="border-b border-slate-800 pb-2">
-                <h3 className="text-xs font-extrabold text-blue-400 uppercase tracking-wider">
-                  SLD Track Specification
-                </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  Excel-style equal split cell grid
-                </p>
+          {/* LEFT FIXED SIDEBAR: Row Labels Locked 1-to-1 to Right Canvas Rows */}
+          <div className="w-56 shrink-0 bg-slate-950 border-r border-slate-800 flex flex-col z-30 select-none">
+            {/* Header Title */}
+            <div className="h-12 border-b border-slate-800 px-3 flex flex-col justify-center">
+              <h3 className="text-xs font-extrabold text-blue-400 uppercase tracking-wider">
+                SLD Track Matrix
+              </h3>
+              <p className="text-[9px] text-slate-400">
+                1-to-1 Aligned Row Legend
+              </p>
+            </div>
+
+            {/* Row 1: Important Towns */}
+            {showTowns && (
+              <div className="h-12 border-b border-slate-800 px-3 flex items-center gap-2 text-amber-400 text-xs font-bold shrink-0">
+                <MapPin className="w-4 h-4 shrink-0" />
+                <span>Important Towns</span>
               </div>
+            )}
 
-              {/* Track Row Name Labels matching horizontal split rows */}
-              <div className="space-y-6 pt-1 text-xs font-bold text-slate-300">
-                {showTowns && (
-                  <div className="h-10 flex items-center gap-2 text-amber-400">
-                    <MapPin className="w-4 h-4 shrink-0" />
-                    <span>Important Towns</span>
-                  </div>
-                )}
+            {/* Row 2: Chainage Splits Header */}
+            <div className="h-11 border-b border-slate-800 px-3 flex items-center gap-2 text-blue-400 text-xs font-bold shrink-0">
+              <Ruler className="w-4 h-4 shrink-0" />
+              <span>Chainage Splits</span>
+            </div>
 
-                <div className="h-10 flex items-center gap-2 text-blue-400 border-y border-slate-800 py-1">
-                  <Ruler className="w-4 h-4 shrink-0" />
-                  <span>Chainage Splits</span>
+            {/* Row 3: Visual Bar Chart Corridor */}
+            <div className="h-[120px] border-b border-slate-800 px-3 py-2 flex flex-col justify-center text-xs font-bold text-slate-300 shrink-0 space-y-1">
+              <div className="text-[10px] font-extrabold uppercase text-white flex items-center justify-between">
+                <span>Visual Bar Chart</span>
+                <span className="text-[9px] text-slate-400 font-normal">(Bar Neutral)</span>
+              </div>
+              <div className="space-y-0.5 text-[9px]">
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2.5 h-3 bg-slate-600 rounded-xs" />
+                  <span>6L (Width 20m)</span>
                 </div>
-
-                {/* Main Bar Chart Left Legend Key */}
-                <div className="h-[96px] flex flex-col justify-center border-y border-slate-800 py-1 space-y-1">
-                  <div className="text-[10px] font-extrabold uppercase text-white flex items-center justify-between">
-                    <span>Visual Bar Chart</span>
-                    <span className="text-[9px] text-slate-400 font-normal">(Bar Fill Neutral)</span>
-                  </div>
-                  {/* Vertical Carriageway Width Specification Key */}
-                  <div className="space-y-0.5 text-[9px]">
-                    <div className="flex items-center gap-1.5 text-slate-300">
-                      <span className="w-2.5 h-3 bg-slate-600 rounded-xs" />
-                      <span>6L (Width 20m)</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-slate-300">
-                      <span className="w-2.5 h-2.5 bg-slate-600 rounded-xs" />
-                      <span>4L / 4L+PS (Width 14m)</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-slate-300">
-                      <span className="w-2.5 h-2 bg-slate-600 rounded-xs" />
-                      <span>2L + PS (Width 10m)</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-slate-300">
-                      <span className="w-2.5 h-1.5 bg-slate-600 rounded-xs" />
-                      <span>2L (Width 7m)</span>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2.5 h-2.5 bg-slate-600 rounded-xs" />
+                  <span>4L / 4L+PS (Width 14m)</span>
                 </div>
-
-                {showPcu && (
-                  <div className="h-10 flex items-center gap-2 text-emerald-400">
-                    <Car className="w-4 h-4 shrink-0" />
-                    <span>Traffic PCU Volume</span>
-                  </div>
-                )}
-
-                {showRow && (
-                  <div className="h-10 flex items-center gap-2 text-teal-400">
-                    <Maximize2 className="w-4 h-4 shrink-0" />
-                    <span>Right of Way (ROW)</span>
-                  </div>
-                )}
-
-                {showDpr && (
-                  <div className="h-10 flex items-center gap-2 text-purple-400">
-                    <Info className="w-4 h-4 shrink-0" />
-                    <span>DPR &amp; Schemes</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2.5 h-2 bg-slate-600 rounded-xs" />
+                  <span>2L + PS (Width 10m)</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2.5 h-1.5 bg-slate-600 rounded-xs" />
+                  <span>2L (Width 7m)</span>
+                </div>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-800 text-[10px] text-slate-400 italic">
-              * Equal split cells ensure all tracks maintain unbroken grid alignment.
+            {/* Row 4: Traffic PCU Volume */}
+            {showPcu && (
+              <div className="h-11 border-b border-slate-800 px-3 flex items-center gap-2 text-emerald-400 text-xs font-bold shrink-0">
+                <Car className="w-4 h-4 shrink-0" />
+                <span>Traffic PCU Volume</span>
+              </div>
+            )}
+
+            {/* Row 5: Right of Way (ROW) */}
+            {showRow && (
+              <div className="h-11 border-b border-slate-800 px-3 flex items-center gap-2 text-teal-400 text-xs font-bold shrink-0">
+                <Maximize2 className="w-4 h-4 shrink-0" />
+                <span>Right of Way (ROW)</span>
+              </div>
+            )}
+
+            {/* Row 6: Sanctioned DPR Proposals & Remarks */}
+            {showDpr && (
+              <div className="h-12 border-b border-slate-800 px-3 flex items-center gap-2 text-purple-400 text-xs font-bold shrink-0">
+                <Info className="w-4 h-4 shrink-0" />
+                <span>DPR &amp; Schemes</span>
+              </div>
+            )}
+
+            <div className="p-3 text-[9.5px] text-slate-400 italic mt-auto">
+              * Perfectly aligned rows fill vertically with zero empty space.
             </div>
           </div>
 
-          {/* RIGHT HORIZONTAL SCROLL AREA: Equal Fixed-Width Cell Columns */}
-          <div className="flex-1 overflow-x-auto p-4 md:p-6 bg-slate-900">
+          {/* RIGHT HORIZONTAL SCROLL AREA: Matrix Tracks Matching Sidebar Rows */}
+          <div className="flex-1 overflow-x-auto bg-slate-900 flex flex-col">
             <div
-              className="relative transition-all duration-300"
+              className="relative transition-all duration-300 flex flex-col"
               style={{ width: `${canvasWidthPx}px` }}
             >
-              {/* TRACK 1: Important Towns Grid Row (Rendered for ALL columns) */}
+              {/* Header Spacer Bar */}
+              <div className="h-12 border-b border-slate-800 bg-slate-950/40 px-3 flex items-center text-[10px] font-mono text-slate-400 shrink-0">
+                Linear Corridor Alignment: Km {minKm} → Km {maxKm} ({totalSpan.toFixed(2)} km)
+              </div>
+
+              {/* TRACK 1: Important Towns Grid Row (Height 48px / h-12) */}
               {showTowns && (
-                <div className="relative h-10 mb-4 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center">
+                <div className="relative h-12 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
                     const leftPx = i * colWidthPx;
 
                     return (
                       <div
                         key={st.id || i}
-                        className="absolute h-8 top-1 border-r border-slate-800 flex items-center justify-center px-1 text-[11px] font-bold text-amber-300 truncate cursor-pointer hover:bg-amber-950/40 transition-colors"
+                        className="absolute h-full top-0 border-r border-slate-800 flex items-center justify-center px-1 text-[11px] font-bold text-amber-300 truncate cursor-pointer hover:bg-amber-950/40 transition-colors"
                         style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
                         onClick={() => setHoveredStretch(st)}
                       >
                         {st.important_town ? (
-                          <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded flex items-center gap-1 truncate max-w-full">
+                          <span className="px-2 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-md flex items-center gap-1 truncate max-w-full shadow-xs">
                             <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
                             <span className="truncate">{st.important_town}</span>
                           </span>
@@ -495,8 +500,8 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 </div>
               )}
 
-              {/* TRACK 2: Chainage Splits Row (Km X → Km Y Columns) */}
-              <div className="relative h-10 border-y border-slate-700 bg-slate-850 dark:bg-slate-950/90 flex items-center mb-4">
+              {/* TRACK 2: Chainage Splits Header Row (Height 44px / h-11) */}
+              <div className="relative h-11 border-b border-slate-800 bg-slate-850 dark:bg-slate-950/90 flex items-center shrink-0">
                 {activeStretches.map((st, i) => {
                   const leftPx = i * colWidthPx;
 
@@ -507,7 +512,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                       style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
                     >
                       <span className="truncate">Km {st.from_km}</span>
-                      <span className="text-slate-400 text-[9px] bg-slate-900/80 px-1 rounded border border-slate-700 shrink-0">
+                      <span className="text-slate-400 text-[9px] bg-slate-900 px-1 py-0.5 rounded border border-slate-700 shrink-0 font-sans">
                         {st.length_km}k
                       </span>
                       <span className="truncate">Km {st.to_km}</span>
@@ -516,45 +521,43 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 })}
               </div>
 
-              {/* TRACK 3: CENTERLINE-ALIGNED ROAD CORRIDOR (NEUTRAL BASELINE FILL, DLP COLORS RESERVED) */}
-              <div className="relative mb-6">
-                <div className="relative h-[112px] bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden shadow-inner flex items-center p-0.5">
-                  {/* Horizontal Road Centerline Guide Line */}
-                  <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/25 z-0 pointer-events-none" />
+              {/* TRACK 3: CENTERLINE-ALIGNED ROAD CORRIDOR (Height 120px / h-[120px]) */}
+              <div className="relative h-[120px] border-b border-slate-800 bg-slate-950/90 flex items-center shrink-0 overflow-hidden">
+                {/* Horizontal Road Centerline Guide Line */}
+                <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/25 z-0 pointer-events-none" />
 
-                  {activeStretches.length === 0 ? (
-                    <div className="w-full text-center text-xs text-slate-500 py-8">
-                      No micro sub-chainage stretches defined for this corridor. Add stretches in Level 2 to render the SLD timeline.
-                    </div>
-                  ) : (
-                    activeStretches.map((st, i) => {
-                      const leftPx = i * colWidthPx;
-                      const style = getLaneStyle(st.lane_configuration);
+                {activeStretches.length === 0 ? (
+                  <div className="w-full text-center text-xs text-slate-500 py-8">
+                    No micro sub-chainage stretches defined for this corridor. Add stretches in Level 2 to render the SLD timeline.
+                  </div>
+                ) : (
+                  activeStretches.map((st, i) => {
+                    const leftPx = i * colWidthPx;
+                    const style = getLaneStyle(st.lane_configuration);
 
-                      return (
-                        <div
-                          key={st.id || i}
-                          className={`absolute top-1/2 -translate-y-1/2 border-r border-white/25 border-y transition-all duration-200 cursor-pointer hover:brightness-125 hover:z-30 shadow-md ${style.bg} ${style.border}`}
-                          style={{
-                            left: `${leftPx}px`,
-                            width: `${colWidthPx}px`,
-                            height: `${style.heightPx}px`,
-                          }}
-                          onMouseEnter={() => setHoveredStretch(st)}
-                          onClick={() => setHoveredStretch(st)}
-                          title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.length_km} km, ${st.lane_configuration}) - Neutral Baseline Box (Colors reserved for DLP contract data)`}
-                        >
-                          {/* 100% EMPTY INSIDE - NEUTRAL COLOR FILL (RESERVED FOR DLP CONTRACT DATA) */}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+                    return (
+                      <div
+                        key={st.id || i}
+                        className={`absolute top-1/2 -translate-y-1/2 border-r border-white/25 border-y transition-all duration-200 cursor-pointer hover:brightness-125 hover:z-30 shadow-md ${style.bg} ${style.border}`}
+                        style={{
+                          left: `${leftPx}px`,
+                          width: `${colWidthPx}px`,
+                          height: `${style.heightPx}px`,
+                        }}
+                        onMouseEnter={() => setHoveredStretch(st)}
+                        onClick={() => setHoveredStretch(st)}
+                        title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.length_km} km, ${st.lane_configuration}) - Neutral Baseline Box (Colors reserved for DLP contract data)`}
+                      >
+                        {/* 100% EMPTY INSIDE - NEUTRAL COLOR FILL (RESERVED FOR DLP CONTRACT DATA) */}
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
-              {/* TRACK 4: Traffic PCU Volume Grid Row (Rendered for ALL columns) */}
+              {/* TRACK 4: Traffic PCU Volume Grid Row (Height 44px / h-11) */}
               {showPcu && (
-                <div className="relative h-10 mb-4 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center">
+                <div className="relative h-11 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
                     const leftPx = i * colWidthPx;
                     const pcuStyle = getPcuColor(st.pcu_count);
@@ -562,7 +565,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     return (
                       <div
                         key={st.id || i}
-                        className={`absolute h-8 top-1 border-r border-slate-800 flex items-center justify-center px-1 text-[10px] font-mono font-bold truncate ${pcuStyle}`}
+                        className={`absolute h-full top-0 border-r border-slate-800 flex items-center justify-center px-1 text-[10px] font-mono font-bold truncate ${pcuStyle}`}
                         style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
                       >
                         {st.pcu_count && st.pcu_count > 0 ? (
@@ -576,16 +579,16 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 </div>
               )}
 
-              {/* TRACK 5: Right of Way (ROW) Grid Row (Rendered for ALL columns) */}
+              {/* TRACK 5: Right of Way (ROW) Grid Row (Height 44px / h-11) */}
               {showRow && (
-                <div className="relative h-10 mb-4 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center">
+                <div className="relative h-11 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
                     const leftPx = i * colWidthPx;
 
                     return (
                       <div
                         key={st.id || i}
-                        className="absolute h-8 top-1 border-r border-slate-800 flex items-center justify-center px-1 text-[10px] font-bold text-teal-300 truncate"
+                        className="absolute h-full top-0 border-r border-slate-800 flex items-center justify-center px-1 text-[10px] font-bold text-teal-300 truncate"
                         style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
                       >
                         {st.row_width ? (
@@ -601,21 +604,21 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 </div>
               )}
 
-              {/* TRACK 6: Sanctioned DPR Proposals & Remarks Grid Row (Rendered for ALL columns) */}
+              {/* TRACK 6: Sanctioned DPR Proposals & Remarks Grid Row (Height 48px / h-12) */}
               {showDpr && (
-                <div className="relative h-10 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center">
+                <div className="relative h-12 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
                     const leftPx = i * colWidthPx;
 
                     return (
                       <div
                         key={st.id || i}
-                        className="absolute h-8 top-1 border-r border-slate-800 flex items-center justify-center px-1.5 text-[10px] font-semibold text-purple-200 truncate cursor-pointer hover:bg-purple-950/40 transition-colors"
+                        className="absolute h-full top-0 border-r border-slate-800 flex items-center justify-center px-1.5 text-[10px] font-semibold text-purple-200 truncate cursor-pointer hover:bg-purple-950/40 transition-colors"
                         style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
                         onClick={() => setHoveredStretch(st)}
                       >
                         {st.dpr_status ? (
-                          <span className="px-2 py-0.5 bg-purple-950/80 text-purple-200 border border-purple-500/50 rounded flex items-center gap-1 truncate max-w-full">
+                          <span className="px-2 py-1 bg-purple-950/80 text-purple-200 border border-purple-500/50 rounded-md flex items-center gap-1 truncate max-w-full shadow-xs">
                             <Info className="w-3 h-3 text-purple-400 shrink-0" />
                             <span className="truncate">{st.dpr_status}</span>
                           </span>
