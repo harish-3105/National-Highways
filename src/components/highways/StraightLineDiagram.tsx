@@ -157,34 +157,34 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
       return {
         ...neutralStyle,
         label: '6-Lane (6L)',
-        heightPx: 170,
+        heightPx: 150,
       };
     }
     if (norm.includes('4l') || norm.includes('4-lane')) {
       return {
         ...neutralStyle,
         label: '4-Lane / 4L+PS',
-        heightPx: 130,
+        heightPx: 110,
       };
     }
     if (norm.includes('2l+ps') || norm.includes('paved')) {
       return {
         ...neutralStyle,
         label: '2L + Paved Shoulder',
-        heightPx: 90,
+        heightPx: 75,
       };
     }
     if (norm.includes('2l') || norm.includes('2-lane')) {
       return {
         ...neutralStyle,
         label: '2-Lane (2L)',
-        heightPx: 50,
+        heightPx: 40,
       };
     }
     return {
       ...neutralStyle,
       label: '< 2-Lane',
-      heightPx: 30,
+      heightPx: 22,
     };
   };
 
@@ -398,26 +398,23 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               <span>Chainage Splits</span>
             </div>
 
-            {/* Row 3: Height-Matched Clean Carriageway Width Dimension Arrow Gauge (STRETCHED DYNAMICALLY) */}
+            {/* Row 3: Height-Matched Clean Carriageway Width Dimension Arrow Gauge */}
             <div className="flex-1 min-h-[200px] border-b border-slate-800 px-2 py-2 flex flex-col justify-between shrink-0 select-none relative overflow-hidden bg-slate-950">
               {/* Horizontal Centerline Axis Guide Line */}
               <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/25 z-0 pointer-events-none" />
 
-              <div className="text-[9.5px] font-extrabold uppercase text-indigo-400 flex items-center justify-between z-10 px-1 pt-0.5">
-                <span className="flex items-center gap-1">
-                  <ArrowUpDown className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Carriageway Gauge</span>
-                </span>
-                <span className="text-[8.5px] text-slate-400 font-normal">Match Height</span>
+              <div className="absolute top-2 left-2 text-[9.5px] font-extrabold uppercase text-indigo-400 flex items-center gap-1 z-20">
+                <ArrowUpDown className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Carriageway Gauge</span>
               </div>
 
               {/* Height-Matched Clean Dimension Arrow Columns (Centered on Centerline Axis) */}
-              <div className="flex items-center justify-between gap-1 z-10 my-auto h-[180px] relative px-1">
+              <div className="absolute inset-0 pt-6 px-1 flex items-center justify-around z-10">
                 {[
-                  { label: '6L', width: '20m', heightPx: 170, color: 'text-purple-400 border-purple-400' },
-                  { label: '4L', width: '14m', heightPx: 130, color: 'text-blue-400 border-blue-400' },
-                  { label: '2L+PS', width: '10m', heightPx: 90, color: 'text-emerald-400 border-emerald-400' },
-                  { label: '2L', width: '7m', heightPx: 50, color: 'text-amber-400 border-amber-400' },
+                  { label: '6L', width: '20m', heightPx: 150, color: 'text-purple-400 border-purple-400' },
+                  { label: '4L', width: '14m', heightPx: 110, color: 'text-blue-400 border-blue-400' },
+                  { label: '2L+PS', width: '10m', heightPx: 75, color: 'text-emerald-400 border-emerald-400' },
+                  { label: '2L', width: '7m', heightPx: 40, color: 'text-amber-400 border-amber-400' },
                 ].map((spec) => (
                   <div
                     key={spec.label}
@@ -426,7 +423,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                   >
                     {/* 100% CLEAN UNBROKEN VERTICAL ARROW LINE (Exact Height Match) */}
                     <div
-                      className={`absolute top-1/2 -translate-y-1/2 left-1.5 w-0.5 bg-current flex flex-col justify-between items-center ${spec.color}`}
+                      className={`absolute top-1/2 -translate-y-1/2 left-1 w-0.5 bg-current flex flex-col justify-between items-center ${spec.color}`}
                       style={{ height: `${spec.heightPx}px` }}
                     >
                       {/* Top Arrowhead at exact top boundary of lane height */}
