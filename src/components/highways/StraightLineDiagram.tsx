@@ -423,7 +423,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                       style={{ left: spec.leftOffset, height: `${spec.heightPx}px` }}
                     />
 
-                    {/* 2. TOP HORIZONTAL LINE WITH RIGHT ARROWHEAD (from Head of Vertical Line) */}
+                    {/* 2. TOP HORIZONTAL LINE WITH RIGHT ARROWHEAD (Seamlessly connected to Head of Vertical Line) */}
                     <div
                       className={`absolute border-t-2 flex items-center justify-end ${spec.color}`}
                       style={{
@@ -432,19 +432,19 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                         right: 0,
                       }}
                     >
-                      <div className="w-1.5 h-1.5 border-t-2 border-r-2 border-current rotate-45 -mr-1 -mt-0.5 shrink-0" />
+                      <div className="w-1.5 h-1.5 border-t-2 border-r-2 border-current rotate-45 -mr-1 -mt-[3px] shrink-0" />
                     </div>
 
-                    {/* 3. BOTTOM HORIZONTAL LINE WITH RIGHT ARROWHEAD (from Tail of Vertical Line) */}
+                    {/* 3. BOTTOM HORIZONTAL LINE WITH RIGHT ARROWHEAD (Seamlessly connected to Tail of Vertical Line) */}
                     <div
-                      className={`absolute border-b-2 flex items-center justify-end ${spec.color}`}
+                      className={`absolute border-t-2 flex items-center justify-end ${spec.color}`}
                       style={{
-                        top: `calc(50% + ${spec.heightPx / 2}px)`,
+                        top: `calc(50% + ${spec.heightPx / 2}px - 2px)`,
                         left: spec.leftOffset,
                         right: 0,
                       }}
                     >
-                      <div className="w-1.5 h-1.5 border-b-2 border-r-2 border-current rotate-45 -mr-1 -mb-0.5 shrink-0" />
+                      <div className="w-1.5 h-1.5 border-t-2 border-r-2 border-current rotate-45 -mr-1 -mt-[3px] shrink-0" />
                     </div>
 
                     {/* 4. BRACKET TEXT LABEL (Inside Docking Slot) */}
