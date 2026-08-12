@@ -68,13 +68,20 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
       const hwData = await hwRes.json();
       
       let foundHighway: HighwayMaster | null = null;
-      if (hwData.success && Array.isArray(hwData.highways)) {
-        foundHighway = hwData.highways.find(
-          (h: HighwayMaster) =>
-            h.id === highwayIdOrCode ||
-            h.road_code.toUpperCase() === highwayIdOrCode.toUpperCase() ||
-            h.road_code.toUpperCase().replace(/^NH-?/, '') === highwayIdOrCode.toUpperCase().replace(/^NH-?/, '')
-        ) || null;
+      const corridorsList: HighwayMaster[] = hwData.corridors || hwData.highways || [];
+      
+      if (hwData.success && Array.isArray(corridorsList)) {
+        const searchTarget = decodeURIComponent(highwayIdOrCode).trim().toUpperCase();
+        const searchNum = searchTarget.replace(/[^0-9A-Z]/gi, '');
+
+        foundHighway = corridorsList.find((h: HighwayMaster) => {
+          const idMatch = h.id === highwayIdOrCode;
+          const codeMatch = (h.road_code || '').toUpperCase() === searchTarget;
+          const codeNormMatch = searchNum ? (h.road_code || '').toUpperCase().replace(/[^0-9A-Z]/gi, '') === searchNum : false;
+          const newNhMatch = searchNum ? (h.new_nh_no || '').toUpperCase().replace(/[^0-9A-Z]/gi, '') === searchNum : false;
+          const oldNhMatch = searchNum ? (h.old_nh_no || '').toUpperCase().replace(/[^0-9A-Z]/gi, '') === searchNum : false;
+          return idMatch || codeMatch || codeNormMatch || newNhMatch || oldNhMatch;
+        }) || null;
       }
 
       if (!foundHighway) {
