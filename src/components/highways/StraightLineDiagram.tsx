@@ -50,7 +50,6 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
   const [viewType, setViewType] = useState<'MICRO_LANE' | 'MACRO_PCU'>('MICRO_LANE');
   const [zoomLevel, setZoomLevel] = useState<number>(1); // 1x, 1.5x, 2x, 3x, 4x
   const [showTowns, setShowTowns] = useState<boolean>(true);
-  const [showCarriagewaySpec, setShowCarriagewaySpec] = useState<boolean>(true);
   const [showPcu, setShowPcu] = useState<boolean>(true);
   const [showRow, setShowRow] = useState<boolean>(true);
   const [showDpr, setShowDpr] = useState<boolean>(true);
@@ -347,17 +346,6 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
             <label className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer hover:bg-slate-700/60">
               <input
                 type="checkbox"
-                checked={showCarriagewaySpec}
-                onChange={(e) => setShowCarriagewaySpec(e.target.checked)}
-                className="rounded border-slate-700 text-blue-600 focus:ring-0"
-              />
-              <Ruler className="w-3.5 h-3.5 text-blue-400" />
-              <span>Carriageway Spec</span>
-            </label>
-
-            <label className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer hover:bg-slate-700/60">
-              <input
-                type="checkbox"
                 checked={showPcu}
                 onChange={(e) => setShowPcu(e.target.checked)}
                 className="rounded border-slate-700 text-blue-600 focus:ring-0"
@@ -419,13 +407,6 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                   <span>Chainage Splits</span>
                 </div>
 
-                {showCarriagewaySpec && (
-                  <div className="h-10 flex items-center gap-2 text-indigo-400">
-                    <GitCommit className="w-4 h-4 shrink-0" />
-                    <span>Carriageway Spec</span>
-                  </div>
-                )}
-
                 {/* Main Bar Chart Left Legend Key */}
                 <div className="h-[96px] flex flex-col justify-center border-y border-slate-800 py-1 space-y-1">
                   <div className="text-[10px] font-extrabold uppercase text-white flex items-center justify-between">
@@ -477,7 +458,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
             </div>
 
             <div className="pt-3 border-t border-slate-800 text-[10px] text-slate-400 italic">
-              * Bar colors are reserved exclusively for DLP contract status (Active, STMC, PBMC).
+              * Bar heights directly communicate lane configurations (6L, 4L, 2L+PS, 2L).
             </div>
           </div>
 
@@ -532,29 +513,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 })}
               </div>
 
-              {/* TRACK 3: Carriageway Specification Split Row (Outside the Bar) */}
-              {showCarriagewaySpec && (
-                <div className="relative h-10 mb-4 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center">
-                  {activeStretches.map((st, i) => {
-                    const leftPx = i * colWidthPx;
-
-                    return (
-                      <div
-                        key={st.id || i}
-                        className="absolute h-8 top-1 border-r border-slate-800 flex items-center justify-center px-2 text-[11px] font-extrabold text-indigo-300 truncate"
-                        style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
-                      >
-                        <span className="truncate">
-                          {st.lane_configuration}
-                          {st.carriageway_width ? ` (${st.carriageway_width})` : ''}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* TRACK 4: CENTERLINE-ALIGNED ROAD CORRIDOR (NEUTRAL BASELINE FILL, DLP COLORS RESERVED) */}
+              {/* TRACK 3: CENTERLINE-ALIGNED ROAD CORRIDOR (NEUTRAL BASELINE FILL, DLP COLORS RESERVED) */}
               <div className="relative mb-6">
                 <div className="relative h-[112px] bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden shadow-inner flex items-center p-0.5">
                   {/* Horizontal Road Centerline Guide Line */}
@@ -590,7 +549,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 </div>
               </div>
 
-              {/* TRACK 5: Traffic PCU Volume Split Row */}
+              {/* TRACK 4: Traffic PCU Volume Split Row */}
               {showPcu && (
                 <div className="relative h-10 mb-4 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center">
                   {activeStretches.map((st, i) => {
@@ -611,7 +570,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 </div>
               )}
 
-              {/* TRACK 6: Right of Way (ROW) Split Row */}
+              {/* TRACK 5: Right of Way (ROW) Split Row */}
               {showRow && (
                 <div className="relative h-10 mb-4 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center">
                   {activeStretches.map((st, i) => {
@@ -631,7 +590,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 </div>
               )}
 
-              {/* TRACK 7: Sanctioned DPR Proposals & Remarks Split Row */}
+              {/* TRACK 6: Sanctioned DPR Proposals & Remarks Split Row */}
               {showDpr && (
                 <div className="relative h-12 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center">
                   {activeStretches.map((st, i) => {
