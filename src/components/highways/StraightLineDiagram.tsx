@@ -408,40 +408,53 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               <span>Chainage Splits</span>
             </div>
 
-            {/* Row 3: Carriageway Width Dimension Arrow Legend */}
-            <div className="h-[120px] border-b border-slate-800 px-3 py-2 flex flex-col justify-center text-xs font-bold text-slate-300 shrink-0 space-y-1.5">
-              <div className="text-[10px] font-extrabold uppercase text-indigo-400 flex items-center gap-1.5">
-                <ArrowUpDown className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                <span>Carriageway Width</span>
-              </div>
-              
-              {/* Vertical Dimension Arrow Legend */}
-              <div className="flex items-center gap-2 pl-1">
-                {/* Vertical Double-Headed Dimension Arrow */}
-                <div className="w-1.5 h-16 bg-indigo-500/30 rounded-full border border-indigo-400/50 relative flex flex-col justify-between items-center shrink-0">
-                  <div className="w-2 h-2 border-t-2 border-l-2 border-indigo-300 rotate-45 -mt-0.5" />
-                  <div className="w-2 h-2 border-b-2 border-r-2 border-indigo-300 rotate-45 -mb-0.5" />
-                </div>
+            {/* Row 3: Height-Matched Carriageway Width Caliper Arrow Gauge */}
+            <div className="h-[120px] border-b border-slate-800 px-2 py-1.5 flex flex-col justify-between shrink-0 select-none relative overflow-hidden bg-slate-950">
+              {/* Horizontal Centerline Axis Guide Line */}
+              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/20 z-0 pointer-events-none" />
 
-                {/* Width Specs Stack */}
-                <div className="space-y-0.5 text-[9px] flex-1">
-                  <div className="flex items-center justify-between text-slate-200">
-                    <span className="font-semibold">6L</span>
-                    <span className="font-mono text-indigo-300 font-bold">20m</span>
+              <div className="text-[9.5px] font-extrabold uppercase text-indigo-400 flex items-center justify-between z-10 px-1">
+                <span className="flex items-center gap-1">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Carriageway Gauge</span>
+                </span>
+                <span className="text-[8px] text-slate-400 font-normal">Match Height</span>
+              </div>
+
+              {/* Height-Matched Dimension Arrows Gauge Columns */}
+              <div className="flex items-center justify-between gap-1 z-10 my-auto py-0.5 px-0.5">
+                {[
+                  { label: '6L', width: '20m', heightPx: 84, color: 'border-purple-400/80 text-purple-300 bg-purple-950/40' },
+                  { label: '4L', width: '14m', heightPx: 68, color: 'border-blue-400/80 text-blue-300 bg-blue-950/40' },
+                  { label: '2L+PS', width: '10m', heightPx: 52, color: 'border-emerald-400/80 text-emerald-300 bg-emerald-950/40' },
+                  { label: '2L', width: '7m', heightPx: 36, color: 'border-amber-400/80 text-amber-300 bg-amber-950/40' },
+                ].map((spec) => (
+                  <div
+                    key={spec.label}
+                    className="flex flex-col items-center justify-center relative flex-1"
+                    title={`${spec.label} (${spec.width} width) - Height: ${spec.heightPx}px`}
+                  >
+                    {/* Vertical Height-Matched Dimension Arrow Box */}
+                    <div
+                      className={`w-full max-w-[36px] border rounded-xs relative flex flex-col justify-between items-center shadow-xs ${spec.color}`}
+                      style={{ height: `${spec.heightPx}px` }}
+                    >
+                      {/* Top Arrowhead */}
+                      <div className="w-1.5 h-1.5 border-t-2 border-l-2 border-current rotate-45 mt-0.5" />
+                      {/* Center Text Badge */}
+                      <span className="text-[8.5px] font-extrabold font-mono leading-none z-10 my-auto drop-shadow-sm truncate px-0.5">
+                        {spec.label}
+                      </span>
+                      {/* Bottom Arrowhead */}
+                      <div className="w-1.5 h-1.5 border-b-2 border-r-2 border-current rotate-45 mb-0.5" />
+                    </div>
+
+                    {/* Width Dimension Subtext */}
+                    <span className="text-[8px] font-mono font-bold text-slate-400 mt-0.5">
+                      {spec.width}
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-300">
-                    <span className="font-semibold">4L / 4L+PS</span>
-                    <span className="font-mono text-blue-300 font-bold">14m</span>
-                  </div>
-                  <div className="flex items-center justify-between text-slate-300">
-                    <span className="font-semibold">2L + PS</span>
-                    <span className="font-mono text-emerald-300 font-bold">10m</span>
-                  </div>
-                  <div className="flex items-center justify-between text-slate-400">
-                    <span className="font-semibold">2L</span>
-                    <span className="font-mono text-amber-300 font-bold">7m</span>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
 
