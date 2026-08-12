@@ -412,9 +412,9 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               <div className="absolute inset-0 flex items-center z-10 pointer-events-none">
                 {[
                   { label: '6L', width: '20m', heightPx: 150, leftOffset: '12px', color: 'text-purple-400 border-purple-400' },
-                  { label: '4L', width: '14m', heightPx: 110, leftOffset: '60px', color: 'text-blue-400 border-blue-400' },
-                  { label: '2L+PS', width: '10m', heightPx: 75, leftOffset: '110px', color: 'text-emerald-400 border-emerald-400' },
-                  { label: '2L', width: '7m', heightPx: 40, leftOffset: '160px', color: 'text-amber-400 border-amber-400' },
+                  { label: '4L / 4L+PS', width: '14m', heightPx: 110, leftOffset: '50px', color: 'text-blue-400 border-blue-400' },
+                  { label: '2L+PS', width: '10m', heightPx: 75, leftOffset: '115px', color: 'text-emerald-400 border-emerald-400' },
+                  { label: '2L', width: '7m', heightPx: 40, leftOffset: '165px', color: 'text-amber-400 border-amber-400' },
                 ].map((spec) => (
                   <React.Fragment key={spec.label}>
                     {/* 1. SINGLE VERTICAL LINE (Exact Bar Height Stem) */}
