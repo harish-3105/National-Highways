@@ -51,6 +51,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
   const [viewType, setViewType] = useState<'MICRO_LANE' | 'MACRO_PCU'>('MICRO_LANE');
   const [zoomLevel, setZoomLevel] = useState<number>(1); // 1x, 1.5x, 2x, 3x, 4x
   const [showTowns, setShowTowns] = useState<boolean>(true);
+  const [showCw, setShowCw] = useState<boolean>(true);
   const [showPcu, setShowPcu] = useState<boolean>(true);
   const [showRow, setShowRow] = useState<boolean>(true);
   const [showDpr, setShowDpr] = useState<boolean>(true);
@@ -347,6 +348,17 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
             <label className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer hover:bg-slate-700/60">
               <input
                 type="checkbox"
+                checked={showCw}
+                onChange={(e) => setShowCw(e.target.checked)}
+                className="rounded border-slate-700 text-blue-600 focus:ring-0"
+              />
+              <ArrowUpDown className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Carriageway Specs</span>
+            </label>
+
+            <label className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer hover:bg-slate-700/60">
+              <input
+                type="checkbox"
                 checked={showPcu}
                 onChange={(e) => setShowPcu(e.target.checked)}
                 className="rounded border-slate-700 text-blue-600 focus:ring-0"
@@ -467,7 +479,15 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               </div>
             </div>
 
-            {/* Row 4: Traffic PCU Volume */}
+            {/* Row 4: Carriageway Specs / Width */}
+            {showCw && (
+              <div className="h-11 border-b border-slate-800 px-3 flex items-center gap-2 text-indigo-400 text-xs font-bold shrink-0">
+                <ArrowUpDown className="w-4 h-4 shrink-0" />
+                <span>Carriageway Specs</span>
+              </div>
+            )}
+
+            {/* Row 5: Traffic PCU Volume */}
             {showPcu && (
               <div className="h-11 border-b border-slate-800 px-3 flex items-center gap-2 text-emerald-400 text-xs font-bold shrink-0">
                 <Car className="w-4 h-4 shrink-0" />
@@ -579,6 +599,34 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                   })
                 )}
               </div>
+
+              {/* TRACK 4: Carriageway Specs / Width Grid Row (Height 44px / h-11) */}
+              {showCw && (
+                <div className="relative h-11 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
+                  {activeStretches.map((st, i) => {
+                    const leftPx = i * colWidthPx;
+                    const style = getLaneStyle(st.lane_configuration);
+                    const widthNum = style.heightPx === 150 ? '20m' : style.heightPx === 110 ? '14m' : style.heightPx === 75 ? '10m' : '7m';
+                    const specLabel = st.carriageway_width ? `CW: ${st.carriageway_width}` : (st.lane_configuration ? `${st.lane_configuration} (${widthNum})` : '');
+
+                    return (
+                      <div
+                        key={st.id || i}
+                        className="absolute h-full top-0 border-r border-slate-800 flex items-center justify-center px-1 text-[10px] font-bold text-indigo-300 truncate"
+                        style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
+                      >
+                        {specLabel ? (
+                          <span className="px-2 py-0.5 bg-indigo-950/70 text-indigo-300 border border-indigo-500/40 rounded truncate max-w-full font-mono">
+                            {specLabel}
+                          </span>
+                        ) : (
+                          <span className="text-slate-600 font-mono text-[10px]">—</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* TRACK 4: Traffic PCU Volume Grid Row (Height 44px / h-11) */}
               {showPcu && (
