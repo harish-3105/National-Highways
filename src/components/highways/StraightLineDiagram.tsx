@@ -424,23 +424,25 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     className="flex flex-col items-center justify-center relative flex-1 h-full"
                     title={`${spec.label} (${spec.width} width) - Height: ${spec.heightPx}px`}
                   >
-                    {/* Clean Vertical Double-Headed Dimension Arrow (Centered at Y=50%) */}
+                    {/* Clean Vertical Double-Headed Dimension Arrow (Exact height match to road bars) */}
                     <div
                       className={`absolute top-1/2 -translate-y-1/2 w-0.5 bg-current flex flex-col justify-between items-center ${spec.color}`}
                       style={{ height: `${spec.heightPx}px` }}
                     >
-                      {/* Top Arrowhead */}
+                      {/* Top Arrowhead at exact top boundary of lane height */}
                       <div className="w-1.5 h-1.5 border-t-2 border-l-2 border-current rotate-45 -mt-1 shrink-0" />
-                      {/* Center Label */}
-                      <span className="text-[8px] font-extrabold font-mono leading-none z-10 my-auto bg-slate-950 px-0.5 rounded">
+                      
+                      {/* Center Label Badge */}
+                      <span className="text-[8px] font-extrabold font-mono leading-none z-10 my-auto bg-slate-950 px-0.5 py-0.5 rounded border border-current/40 shadow-xs whitespace-nowrap">
                         {spec.label}
                       </span>
-                      {/* Bottom Arrowhead */}
+                      
+                      {/* Bottom Arrowhead at exact bottom boundary of lane height */}
                       <div className="w-1.5 h-1.5 border-b-2 border-r-2 border-current rotate-45 -mb-1 shrink-0" />
                     </div>
 
-                    {/* Bottom Width Subtext */}
-                    <span className="absolute bottom-0 text-[8px] font-mono font-bold text-slate-400">
+                    {/* Width Subtext placed below bottom arrowhead */}
+                    <span className="absolute bottom-0 text-[8px] font-mono font-bold text-slate-400 leading-none">
                       {spec.width}
                     </span>
                   </div>
