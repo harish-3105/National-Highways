@@ -549,9 +549,9 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 </div>
               )}
 
-              {/* TRACK 4: THE MAIN VISUAL BAR CHART (100% EMPTY BAR BOXES FOR DLP DATA) */}
+              {/* TRACK 4: CONTINUOUS ROAD CORRIDOR RIBBON (100% EMPTY BLOCKS RESERVED FOR DLP) */}
               <div className="relative mb-6">
-                <div className="relative h-[96px] bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden flex items-end p-1 shadow-inner">
+                <div className="relative h-[104px] bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden flex items-end shadow-inner p-0.5">
                   {activeStretches.length === 0 ? (
                     <div className="w-full text-center text-xs text-slate-500 py-8">
                       No micro sub-chainage stretches defined for this corridor. Add stretches in Level 2 to render the SLD timeline.
@@ -559,13 +559,13 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                   ) : (
                     activeStretches.map((st, i) => {
                       const leftPct = ((st.from_km - minKm) / totalSpan) * 100;
-                      const widthPct = Math.max(0.2, ((st.to_km - st.from_km) / totalSpan) * 100);
+                      const widthPct = Math.max(0.1, ((st.to_km - st.from_km) / totalSpan) * 100);
                       const style = getLaneStyle(st.lane_configuration);
 
                       return (
                         <div
                           key={st.id || i}
-                          className={`absolute bottom-1 border-r last:border-r-0 border-t border-x rounded-t-lg transition-all duration-200 cursor-pointer hover:ring-2 hover:ring-white hover:z-30 shadow-md ${style.bg} ${style.border}`}
+                          className={`absolute bottom-0 border-r border-white/20 border-t transition-all duration-200 cursor-pointer hover:brightness-125 hover:z-30 shadow-md ${style.bg} ${style.border}`}
                           style={{
                             left: `${leftPct}%`,
                             width: `${widthPct}%`,
@@ -573,9 +573,9 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                           }}
                           onMouseEnter={() => setHoveredStretch(st)}
                           onClick={() => setHoveredStretch(st)}
-                          title={`Km ${st.from_km} to Km ${st.to_km} (${st.lane_configuration}) - Empty Bar Box (Reserved for DLP Contract Data)`}
+                          title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.lane_configuration}) - Continuous Road Corridor (Clean Box Reserved for DLP Data)`}
                         >
-                          {/* 100% EMPTY INSIDE RIGHT NOW (COMPLETELY CLEAN FOR DLP DATA) */}
+                          {/* 100% EMPTY INSIDE - CONTINUOUS UNBROKEN ROAD RIBBON REGION */}
                         </div>
                       );
                     })
