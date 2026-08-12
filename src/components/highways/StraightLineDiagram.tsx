@@ -557,8 +557,8 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                       style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
                     >
                       <span className="truncate">Km {st.from_km}</span>
-                      <span className="text-slate-400 text-[9px] bg-slate-900 px-1 py-0.5 rounded border border-slate-700 shrink-0 font-sans">
-                        {st.length_km}k
+                      <span className="text-slate-400 text-[9px] bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 shrink-0 font-sans">
+                        {st.length_km} km
                       </span>
                       <span className="truncate">Km {st.to_km}</span>
                     </div>
