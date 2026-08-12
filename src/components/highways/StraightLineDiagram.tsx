@@ -421,17 +421,15 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     className="flex items-center relative flex-1 h-full"
                     title={`${spec.label} (${spec.width} width) - Height: ${spec.heightPx}px`}
                   >
-                    {/* 100% CLEAN UNBROKEN VERTICAL ARROW (Tip-to-Tip Total Height Matches Road Bar Exactly) */}
+                    {/* 100% CLEAN UNBROKEN VERTICAL ARROW LINE (Exact Height Match) */}
                     <div
-                      className={`absolute top-1/2 -translate-y-1/2 left-1 w-2 flex flex-col items-center justify-between pointer-events-none ${spec.color}`}
+                      className={`absolute top-1/2 -translate-y-1/2 left-1 w-0.5 bg-current flex flex-col justify-between items-center ${spec.color}`}
                       style={{ height: `${spec.heightPx}px` }}
                     >
-                      {/* Top Arrowhead tip aligns to exact top edge of road bar */}
-                      <div className="w-1.5 h-1.5 border-t-2 border-l-2 border-current rotate-45 shrink-0 mt-0.5" />
-                      {/* Vertical Arrow Shaft Line (shrinks to accommodate arrowheads inside) */}
-                      <div className="w-0.5 flex-1 bg-current" />
-                      {/* Bottom Arrowhead tip aligns to exact bottom edge of road bar */}
-                      <div className="w-1.5 h-1.5 border-b-2 border-r-2 border-current rotate-45 shrink-0 mb-0.5" />
+                      {/* Top Arrowhead at exact top boundary of lane height */}
+                      <div className="w-1.5 h-1.5 border-t-2 border-l-2 border-current rotate-45 -mt-1 shrink-0" />
+                      {/* Bottom Arrowhead at exact bottom boundary of lane height */}
+                      <div className="w-1.5 h-1.5 border-b-2 border-r-2 border-current rotate-45 -mb-1 shrink-0" />
                     </div>
 
                     {/* SIDE TEXT LABEL (Placed to the right side of arrow line) */}
