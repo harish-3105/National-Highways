@@ -157,34 +157,34 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
       return {
         ...neutralStyle,
         label: '6-Lane (6L)',
-        heightPx: 84,
+        heightPx: 112,
       };
     }
     if (norm.includes('4l') || norm.includes('4-lane')) {
       return {
         ...neutralStyle,
         label: '4-Lane / 4L+PS',
-        heightPx: 68,
+        heightPx: 88,
       };
     }
     if (norm.includes('2l+ps') || norm.includes('paved')) {
       return {
         ...neutralStyle,
         label: '2L + Paved Shoulder',
-        heightPx: 52,
+        heightPx: 64,
       };
     }
     if (norm.includes('2l') || norm.includes('2-lane')) {
       return {
         ...neutralStyle,
         label: '2-Lane (2L)',
-        heightPx: 36,
+        heightPx: 40,
       };
     }
     return {
       ...neutralStyle,
       label: '< 2-Lane',
-      heightPx: 22,
+      heightPx: 24,
     };
   };
 
@@ -409,25 +409,25 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
             </div>
 
             {/* Row 3: Height-Matched Clean Carriageway Width Dimension Arrow Gauge */}
-            <div className="h-[120px] border-b border-slate-800 px-2 py-1 flex flex-col justify-between shrink-0 select-none relative overflow-hidden bg-slate-950">
+            <div className="h-[150px] border-b border-slate-800 px-2 py-1.5 flex flex-col justify-between shrink-0 select-none relative overflow-hidden bg-slate-950">
               {/* Horizontal Centerline Axis Guide Line */}
               <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/25 z-0 pointer-events-none" />
 
-              <div className="text-[9px] font-extrabold uppercase text-indigo-400 flex items-center justify-between z-10 px-1 pt-0.5">
+              <div className="text-[9.5px] font-extrabold uppercase text-indigo-400 flex items-center justify-between z-10 px-1 pt-0.5">
                 <span className="flex items-center gap-1">
-                  <ArrowUpDown className="w-3 h-3 text-indigo-400" />
+                  <ArrowUpDown className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Carriageway Gauge</span>
                 </span>
-                <span className="text-[8px] text-slate-400 font-normal">Match Height</span>
+                <span className="text-[8.5px] text-slate-400 font-normal">Match Height</span>
               </div>
 
               {/* Height-Matched Clean Dimension Arrow Columns (Centered on Centerline Axis) */}
-              <div className="flex items-center justify-between gap-1 z-10 my-auto h-[92px] relative px-1">
+              <div className="flex items-center justify-between gap-1 z-10 my-auto h-[120px] relative px-1">
                 {[
-                  { label: '6L', width: '20m', heightPx: 84, color: 'text-purple-400 border-purple-400' },
-                  { label: '4L', width: '14m', heightPx: 68, color: 'text-blue-400 border-blue-400' },
-                  { label: '2L+PS', width: '10m', heightPx: 52, color: 'text-emerald-400 border-emerald-400' },
-                  { label: '2L', width: '7m', heightPx: 36, color: 'text-amber-400 border-amber-400' },
+                  { label: '6L', width: '20m', heightPx: 112, color: 'text-purple-400 border-purple-400' },
+                  { label: '4L', width: '14m', heightPx: 88, color: 'text-blue-400 border-blue-400' },
+                  { label: '2L+PS', width: '10m', heightPx: 64, color: 'text-emerald-400 border-emerald-400' },
+                  { label: '2L', width: '7m', heightPx: 40, color: 'text-amber-400 border-amber-400' },
                 ].map((spec) => (
                   <div
                     key={spec.label}
@@ -441,8 +441,8 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     >
                       {/* Top Arrowhead */}
                       <div className="w-1.5 h-1.5 border-t-2 border-l-2 border-current rotate-45 -mt-1 shrink-0" />
-                      {/* Center Label (Only if height is tall enough, e.g. 6L / 4L) */}
-                      {spec.heightPx >= 68 && (
+                      {/* Center Label (Only if height is tall enough, e.g. 6L / 4L / 2L+PS) */}
+                      {spec.heightPx >= 64 && (
                         <span className="text-[8px] font-extrabold font-mono leading-none z-10 my-auto bg-slate-950 px-0.5 rounded">
                           {spec.label}
                         </span>
@@ -452,7 +452,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     </div>
 
                     {/* Top Text Label for smaller arrows */}
-                    {spec.heightPx < 68 && (
+                    {spec.heightPx < 64 && (
                       <span className={`absolute top-0 text-[8px] font-mono font-bold ${spec.color}`}>
                         {spec.label}
                       </span>
@@ -555,8 +555,8 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 })}
               </div>
 
-              {/* TRACK 3: CENTERLINE-ALIGNED ROAD CORRIDOR (Height 120px / h-[120px]) */}
-              <div className="relative h-[120px] border-b border-slate-800 bg-slate-950/90 flex items-center shrink-0 overflow-hidden">
+              {/* TRACK 3: CENTERLINE-ALIGNED ROAD CORRIDOR (Height 150px / h-[150px]) */}
+              <div className="relative h-[150px] border-b border-slate-800 bg-slate-950/90 flex items-center shrink-0 overflow-hidden">
                 {/* Horizontal Road Centerline Guide Line */}
                 <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/25 z-0 pointer-events-none" />
 
