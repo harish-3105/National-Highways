@@ -421,30 +421,29 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 ].map((spec) => (
                   <div
                     key={spec.label}
-                    className="flex flex-col items-center justify-center relative flex-1 h-full"
+                    className="flex items-center relative flex-1 h-full"
                     title={`${spec.label} (${spec.width} width) - Height: ${spec.heightPx}px`}
                   >
-                    {/* Clean Vertical Double-Headed Dimension Arrow (Exact height match to road bars) */}
+                    {/* 100% CLEAN UNBROKEN VERTICAL ARROW LINE (Exact Height Match) */}
                     <div
-                      className={`absolute top-1/2 -translate-y-1/2 w-0.5 bg-current flex flex-col justify-between items-center ${spec.color}`}
+                      className={`absolute top-1/2 -translate-y-1/2 left-1.5 w-0.5 bg-current flex flex-col justify-between items-center ${spec.color}`}
                       style={{ height: `${spec.heightPx}px` }}
                     >
                       {/* Top Arrowhead at exact top boundary of lane height */}
                       <div className="w-1.5 h-1.5 border-t-2 border-l-2 border-current rotate-45 -mt-1 shrink-0" />
-                      
-                      {/* Center Label Badge */}
-                      <span className="text-[8px] font-extrabold font-mono leading-none z-10 my-auto bg-slate-950 px-0.5 py-0.5 rounded border border-current/40 shadow-xs whitespace-nowrap">
-                        {spec.label}
-                      </span>
-                      
                       {/* Bottom Arrowhead at exact bottom boundary of lane height */}
                       <div className="w-1.5 h-1.5 border-b-2 border-r-2 border-current rotate-45 -mb-1 shrink-0" />
                     </div>
 
-                    {/* Width Subtext placed below bottom arrowhead */}
-                    <span className="absolute bottom-0 text-[8px] font-mono font-bold text-slate-400 leading-none">
-                      {spec.width}
-                    </span>
+                    {/* SIDE TEXT LABEL (Placed to the right side of arrow line) */}
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex flex-col items-start leading-none space-y-0.5 pointer-events-none">
+                      <span className={`text-[8.5px] font-extrabold font-mono tracking-tighter ${spec.color}`}>
+                        {spec.label}
+                      </span>
+                      <span className="text-[7.5px] font-mono font-bold text-slate-400">
+                        {spec.width}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
