@@ -549,9 +549,12 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 </div>
               )}
 
-              {/* TRACK 4: CONTINUOUS ROAD CORRIDOR RIBBON (100% EMPTY BLOCKS RESERVED FOR DLP) */}
+              {/* TRACK 4: CENTERLINE-ALIGNED ROAD CORRIDOR (100% EMPTY BLOCKS RESERVED FOR DLP) */}
               <div className="relative mb-6">
-                <div className="relative h-[104px] bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden flex items-end shadow-inner p-0.5">
+                <div className="relative h-[112px] bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden shadow-inner flex items-center p-0.5">
+                  {/* Horizontal Road Centerline Guide Line */}
+                  <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/25 z-0 pointer-events-none" />
+
                   {activeStretches.length === 0 ? (
                     <div className="w-full text-center text-xs text-slate-500 py-8">
                       No micro sub-chainage stretches defined for this corridor. Add stretches in Level 2 to render the SLD timeline.
@@ -565,7 +568,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                       return (
                         <div
                           key={st.id || i}
-                          className={`absolute bottom-0 border-r border-white/20 border-t transition-all duration-200 cursor-pointer hover:brightness-125 hover:z-30 shadow-md ${style.bg} ${style.border}`}
+                          className={`absolute top-1/2 -translate-y-1/2 border-r border-white/25 border-y transition-all duration-200 cursor-pointer hover:brightness-125 hover:z-30 shadow-md ${style.bg} ${style.border}`}
                           style={{
                             left: `${leftPct}%`,
                             width: `${widthPct}%`,
@@ -573,9 +576,9 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                           }}
                           onMouseEnter={() => setHoveredStretch(st)}
                           onClick={() => setHoveredStretch(st)}
-                          title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.lane_configuration}) - Continuous Road Corridor (Clean Box Reserved for DLP Data)`}
+                          title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.lane_configuration}) - Centered Road Corridor (Clean Box Reserved for DLP Data)`}
                         >
-                          {/* 100% EMPTY INSIDE - CONTINUOUS UNBROKEN ROAD RIBBON REGION */}
+                          {/* 100% EMPTY INSIDE - CENTERED AROUND ROAD CENTERLINE (RESERVED FOR DLP DATA) */}
                         </div>
                       );
                     })
