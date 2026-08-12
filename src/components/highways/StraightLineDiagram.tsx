@@ -408,32 +408,58 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 <span>Carriageway Gauge</span>
               </div>
 
-              {/* Height-Matched Clean Dimension Arrow Columns (Centered EXACTLY at Y=50%) */}
-              <div className="absolute inset-0 flex items-center justify-around z-10 px-1">
+              {/* Caliper Docking Gauge: Height-Matched Vertical Arrows with Horizontal Right-Pointing Guide Arrows */}
+              <div className="absolute inset-0 pt-6 flex items-center z-10">
                 {[
-                  { label: '6L', width: '20m', heightPx: 150, color: 'text-purple-400 border-purple-400' },
-                  { label: '4L', width: '14m', heightPx: 110, color: 'text-blue-400 border-blue-400' },
-                  { label: '2L+PS', width: '10m', heightPx: 75, color: 'text-emerald-400 border-emerald-400' },
-                  { label: '2L', width: '7m', heightPx: 40, color: 'text-amber-400 border-amber-400' },
+                  { label: '6L', width: '20m', heightPx: 150, leftOffset: '12px', color: 'text-purple-400 border-purple-400 bg-purple-400' },
+                  { label: '4L', width: '14m', heightPx: 110, leftOffset: '60px', color: 'text-blue-400 border-blue-400 bg-blue-400' },
+                  { label: '2L+PS', width: '10m', heightPx: 75, leftOffset: '110px', color: 'text-emerald-400 border-emerald-400 bg-emerald-400' },
+                  { label: '2L', width: '7m', heightPx: 40, leftOffset: '160px', color: 'text-amber-400 border-amber-400 bg-amber-400' },
                 ].map((spec) => (
-                  <div
-                    key={spec.label}
-                    className="flex items-center relative flex-1 h-full"
-                    title={`${spec.label} (${spec.width} width) - Height: ${spec.heightPx}px`}
-                  >
-                    {/* 100% CLEAN UNBROKEN VERTICAL ARROW LINE (Exact Height Match) */}
+                  <React.Fragment key={spec.label}>
+                    {/* Vertical Shaft Line */}
                     <div
-                      className={`absolute top-1/2 -translate-y-1/2 left-1 w-0.5 bg-current flex flex-col justify-between items-center ${spec.color}`}
-                      style={{ height: `${spec.heightPx}px` }}
+                      className={`absolute top-1/2 -translate-y-1/2 w-0.5 bg-current flex flex-col justify-between items-center ${spec.color}`}
+                      style={{ left: spec.leftOffset, height: `${spec.heightPx}px` }}
                     >
-                      {/* Top Arrowhead at exact top boundary of lane height */}
+                      {/* Top Vertical Arrowhead */}
                       <div className="w-1.5 h-1.5 border-t-2 border-l-2 border-current rotate-45 -mt-1 shrink-0" />
-                      {/* Bottom Arrowhead at exact bottom boundary of lane height */}
+                      {/* Bottom Vertical Arrowhead */}
                       <div className="w-1.5 h-1.5 border-b-2 border-r-2 border-current rotate-45 -mb-1 shrink-0" />
                     </div>
 
-                    {/* SIDE TEXT LABEL (Placed to the right side of arrow line) */}
-                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex flex-col items-start leading-none space-y-0.5 pointer-events-none">
+                    {/* TOP HORIZONTAL RIGHT-POINTING GUIDE ARROW (at top boundary) */}
+                    <div
+                      className={`absolute border-t border-dashed opacity-60 flex items-center justify-end ${spec.color}`}
+                      style={{
+                        top: `calc(50% - ${spec.heightPx / 2}px)`,
+                        left: spec.leftOffset,
+                        right: 0,
+                      }}
+                    >
+                      <div className="w-1.5 h-1.5 border-t-2 border-r-2 border-current rotate-45 -mr-1 -mt-0.5 shrink-0" />
+                    </div>
+
+                    {/* BOTTOM HORIZONTAL RIGHT-POINTING GUIDE ARROW (at bottom boundary) */}
+                    <div
+                      className={`absolute border-b border-dashed opacity-60 flex items-center justify-end ${spec.color}`}
+                      style={{
+                        top: `calc(50% + ${spec.heightPx / 2}px)`,
+                        left: spec.leftOffset,
+                        right: 0,
+                      }}
+                    >
+                      <div className="w-1.5 h-1.5 border-b-2 border-r-2 border-current rotate-45 -mr-1 -mb-0.5 shrink-0" />
+                    </div>
+
+                    {/* Side Label Badge */}
+                    <div
+                      className="absolute flex flex-col items-start leading-none pointer-events-none z-20"
+                      style={{
+                        left: `calc(${spec.leftOffset} + 6px)`,
+                        top: `calc(50% - ${spec.heightPx / 2}px + 4px)`,
+                      }}
+                    >
                       <span className={`text-[8.5px] font-extrabold font-mono tracking-tighter ${spec.color}`}>
                         {spec.label}
                       </span>
@@ -441,7 +467,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                         {spec.width}
                       </span>
                     </div>
-                  </div>
+                  </React.Fragment>
                 ))}
               </div>
             </div>
