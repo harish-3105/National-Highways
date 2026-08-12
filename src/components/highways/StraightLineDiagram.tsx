@@ -189,10 +189,10 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
   // Traffic PCU Badge Color
   const getPcuColor = (pcu: number) => {
-    if (!pcu || pcu <= 0) return 'bg-slate-100 text-slate-600 border-slate-300';
-    if (pcu < 5000) return 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-300';
-    if (pcu <= 15000) return 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/70 dark:text-amber-300';
-    return 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950/70 dark:text-red-300 font-bold';
+    if (!pcu || pcu <= 0) return 'bg-slate-900/60 text-slate-500 border-slate-800';
+    if (pcu < 5000) return 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40';
+    if (pcu <= 15000) return 'bg-amber-950/70 text-amber-300 border-amber-500/40';
+    return 'bg-red-950/70 text-red-300 border-red-500/50 font-bold';
   };
 
   if (loading) {
@@ -396,7 +396,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {/* Track Row Name Labels matching horizontal split rows */}
               <div className="space-y-6 pt-1 text-xs font-bold text-slate-300">
                 {showTowns && (
-                  <div className="h-12 flex items-center gap-2 text-amber-400">
+                  <div className="h-10 flex items-center gap-2 text-amber-400">
                     <MapPin className="w-4 h-4 shrink-0" />
                     <span>Important Towns</span>
                   </div>
@@ -449,7 +449,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 )}
 
                 {showDpr && (
-                  <div className="h-12 flex items-center gap-2 text-purple-400">
+                  <div className="h-10 flex items-center gap-2 text-purple-400">
                     <Info className="w-4 h-4 shrink-0" />
                     <span>DPR &amp; Schemes</span>
                   </div>
@@ -458,7 +458,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
             </div>
 
             <div className="pt-3 border-t border-slate-800 text-[10px] text-slate-400 italic">
-              * Bar heights directly communicate lane configurations (6L, 4L, 2L+PS, 2L).
+              * Equal split cells ensure all tracks maintain unbroken grid alignment.
             </div>
           </div>
 
@@ -468,24 +468,27 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               className="relative transition-all duration-300"
               style={{ width: `${canvasWidthPx}px` }}
             >
-              {/* TRACK 1: Important Towns Split Cells */}
+              {/* TRACK 1: Important Towns Grid Row (Rendered for ALL columns) */}
               {showTowns && (
-                <div className="relative h-12 mb-4">
+                <div className="relative h-10 mb-4 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center">
                   {activeStretches.map((st, i) => {
-                    if (!st.important_town) return null;
                     const leftPx = i * colWidthPx;
 
                     return (
                       <div
                         key={st.id || i}
-                        className="absolute h-9 top-1.5 flex items-center justify-center cursor-pointer group"
+                        className="absolute h-8 top-1 border-r border-slate-800 flex items-center justify-center px-1 text-[11px] font-bold text-amber-300 truncate cursor-pointer hover:bg-amber-950/40 transition-colors"
                         style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
                         onClick={() => setHoveredStretch(st)}
                       >
-                        <span className="px-2.5 py-1 bg-amber-500 text-slate-950 font-extrabold text-[11px] rounded-lg shadow-lg border border-amber-300 whitespace-nowrap flex items-center gap-1 group-hover:scale-105 transition-transform truncate max-w-full">
-                          <MapPin className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">{st.important_town}</span>
-                        </span>
+                        {st.important_town ? (
+                          <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded flex items-center gap-1 truncate max-w-full">
+                            <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
+                            <span className="truncate">{st.important_town}</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-600 font-mono text-[10px]">—</span>
+                        )}
                       </div>
                     );
                   })}
@@ -549,63 +552,76 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 </div>
               </div>
 
-              {/* TRACK 4: Traffic PCU Volume Split Row */}
+              {/* TRACK 4: Traffic PCU Volume Grid Row (Rendered for ALL columns) */}
               {showPcu && (
                 <div className="relative h-10 mb-4 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center">
                   {activeStretches.map((st, i) => {
                     const leftPx = i * colWidthPx;
-                    if (!st.pcu_count || st.pcu_count <= 0) return null;
                     const pcuStyle = getPcuColor(st.pcu_count);
 
                     return (
                       <div
                         key={st.id || i}
-                        className={`absolute h-7 top-1 rounded border px-2 flex items-center justify-center text-[10px] font-mono font-bold truncate ${pcuStyle}`}
+                        className={`absolute h-8 top-1 border-r border-slate-800 flex items-center justify-center px-1 text-[10px] font-mono font-bold truncate ${pcuStyle}`}
                         style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
                       >
-                        <span className="truncate">{st.pcu_count.toLocaleString()} PCU</span>
+                        {st.pcu_count && st.pcu_count > 0 ? (
+                          <span className="truncate">{st.pcu_count.toLocaleString()} PCU</span>
+                        ) : (
+                          <span className="text-slate-600 font-mono text-[10px]">—</span>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               )}
 
-              {/* TRACK 5: Right of Way (ROW) Split Row */}
+              {/* TRACK 5: Right of Way (ROW) Grid Row (Rendered for ALL columns) */}
               {showRow && (
                 <div className="relative h-10 mb-4 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center">
                   {activeStretches.map((st, i) => {
                     const leftPx = i * colWidthPx;
-                    if (!st.row_width) return null;
 
                     return (
                       <div
                         key={st.id || i}
-                        className="absolute h-7 top-1 rounded border border-teal-500/40 bg-teal-950/70 text-teal-300 px-2 flex items-center justify-center text-[10px] font-bold truncate"
+                        className="absolute h-8 top-1 border-r border-slate-800 flex items-center justify-center px-1 text-[10px] font-bold text-teal-300 truncate"
                         style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
                       >
-                        <span className="truncate">RoW: {st.row_width}</span>
+                        {st.row_width ? (
+                          <span className="px-2 py-0.5 bg-teal-950/70 text-teal-300 border border-teal-500/40 rounded truncate max-w-full">
+                            RoW: {st.row_width}
+                          </span>
+                        ) : (
+                          <span className="text-slate-600 font-mono text-[10px]">—</span>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               )}
 
-              {/* TRACK 6: Sanctioned DPR Proposals & Remarks Split Row */}
+              {/* TRACK 6: Sanctioned DPR Proposals & Remarks Grid Row (Rendered for ALL columns) */}
               {showDpr && (
-                <div className="relative h-12 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center">
+                <div className="relative h-10 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center">
                   {activeStretches.map((st, i) => {
                     const leftPx = i * colWidthPx;
-                    if (!st.dpr_status) return null;
 
                     return (
                       <div
                         key={st.id || i}
-                        className="absolute h-8 top-2 rounded-lg border border-purple-500/50 bg-purple-950/80 text-purple-200 px-2.5 flex items-center text-[10px] font-semibold truncate hover:z-30 cursor-pointer shadow-md"
+                        className="absolute h-8 top-1 border-r border-slate-800 flex items-center justify-center px-1.5 text-[10px] font-semibold text-purple-200 truncate cursor-pointer hover:bg-purple-950/40 transition-colors"
                         style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
                         onClick={() => setHoveredStretch(st)}
                       >
-                        <Info className="w-3.5 h-3.5 text-purple-400 mr-1.5 shrink-0" />
-                        <span className="truncate">{st.dpr_status}</span>
+                        {st.dpr_status ? (
+                          <span className="px-2 py-0.5 bg-purple-950/80 text-purple-200 border border-purple-500/50 rounded flex items-center gap-1 truncate max-w-full">
+                            <Info className="w-3 h-3 text-purple-400 shrink-0" />
+                            <span className="truncate">{st.dpr_status}</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-600 font-mono text-[10px]">—</span>
+                        )}
                       </div>
                     );
                   })}
