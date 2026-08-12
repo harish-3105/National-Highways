@@ -145,44 +145,44 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     return Math.max(1000, numCols * colWidthPx);
   }, [activeStretches.length, colWidthPx]);
 
-  // Helper for lane color styling and Excel bar height specs
+  // Helper for Excel bar height specs (Colors neutral, reserved for DLP contract status)
   const getLaneStyle = (laneConfig: string) => {
     const norm = (laneConfig || '').toLowerCase();
+    const neutralStyle = {
+      bg: 'bg-slate-700/80 hover:bg-slate-600/90 text-slate-200',
+      border: 'border-slate-500/70',
+    };
+
     if (norm.includes('6l') || norm.includes('6-lane')) {
       return {
-        bg: 'bg-purple-600 dark:bg-purple-500',
-        border: 'border-purple-700',
+        ...neutralStyle,
         label: '6-Lane (6L)',
         heightPx: 84,
       };
     }
     if (norm.includes('4l') || norm.includes('4-lane')) {
       return {
-        bg: 'bg-blue-600 dark:bg-blue-500',
-        border: 'border-blue-700',
+        ...neutralStyle,
         label: '4-Lane / 4L+PS',
         heightPx: 68,
       };
     }
     if (norm.includes('2l+ps') || norm.includes('paved')) {
       return {
-        bg: 'bg-emerald-600 dark:bg-emerald-500',
-        border: 'border-emerald-700',
+        ...neutralStyle,
         label: '2L + Paved Shoulder',
         heightPx: 52,
       };
     }
     if (norm.includes('2l') || norm.includes('2-lane')) {
       return {
-        bg: 'bg-amber-600 dark:bg-amber-500',
-        border: 'border-amber-700',
+        ...neutralStyle,
         label: '2-Lane (2L)',
         heightPx: 36,
       };
     }
     return {
-      bg: 'bg-slate-600 dark:bg-slate-500',
-      border: 'border-slate-700',
+      ...neutralStyle,
       label: '< 2-Lane',
       heightPx: 22,
     };
@@ -430,24 +430,24 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 <div className="h-[96px] flex flex-col justify-center border-y border-slate-800 py-1 space-y-1">
                   <div className="text-[10px] font-extrabold uppercase text-white flex items-center justify-between">
                     <span>Visual Bar Chart</span>
-                    <span className="text-[9px] text-slate-400 font-normal">(Empty for DLP)</span>
+                    <span className="text-[9px] text-slate-400 font-normal">(Bar Fill Neutral)</span>
                   </div>
                   {/* Vertical Height Specification Key */}
                   <div className="space-y-0.5 text-[9px]">
-                    <div className="flex items-center gap-1.5 text-purple-300">
-                      <span className="w-2.5 h-3 bg-purple-600 rounded-xs" />
+                    <div className="flex items-center gap-1.5 text-slate-300">
+                      <span className="w-2.5 h-3 bg-slate-600 rounded-xs" />
                       <span>6L (Height 84px)</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-blue-300">
-                      <span className="w-2.5 h-2.5 bg-blue-600 rounded-xs" />
+                    <div className="flex items-center gap-1.5 text-slate-300">
+                      <span className="w-2.5 h-2.5 bg-slate-600 rounded-xs" />
                       <span>4L / 4L+PS (Height 68px)</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-emerald-300">
-                      <span className="w-2.5 h-2 bg-emerald-600 rounded-xs" />
+                    <div className="flex items-center gap-1.5 text-slate-300">
+                      <span className="w-2.5 h-2 bg-slate-600 rounded-xs" />
                       <span>2L + PS (Height 52px)</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-amber-300">
-                      <span className="w-2.5 h-1.5 bg-amber-600 rounded-xs" />
+                    <div className="flex items-center gap-1.5 text-slate-300">
+                      <span className="w-2.5 h-1.5 bg-slate-600 rounded-xs" />
                       <span>2L (Height 36px)</span>
                     </div>
                   </div>
@@ -477,7 +477,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
             </div>
 
             <div className="pt-3 border-t border-slate-800 text-[10px] text-slate-400 italic">
-              * Equal split cells ensure all stretches have un-squished, maximum readability.
+              * Bar colors are reserved exclusively for DLP contract status (Active, STMC, PBMC).
             </div>
           </div>
 
@@ -554,7 +554,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 </div>
               )}
 
-              {/* TRACK 4: CENTERLINE-ALIGNED ROAD CORRIDOR (100% EMPTY BLOCKS RESERVED FOR DLP) */}
+              {/* TRACK 4: CENTERLINE-ALIGNED ROAD CORRIDOR (NEUTRAL BASELINE FILL, DLP COLORS RESERVED) */}
               <div className="relative mb-6">
                 <div className="relative h-[112px] bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden shadow-inner flex items-center p-0.5">
                   {/* Horizontal Road Centerline Guide Line */}
@@ -580,9 +580,9 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                           }}
                           onMouseEnter={() => setHoveredStretch(st)}
                           onClick={() => setHoveredStretch(st)}
-                          title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.length_km} km, ${st.lane_configuration}) - Centered Road Corridor (Clean Box Reserved for DLP Data)`}
+                          title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.length_km} km, ${st.lane_configuration}) - Neutral Baseline Box (Colors reserved for DLP contract data)`}
                         >
-                          {/* 100% EMPTY INSIDE - CENTERED AROUND ROAD CENTERLINE (RESERVED FOR DLP DATA) */}
+                          {/* 100% EMPTY INSIDE - NEUTRAL COLOR FILL (RESERVED FOR DLP CONTRACT DATA) */}
                         </div>
                       );
                     })
