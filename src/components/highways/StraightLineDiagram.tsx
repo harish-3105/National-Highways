@@ -408,8 +408,8 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 <span>Carriageway Gauge</span>
               </div>
 
-              {/* Height-Matched Clean Dimension Arrow Columns (Centered on Centerline Axis) */}
-              <div className="absolute inset-0 pt-6 px-1 flex items-center justify-around z-10">
+              {/* Height-Matched Clean Dimension Arrow Columns (Centered EXACTLY at Y=50%) */}
+              <div className="absolute inset-0 flex items-center justify-around z-10 px-1">
                 {[
                   { label: '6L', width: '20m', heightPx: 150, color: 'text-purple-400 border-purple-400' },
                   { label: '4L', width: '14m', heightPx: 110, color: 'text-blue-400 border-blue-400' },
