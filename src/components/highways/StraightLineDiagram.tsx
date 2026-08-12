@@ -605,19 +605,40 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 <div className="relative h-11 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
                     const leftPx = i * colWidthPx;
-                    const style = getLaneStyle(st.lane_configuration);
-                    const widthNum = style.heightPx === 150 ? '20m' : style.heightPx === 110 ? '14m' : style.heightPx === 75 ? '10m' : '7m';
-                    const specLabel = st.carriageway_width ? `CW: ${st.carriageway_width}` : (st.lane_configuration ? `${st.lane_configuration} (${widthNum})` : '');
+                    const norm = (st.lane_configuration || '').toLowerCase();
+                    
+                    let badgeStyle = 'bg-indigo-950/70 text-indigo-300 border-indigo-500/40';
+                    let widthNum = '7m';
+
+                    if (norm.includes('6l') || norm.includes('6-lane')) {
+                      badgeStyle = 'bg-purple-950/80 text-purple-300 border-purple-500/50';
+                      widthNum = '20m';
+                    } else if (norm.includes('4l') || norm.includes('4-lane')) {
+                      badgeStyle = 'bg-blue-950/80 text-blue-300 border-blue-500/50';
+                      widthNum = '14m';
+                    } else if (norm.includes('2l+ps') || norm.includes('paved')) {
+                      badgeStyle = 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50';
+                      widthNum = '10m';
+                    } else if (norm.includes('2l') || norm.includes('2-lane')) {
+                      badgeStyle = 'bg-amber-950/80 text-amber-300 border-amber-500/50';
+                      widthNum = '7m';
+                    }
+
+                    const specLabel = st.carriageway_width
+                      ? `CW: ${st.carriageway_width}`
+                      : st.lane_configuration
+                      ? `${st.lane_configuration} (${widthNum})`
+                      : '';
 
                     return (
                       <div
                         key={st.id || i}
-                        className="absolute h-full top-0 border-r border-slate-800 flex items-center justify-center px-1 text-[10px] font-bold text-indigo-300 truncate"
+                        className="absolute h-full top-0 border-r border-slate-800 flex items-center justify-center px-1 text-[10px] font-bold truncate"
                         style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
                       >
                         {specLabel ? (
-                          <span className="px-2 py-0.5 bg-indigo-950/70 text-indigo-300 border border-indigo-500/40 rounded truncate max-w-full font-mono">
-                            {specLabel}
+                          <span className={`px-2 py-1 border rounded-md truncate max-w-full font-mono shadow-xs flex items-center justify-center gap-1 ${badgeStyle}`}>
+                            <span className="truncate">{specLabel}</span>
                           </span>
                         ) : (
                           <span className="text-slate-600 font-mono text-[10px]">—</span>
