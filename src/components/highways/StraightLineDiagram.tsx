@@ -157,34 +157,34 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
       return {
         ...neutralStyle,
         label: '6-Lane (6L)',
-        heightPx: 112,
+        heightPx: 170,
       };
     }
     if (norm.includes('4l') || norm.includes('4-lane')) {
       return {
         ...neutralStyle,
         label: '4-Lane / 4L+PS',
-        heightPx: 88,
+        heightPx: 130,
       };
     }
     if (norm.includes('2l+ps') || norm.includes('paved')) {
       return {
         ...neutralStyle,
         label: '2L + Paved Shoulder',
-        heightPx: 64,
+        heightPx: 90,
       };
     }
     if (norm.includes('2l') || norm.includes('2-lane')) {
       return {
         ...neutralStyle,
         label: '2-Lane (2L)',
-        heightPx: 40,
+        heightPx: 50,
       };
     }
     return {
       ...neutralStyle,
       label: '< 2-Lane',
-      heightPx: 24,
+      heightPx: 30,
     };
   };
 
@@ -324,9 +324,9 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
       </header>
 
       {/* Main Canvas Workspace */}
-      <main className="flex-1 max-w-[1440px] w-full mx-auto p-4 md:p-6 space-y-4">
+      <main className="flex-1 max-w-[1440px] w-full mx-auto p-4 md:p-6 space-y-4 flex flex-col">
         {/* Layer Visibility Filters Bar */}
-        <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl flex items-center justify-between flex-wrap gap-3 print:hidden">
+        <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl flex items-center justify-between flex-wrap gap-3 print:hidden shrink-0">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
             <Layers className="w-4 h-4 text-blue-400" />
             <span>Interactive Split Track Layers:</span>
@@ -379,21 +379,11 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
           </div>
         </div>
 
-        {/* 1-TO-1 PERFECTLY ALIGNED MATRIX GRID SLD BOARD */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex print:border-black print:bg-white">
+        {/* FULL SCREEN DYNAMICALLY STRETCHED MATRIX SLD BOARD */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-1 min-h-[500px] print:border-black print:bg-white">
           
           {/* LEFT FIXED SIDEBAR: Row Labels Locked 1-to-1 to Right Canvas Rows */}
           <div className="w-56 shrink-0 bg-slate-950 border-r border-slate-800 flex flex-col z-30 select-none">
-            {/* Header Title */}
-            <div className="h-12 border-b border-slate-800 px-3 flex flex-col justify-center">
-              <h3 className="text-xs font-extrabold text-blue-400 uppercase tracking-wider">
-                SLD Track Matrix
-              </h3>
-              <p className="text-[9px] text-slate-400">
-                1-to-1 Aligned Row Legend
-              </p>
-            </div>
-
             {/* Row 1: Important Towns */}
             {showTowns && (
               <div className="h-12 border-b border-slate-800 px-3 flex items-center gap-2 text-amber-400 text-xs font-bold shrink-0">
@@ -408,8 +398,8 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               <span>Chainage Splits</span>
             </div>
 
-            {/* Row 3: Height-Matched Clean Carriageway Width Dimension Arrow Gauge */}
-            <div className="h-[150px] border-b border-slate-800 px-2 py-1.5 flex flex-col justify-between shrink-0 select-none relative overflow-hidden bg-slate-950">
+            {/* Row 3: Height-Matched Clean Carriageway Width Dimension Arrow Gauge (STRETCHED DYNAMICALLY) */}
+            <div className="flex-1 min-h-[200px] border-b border-slate-800 px-2 py-2 flex flex-col justify-between shrink-0 select-none relative overflow-hidden bg-slate-950">
               {/* Horizontal Centerline Axis Guide Line */}
               <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/25 z-0 pointer-events-none" />
 
@@ -422,12 +412,12 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               </div>
 
               {/* Height-Matched Clean Dimension Arrow Columns (Centered on Centerline Axis) */}
-              <div className="flex items-center justify-between gap-1 z-10 my-auto h-[120px] relative px-1">
+              <div className="flex items-center justify-between gap-1 z-10 my-auto h-[180px] relative px-1">
                 {[
-                  { label: '6L', width: '20m', heightPx: 112, color: 'text-purple-400 border-purple-400' },
-                  { label: '4L', width: '14m', heightPx: 88, color: 'text-blue-400 border-blue-400' },
-                  { label: '2L+PS', width: '10m', heightPx: 64, color: 'text-emerald-400 border-emerald-400' },
-                  { label: '2L', width: '7m', heightPx: 40, color: 'text-amber-400 border-amber-400' },
+                  { label: '6L', width: '20m', heightPx: 170, color: 'text-purple-400 border-purple-400' },
+                  { label: '4L', width: '14m', heightPx: 130, color: 'text-blue-400 border-blue-400' },
+                  { label: '2L+PS', width: '10m', heightPx: 90, color: 'text-emerald-400 border-emerald-400' },
+                  { label: '2L', width: '7m', heightPx: 50, color: 'text-amber-400 border-amber-400' },
                 ].map((spec) => (
                   <div
                     key={spec.label}
@@ -441,22 +431,13 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     >
                       {/* Top Arrowhead */}
                       <div className="w-1.5 h-1.5 border-t-2 border-l-2 border-current rotate-45 -mt-1 shrink-0" />
-                      {/* Center Label (Only if height is tall enough, e.g. 6L / 4L / 2L+PS) */}
-                      {spec.heightPx >= 64 && (
-                        <span className="text-[8px] font-extrabold font-mono leading-none z-10 my-auto bg-slate-950 px-0.5 rounded">
-                          {spec.label}
-                        </span>
-                      )}
+                      {/* Center Label */}
+                      <span className="text-[8px] font-extrabold font-mono leading-none z-10 my-auto bg-slate-950 px-0.5 rounded">
+                        {spec.label}
+                      </span>
                       {/* Bottom Arrowhead */}
                       <div className="w-1.5 h-1.5 border-b-2 border-r-2 border-current rotate-45 -mb-1 shrink-0" />
                     </div>
-
-                    {/* Top Text Label for smaller arrows */}
-                    {spec.heightPx < 64 && (
-                      <span className={`absolute top-0 text-[8px] font-mono font-bold ${spec.color}`}>
-                        {spec.label}
-                      </span>
-                    )}
 
                     {/* Bottom Width Subtext */}
                     <span className="absolute bottom-0 text-[8px] font-mono font-bold text-slate-400">
@@ -490,23 +471,14 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 <span>DPR &amp; Schemes</span>
               </div>
             )}
-
-            <div className="p-3 text-[9.5px] text-slate-400 italic mt-auto">
-              * Perfectly aligned rows fill vertically with zero empty space.
-            </div>
           </div>
 
           {/* RIGHT HORIZONTAL SCROLL AREA: Matrix Tracks Matching Sidebar Rows */}
           <div className="flex-1 overflow-x-auto bg-slate-900 flex flex-col">
             <div
-              className="relative transition-all duration-300 flex flex-col"
+              className="relative transition-all duration-300 flex flex-col flex-1"
               style={{ width: `${canvasWidthPx}px` }}
             >
-              {/* Header Spacer Bar */}
-              <div className="h-12 border-b border-slate-800 bg-slate-950/40 px-3 flex items-center text-[10px] font-mono text-slate-400 shrink-0">
-                Linear Corridor Alignment: Km {minKm} → Km {maxKm} ({totalSpan.toFixed(2)} km)
-              </div>
-
               {/* TRACK 1: Important Towns Grid Row (Height 48px / h-12) */}
               {showTowns && (
                 <div className="relative h-12 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
@@ -555,8 +527,8 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 })}
               </div>
 
-              {/* TRACK 3: CENTERLINE-ALIGNED ROAD CORRIDOR (Height 150px / h-[150px]) */}
-              <div className="relative h-[150px] border-b border-slate-800 bg-slate-950/90 flex items-center shrink-0 overflow-hidden">
+              {/* TRACK 3: CENTERLINE-ALIGNED ROAD CORRIDOR (STRETCHED DYNAMICALLY) */}
+              <div className="relative flex-1 min-h-[200px] border-b border-slate-800 bg-slate-950/90 flex items-center shrink-0 overflow-hidden">
                 {/* Horizontal Road Centerline Guide Line */}
                 <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/25 z-0 pointer-events-none" />
 
@@ -670,7 +642,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
         {/* Stretch Hover Detail Card */}
         {hoveredStretch && (
-          <div className="bg-slate-900 border border-blue-500/50 p-4 rounded-xl shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-blue-500/50 p-4 rounded-xl shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in duration-150 shrink-0">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2 py-0.5 bg-blue-600 text-white font-mono font-bold text-xs rounded">
