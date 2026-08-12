@@ -498,34 +498,27 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                         onMouseEnter={() => setHoveredStretch(st)}
                         onClick={() => setHoveredStretch(st)}
                       >
-                        {/* Top: Stretch Bounds & Carriageway Width */}
-                        <div className="flex items-center justify-between text-[10px] font-mono font-extrabold truncate">
-                          <span className="bg-black/40 px-1.5 py-0.5 rounded text-white border border-white/20">
-                            Km {st.from_km} → {st.to_km}
+                        {/* Top: Carriageway Lane Configuration & Width Label */}
+                        <div className="flex items-center justify-between text-[11px] font-extrabold truncate">
+                          <span className="truncate">
+                            {st.lane_configuration}
                           </span>
                           {st.carriageway_width && (
-                            <span className="bg-black/40 px-1.5 py-0.5 rounded text-amber-200 border border-white/20 font-bold">
+                            <span className="bg-black/40 px-1.5 py-0.5 rounded text-amber-200 border border-white/20 font-bold ml-1 shrink-0">
                               {st.carriageway_width}
                             </span>
                           )}
                         </div>
 
-                        {/* Middle: Lane Config Title */}
-                        <div className="text-[11px] font-extrabold tracking-tight truncate text-center my-auto drop-shadow-md">
-                          {st.lane_configuration} ({st.length_km} km)
+                        {/* Middle: Stretch Span Length */}
+                        <div className="text-[10px] font-mono font-bold tracking-tight truncate text-center my-auto opacity-90">
+                          {st.length_km} km stretch
                         </div>
 
-                        {/* Bottom: MODULAR DLP SLOT PLACEHOLDER */}
-                        <div className="mt-auto pt-1 border-t border-white/25 flex items-center justify-between text-[9px] opacity-95">
-                          <span className="truncate flex items-center gap-1 font-semibold">
-                            <Sparkles className="w-3 h-3 text-amber-200 shrink-0" />
-                            <span>DLP Slot Ready</span>
-                          </span>
-                          {st.pcu_count > 0 && (
-                            <span className="font-mono bg-black/50 px-1.5 py-0.5 rounded text-white font-bold">
-                              {st.pcu_count.toLocaleString()} PCU
-                            </span>
-                          )}
+                        {/* Bottom: MODULAR DLP CONTRACT SLOT (Reserved for DLP Module) */}
+                        <div className="mt-auto pt-1 border-t border-white/25 flex items-center justify-center text-[9px] font-semibold text-amber-100 bg-black/25 rounded px-1.5 py-0.5 border border-amber-300/30">
+                          <Sparkles className="w-3 h-3 text-amber-300 mr-1 shrink-0" />
+                          <span className="truncate">DLP Contract Info (Pending Config)</span>
                         </div>
                       </div>
                     );
