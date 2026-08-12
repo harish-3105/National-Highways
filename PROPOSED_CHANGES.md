@@ -119,7 +119,19 @@ This document captures and tracks all proposed changes, architectural pivots, an
   - Centralized or module-linked document storage allowing users to upload departmental files (PDFs, Office docs, Scans) tagged with categories (e.g. *Government Orders*, *Technical Sanctions*, *Contracts*, *Court Orders*, *Circulars*).
   - View and download files on demand with category filtering and search.
 
+### Change 8: Level 3 Straight-Line Diagram (SLD) Baseline & Level 2 Schema Expansion
+- **Module**: Master Corridors & Sub-Chainages (`/highways`, `/highways/[id]/sld`)
+- **Status**: **Approved for Execution** (August 12, 2026)
+- **Schema Expansion (`highway_sub_chainages` table)**:
+  - Add `important_town` (`TEXT`): For town names, junction markers, ROBs, and landmarks (Micro).
+  - Add `row_width` (`VARCHAR(100)`): For Right of Way dimensions (e.g., `22m-25m`) (Micro & Macro).
+  - Add `carriageway_width` (`VARCHAR(100)`): For physical width details (e.g., `10m`, `14m`, `7m`) (Micro & Macro).
+- **Level 3 SLD Web Timeline (`/highways/[id]/sld`) Strategy**:
+  - Implement dynamic linear canvas rendering Chainage Ruler, Carriageway Lane Bars (`2L`, `2L+PS`, `4L`, `6L`), Town Markers, Traffic PCU count, and ROW spans.
+  - **Decoupled DLP Architecture**: Defer DLP contract integration while reserving structured DLP overlay slots inside the stretch bar boxes for seamless attachment when the DLP module redesign is complete.
+
 ---
+
 
 
 

@@ -15,6 +15,9 @@ export interface SubChainageStretch {
   lane_configuration: string;
   pcu_count: number;
   dpr_status?: string | null;
+  important_town?: string | null;
+  row_width?: string | null;
+  carriageway_width?: string | null;
   delete_status?: string | null;
   created_at?: string;
   updated_at?: string;
@@ -140,6 +143,9 @@ export async function POST(request: Request) {
       lane_configuration,
       pcu_count,
       dpr_status,
+      important_town,
+      row_width,
+      carriageway_width,
       delete_status,
     } = body;
 
@@ -161,6 +167,9 @@ export async function POST(request: Request) {
       lane_configuration: lane_configuration || '2-Lane',
       pcu_count: Number(pcu_count) || 0,
       dpr_status: dpr_status?.trim() || null,
+      important_town: important_town?.trim() || null,
+      row_width: row_width?.trim() || null,
+      carriageway_width: carriageway_width?.trim() || null,
       updated_at: new Date().toISOString(),
     };
 

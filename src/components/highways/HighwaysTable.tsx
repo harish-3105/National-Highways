@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { HighwayCorridor } from '@/app/api/highways/route';
-import { ArrowRight, MapPin, ShieldCheck, Edit3, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, MapPin, ShieldCheck, Edit3, Trash2, Eye, ChevronLeft, ChevronRight, BarChart2 } from 'lucide-react';
 
 interface HighwaysTableProps {
   corridors: HighwayCorridor[];
@@ -269,6 +270,14 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
                   {/* Actions Column */}
                   <td className="py-3.5 px-4 text-right whitespace-nowrap print:hidden">
                     <div className="flex items-center justify-end gap-1.5">
+                      <Link
+                        href={`/highways/${encodeURIComponent(item.road_code)}/sld`}
+                        className="p-1.5 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/60 rounded-md transition-colors cursor-pointer"
+                        title="View Interactive Straight-Line Diagram (SLD)"
+                      >
+                        <BarChart2 className="w-4 h-4" />
+                      </Link>
+
                       {onView && (
                         <button
                           onClick={() => onView(item)}

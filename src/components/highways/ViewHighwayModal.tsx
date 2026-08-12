@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { HighwayCorridor } from '@/app/api/highways/route';
 import { SubChainageStretch } from '@/app/api/sub-chainages/route';
 import {
@@ -51,6 +52,9 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
   const [subPcu, setSubPcu] = useState<string>('0');
   const [subDivision, setSubDivision] = useState<string>('');
   const [subDpr, setSubDpr] = useState<string>('');
+  const [subTown, setSubTown] = useState<string>('');
+  const [subRowWidth, setSubRowWidth] = useState<string>('');
+  const [subCarriagewayWidth, setSubCarriagewayWidth] = useState<string>('');
   const [subFormError, setSubFormError] = useState<string>('');
   const [subFormLoading, setSubFormLoading] = useState<boolean>(false);
 
@@ -152,6 +156,9 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
     setSubPcu('0');
     setSubDivision('');
     setSubDpr('');
+    setSubTown('');
+    setSubRowWidth('');
+    setSubCarriagewayWidth('');
     setSubFormError('');
     setIsFormOpen(true);
   };
@@ -164,6 +171,9 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
     setSubPcu(String(sub.pcu_count || 0));
     setSubDivision(sub.division_name || '');
     setSubDpr(sub.dpr_status || '');
+    setSubTown(sub.important_town || '');
+    setSubRowWidth(sub.row_width || '');
+    setSubCarriagewayWidth(sub.carriageway_width || '');
     setSubFormError('');
     setIsFormOpen(true);
   };
@@ -196,6 +206,9 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
           lane_configuration: subLaneConfig,
           pcu_count: Number(subPcu) || 0,
           dpr_status: subDpr,
+          important_town: subTown,
+          row_width: subRowWidth,
+          carriageway_width: subCarriagewayWidth,
           delete_status: 'ACTIVE',
         }),
       });
@@ -464,6 +477,16 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                {/* View SLD Diagram Button */}
+                <Link
+                  href={`/highways/${encodeURIComponent(highway.road_code)}/sld`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer shadow-xs"
+                  title="Open Web Interactive Straight-Line Diagram (SLD)"
+                >
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  <span>View SLD Timeline</span>
+                </Link>
+
                 {/* Archive Toggle Button */}
                 <button
                   type="button"
@@ -568,6 +591,41 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Important Town / Landmark</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Kurinjipadi, Virudhachalam"
+                      value={subTown}
+                      onChange={(e) => setSubTown(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">ROW Width (Right of Way)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 24m-28m or 18m"
+                      value={subRowWidth}
+                      onChange={(e) => setSubRowWidth(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Carriageway Width Detail</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 7m, 10m, 14m, 15.6m"
+                      value={subCarriagewayWidth}
+                      onChange={(e) => setSubCarriagewayWidth(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
+                    />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Division Name</label>
@@ -633,7 +691,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                           : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
                       }`}
                     >
-                      {/* Left: Chainage Span, Length, Lane & Division */}
+                      {/* Left: Chainage Span, Length, Lane, Town, ROW & Division */}
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
@@ -659,6 +717,24 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                           {sub.lane_configuration && sub.lane_configuration !== 'Primary' && (
                             <span className="px-2 py-0.5 text-xs font-bold rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                               {sub.lane_configuration}
+                            </span>
+                          )}
+
+                          {sub.important_town && (
+                            <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                              📍 {sub.important_town}
+                            </span>
+                          )}
+
+                          {sub.row_width && (
+                            <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                              ROW: {sub.row_width}
+                            </span>
+                          )}
+
+                          {sub.carriageway_width && (
+                            <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                              Width: {sub.carriageway_width}
                             </span>
                           )}
 
