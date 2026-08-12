@@ -16,6 +16,7 @@ import {
   Car,
   Maximize2,
   Ruler,
+  ArrowUpDown,
 } from 'lucide-react';
 import { SubChainageStretch } from '@/app/api/sub-chainages/route';
 
@@ -407,28 +408,39 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               <span>Chainage Splits</span>
             </div>
 
-            {/* Row 3: Visual Bar Chart Corridor */}
-            <div className="h-[120px] border-b border-slate-800 px-3 py-2 flex flex-col justify-center text-xs font-bold text-slate-300 shrink-0 space-y-1">
-              <div className="text-[10px] font-extrabold uppercase text-white flex items-center justify-between">
-                <span>Visual Bar Chart</span>
-                <span className="text-[9px] text-slate-400 font-normal">(Bar Neutral)</span>
+            {/* Row 3: Carriageway Width Dimension Arrow Legend */}
+            <div className="h-[120px] border-b border-slate-800 px-3 py-2 flex flex-col justify-center text-xs font-bold text-slate-300 shrink-0 space-y-1.5">
+              <div className="text-[10px] font-extrabold uppercase text-indigo-400 flex items-center gap-1.5">
+                <ArrowUpDown className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span>Carriageway Width</span>
               </div>
-              <div className="space-y-0.5 text-[9px]">
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <span className="w-2.5 h-3 bg-slate-600 rounded-xs" />
-                  <span>6L (Width 20m)</span>
+              
+              {/* Vertical Dimension Arrow Legend */}
+              <div className="flex items-center gap-2 pl-1">
+                {/* Vertical Double-Headed Dimension Arrow */}
+                <div className="w-1.5 h-16 bg-indigo-500/30 rounded-full border border-indigo-400/50 relative flex flex-col justify-between items-center shrink-0">
+                  <div className="w-2 h-2 border-t-2 border-l-2 border-indigo-300 rotate-45 -mt-0.5" />
+                  <div className="w-2 h-2 border-b-2 border-r-2 border-indigo-300 rotate-45 -mb-0.5" />
                 </div>
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <span className="w-2.5 h-2.5 bg-slate-600 rounded-xs" />
-                  <span>4L / 4L+PS (Width 14m)</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <span className="w-2.5 h-2 bg-slate-600 rounded-xs" />
-                  <span>2L + PS (Width 10m)</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <span className="w-2.5 h-1.5 bg-slate-600 rounded-xs" />
-                  <span>2L (Width 7m)</span>
+
+                {/* Width Specs Stack */}
+                <div className="space-y-0.5 text-[9px] flex-1">
+                  <div className="flex items-center justify-between text-slate-200">
+                    <span className="font-semibold">6L</span>
+                    <span className="font-mono text-indigo-300 font-bold">20m</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-300">
+                    <span className="font-semibold">4L / 4L+PS</span>
+                    <span className="font-mono text-blue-300 font-bold">14m</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-300">
+                    <span className="font-semibold">2L + PS</span>
+                    <span className="font-mono text-emerald-300 font-bold">10m</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span className="font-semibold">2L</span>
+                    <span className="font-mono text-amber-300 font-bold">7m</span>
+                  </div>
                 </div>
               </div>
             </div>
