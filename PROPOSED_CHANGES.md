@@ -119,18 +119,34 @@ This document captures and tracks all proposed changes, architectural pivots, an
   - Centralized or module-linked document storage allowing users to upload departmental files (PDFs, Office docs, Scans) tagged with categories (e.g. *Government Orders*, *Technical Sanctions*, *Contracts*, *Court Orders*, *Circulars*).
   - View and download files on demand with category filtering and search.
 
-### Change 8: Level 3 Straight-Line Diagram (SLD) Baseline & Level 2 Schema Expansion
-- **Module**: Master Corridors & Sub-Chainages (`/highways`, `/highways/[id]/sld`)
-- **Status**: **Approved for Execution** (August 12, 2026)
-- **Schema Expansion (`highway_sub_chainages` table)**:
-  - Add `important_town` (`TEXT`): For town names, junction markers, ROBs, and landmarks (Micro).
-  - Add `row_width` (`VARCHAR(100)`): For Right of Way dimensions (e.g., `22m-25m`) (Micro & Macro).
-  - Add `carriageway_width` (`VARCHAR(100)`): For physical width details (e.g., `10m`, `14m`, `7m`) (Micro & Macro).
-- **Level 3 SLD Web Timeline (`/highways/[id]/sld`) Strategy**:
-  - Implement dynamic linear canvas rendering Chainage Ruler, Carriageway Lane Bars (`2L`, `2L+PS`, `4L`, `6L`), Town Markers, Traffic PCU count, and ROW spans.
-  - **Decoupled DLP Architecture**: Defer DLP contract integration while reserving structured DLP overlay slots inside the stretch bar boxes for seamless attachment when the DLP module redesign is complete.
+### Change 9: Interactive Level 3 Straight-Line Diagram (SLD) Architecture & Visual Gauge Refinements
+- **Module**: Master Corridors & Sub-Chainages (`/highways/[id]/sld`)
+- **Status**: ✅ **COMPLETED & DEPLOYED TO PRODUCTION** (August 12, 2026)
+- **Delivered Architecture & Visual Features**:
+  1. **Equal Fixed-Width Cell Columns (Excel Grid Paradigm)**:
+     - Shifted from proportional physical distance scaling to fixed-width cell column grid (`colWidthPx = 150px * zoomLevel`).
+     - Short/dense sub-chainages (e.g. 0.1km or 5km) are guaranteed equal visual space as long stretches (100km), maximizing human readability and data absorption.
+  2. **Centerline Symmetrical Road Expansion**:
+     - Aligned road bar boxes vertically on a horizontal centerline reference axis (`top-1/2 -translate-y-1/2`).
+     - Road sections expand symmetrically outward on both top and bottom based on lane width (`6L = 150px`, `4L / 4L+PS = 110px`, `2L+PS = 75px`, `2L = 40px`).
+  3. **100% Clean Neutral Baseline Bar Fill Colors (Reserved for DLP Data)**:
+     - Neutralized bar box fill colors (`bg-slate-700/80`), reserving color fills 100% for future DLP contract statuses (Active DLP, STMC, PBMC) upon DLP module upload.
+  4. **Full-Screen Dynamically Stretched Canvas Layout**:
+     - Removed redundant header title rows and footer notice rows.
+     - Matrix board container dynamically expands to fit full screen height (`flex-1 min-h-[500px]`), stretching the Carriageway Bar Corridor row dynamically (`flex-1 min-h-[200px]`).
+  5. **Precision Right-Facing Caliper Docking Gauge (Sidebar Legend)**:
+     - Built vertical stems matching exact bar heights (`150px`, `110px`, `75px`, `40px`) centered on the centerline axis.
+     - Placed **top and bottom right-pointing horizontal guide arrows (`─────►`)** extending seamlessly from the head and tail of each vertical stem to the right border of the sidebar.
+     - Placed lane reference text (`6L 20m`, `4L / 4L+PS 14m`, `2L+PS 10m`, `2L 7m`) to the right side of the vertical stem.
+     - As users scroll horizontally on the canvas, any road bar docks directly between its top and bottom guide arrows (`─────►`) at the sidebar seam border.
+  6. **Dedicated Carriageway Specs Matrix Track Row & Interactive Filter**:
+     - Added a dedicated 1-to-1 matrix track row for **Carriageway Specs** displaying full-width colored cell badges matching lane type (Purple for 6L, Blue for 4L / 4L+PS, Emerald for 2L+PS, Amber for 2L).
+     - Added an interactive **`Carriageway Specs`** filter checkbox in the top layer visibility toolbar.
+  7. **Clean Distance Unit Badge Formatting**:
+     - Formatted split distance badges in the Chainage Splits track to display **`12.3 km`** (with space and `km`).
 
 ---
+
 
 
 
