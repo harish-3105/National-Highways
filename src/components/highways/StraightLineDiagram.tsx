@@ -146,6 +146,13 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     return Math.max(1000, numCols * colWidthPx);
   }, [activeStretches.length, colWidthPx]);
 
+  // Dynamic Print Scale Factor so SLD matrix fits landscape PDF/print page without horizontal truncation
+  const printScale = useMemo(() => {
+    const totalW = 224 + canvasWidthPx;
+    if (totalW <= 1000) return 1;
+    return Math.max(0.35, Math.round((1000 / totalW) * 100) / 100);
+  }, [canvasWidthPx]);
+
   // Helper for Excel bar height specs (Colors neutral, reserved for DLP contract status)
   const getLaneStyle = (laneConfig: string) => {
     const norm = (laneConfig || '').toLowerCase();
@@ -224,7 +231,47 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans print:bg-white print:text-black">
+    <div
+      className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans print:bg-white print:text-black print:p-2"
+      style={{ '--sld-print-scale': printScale } as React.CSSProperties}
+    >
+      {/* Printable Document Header (Visible only when exporting PDF / printing) */}
+      <div className="hidden print:block mb-4 border-b-2 border-slate-900 pb-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 bg-slate-900 text-white font-mono font-extrabold text-xs rounded">
+                {highway.road_code}
+              </span>
+              {highway.old_nh_no && (
+                <span className="px-2 py-0.5 bg-slate-200 text-slate-800 text-xs font-bold rounded border border-slate-400">
+                  Old NH: {highway.old_nh_no}
+                </span>
+              )}
+              <h1 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+                {highway.corridor_name}
+              </h1>
+            </div>
+            <p className="text-xs text-slate-700 mt-1 font-medium">
+              National Highway Corridor Linear Asset &amp; Straight-Line Diagram (SLD) Official Report
+            </p>
+          </div>
+          <div className="text-right text-xs text-slate-700">
+            <p className="font-bold text-slate-900">Tamil Nadu National Highways Division</p>
+            <p className="text-[11px] text-slate-600 mt-0.5">
+              Report Date: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </p>
+          </div>
+        </div>
+        <div className="mt-3 pt-2 border-t border-slate-300 flex items-center justify-between text-xs text-slate-800 font-semibold">
+          <span>Corridor Span: <strong>Km {minKm} → Km {maxKm}</strong> ({totalSpan.toFixed(2)} km)</span>
+          <span>&bull;</span>
+          <span>Sub-Chainage Splits: <strong>{activeStretches.length} Stretches</strong></span>
+          <span>&bull;</span>
+          <span>Diagram Mode: <strong>{viewType === 'MICRO_LANE' ? 'Micro Splits SLD' : 'Macro Census SLD'}</strong></span>
+        </div>
+      </div>
+
       {/* Top Header Bar */}
       <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -325,7 +372,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
       </header>
 
       {/* Main Canvas Workspace */}
-      <main className="flex-1 max-w-[1440px] w-full mx-auto p-4 md:p-6 space-y-4 flex flex-col">
+      <main className="flex-1 max-w-[1440px] w-full mx-auto p-4 md:p-6 space-y-4 flex flex-col print:p-0 print:max-w-none print:w-full print:m-0 print:space-y-2">
         {/* Layer Visibility Filters Bar */}
         <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl flex items-center justify-between flex-wrap gap-3 print:hidden shrink-0">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
@@ -392,7 +439,10 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         </div>
 
         {/* FULL SCREEN DYNAMICALLY STRETCHED MATRIX SLD BOARD */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-1 min-h-[500px] print:border-black print:bg-white">
+        <div
+          className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-1 min-h-[500px] print:border-slate-400 print:bg-white print:shadow-none print:rounded-none print:min-h-0 print:overflow-visible"
+          style={{ zoom: 'var(--sld-print-scale, 1)' } as React.CSSProperties}
+        >
           
           {/* LEFT FIXED SIDEBAR: Row Labels Locked 1-to-1 to Right Canvas Rows */}
           <div className="w-56 shrink-0 bg-slate-950 border-r border-slate-800 flex flex-col z-30 select-none">
@@ -583,7 +633,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     return (
                       <div
                         key={st.id || i}
-                        className={`absolute top-1/2 -translate-y-1/2 border-r border-white/25 border-y transition-all duration-200 cursor-pointer hover:brightness-125 hover:z-30 shadow-md ${style.bg} ${style.border}`}
+                        className={`absolute top-1/2 -translate-y-1/2 border-r border-white/25 border-y transition-all duration-200 cursor-pointer hover:brightness-125 hover:z-30 shadow-md ${style.bg} ${style.border} print:bg-slate-200 print:border-slate-500 print:text-slate-900 flex items-center justify-center`}
                         style={{
                           left: `${leftPx}px`,
                           width: `${colWidthPx}px`,
@@ -593,7 +643,9 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                         onClick={() => setHoveredStretch(st)}
                         title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.length_km} km, ${st.lane_configuration}) - Neutral Baseline Box (Colors reserved for DLP contract data)`}
                       >
-                        {/* 100% EMPTY INSIDE - NEUTRAL COLOR FILL (RESERVED FOR DLP CONTRACT DATA) */}
+                        <span className="text-[10px] font-extrabold font-mono text-slate-300 print:text-slate-900 truncate px-1 select-none">
+                          {st.lane_configuration || style.label}
+                        </span>
                       </div>
                     );
                   })
@@ -730,7 +782,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
         {/* Stretch Hover Detail Card */}
         {hoveredStretch && (
-          <div className="bg-slate-900 border border-blue-500/50 p-4 rounded-xl shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in duration-150 shrink-0">
+          <div className="bg-slate-900 border border-blue-500/50 p-4 rounded-xl shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in duration-150 shrink-0 print:hidden">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2 py-0.5 bg-blue-600 text-white font-mono font-bold text-xs rounded">
@@ -781,6 +833,41 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
             </button>
           </div>
         )}
+
+        {/* Printable Report Technical Legend & Operational Footer */}
+        <div className="hidden print:block mt-6 pt-4 border-t-2 border-slate-800 text-xs text-slate-900">
+          <h3 className="font-bold text-slate-900 mb-2 uppercase tracking-wide text-xs">
+            SLD Technical Legend &amp; Operational Reference Guide
+          </h3>
+          <div className="grid grid-cols-3 gap-4 bg-slate-50 p-3 rounded border border-slate-300">
+            <div>
+              <span className="font-bold text-slate-900 block mb-1">Carriageway Gauge Heights:</span>
+              <ul className="space-y-0.5 text-[10px] text-slate-700">
+                <li>• <strong>6L (20m):</strong> 6-Lane Dual Carriageway</li>
+                <li>• <strong>4L / 4L+PS (14m):</strong> 4-Lane / Paved Shoulder</li>
+                <li>• <strong>2L+PS (10m):</strong> 2-Lane + Paved Shoulder</li>
+                <li>• <strong>2L (7m):</strong> Standard 2-Lane Carriageway</li>
+              </ul>
+            </div>
+            <div>
+              <span className="font-bold text-slate-900 block mb-1">Traffic PCU Volume Range:</span>
+              <ul className="space-y-0.5 text-[10px] text-slate-700">
+                <li>• <strong>Low Volume:</strong> &lt; 5,000 PCU / day</li>
+                <li>• <strong>Medium Volume:</strong> 5,000 – 15,000 PCU / day</li>
+                <li>• <strong>High Traffic:</strong> &gt; 15,000 PCU / day</li>
+              </ul>
+            </div>
+            <div>
+              <span className="font-bold text-slate-900 block mb-1">Official Verification:</span>
+              <p className="text-[10px] text-slate-700">
+                Linear asset matrix verified against Level 1 corridor master record &amp; Level 2 sub-chainage breakdown data.
+              </p>
+              <p className="text-[9px] text-slate-500 mt-2 font-mono">
+                Generated via TN National Highways Management System
+              </p>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
   );

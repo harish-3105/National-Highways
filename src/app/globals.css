@@ -25,21 +25,22 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Print CSS rules for Legal Record & Fee Bill document printing */
+/* Print CSS rules for Legal Record & Fee Bill document printing & SLD export */
 @media print {
   .no-print,
   .print-hide,
-  header,
-  nav {
+  header.print-hide,
+  nav.print-hide {
     display: none !important;
   }
 
-  body * {
+  /* Only hide body content if printing a modal popup window */
+  body:has(.legal-print-modal-wrapper) * {
     visibility: hidden;
   }
 
-  .legal-print-modal-wrapper,
-  .legal-print-modal-wrapper * {
+  body:has(.legal-print-modal-wrapper) .legal-print-modal-wrapper,
+  body:has(.legal-print-modal-wrapper) .legal-print-modal-wrapper * {
     visibility: visible !important;
   }
 
@@ -78,6 +79,12 @@ body {
     height: auto !important;
     overflow: visible !important;
     padding: 0.5in !important;
+  }
+
+  /* General SLD Print Optimization */
+  @page {
+    size: landscape;
+    margin: 8mm;
   }
 }
 
