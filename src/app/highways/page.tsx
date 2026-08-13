@@ -56,6 +56,20 @@ export default function HighwaysPage() {
   const [editingHighway, setEditingHighway] = useState<HighwayCorridor | null>(null);
   const [deletingHighway, setDeletingHighway] = useState<HighwayCorridor | null>(null);
 
+  const [activeLaneFilter, setActiveLaneFilter] = useState<string | null>(null);
+
+  const displayedCorridors = React.useMemo(() => {
+    if (!activeLaneFilter) return corridors;
+    return corridors.filter((c) => {
+      if (activeLaneFilter === 'lessThan2l') return Number(c.length_less_than_2l) > 0;
+      if (activeLaneFilter === 'lane2l') return Number(c.length_2l) > 0;
+      if (activeLaneFilter === 'lane2lPs') return Number(c.length_2l_ps) > 0;
+      if (activeLaneFilter === 'lane4l') return Number(c.length_4l) > 0;
+      if (activeLaneFilter === 'lane6l') return Number(c.length_6l) > 0;
+      return true;
+    });
+  }, [corridors, activeLaneFilter]);
+
   // Debounce search input by 300ms
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -176,6 +190,8 @@ export default function HighwaysPage() {
           laneLengthsKm={aggregates.laneLengthsKm}
           corridorsWithDlp={aggregates.corridorsWithDlp}
           loading={loading && corridors.length === 0}
+          activeLaneFilter={activeLaneFilter}
+          onSelectLaneFilter={(key) => setActiveLaneFilter((prev) => prev === key ? null : key)}
         />
 
         {/* Section B: Filter & Search Bar */}
@@ -189,7 +205,7 @@ export default function HighwaysPage() {
             onSortChange={setSortBy}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
-            totalResults={corridors.length}
+            totalResults={displayedCorridors.length}
             showArchived={showArchived}
             onToggleArchived={() => setShowArchived((v) => !v)}
           />
@@ -198,7 +214,7 @@ export default function HighwaysPage() {
         {/* Section C: Master Catalog View */}
         {viewMode === 'table' ? (
           <HighwaysTable
-            corridors={corridors}
+            corridors={displayedCorridors}
             loading={loading}
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
@@ -206,10 +222,11 @@ export default function HighwaysPage() {
             onView={(h) => setViewingHighway(h)}
             onEdit={(h) => setEditingHighway(h)}
             onDelete={(h) => setDeletingHighway(h)}
+            activeLaneFilter={activeLaneFilter}
           />
         ) : (
           <HighwaysGrid
-            corridors={corridors}
+            corridors={displayedCorridors}
             loading={loading}
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}

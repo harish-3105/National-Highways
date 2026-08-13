@@ -402,23 +402,33 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2 text-xs">
               <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
                 <span className="text-[10px] text-slate-400 font-semibold block">&lt; 2-Lane</span>
-                <span className="font-bold text-amber-700 dark:text-amber-300">{lLess2l} km</span>
+                <span className="font-bold text-amber-700 dark:text-amber-300">
+                  {lLess2l} km <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">({pLess2l}%)</span>
+                </span>
               </div>
               <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
                 <span className="text-[10px] text-slate-400 font-semibold block">2-Lane</span>
-                <span className="font-bold text-amber-800 dark:text-amber-200">{l2l} km</span>
+                <span className="font-bold text-amber-800 dark:text-amber-200">
+                  {l2l} km <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">({p2l}%)</span>
+                </span>
               </div>
               <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
                 <span className="text-[10px] text-slate-400 font-semibold block">2L + Paved Sh.</span>
-                <span className="font-bold text-emerald-700 dark:text-emerald-300">{l2lPs} km</span>
+                <span className="font-bold text-emerald-700 dark:text-emerald-300">
+                  {l2lPs} km <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">({p2lPs}%)</span>
+                </span>
               </div>
               <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
                 <span className="text-[10px] text-slate-400 font-semibold block">4-Lane</span>
-                <span className="font-bold text-blue-700 dark:text-blue-300">{l4l} km</span>
+                <span className="font-bold text-blue-700 dark:text-blue-300">
+                  {l4l} km <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">({p4l}%)</span>
+                </span>
               </div>
               <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
                 <span className="text-[10px] text-slate-400 font-semibold block">6-Lane</span>
-                <span className="font-bold text-purple-700 dark:text-purple-300">{l6l} km</span>
+                <span className="font-bold text-purple-700 dark:text-purple-300">
+                  {l6l} km <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">({p6l}%)</span>
+                </span>
               </div>
             </div>
           </div>

@@ -14,6 +14,7 @@ interface HighwaysTableProps {
   onView?: (highway: HighwayCorridor) => void;
   onEdit: (highway: HighwayCorridor) => void;
   onDelete: (highway: HighwayCorridor) => void;
+  activeLaneFilter?: string | null;
 }
 
 export const HighwaysTable: React.FC<HighwaysTableProps> = ({
@@ -25,6 +26,7 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
   onView,
   onEdit,
   onDelete,
+  activeLaneFilter = null,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState<boolean>(false);
@@ -142,11 +144,11 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
               </th>
               <th className="py-3.5 px-4 font-semibold">NH Numbers / Code</th>
               <th className="py-3.5 px-4 font-semibold">Corridor Title / Section</th>
-              <th className="py-3.5 px-4 font-semibold">Route Endpoints</th>
               <th className="py-3.5 px-4 font-semibold">Chainage Span</th>
               <th className="py-3.5 px-4 font-semibold">Total Length</th>
-              <th className="py-3.5 px-4 font-semibold">Multi-Lane Breakdown</th>
-              <th className="py-3.5 px-4 font-semibold">DLP Coverage</th>
+              <th className="py-3.5 px-4 font-semibold">
+                {activeLaneFilter ? 'Focused Lane Metric' : 'Multi-Lane Breakdown'}
+              </th>
               <th className="py-3.5 px-4 font-semibold text-right print:hidden">Actions</th>
             </tr>
           </thead>
@@ -200,15 +202,6 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
                     {item.road_name}
                   </td>
 
-                  {/* Route Endpoints */}
-                  <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-xs">
-                      <span className="font-semibold text-slate-700 dark:text-slate-200">{item.from_location || 'Start'}</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="font-semibold text-slate-700 dark:text-slate-200">{item.to_location || 'End'}</span>
-                    </div>
-                  </td>
-
                   {/* Chainage Span */}
                   <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 whitespace-nowrap font-mono">
                     Km {item.from_chainage || '0'} → {item.to_chainage || '0'}
@@ -219,40 +212,78 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
                     {item.length_km} km
                   </td>
 
-                  {/* Multi-Lane Breakdown */}
+                  {/* Multi-Lane Breakdown / Focused Isolated Metric */}
                   <td className="py-3.5 px-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1 text-[11px]">
-                      {Number(item.length_less_than_2l) > 0 && (
-                        <span className="px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 font-medium">
-                          &lt;2L: {item.length_less_than_2l}km
+                    {activeLaneFilter ? (
+                      <div className="flex items-center gap-1.5">
+                        {activeLaneFilter === 'lessThan2l' && (
+                          <span className="px-2.5 py-1 rounded-md bg-amber-600 text-white font-extrabold text-xs shadow-xs">
+                            &lt;2L: {item.length_less_than_2l || 0} km
+                          </span>
+                        )}
+                        {activeLaneFilter === 'lane2l' && (
+                          <span className="px-2.5 py-1 rounded-md bg-amber-600 text-white font-extrabold text-xs shadow-xs">
+                            2L: {item.length_2l || 0} km
+                          </span>
+                        )}
+                        {activeLaneFilter === 'lane2lPs' && (
+                          <span className="px-2.5 py-1 rounded-md bg-emerald-600 text-white font-extrabold text-xs shadow-xs">
+                            2L+PS: {item.length_2l_ps || 0} km
+                          </span>
+                        )}
+                        {activeLaneFilter === 'lane4l' && (
+                          <span className="px-2.5 py-1 rounded-md bg-blue-600 text-white font-extrabold text-xs shadow-xs">
+                            4L: {item.length_4l || 0} km
+                          </span>
+                        )}
+                        {activeLaneFilter === 'lane6l' && (
+                          <span className="px-2.5 py-1 rounded-md bg-purple-600 text-white font-extrabold text-xs shadow-xs">
+                            6L: {item.length_6l || 0} km
+                          </span>
+                        )}
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          ({Math.round(((Number(item[
+                            activeLaneFilter === 'lessThan2l' ? 'length_less_than_2l' :
+                            activeLaneFilter === 'lane2l' ? 'length_2l' :
+                            activeLaneFilter === 'lane2lPs' ? 'length_2l_ps' :
+                            activeLaneFilter === 'lane4l' ? 'length_4l' : 'length_6l'
+                          ]) || 0) / (item.length_km || 1)) * 100)}% of corridor)
                         </span>
-                      )}
-                      {Number(item.length_2l) > 0 && (
-                        <span className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border border-amber-300 font-medium">
-                          2L: {item.length_2l}km
-                        </span>
-                      )}
-                      {Number(item.length_2l_ps) > 0 && (
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 font-medium">
-                          2L+PS: {item.length_2l_ps}km
-                        </span>
-                      )}
-                      {Number(item.length_4l) > 0 && (
-                        <span className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 font-bold">
-                          4L: {item.length_4l}km
-                        </span>
-                      )}
-                      {Number(item.length_6l) > 0 && (
-                        <span className="px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 font-bold">
-                          6L: {item.length_6l}km
-                        </span>
-                      )}
-                      {(!item.length_less_than_2l && !item.length_2l && !item.length_2l_ps && !item.length_4l && !item.length_6l) && (
-                        <span className={`px-2 py-0.5 rounded-md text-xs font-bold border ${getBadgeStyle(item.configuration)}`}>
-                          {item.configuration}
-                        </span>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-[11px]">
+                        {Number(item.length_less_than_2l) > 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 font-medium">
+                            &lt;2L: {item.length_less_than_2l}km
+                          </span>
+                        )}
+                        {Number(item.length_2l) > 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border border-amber-300 font-medium">
+                            2L: {item.length_2l}km
+                          </span>
+                        )}
+                        {Number(item.length_2l_ps) > 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 font-medium">
+                            2L+PS: {item.length_2l_ps}km
+                          </span>
+                        )}
+                        {Number(item.length_4l) > 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 font-bold">
+                            4L: {item.length_4l}km
+                          </span>
+                        )}
+                        {Number(item.length_6l) > 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 font-bold">
+                            6L: {item.length_6l}km
+                          </span>
+                        )}
+                        {(!item.length_less_than_2l && !item.length_2l && !item.length_2l_ps && !item.length_4l && !item.length_6l) && (
+                          <span className={`px-2 py-0.5 rounded-md text-xs font-bold border ${getBadgeStyle(item.configuration)}`}>
+                            {item.configuration}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </td>
 
                   {/* DLP Coverage */}
