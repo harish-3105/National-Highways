@@ -53,13 +53,14 @@ This document captures and tracks all proposed changes, architectural pivots, an
 ### Change 1: Corridors Dashboard Summary Cards 2x2 Grid Layout
 - **Module**: Master Corridors (`/highways`)
 - **Component**: [`KpiHeaderCards.tsx`](file:///home/mathir14/nh_proj/src/components/highways/KpiHeaderCards.tsx)
-- **Requested Change**: Re-layout the 4 top KPI summary boxes into a 2x2 grid (2 vertical x 2 horizontal equal quadrant boxes) across the screen for high visual prominence, followed by the rest of the existing page content (search bar, catalog table, actions).
+- **Status**: ✅ **COMPLETED & DEPLOYED TO PRODUCTION** (August 13, 2026)
+- **Delivered Change**: Re-laid out the 4 top KPI summary boxes into a balanced 2x2 quadrant grid (`grid-cols-1 md:grid-cols-2`) for high visual prominence on screen.
 
 ### Change 2: Streamline Master Highways Table Columns (Remove Endpoints & DLP Coverage)
 - **Module**: Master Corridors (`/highways`)
 - **Component**: [`HighwaysTable.tsx`](file:///home/mathir14/nh_proj/src/components/highways/HighwaysTable.tsx)
-- **Requested Change**: Remove the **Route Endpoints** column and **DLP Coverage** column from the primary Master Corridors catalog table.
-- **Resulting Table Columns**:
+- **Status**: ✅ **COMPLETED & DEPLOYED TO PRODUCTION** (August 13, 2026)
+- **Delivered Change**: Removed **Route Endpoints** and **DLP Coverage** columns from the primary Master Corridors catalog table, resulting in a streamlined 6-column layout:
   1. `NH Numbers / Code`
   2. `Corridor Title / Section`
   3. `Chainage Span`
@@ -70,18 +71,17 @@ This document captures and tracks all proposed changes, architectural pivots, an
 ### Change 3: Add Percentage Share (%) to Multi-Lane Breakdown in View Modal
 - **Module**: Master Corridors (`/highways`)
 - **Component**: [`ViewHighwayModal.tsx`](file:///home/mathir14/nh_proj/src/components/highways/ViewHighwayModal.tsx) (Passport View Modal)
-- **Requested Change**: In the **Multi-Lane Breakdown Distribution** section of the View modal, display the percentage contribution (`%`) of total corridor length alongside each lane type kilometer value (e.g. `71 km (41.4%)`).
+- **Status**: ✅ **COMPLETED & DEPLOYED TO PRODUCTION** (August 13, 2026)
+- **Delivered Change**: In the **Multi-Lane Breakdown Distribution** section of the Passport View modal, displayed percentage contribution (`%`) alongside each lane type kilometer value (e.g. `71 km (41%)`).
 
 ### Change 4: Interactive KPI Lane Breakdown Filter (Focused Lane View)
 - **Module**: Master Corridors (`/highways`)
-- **Components**: [`KpiHeaderCards.tsx`](file:///home/mathir14/nh_proj/src/components/highways/KpiHeaderCards.tsx) & [`HighwaysTable.tsx`](file:///home/mathir14/nh_proj/src/components/highways/HighwaysTable.tsx)
-- **Requested Change**:
-  - Turn the lane breakdown badges in the KPI card (`<2L`, `2L`, `2L+PS`, `4L`, `6L`) into interactive filter buttons.
-  - **Behavior Difference vs Main Toolbar Dropdown**:
-    - **Main Toolbar Filter**: Filters roads containing the lane type, while keeping the full multi-lane breakdown displayed for each road.
-    - **KPI Card Filter**: 
-      1. Filters the catalog to show only corridors containing that selected lane configuration (`> 0 km`).
-      2. Isolates and displays **only the selected lane configuration data/distance** for those matching roads in the table (focusing specifically on that target lane metric rather than all 5 lane configurations).
+- **Components**: [`KpiHeaderCards.tsx`](file:///home/mathir14/nh_proj/src/components/highways/KpiHeaderCards.tsx), [`HighwaysTable.tsx`](file:///home/mathir14/nh_proj/src/components/highways/HighwaysTable.tsx), [`page.tsx`](file:///home/mathir14/nh_proj/src/app/highways/page.tsx)
+- **Status**: ✅ **COMPLETED & DEPLOYED TO PRODUCTION** (August 13, 2026)
+- **Delivered Change**:
+  - Converted lane breakdown badges in the KPI card (`<2L`, `2L`, `2L+PS`, `4L`, `6L`) into interactive filter buttons.
+  - Clicking any lane badge filters the table to show corridors matching that lane configuration (> 0 km) AND isolates/displays **only the selected lane distance metric** in the table row with a focused highlight badge and percentage share.
+  - Clicking active badge or "Reset Filter" restores full multi-lane list view.
 
 ### Change 5: Replace "Maintenance DLP Active" KPI Card (Replacement Metric Pending)
 - **Module**: Master Corridors (`/highways`)
