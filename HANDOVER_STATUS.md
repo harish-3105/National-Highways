@@ -3,9 +3,9 @@
 **Project**: Tamil Nadu National Highways Department Management System  
 **Repository Remote**: `git@github.com:tnhighwaysdep/highways_project.git`  
 **Active Production Branch**: `main`  
-**Latest Deployed Commit**: `4d9bac0`  
+**Latest Deployed Commit**: `c65a3dd`  
 
-**Date**: August 8, 2026  
+**Date**: August 13, 2026  
 
 ---
 
@@ -101,6 +101,11 @@ Located in `supabase/migrations/`:
 | **`97cad17`** | `style(ingest): aligned Data Ingestion module theme and color scheme with unified light/dark design system` |
 | **`2e28daa`** | `fix(legal): fix print record duplication and render 100% full case details in CaseViewModal` |
 | **`4d9bac0`** | `feat(legal): add formal legal letterhead template for PDF export while preserving web modal UI` |
+| **`0c5b58d`** | `fix(sld): resolve blank page on print/export PDF and format printable layout` |
+| **`b0997f9`** | `fix(sld): restrict print scale zoom strictly to @media print block so web view remains 100% full size` |
+| **`1035127`** | `feat(highways): implement proposed changes 1-4 (2x2 KPI grid, streamlined table columns, percentage share in view modal, interactive KPI lane breakdown filter)` |
+| **`6ac0d57`** | `docs: update PROPOSED_CHANGES.md status for completed Changes 1-4` |
+| **`c65a3dd`** | `fix(highways): remove un-removed DLP Coverage td cell from HighwaysTable tbody row` |
 
 
 ---
