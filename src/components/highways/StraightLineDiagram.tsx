@@ -135,16 +135,29 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     return { minKm: min, maxKm: max, totalSpan: span };
   }, [activeStretches, highway]);
 
-  // Equal Cell Column Width (Excel-like Grid Cells for Maximum Human Readability)
-  const colWidthPx = useMemo(() => {
-    return Math.max(150, Math.round(150 * zoomLevel));
+  // Proportional physical scale: Calculate pixels per kilometer
+  const pixelsPerKm = useMemo(() => {
+    // Base scale: ~100px per kilometer at 1x zoom
+    return Math.max(25, Math.round(100 * zoomLevel));
   }, [zoomLevel]);
 
-  // Total Canvas Width based on number of split columns
+  // Total Canvas Width based on physical distance totalSpan (km)
   const canvasWidthPx = useMemo(() => {
-    const numCols = Math.max(1, activeStretches.length);
-    return Math.max(1000, numCols * colWidthPx);
-  }, [activeStretches.length, colWidthPx]);
+    return Math.max(1000, Math.round(totalSpan * pixelsPerKm));
+  }, [totalSpan, pixelsPerKm]);
+
+  // Helper function to calculate proportional left and width for any stretch
+  const getStretchPos = useCallback(
+    (fromKm: number, toKm: number, lengthKm: number) => {
+      const start = Math.max(minKm, fromKm);
+      const end = Math.max(start, toKm);
+      const len = Math.max(0.1, lengthKm || (end - start));
+      const leftPx = Math.round(((start - minKm) / totalSpan) * canvasWidthPx);
+      const widthPx = Math.max(24, Math.round((len / totalSpan) * canvasWidthPx));
+      return { leftPx, widthPx };
+    },
+    [minKm, totalSpan, canvasWidthPx]
+  );
 
   // Dynamic Print Scale Factor so SLD matrix fits landscape PDF/print page without horizontal truncation
   const printScale = useMemo(() => {
@@ -571,13 +584,13 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {showTowns && (
                 <div className="relative h-12 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
-                    const leftPx = i * colWidthPx;
+                    const { leftPx, widthPx } = getStretchPos(st.from_km, st.to_km, st.length_km);
 
                     return (
                       <div
                         key={st.id || i}
                         className="absolute h-full top-0 border-r border-slate-800 flex items-center justify-center px-1 text-[11px] font-bold text-amber-300 truncate cursor-pointer hover:bg-amber-950/40 transition-colors"
-                        style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
+                        style={{ left: `${leftPx}px`, width: `${widthPx}px` }}
                         onClick={() => setHoveredStretch(st)}
                       >
                         {st.important_town ? (
@@ -597,13 +610,13 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {/* TRACK 2: Chainage Splits Header Row (Height 44px / h-11) */}
               <div className="relative h-11 border-b border-slate-800 bg-slate-850 dark:bg-slate-950/90 flex items-center shrink-0">
                 {activeStretches.map((st, i) => {
-                  const leftPx = i * colWidthPx;
+                  const { leftPx, widthPx } = getStretchPos(st.from_km, st.to_km, st.length_km);
 
                   return (
                     <div
                       key={st.id || i}
                       className="absolute h-full border-r border-slate-700 flex items-center justify-between px-2 text-[10px] font-mono font-bold text-blue-300 truncate"
-                      style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
+                      style={{ left: `${leftPx}px`, width: `${widthPx}px` }}
                     >
                       <span className="truncate">Km {st.from_km}</span>
                       <span className="text-slate-400 text-[9px] bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 shrink-0 font-sans">
@@ -615,7 +628,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 })}
               </div>
 
-              {/* TRACK 3: CENTERLINE-ALIGNED ROAD CORRIDOR (STRETCHED DYNAMICALLY) */}
+              {/* TRACK 3: CENTERLINE-ALIGNED ROAD CORRIDOR (PROPORTIONAL PHYSICAL LENGTH) */}
               <div className="relative flex-1 min-h-[200px] border-b border-slate-800 bg-slate-950/90 flex items-center shrink-0 overflow-hidden">
                 {/* Horizontal Road Centerline Guide Line */}
                 <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/25 z-0 pointer-events-none" />
@@ -626,23 +639,25 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                   </div>
                 ) : (
                   activeStretches.map((st, i) => {
-                    const leftPx = i * colWidthPx;
+                    const { leftPx, widthPx } = getStretchPos(st.from_km, st.to_km, st.length_km);
                     const style = getLaneStyle(st.lane_configuration);
 
                     return (
                       <div
                         key={st.id || i}
-                        className={`absolute top-1/2 -translate-y-1/2 border-r border-white/25 border-y transition-all duration-200 cursor-pointer hover:brightness-125 hover:z-30 shadow-md ${style.bg} ${style.border} print:bg-slate-200 print:border-slate-500`}
+                        className={`absolute top-1/2 -translate-y-1/2 border-r border-white/25 border-y transition-all duration-200 cursor-pointer hover:brightness-125 hover:z-30 shadow-md ${style.bg} ${style.border} print:bg-slate-200 print:border-slate-500 flex items-center justify-center overflow-hidden px-1`}
                         style={{
                           left: `${leftPx}px`,
-                          width: `${colWidthPx}px`,
+                          width: `${widthPx}px`,
                           height: `${style.heightPx}px`,
                         }}
                         onMouseEnter={() => setHoveredStretch(st)}
                         onClick={() => setHoveredStretch(st)}
-                        title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.length_km} km, ${st.lane_configuration}) - Neutral Baseline Box (Colors reserved for DLP contract data)`}
+                        title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.length_km} km, ${st.lane_configuration}) - ${st.dpr_status || st.important_town || 'Baseline Stretch'}`}
                       >
-                        {/* 100% EMPTY INSIDE - NEUTRAL COLOR FILL (RESERVED FOR DLP CONTRACT DATA) */}
+                        <span className="text-[10px] font-extrabold font-mono text-slate-200 print:text-slate-900 truncate select-none px-1">
+                          {st.dpr_status || st.important_town || `${st.lane_configuration} (${st.length_km}km)`}
+                        </span>
                       </div>
                     );
                   })
@@ -653,7 +668,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {showCw && (
                 <div className="relative h-11 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
-                    const leftPx = i * colWidthPx;
+                    const { leftPx, widthPx } = getStretchPos(st.from_km, st.to_km, st.length_km);
                     const norm = (st.lane_configuration || '').toLowerCase();
                     
                     let badgeStyle = 'bg-indigo-950/70 text-indigo-300 border-indigo-500/40';
@@ -683,7 +698,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                       <div
                         key={st.id || i}
                         className="absolute h-full top-0 border-r border-slate-800 flex items-center justify-center px-1 text-[10px] font-bold truncate"
-                        style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
+                        style={{ left: `${leftPx}px`, width: `${widthPx}px` }}
                       >
                         {specLabel ? (
                           <span className={`px-2 py-1 border rounded-md truncate max-w-full font-mono shadow-xs flex items-center justify-center gap-1 ${badgeStyle}`}>
@@ -702,14 +717,14 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {showPcu && (
                 <div className="relative h-11 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
-                    const leftPx = i * colWidthPx;
+                    const { leftPx, widthPx } = getStretchPos(st.from_km, st.to_km, st.length_km);
                     const pcuStyle = getPcuColor(st.pcu_count);
 
                     return (
                       <div
                         key={st.id || i}
                         className={`absolute h-full top-0 border-r border-slate-800 flex items-center justify-center px-1 text-[10px] font-mono font-bold truncate ${pcuStyle}`}
-                        style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
+                        style={{ left: `${leftPx}px`, width: `${widthPx}px` }}
                       >
                         {st.pcu_count && st.pcu_count > 0 ? (
                           <span className="truncate">{st.pcu_count.toLocaleString()} PCU</span>
@@ -726,13 +741,13 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {showRow && (
                 <div className="relative h-11 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
-                    const leftPx = i * colWidthPx;
+                    const { leftPx, widthPx } = getStretchPos(st.from_km, st.to_km, st.length_km);
 
                     return (
                       <div
                         key={st.id || i}
                         className="absolute h-full top-0 border-r border-slate-800 flex items-center justify-center px-1 text-[10px] font-bold text-teal-300 truncate"
-                        style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
+                        style={{ left: `${leftPx}px`, width: `${widthPx}px` }}
                       >
                         {st.row_width ? (
                           <span className="px-2 py-0.5 bg-teal-950/70 text-teal-300 border border-teal-500/40 rounded truncate max-w-full">
@@ -751,13 +766,13 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {showDpr && (
                 <div className="relative h-12 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
-                    const leftPx = i * colWidthPx;
+                    const { leftPx, widthPx } = getStretchPos(st.from_km, st.to_km, st.length_km);
 
                     return (
                       <div
                         key={st.id || i}
                         className="absolute h-full top-0 border-r border-slate-800 flex items-center justify-center px-1.5 text-[10px] font-semibold text-purple-200 truncate cursor-pointer hover:bg-purple-950/40 transition-colors"
-                        style={{ left: `${leftPx}px`, width: `${colWidthPx}px` }}
+                        style={{ left: `${leftPx}px`, width: `${widthPx}px` }}
                         onClick={() => setHoveredStretch(st)}
                       >
                         {st.dpr_status ? (
@@ -779,55 +794,72 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
         {/* Stretch Hover Detail Card */}
         {hoveredStretch && (
-          <div className="bg-slate-900 border border-blue-500/50 p-4 rounded-xl shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in duration-150 shrink-0 print:hidden">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2 py-0.5 bg-blue-600 text-white font-mono font-bold text-xs rounded">
-                  Km {hoveredStretch.from_km} → Km {hoveredStretch.to_km}
-                </span>
-                <span className="text-xs font-extrabold text-slate-200">
-                  Length: {hoveredStretch.length_km} km
-                </span>
-                <span className="px-2 py-0.5 bg-slate-800 text-slate-300 text-xs font-bold rounded border border-slate-700">
-                  {hoveredStretch.lane_configuration}
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 pt-1 flex items-center gap-4 flex-wrap">
-                {hoveredStretch.important_town && (
-                  <span className="text-amber-400 font-bold">
-                    📍 Town: {hoveredStretch.important_town}
+          <div className="bg-slate-900 border border-blue-500/50 p-4 rounded-xl shadow-2xl flex flex-col gap-3 animate-in fade-in duration-150 shrink-0 print:hidden">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 bg-blue-600 text-white font-mono font-bold text-xs rounded">
+                    Km {hoveredStretch.from_km} → Km {hoveredStretch.to_km}
                   </span>
-                )}
-                {hoveredStretch.row_width && (
-                  <span className="text-teal-400 font-bold">
-                    Right of Way: {hoveredStretch.row_width}
+                  <span className="text-xs font-extrabold text-slate-200">
+                    Length: {hoveredStretch.length_km} km
                   </span>
-                )}
-                {hoveredStretch.carriageway_width && (
-                  <span className="text-indigo-400 font-bold">
-                    Carriageway Width: {hoveredStretch.carriageway_width}
+                  <span className="px-2 py-0.5 bg-slate-800 text-slate-300 text-xs font-bold rounded border border-slate-700">
+                    {hoveredStretch.lane_configuration}
                   </span>
-                )}
-                {hoveredStretch.pcu_count > 0 && (
-                  <span className="text-emerald-400 font-bold">
-                    Traffic: {hoveredStretch.pcu_count.toLocaleString()} PCU
-                  </span>
-                )}
-              </p>
-              {hoveredStretch.dpr_status && (
-                <p className="text-xs italic text-purple-300 pt-0.5">
-                  &quot;{hoveredStretch.dpr_status}&quot;
+                </div>
+                <p className="text-xs text-slate-300 pt-1 flex items-center gap-4 flex-wrap">
+                  {hoveredStretch.important_town && (
+                    <span className="text-amber-400 font-bold">
+                      📍 Town: {hoveredStretch.important_town}
+                    </span>
+                  )}
+                  {hoveredStretch.row_width && (
+                    <span className="text-teal-400 font-bold">
+                      Right of Way: {hoveredStretch.row_width}
+                    </span>
+                  )}
+                  {hoveredStretch.carriageway_width && (
+                    <span className="text-indigo-400 font-bold">
+                      Carriageway Width: {hoveredStretch.carriageway_width}
+                    </span>
+                  )}
+                  {hoveredStretch.pcu_count > 0 && (
+                    <span className="text-emerald-400 font-bold">
+                      Traffic: {hoveredStretch.pcu_count.toLocaleString()} PCU
+                    </span>
+                  )}
                 </p>
-              )}
+                {hoveredStretch.dpr_status && (
+                  <p className="text-xs italic text-purple-300 pt-0.5">
+                    &quot;{hoveredStretch.dpr_status}&quot;
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setHoveredStretch(null)}
+                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg transition-colors shrink-0 cursor-pointer self-start md:self-auto"
+              >
+                Dismiss Details
+              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setHoveredStretch(null)}
-              className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg transition-colors shrink-0 cursor-pointer"
-            >
-              Dismiss Details
-            </button>
+            {/* DLP Work Details Card (Formatted section ready for DLP contract details) */}
+            <div className="pt-2 mt-1 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-bold border border-slate-700 text-[11px]">
+                  🛡️ DLP Work Details:
+                </span>
+                <span className="text-slate-400 text-xs italic">
+                  DLP Contract Data Pending Upload / Linking
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-500 font-mono">
+                (Km {hoveredStretch.from_km} – Km {hoveredStretch.to_km})
+              </span>
+            </div>
           </div>
         )}
 
