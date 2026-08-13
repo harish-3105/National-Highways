@@ -286,18 +286,6 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
                     )}
                   </td>
 
-                  {/* DLP Coverage */}
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    {(item.dlp_count || 0) > 0 ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                        <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
-                        {item.dlp_count} Stretches
-                      </span>
-                    ) : (
-                      <span className="text-xs text-slate-400 italic">No Active DLP</span>
-                    )}
-                  </td>
-
                   {/* Actions Column */}
                   <td className="py-3.5 px-4 text-right whitespace-nowrap print:hidden">
                     <div className="flex items-center justify-end gap-1.5">
