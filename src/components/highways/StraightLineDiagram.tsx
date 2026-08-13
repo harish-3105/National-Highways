@@ -146,25 +146,48 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     return Math.max(1000, Math.round(totalSpan * pixelsPerKm));
   }, [totalSpan, pixelsPerKm]);
 
-  // Helper function to calculate proportional left and width for any stretch
+  // Minimum bar width to guarantee chainage splits and text render legibly without overlap
+  const minBarWidthPx = useMemo(() => {
+    return Math.max(120, Math.round(120 * zoomLevel));
+  }, [zoomLevel]);
+
+  // Pre-calculate stretch positions with minimum bar width protection and zero overlaps
+  const stretchPositions = useMemo(() => {
+    const posMap = new Map<string | number, { leftPx: number; widthPx: number }>();
+    let currentLeft = 0;
+
+    activeStretches.forEach((st, i) => {
+      const propWidth = Math.round(((st.length_km || 1) / totalSpan) * canvasWidthPx);
+      const widthPx = Math.max(minBarWidthPx, propWidth);
+      const key = st.id || i;
+      posMap.set(key, { leftPx: currentLeft, widthPx });
+      currentLeft += widthPx;
+    });
+
+    return { posMap, totalCanvasWidth: Math.max(canvasWidthPx, currentLeft) };
+  }, [activeStretches, totalSpan, canvasWidthPx, minBarWidthPx]);
+
+  const canvasWidthPxActual = stretchPositions.totalCanvasWidth;
+
   const getStretchPos = useCallback(
-    (fromKm: number, toKm: number, lengthKm: number) => {
-      const start = Math.max(minKm, fromKm);
-      const end = Math.max(start, toKm);
-      const len = Math.max(0.1, lengthKm || (end - start));
-      const leftPx = Math.round(((start - minKm) / totalSpan) * canvasWidthPx);
-      const widthPx = Math.max(24, Math.round((len / totalSpan) * canvasWidthPx));
-      return { leftPx, widthPx };
+    (st: SubChainageStretch, index: number) => {
+      const key = st.id || index;
+      return (
+        stretchPositions.posMap.get(key) || {
+          leftPx: index * minBarWidthPx,
+          widthPx: minBarWidthPx,
+        }
+      );
     },
-    [minKm, totalSpan, canvasWidthPx]
+    [stretchPositions, minBarWidthPx]
   );
 
   // Dynamic Print Scale Factor so SLD matrix fits landscape PDF/print page without horizontal truncation
   const printScale = useMemo(() => {
-    const totalW = 224 + canvasWidthPx;
+    const totalW = 224 + canvasWidthPxActual;
     if (totalW <= 1000) return 1;
     return Math.max(0.35, Math.round((1000 / totalW) * 100) / 100);
-  }, [canvasWidthPx]);
+  }, [canvasWidthPxActual]);
 
   // Helper for Excel bar height specs (Colors neutral, reserved for DLP contract status)
   const getLaneStyle = (laneConfig: string) => {
@@ -578,13 +601,13 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
           <div className="flex-1 overflow-x-auto bg-slate-900 flex flex-col">
             <div
               className="relative transition-all duration-300 flex flex-col flex-1"
-              style={{ width: `${canvasWidthPx}px` }}
+              style={{ width: `${canvasWidthPxActual}px` }}
             >
               {/* TRACK 1: Important Towns Grid Row (Height 48px / h-12) */}
               {showTowns && (
                 <div className="relative h-12 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
-                    const { leftPx, widthPx } = getStretchPos(st.from_km, st.to_km, st.length_km);
+                    const { leftPx, widthPx } = getStretchPos(st, i);
 
                     return (
                       <div
@@ -610,16 +633,16 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {/* TRACK 2: Chainage Splits Header Row (Height 44px / h-11) */}
               <div className="relative h-11 border-b border-slate-800 bg-slate-850 dark:bg-slate-950/90 flex items-center shrink-0">
                 {activeStretches.map((st, i) => {
-                  const { leftPx, widthPx } = getStretchPos(st.from_km, st.to_km, st.length_km);
+                  const { leftPx, widthPx } = getStretchPos(st, i);
 
                   return (
                     <div
                       key={st.id || i}
-                      className="absolute h-full border-r border-slate-700 flex items-center justify-between px-2 text-[10px] font-mono font-bold text-blue-300 truncate"
+                      className="absolute h-full border-r border-slate-700 flex items-center justify-between px-2 text-[10px] font-mono font-bold text-blue-300 overflow-hidden"
                       style={{ left: `${leftPx}px`, width: `${widthPx}px` }}
                     >
                       <span className="truncate">Km {st.from_km}</span>
-                      <span className="text-slate-400 text-[9px] bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 shrink-0 font-sans">
+                      <span className="text-slate-400 text-[9px] bg-slate-900 px-1 py-0.5 rounded border border-slate-700 shrink-0 font-sans">
                         {st.length_km} km
                       </span>
                       <span className="truncate">Km {st.to_km}</span>
@@ -639,7 +662,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                   </div>
                 ) : (
                   activeStretches.map((st, i) => {
-                    const { leftPx, widthPx } = getStretchPos(st.from_km, st.to_km, st.length_km);
+                    const { leftPx, widthPx } = getStretchPos(st, i);
                     const style = getLaneStyle(st.lane_configuration);
 
                     return (
@@ -668,7 +691,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {showCw && (
                 <div className="relative h-11 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
-                    const { leftPx, widthPx } = getStretchPos(st.from_km, st.to_km, st.length_km);
+                    const { leftPx, widthPx } = getStretchPos(st, i);
                     const norm = (st.lane_configuration || '').toLowerCase();
                     
                     let badgeStyle = 'bg-indigo-950/70 text-indigo-300 border-indigo-500/40';
@@ -717,7 +740,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {showPcu && (
                 <div className="relative h-11 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
-                    const { leftPx, widthPx } = getStretchPos(st.from_km, st.to_km, st.length_km);
+                    const { leftPx, widthPx } = getStretchPos(st, i);
                     const pcuStyle = getPcuColor(st.pcu_count);
 
                     return (
@@ -741,7 +764,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {showRow && (
                 <div className="relative h-11 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
-                    const { leftPx, widthPx } = getStretchPos(st.from_km, st.to_km, st.length_km);
+                    const { leftPx, widthPx } = getStretchPos(st, i);
 
                     return (
                       <div
@@ -766,7 +789,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {showDpr && (
                 <div className="relative h-12 border-b border-slate-800 bg-slate-950/60 flex items-center shrink-0">
                   {activeStretches.map((st, i) => {
-                    const { leftPx, widthPx } = getStretchPos(st.from_km, st.to_km, st.length_km);
+                    const { leftPx, widthPx } = getStretchPos(st, i);
 
                     return (
                       <div
