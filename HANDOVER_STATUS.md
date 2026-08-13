@@ -3,7 +3,7 @@
 **Project**: Tamil Nadu National Highways Department Management System  
 **Repository Remote**: `git@github.com:tnhighwaysdep/highways_project.git`  
 **Active Production Branch**: `main`  
-**Latest Deployed Commit**: `c65a3dd`  
+**Latest Deployed Commit**: `2354cf8`  
 
 **Date**: August 13, 2026  
 
@@ -106,6 +106,9 @@ Located in `supabase/migrations/`:
 | **`1035127`** | `feat(highways): implement proposed changes 1-4 (2x2 KPI grid, streamlined table columns, percentage share in view modal, interactive KPI lane breakdown filter)` |
 | **`6ac0d57`** | `docs: update PROPOSED_CHANGES.md status for completed Changes 1-4` |
 | **`c65a3dd`** | `fix(highways): remove un-removed DLP Coverage td cell from HighwaysTable tbody row` |
+| **`bf07559`** | `feat(sld): proportional physical bar length scaling, inner bar text truncation, and DLP work card placeholder in hovercard` |
+| **`a8b3005`** | `feat(sld): enforce minimum bar width floor for legibility of chainage splits while preserving proportional scaling` |
+| **`2354cf8`** | `style(sld): update minimum bar width floor to 150px for spacious chainage split rendering` |
 
 
 ---

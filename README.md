@@ -13,10 +13,12 @@ A state-of-the-art web application for managing National Highway corridors, line
 
 ### 2. Level 3 Interactive Straight-Line Diagram (`/highways/[id]/sld`)
 - **Linear Asset Timeline**: Web-based interactive Straight-Line Diagram (SLD) replacing manual Excel bar charts.
-- **Excel-Style Fixed Grid Cells**: Sub-chainage split columns (`colWidthPx = 150px * zoomLevel`) for maximum human readability.
+- **Distance-Proportional Physical Bar Scaling**: Horizontal bar widths and matrix positions are directly proportional to physical distance (`length_km`), so longer stretches expand proportionally larger on screen.
+- **150px Minimum Bar Width Floor**: Enforces a 150px minimum width floor (`minBarWidthPx = 150px`) for short stretches, ensuring chainage splits (`Km X → Km Y`), length badges, and town labels render with 100% legibility without text overlap.
+- **Auto-Truncated Bar Text**: Text inside baseline road bars auto-truncates cleanly (`truncate`), displaying full text in wide bars and clipped 1-2 words in narrow bars.
 - **Centerline Symmetrical Road Expansion**: Visual carriageway bar height expansion matching lane widths (`6L`, `4L/4L+PS`, `2L+PS`, `2L`).
-- **Precision Caliper Docking Gauge**: Vertical guide stems with top and bottom right-pointing arrow arms (`─────►`) for 1-to-1 visual alignment.
-- **Print & Export PDF Engine**: Print system with dynamic landscape scaling (`--sld-print-scale`), official department letterhead, and technical legend report footers.
+- **Interactive Hovercard with DLP Work Section**: Hovering or clicking any stretch displays full asset metrics plus a formatted DLP Work Details container.
+- **Print & Export PDF Engine**: Landscape print system with dynamic scaling (`--sld-print-scale`), official department letterhead, and technical legend footers.
 
 ### 3. Defect Liability Period & Warranty Tracker (`/dlp`)
 - **26-Column Excel Parity**: Complete coverage of departmental maintenance spreadsheets with 1-to-N child sub-contract extractors.
