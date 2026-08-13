@@ -632,7 +632,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     return (
                       <div
                         key={st.id || i}
-                        className={`absolute top-1/2 -translate-y-1/2 border-r border-white/25 border-y transition-all duration-200 cursor-pointer hover:brightness-125 hover:z-30 shadow-md ${style.bg} ${style.border} print:bg-slate-200 print:border-slate-500 print:text-slate-900 flex items-center justify-center`}
+                        className={`absolute top-1/2 -translate-y-1/2 border-r border-white/25 border-y transition-all duration-200 cursor-pointer hover:brightness-125 hover:z-30 shadow-md ${style.bg} ${style.border} print:bg-slate-200 print:border-slate-500`}
                         style={{
                           left: `${leftPx}px`,
                           width: `${colWidthPx}px`,
@@ -642,9 +642,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                         onClick={() => setHoveredStretch(st)}
                         title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.length_km} km, ${st.lane_configuration}) - Neutral Baseline Box (Colors reserved for DLP contract data)`}
                       >
-                        <span className="text-[10px] font-extrabold font-mono text-slate-300 print:text-slate-900 truncate px-1 select-none">
-                          {st.lane_configuration || style.label}
-                        </span>
+                        {/* 100% EMPTY INSIDE - NEUTRAL COLOR FILL (RESERVED FOR DLP CONTRACT DATA) */}
                       </div>
                     );
                   })
