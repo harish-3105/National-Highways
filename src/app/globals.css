@@ -86,6 +86,10 @@ body {
     size: landscape;
     margin: 8mm;
   }
+
+  .sld-matrix-board-print-scale {
+    zoom: var(--sld-print-scale, 1) !important;
+  }
 }
 
 

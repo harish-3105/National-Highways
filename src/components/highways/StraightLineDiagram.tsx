@@ -440,8 +440,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
         {/* FULL SCREEN DYNAMICALLY STRETCHED MATRIX SLD BOARD */}
         <div
-          className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-1 min-h-[500px] print:border-slate-400 print:bg-white print:shadow-none print:rounded-none print:min-h-0 print:overflow-visible"
-          style={{ zoom: 'var(--sld-print-scale, 1)' } as React.CSSProperties}
+          className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-1 min-h-[500px] print:border-slate-400 print:bg-white print:shadow-none print:rounded-none print:min-h-0 print:overflow-visible sld-matrix-board-print-scale"
         >
           
           {/* LEFT FIXED SIDEBAR: Row Labels Locked 1-to-1 to Right Canvas Rows */}
