@@ -148,7 +148,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
   // Minimum bar width to guarantee chainage splits and text render legibly without overlap
   const minBarWidthPx = useMemo(() => {
-    return Math.max(120, Math.round(120 * zoomLevel));
+    return Math.max(150, Math.round(150 * zoomLevel));
   }, [zoomLevel]);
 
   // Pre-calculate stretch positions with minimum bar width protection and zero overlaps
