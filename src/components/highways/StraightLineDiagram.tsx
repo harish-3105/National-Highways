@@ -189,17 +189,17 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     return Math.max(0.35, Math.round((1000 / totalW) * 100) / 100);
   }, [canvasWidthPxActual]);
 
-  // Helper for Excel bar height specs (Colors neutral, reserved for DLP contract status)
+  // Helper for Excel bar height specs (Borders match left sidebar Carriageway Gauge caliper colors for seamless visual alignment)
   const getLaneStyle = (laneConfig: string) => {
     const norm = (laneConfig || '').toLowerCase();
     const neutralStyle = {
       bg: 'bg-slate-700/80 hover:bg-slate-600/90 text-slate-200',
-      border: 'border-slate-500/70',
     };
 
     if (norm.includes('6l') || norm.includes('6-lane')) {
       return {
         ...neutralStyle,
+        border: 'border-y-2 border-y-purple-400',
         label: '6-Lane (6L)',
         heightPx: 150,
       };
@@ -207,6 +207,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     if (norm.includes('4l') || norm.includes('4-lane')) {
       return {
         ...neutralStyle,
+        border: 'border-y-2 border-y-blue-400',
         label: '4-Lane / 4L+PS',
         heightPx: 110,
       };
@@ -214,6 +215,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     if (norm.includes('2l+ps') || norm.includes('paved')) {
       return {
         ...neutralStyle,
+        border: 'border-y-2 border-y-emerald-400',
         label: '2L + Paved Shoulder',
         heightPx: 75,
       };
@@ -221,12 +223,14 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     if (norm.includes('2l') || norm.includes('2-lane')) {
       return {
         ...neutralStyle,
+        border: 'border-y-2 border-y-amber-400',
         label: '2-Lane (2L)',
         heightPx: 40,
       };
     }
     return {
       ...neutralStyle,
+      border: 'border-y-2 border-y-slate-400',
       label: '< 2-Lane',
       heightPx: 22,
     };
