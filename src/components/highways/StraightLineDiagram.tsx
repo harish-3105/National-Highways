@@ -217,7 +217,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         ...neutralStyle,
         border: 'border-y-2 border-y-emerald-400',
         label: '2L + Paved Shoulder',
-        heightPx: 75,
+        heightPx: 76,
       };
     }
     if (norm.includes('2l') || norm.includes('2-lane')) {
@@ -514,7 +514,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 {[
                   { label: '6L', width: '20m', heightPx: 150, leftOffset: '12px', color: 'text-purple-400 border-purple-400' },
                   { label: '4L / 4L+PS', width: '14m', heightPx: 110, leftOffset: '50px', color: 'text-blue-400 border-blue-400' },
-                  { label: '2L+PS', width: '10m', heightPx: 75, leftOffset: '115px', color: 'text-emerald-400 border-emerald-400' },
+                  { label: '2L+PS', width: '10m', heightPx: 76, leftOffset: '115px', color: 'text-emerald-400 border-emerald-400' },
                   { label: '2L', width: '7m', heightPx: 40, leftOffset: '165px', color: 'text-amber-400 border-amber-400' },
                 ].map((spec) => (
                   <React.Fragment key={spec.label}>
@@ -526,7 +526,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
                     {/* 2. TOP HORIZONTAL LINE WITH RIGHT ARROWHEAD (Seamlessly connected to Head of Vertical Line) */}
                     <div
-                      className={`absolute border-t-2 flex items-center justify-end ${spec.color}`}
+                      className={`absolute h-0 overflow-visible border-t-2 flex items-center justify-end ${spec.color}`}
                       style={{
                         top: `calc(50% - ${spec.heightPx / 2}px)`,
                         left: spec.leftOffset,
@@ -538,7 +538,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
                     {/* 3. BOTTOM HORIZONTAL LINE WITH RIGHT ARROWHEAD (Seamlessly connected to Tail of Vertical Line) */}
                     <div
-                      className={`absolute border-t-2 flex items-center justify-end ${spec.color}`}
+                      className={`absolute h-0 overflow-visible border-t-2 flex items-center justify-end ${spec.color}`}
                       style={{
                         top: `calc(50% + ${spec.heightPx / 2}px - 2px)`,
                         left: spec.leftOffset,
