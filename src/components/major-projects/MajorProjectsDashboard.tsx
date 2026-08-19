@@ -505,30 +505,60 @@ export const MajorProjectsDashboard: React.FC = () => {
               <div className="hidden sm:flex items-center gap-1 ml-1 text-[10.5px]">
                 <button
                   onClick={() => {
-                    setDelayMin('0.01');
-                    setDelayMax('1');
+                    if (delayMin === '0.01' && delayMax === '0.99') {
+                      setDelayMin('');
+                      setDelayMax('');
+                    } else {
+                      setDelayMin('0.01');
+                      setDelayMax('0.99');
+                    }
                   }}
-                  className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded cursor-pointer"
+                  className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-semibold ${
+                    delayMin === '0.01' && delayMax === '0.99'
+                      ? 'bg-rose-600 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200'
+                  }`}
+                  title="Delayed strictly under 1 year (< 1 yr)"
                 >
-                  &lt;1y
+                  &lt; 1y
                 </button>
                 <button
                   onClick={() => {
-                    setDelayMin('1');
-                    setDelayMax('3');
+                    if (delayMin === '1' && delayMax === '3') {
+                      setDelayMin('');
+                      setDelayMax('');
+                    } else {
+                      setDelayMin('1');
+                      setDelayMax('3');
+                    }
                   }}
-                  className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded cursor-pointer"
+                  className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-semibold ${
+                    delayMin === '1' && delayMax === '3'
+                      ? 'bg-rose-600 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200'
+                  }`}
+                  title="Delayed 1 to 3 years inclusive (1 – 3 yrs)"
                 >
-                  1-3y
+                  1 – 3y
                 </button>
                 <button
                   onClick={() => {
-                    setDelayMin('3');
-                    setDelayMax('');
+                    if (delayMin === '3.01' && delayMax === '') {
+                      setDelayMin('');
+                      setDelayMax('');
+                    } else {
+                      setDelayMin('3.01');
+                      setDelayMax('');
+                    }
                   }}
-                  className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded cursor-pointer"
+                  className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-semibold ${
+                    delayMin === '3.01' && delayMax === ''
+                      ? 'bg-rose-600 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200'
+                  }`}
+                  title="Delayed strictly over 3 years (> 3 yrs)"
                 >
-                  &gt;3y
+                  &gt; 3y
                 </button>
               </div>
 
@@ -578,39 +608,79 @@ export const MajorProjectsDashboard: React.FC = () => {
               <div className="hidden sm:flex items-center gap-1 ml-1 text-[10.5px]">
                 <button
                   onClick={() => {
-                    setProgressMin('0');
-                    setProgressMax('25');
+                    if (progressMin === '0' && progressMax === '24.9') {
+                      setProgressMin('');
+                      setProgressMax('');
+                    } else {
+                      setProgressMin('0');
+                      setProgressMax('24.9');
+                    }
                   }}
-                  className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded cursor-pointer"
+                  className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-semibold ${
+                    progressMin === '0' && progressMax === '24.9'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200'
+                  }`}
+                  title="Progress strictly under 25% (< 25%)"
                 >
-                  &lt;25%
+                  &lt; 25%
                 </button>
                 <button
                   onClick={() => {
-                    setProgressMin('25');
-                    setProgressMax('50');
+                    if (progressMin === '25' && progressMax === '49.9') {
+                      setProgressMin('');
+                      setProgressMax('');
+                    } else {
+                      setProgressMin('25');
+                      setProgressMax('49.9');
+                    }
                   }}
-                  className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded cursor-pointer"
+                  className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-semibold ${
+                    progressMin === '25' && progressMax === '49.9'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200'
+                  }`}
+                  title="Progress 25% to 49.9% (25 – 50%)"
                 >
-                  25-50%
+                  25 – 50%
                 </button>
                 <button
                   onClick={() => {
-                    setProgressMin('50');
-                    setProgressMax('75');
+                    if (progressMin === '50' && progressMax === '74.9') {
+                      setProgressMin('');
+                      setProgressMax('');
+                    } else {
+                      setProgressMin('50');
+                      setProgressMax('74.9');
+                    }
                   }}
-                  className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded cursor-pointer"
+                  className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-semibold ${
+                    progressMin === '50' && progressMax === '74.9'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200'
+                  }`}
+                  title="Progress 50% to 74.9% (50 – 75%)"
                 >
-                  50-75%
+                  50 – 75%
                 </button>
                 <button
                   onClick={() => {
-                    setProgressMin('75');
-                    setProgressMax('100');
+                    if (progressMin === '75' && progressMax === '100') {
+                      setProgressMin('');
+                      setProgressMax('');
+                    } else {
+                      setProgressMin('75');
+                      setProgressMax('100');
+                    }
                   }}
-                  className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded cursor-pointer"
+                  className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-semibold ${
+                    progressMin === '75' && progressMax === '100'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200'
+                  }`}
+                  title="Progress 75% to 100% (75 – 100%)"
                 >
-                  &gt;75%
+                  75 – 100%
                 </button>
               </div>
 
