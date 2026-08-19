@@ -149,6 +149,10 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
   };
 
   const handleOpenAddSubForm = () => {
+    if (isFormOpen && editingSubId === null) {
+      setIsFormOpen(false);
+      return;
+    }
     setEditingSubId(null);
     setSubFromKm('');
     setSubToKm('');
@@ -164,6 +168,11 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
   };
 
   const handleOpenEditSubForm = (sub: SubChainageStretch) => {
+    if (isFormOpen && editingSubId === sub.id) {
+      setIsFormOpen(false);
+      setEditingSubId(null);
+      return;
+    }
     setEditingSubId(sub.id);
     setSubFromKm(String(sub.from_km));
     setSubToKm(String(sub.to_km));
@@ -216,6 +225,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
       const data = await res.json();
       if (data.success) {
         setIsFormOpen(false);
+        setEditingSubId(null);
         fetchSubChainages();
       } else {
         setSubFormError(data.message || 'Failed to save sub-stretch.');
@@ -263,6 +273,181 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
       console.error('Failed to restore sub-chainage:', err);
     }
   };
+
+  const renderSubForm = (isInline = false) => (
+    <form
+      onSubmit={handleSaveSubForm}
+      className={`p-4 bg-slate-100 dark:bg-slate-800/90 rounded-xl border space-y-3 animate-in fade-in duration-200 ${
+        isInline
+          ? 'border-blue-500/80 dark:border-blue-500/80 ring-2 ring-blue-500/20 shadow-md my-2'
+          : 'border-slate-300 dark:border-slate-700'
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full ${isInline ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+          <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">
+            {editingSubId
+              ? `Edit ${activeTab === 'MACRO_PCU' ? 'Traffic Census' : 'Lane Geometry'} Stretch`
+              : `Add New ${activeTab === 'MACRO_PCU' ? 'Traffic Census' : 'Lane Geometry'} Stretch`}
+          </h4>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setIsFormOpen(false);
+            setEditingSubId(null);
+          }}
+          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1"
+          title="Close form"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {subFormError && (
+        <div className="p-2 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800 rounded text-xs flex items-center gap-1">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>{subFormError}</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div>
+          <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">From Km</label>
+          <input
+            type="number"
+            step="0.001"
+            placeholder="0.0"
+            value={subFromKm}
+            onChange={(e) => setSubFromKm(e.target.value)}
+            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100 font-mono"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">To Km</label>
+          <input
+            type="number"
+            step="0.001"
+            placeholder="22.0"
+            value={subToKm}
+            onChange={(e) => setSubToKm(e.target.value)}
+            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100 font-mono"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Lane Status</label>
+          <select
+            value={subLaneConfig}
+            onChange={(e) => setSubLaneConfig(e.target.value)}
+            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100"
+          >
+            <option value="2-Lane">2-Lane</option>
+            <option value="2L+PS">2L+PS</option>
+            <option value="4-Lane">4-Lane</option>
+            <option value="4L+PS">4L+PS</option>
+            <option value="6-Lane">6-Lane</option>
+            <option value="<2-Lane">&lt;2-Lane</option>
+            <option value="Primary">Primary (Macro Range)</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Traffic PCU Count</label>
+          <input
+            type="number"
+            placeholder="e.g. 57428"
+            value={subPcu}
+            onChange={(e) => setSubPcu(e.target.value)}
+            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100 font-mono"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div>
+          <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Important Town / Landmark</label>
+          <input
+            type="text"
+            placeholder="e.g. Kurinjipadi, Virudhachalam"
+            value={subTown}
+            onChange={(e) => setSubTown(e.target.value)}
+            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">ROW Width (Right of Way)</label>
+          <input
+            type="text"
+            placeholder="e.g. 24m-28m or 18m"
+            value={subRowWidth}
+            onChange={(e) => setSubRowWidth(e.target.value)}
+            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Carriageway Width Detail</label>
+          <input
+            type="text"
+            placeholder="e.g. 7m, 10m, 14m, 15.6m"
+            value={subCarriagewayWidth}
+            onChange={(e) => setSubCarriagewayWidth(e.target.value)}
+            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Division Name</label>
+          <input
+            type="text"
+            placeholder="e.g. Coimbatore"
+            value={subDivision}
+            onChange={(e) => setSubDivision(e.target.value)}
+            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">DPR Status / Remarks</label>
+          <input
+            type="text"
+            placeholder="e.g. DPR for 4-laning proposed..."
+            value={subDpr}
+            onChange={(e) => setSubDpr(e.target.value)}
+            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100"
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-1">
+        <button
+          type="button"
+          onClick={() => {
+            setIsFormOpen(false);
+            setEditingSubId(null);
+          }}
+          className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={subFormLoading}
+          className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors disabled:opacity-50"
+        >
+          {subFormLoading ? 'Saving...' : editingSubId ? 'Update Stretch' : 'Save Stretch'}
+        </button>
+      </div>
+    </form>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
@@ -524,152 +709,8 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
               </div>
             </div>
 
-            {/* Quick Add / Edit Form Overlay inside Section */}
-            {isFormOpen && (
-              <form onSubmit={handleSaveSubForm} className="p-4 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-300 dark:border-slate-700 space-y-3 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">
-                    {editingSubId
-                      ? `Edit ${activeTab === 'MACRO_PCU' ? 'Traffic Census' : 'Lane Geometry'} Stretch`
-                      : `Add New ${activeTab === 'MACRO_PCU' ? 'Traffic Census' : 'Lane Geometry'} Stretch`}
-                  </h4>
-                  <button type="button" onClick={() => setIsFormOpen(false)} className="text-slate-400 hover:text-slate-600">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {subFormError && (
-                  <div className="p-2 bg-red-50 text-red-600 border border-red-200 rounded text-xs flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    <span>{subFormError}</span>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">From Km</label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      placeholder="0.0"
-                      value={subFromKm}
-                      onChange={(e) => setSubFromKm(e.target.value)}
-                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">To Km</label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      placeholder="22.0"
-                      value={subToKm}
-                      onChange={(e) => setSubToKm(e.target.value)}
-                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Lane Status</label>
-                    <select
-                      value={subLaneConfig}
-                      onChange={(e) => setSubLaneConfig(e.target.value)}
-                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
-                    >
-                      <option value="2-Lane">2-Lane</option>
-                      <option value="2L+PS">2L+PS</option>
-                      <option value="4-Lane">4-Lane</option>
-                      <option value="4L+PS">4L+PS</option>
-                      <option value="6-Lane">6-Lane</option>
-                      <option value="<2-Lane">&lt;2-Lane</option>
-                      <option value="Primary">Primary (Macro Range)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Traffic PCU Count</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 57428"
-                      value={subPcu}
-                      onChange={(e) => setSubPcu(e.target.value)}
-                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Important Town / Landmark</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Kurinjipadi, Virudhachalam"
-                      value={subTown}
-                      onChange={(e) => setSubTown(e.target.value)}
-                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">ROW Width (Right of Way)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 24m-28m or 18m"
-                      value={subRowWidth}
-                      onChange={(e) => setSubRowWidth(e.target.value)}
-                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Carriageway Width Detail</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 7m, 10m, 14m, 15.6m"
-                      value={subCarriagewayWidth}
-                      onChange={(e) => setSubCarriagewayWidth(e.target.value)}
-                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Division Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Coimbatore"
-                      value={subDivision}
-                      onChange={(e) => setSubDivision(e.target.value)}
-                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">DPR Status / Remarks</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. DPR for 4-laning proposed..."
-                      value={subDpr}
-                      onChange={(e) => setSubDpr(e.target.value)}
-                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-1">
-                  <button type="button" onClick={() => setIsFormOpen(false)} className="px-3 py-1 bg-slate-200 text-slate-700 rounded text-xs">
-                    Cancel
-                  </button>
-                  <button type="submit" disabled={subFormLoading} className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-bold">
-                    {subFormLoading ? 'Saving...' : 'Save Stretch'}
-                  </button>
-                </div>
-              </form>
-            )}
+            {/* Quick Add Form Overlay on top (Only rendered when adding a new stretch) */}
+            {isFormOpen && editingSubId === null && renderSubForm(false)}
 
             {/* Sub-chainage Stretches List */}
             {loadingSub ? (
@@ -691,115 +732,130 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
               <div className="space-y-2.5">
                 {subChainages.map((sub, idx) => {
                   const isDeleted = sub.delete_status === 'DELETED' || sub.delete_status === 'SOFT_DELETE';
+                  const isEditingThis = isFormOpen && editingSubId === sub.id;
                   const pcuBadge = getPcuBadge(sub.pcu_count);
                   return (
-                    <div
-                      key={sub.id || idx}
-                      className={`p-3 border rounded-xl transition-all shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                        isDeleted
-                          ? 'bg-red-50/40 dark:bg-red-950/20 border-red-200 dark:border-red-900/40 opacity-75'
-                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                      }`}
-                    >
-                      {/* Left: Chainage Span, Length, Lane, Town, ROW & Division */}
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            className={`font-mono font-bold text-xs px-2 py-0.5 rounded border ${
-                              isDeleted
-                                ? 'bg-red-100 text-red-700 border-red-300 line-through'
-                                : 'bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-                            }`}
-                          >
-                            Km {sub.from_km} → Km {sub.to_km}
-                          </span>
-
-                          <span className={`font-extrabold text-xs ${isDeleted ? 'text-red-700 line-through' : 'text-slate-800 dark:text-slate-200'}`}>
-                            ({sub.length_km} km)
-                          </span>
-
-                          {isDeleted && (
-                            <span className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-red-600 text-white uppercase tracking-wider">
-                              Soft Deleted
-                            </span>
-                          )}
-
-                          {sub.lane_configuration && sub.lane_configuration !== 'Primary' && (
-                            <span className="px-2 py-0.5 text-xs font-bold rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                              {sub.lane_configuration}
-                            </span>
-                          )}
-
-                          {sub.important_town && (
-                            <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                              📍 {sub.important_town}
-                            </span>
-                          )}
-
-                          {sub.row_width && (
-                            <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
-                              ROW: {sub.row_width}
-                            </span>
-                          )}
-
-                          {sub.carriageway_width && (
-                            <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                              Width: {sub.carriageway_width}
-                            </span>
-                          )}
-
-                          {sub.division_name && (
-                            <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                              Div: {sub.division_name}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* DPR Remarks */}
-                        {sub.dpr_status && (
-                          <p className={`text-[11px] line-clamp-3 italic ${isDeleted ? 'text-red-600/70' : 'text-slate-600 dark:text-slate-400'}`}>
-                            &quot;{sub.dpr_status}&quot;
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Right: Traffic PCU Badge & Actions */}
-                      <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-                        <span className={`px-2.5 py-1 text-xs font-semibold rounded-md border ${pcuBadge.style}`}>
-                          {pcuBadge.label}
-                        </span>
-
-                        <div className="flex items-center gap-1">
-                          {isDeleted ? (
-                            <button
-                              onClick={() => handleRestoreSub(sub)}
-                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 rounded-lg cursor-pointer"
-                              title="Restore Stretch to Active View"
+                    <React.Fragment key={sub.id || idx}>
+                      <div
+                        className={`p-3 border rounded-xl transition-all shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                          isEditingThis
+                            ? 'bg-blue-50/50 dark:bg-blue-950/30 border-blue-400 dark:border-blue-700 ring-2 ring-blue-500/20'
+                            : isDeleted
+                            ? 'bg-red-50/40 dark:bg-red-950/20 border-red-200 dark:border-red-900/40 opacity-75'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                        }`}
+                      >
+                        {/* Left: Chainage Span, Length, Lane, Town, ROW & Division */}
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`font-mono font-bold text-xs px-2 py-0.5 rounded border ${
+                                isDeleted
+                                  ? 'bg-red-100 text-red-700 border-red-300 line-through'
+                                  : 'bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                              }`}
                             >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                              <span>Restore</span>
-                            </button>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => handleOpenEditSubForm(sub)}
-                                className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-lg cursor-pointer transition-colors"
-                                title="Edit Stretch"
-                              >
-                                <Edit3 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setDeletingSub(sub)}
-                                className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/60 rounded-lg cursor-pointer transition-colors"
-                                title="Soft Delete Stretch"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </>
+                              Km {sub.from_km} → Km {sub.to_km}
+                            </span>
+
+                            <span className={`font-extrabold text-xs ${isDeleted ? 'text-red-700 line-through' : 'text-slate-800 dark:text-slate-200'}`}>
+                              ({sub.length_km} km)
+                            </span>
+
+                            {isDeleted && (
+                              <span className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-red-600 text-white uppercase tracking-wider">
+                                Soft Deleted
+                              </span>
+                            )}
+
+                            {sub.lane_configuration && sub.lane_configuration !== 'Primary' && (
+                              <span className="px-2 py-0.5 text-xs font-bold rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                {sub.lane_configuration}
+                              </span>
+                            )}
+
+                            {sub.important_town && (
+                              <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                                📍 {sub.important_town}
+                              </span>
+                            )}
+
+                            {sub.row_width && (
+                              <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                                ROW: {sub.row_width}
+                              </span>
+                            )}
+
+                            {sub.carriageway_width && (
+                              <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                Width: {sub.carriageway_width}
+                              </span>
+                            )}
+
+                            {sub.division_name && (
+                              <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                Div: {sub.division_name}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* DPR Remarks */}
+                          {sub.dpr_status && (
+                            <p className={`text-[11px] line-clamp-3 italic ${isDeleted ? 'text-red-600/70' : 'text-slate-600 dark:text-slate-400'}`}>
+                              &quot;{sub.dpr_status}&quot;
+                            </p>
                           )}
                         </div>
+
+                        {/* Right: Traffic PCU Badge & Actions */}
+                        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                          <span className={`px-2.5 py-1 text-xs font-semibold rounded-md border ${pcuBadge.style}`}>
+                            {pcuBadge.label}
+                          </span>
+
+                          <div className="flex items-center gap-1">
+                            {isDeleted ? (
+                              <button
+                                onClick={() => handleRestoreSub(sub)}
+                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 rounded-lg cursor-pointer"
+                                title="Restore Stretch to Active View"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                <span>Restore</span>
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleOpenEditSubForm(sub)}
+                                  className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
+                                    isEditingThis
+                                      ? 'bg-blue-600 text-white shadow-xs'
+                                      : 'text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/60'
+                                  }`}
+                                  title={isEditingThis ? 'Close Edit Form' : 'Edit Stretch'}
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => setDeletingSub(sub)}
+                                  className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/60 rounded-lg cursor-pointer transition-colors"
+                                  title="Soft Delete Stretch"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
+
+                      {/* Inline Edit Form directly beneath the active stretch */}
+                      {isEditingThis && (
+                        <div className="pl-2 sm:pl-3 border-l-2 border-blue-500 my-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                          {renderSubForm(true)}
+                        </div>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </div>
