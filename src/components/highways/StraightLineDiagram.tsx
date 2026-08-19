@@ -517,61 +517,46 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 <span>Carriageway Gauge</span>
               </div>
 
-              {/* Right-Facing Caliper Docking Gauge */}
-              <div className="absolute inset-0 flex items-center z-10 pointer-events-none">
+              {/* Right-Facing Caliper Docking Gauge: Unified Locked Container for Pixel-Perfect 0px Offset Alignment */}
+              <div className="absolute inset-0 z-10 pointer-events-none">
                 {[
-                  { label: '6L', width: '20m', heightPx: 150, leftOffset: '12px', color: 'text-purple-400 dark:text-purple-600 border-purple-400 dark:border-purple-600' },
-                  { label: '4L / 4L+PS', width: '14m', heightPx: 110, leftOffset: '50px', color: 'text-blue-400 dark:text-blue-600 border-blue-400 dark:border-blue-600' },
-                  { label: '2L+PS', width: '10m', heightPx: 76, leftOffset: '115px', color: 'text-emerald-400 dark:text-emerald-600 border-emerald-400 dark:border-emerald-600' },
-                  { label: '2L', width: '7m', heightPx: 40, leftOffset: '165px', color: 'text-amber-400 dark:text-amber-600 border-amber-400 dark:border-amber-600' },
+                  { label: '6L', width: '20m', heightPx: 150, leftOffset: '12px', color: 'text-purple-400 dark:text-purple-600' },
+                  { label: '4L / 4L+PS', width: '14m', heightPx: 110, leftOffset: '50px', color: 'text-blue-400 dark:text-blue-600' },
+                  { label: '2L+PS', width: '10m', heightPx: 76, leftOffset: '115px', color: 'text-emerald-400 dark:text-emerald-600' },
+                  { label: '2L', width: '7m', heightPx: 40, leftOffset: '165px', color: 'text-amber-400 dark:text-amber-600' },
                 ].map((spec) => (
-                  <React.Fragment key={spec.label}>
-                    {/* 1. Vertical Line */}
-                    <div
-                      className={`absolute top-1/2 -translate-y-1/2 w-0.5 bg-current ${spec.color}`}
-                      style={{ left: spec.leftOffset, height: `${spec.heightPx}px` }}
-                    />
+                  <div
+                    key={spec.label}
+                    className={`absolute top-1/2 -translate-y-1/2 ${spec.color}`}
+                    style={{
+                      left: spec.leftOffset,
+                      height: `${spec.heightPx}px`,
+                      right: 0,
+                    }}
+                  >
+                    {/* 1. SINGLE VERTICAL LINE (Exact 100% Height Stem from Top 0 to Bottom 0) */}
+                    <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-current" />
 
-                    {/* 2. Top Horizontal Line */}
-                    <div
-                      className={`absolute h-0 overflow-visible border-t-2 flex items-center justify-end ${spec.color}`}
-                      style={{
-                        top: `calc(50% - ${spec.heightPx / 2}px)`,
-                        left: spec.leftOffset,
-                        right: 0,
-                      }}
-                    >
-                      <div className="w-1.5 h-1.5 border-t-2 border-r-2 border-current rotate-45 -mr-1 -mt-[3px] shrink-0" />
+                    {/* 2. TOP HORIZONTAL LINE WITH RIGHT ARROWHEAD (Locked to Top 0) */}
+                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-current flex items-center justify-end overflow-visible">
+                      <div className="w-1.5 h-1.5 border-t-2 border-r-2 border-current rotate-45 -mr-1 shrink-0" />
                     </div>
 
-                    {/* 3. Bottom Horizontal Line */}
-                    <div
-                      className={`absolute h-0 overflow-visible border-t-2 flex items-center justify-end ${spec.color}`}
-                      style={{
-                        top: `calc(50% + ${spec.heightPx / 2}px - 2px)`,
-                        left: spec.leftOffset,
-                        right: 0,
-                      }}
-                    >
-                      <div className="w-1.5 h-1.5 border-t-2 border-r-2 border-current rotate-45 -mr-1 -mt-[3px] shrink-0" />
+                    {/* 3. BOTTOM HORIZONTAL LINE WITH RIGHT ARROWHEAD (Locked to Bottom 0) */}
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-current flex items-center justify-end overflow-visible">
+                      <div className="w-1.5 h-1.5 border-t-2 border-r-2 border-current rotate-45 -mr-1 shrink-0" />
                     </div>
 
-                    {/* 4. Bracket Text Label */}
-                    <div
-                      className="absolute flex flex-col items-start leading-none pointer-events-none z-20"
-                      style={{
-                        left: `calc(${spec.leftOffset} + 6px)`,
-                        top: `calc(50% - ${spec.heightPx / 2}px + 4px)`,
-                      }}
-                    >
-                      <span className={`text-[8.5px] font-extrabold font-mono tracking-tighter ${spec.color}`}>
+                    {/* 4. BRACKET TEXT LABEL */}
+                    <div className="absolute left-2 top-1.5 flex flex-col items-start leading-none pointer-events-none z-20">
+                      <span className="text-[8.5px] font-extrabold font-mono tracking-tighter">
                         {spec.label}
                       </span>
-                      <span className="text-[7.5px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                      <span className="text-[7.5px] font-mono font-bold text-slate-500 dark:text-slate-400 mt-0.5">
                         {spec.width}
                       </span>
                     </div>
-                  </React.Fragment>
+                  </div>
                 ))}
               </div>
             </div>
