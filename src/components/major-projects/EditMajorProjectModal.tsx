@@ -205,13 +205,13 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col relative"
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xs shadow-2xl w-full max-w-5xl lg:max-w-6xl h-[92vh] max-h-[95vh] overflow-hidden flex flex-col relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-850/80 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-blue-100 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400">
               <Edit3 className="w-5 h-5" />
@@ -304,7 +304,7 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
         </div>
 
         {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1 text-xs">
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5 flex-1 min-h-0 text-xs">
           {error && (
             <div className="p-3 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -845,8 +845,8 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                 <textarea
                   value={detailedStageStatus}
                   onChange={(e) => setDetailedStageStatus(e.target.value)}
-                  rows={6}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono leading-relaxed"
+                  rows={8}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xs text-xs font-mono leading-relaxed min-h-[180px] max-h-[450px]"
                   placeholder="Enter multi-paragraph log of piers, decks, box culverts, railway GAD, forest clearance, 3A/3D/3G gazettes, CALA award disbursement..."
                 />
               </div>

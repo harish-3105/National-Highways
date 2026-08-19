@@ -51,13 +51,13 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200 print:p-0 print:bg-white print:static">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200 print:p-0 print:bg-white print:static">
       <div
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col relative print:border-none print:shadow-none print:max-h-none print:w-full"
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xs shadow-2xl w-full max-w-5xl lg:max-w-6xl h-[92vh] max-h-[95vh] overflow-hidden flex flex-col relative print:border-none print:shadow-none print:max-h-none print:h-auto print:w-full"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-850/60 flex items-start justify-between gap-4">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-850/80 flex items-start justify-between gap-4 shrink-0">
           <div className="space-y-1.5 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2 py-0.5 bg-blue-600 text-white font-mono font-bold text-xs rounded-md">
@@ -540,7 +540,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                   <span>Ground Reality & Engineering Milestone Log (Col AC)</span>
                 </div>
                 {project.detailed_stage_status ? (
-                  <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs leading-relaxed whitespace-pre-line font-mono text-slate-800 dark:text-slate-200 max-h-96 overflow-y-auto">
+                  <div className="p-4 bg-white dark:bg-slate-900 rounded-xs border border-slate-200 dark:border-slate-800 text-xs leading-relaxed whitespace-pre-line font-mono text-slate-800 dark:text-slate-200 min-h-[220px] max-h-[500px] overflow-y-auto shadow-inner">
                     {project.detailed_stage_status}
                   </div>
                 ) : (
