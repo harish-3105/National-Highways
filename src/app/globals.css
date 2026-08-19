@@ -1,28 +1,89 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fcfcfd;
+  --foreground: #18181b;
+  --radius: 0px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@theme {
+  /* Sharp Edged Corners System (VS Code / Engineering Precision) */
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
+  --radius-2xl: 2px;
+  --radius-3xl: 2px;
+  --radius-full: 2px;
+  --radius: 2px;
+
+  /* VS Code Neutral Tone Architecture (Remapped Slate -> Neutral Charcoal/Zinc) */
+  --color-slate-50: #f8f9fa;
+  --color-slate-100: #f1f2f4;
+  --color-slate-200: #e4e5e8;
+  --color-slate-300: #d1d3d8;
+  --color-slate-400: #9da1aa;
+  --color-slate-500: #6c727e;
+  --color-slate-600: #4e535e;
+  --color-slate-700: #383c44;
+  --color-slate-800: #25282f;
+  --color-slate-850: #1e2026;
+  --color-slate-900: #181a1f;
+  --color-slate-950: #101216;
+
+  /* VS Code Signature Blue Accent Palette */
+  --color-blue-50: #edf6fd;
+  --color-blue-100: #d7eafd;
+  --color-blue-200: #b5d9fb;
+  --color-blue-300: #83c0f8;
+  --color-blue-400: #499ff3;
+  --color-blue-500: #2081ea;
+  --color-blue-600: #007acc;
+  --color-blue-700: #0e639c;
+  --color-blue-800: #105282;
+  --color-blue-900: #13456d;
+  --color-blue-950: #0c2b46;
+
+  /* Technical Status Accents */
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+  --color-rose-500: #f43f5e;
+  --color-rose-600: #e11d48;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #181a1f;
+    --foreground: #f4f4f5;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* VS Code Minimalist Sharp Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 130, 0.3);
+  border-radius: 0px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 130, 0.5);
 }
 
 /* Print CSS rules for Legal Record & Fee Bill document printing & SLD export */
@@ -91,6 +152,3 @@ body {
     zoom: var(--sld-print-scale, 1) !important;
   }
 }
-
-
-

@@ -63,35 +63,35 @@ export function NavigationHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-xs print-hide">
+    <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 print-hide">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
-          {/* Logo & Header Title (Clickable Link) */}
+        <div className="flex items-center justify-between h-14 gap-4">
+          {/* Logo & Header Title */}
           <Link
             href="/highways"
-            className="flex items-center gap-3 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl p-1 transition-all"
+            className="flex items-center gap-2.5 group cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500 p-1 transition-all"
             title="Return to Main Highways Dashboard"
           >
-            <div className="w-10 h-10 rounded-xl bg-blue-600 group-hover:bg-blue-700 flex items-center justify-center text-white font-black shadow-md transition-colors">
+            <div className="w-8 h-8 rounded-xs bg-blue-600 group-hover:bg-blue-700 flex items-center justify-center text-white font-black text-xs transition-colors">
               NH
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-extrabold text-sm text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <div className="flex items-center gap-1.5">
+                <h1 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors tracking-tight">
                   Tamil Nadu National Highways
                 </h1>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                <span className="px-1.5 py-0.2 rounded-xs text-[9.5px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 font-mono">
                   PWD
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Infrastructure Management System
+              <p className="text-[10.5px] text-slate-500 dark:text-slate-400 font-medium leading-none">
+                Integrated Management & Analytics Portal
               </p>
             </div>
           </Link>
 
-          {/* Desktop Navigation Links */}
-          <nav aria-label="Main Navigation" className="hidden md:flex items-center gap-1.5 overflow-x-auto">
+          {/* Desktop Navigation Links (VS Code Tab Bar Style) */}
+          <nav aria-label="Main Navigation" className="hidden md:flex items-center gap-1 overflow-x-auto h-full pt-1">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive =
@@ -103,14 +103,14 @@ export function NavigationHeader() {
                   key={item.href}
                   href={item.href}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all cursor-pointer border-b-2 ${
                     isActive
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-slate-50 dark:bg-slate-800/80'
+                      : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
                   }`}
                   title={item.description}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3.5 h-3.5" />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -122,17 +122,17 @@ export function NavigationHeader() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-2 rounded-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
               aria-label="Toggle mobile menu"
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <nav className="md:hidden py-3 border-t border-slate-200 dark:border-slate-800 space-y-1.5 animate-in slide-in-from-top-2 duration-150">
+          <nav className="md:hidden py-2.5 border-t border-slate-200 dark:border-slate-800 space-y-1 animate-in slide-in-from-top-2 duration-150">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive =
@@ -145,16 +145,16 @@ export function NavigationHeader() {
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
+                  className={`flex items-center gap-2.5 px-3 py-2 text-xs font-bold transition-all border-l-2 ${
                     isActive
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
+                      : 'border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <Icon className="w-5 h-5 shrink-0" />
+                  <Icon className="w-4 h-4 shrink-0" />
                   <div>
                     <div className="text-xs font-extrabold">{item.label}</div>
-                    <div className="text-[10px] opacity-80 font-normal">{item.description}</div>
+                    <div className="text-[10px] opacity-75 font-normal">{item.description}</div>
                   </div>
                 </Link>
               );
