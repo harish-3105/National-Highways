@@ -4,15 +4,15 @@
 CREATE TABLE IF NOT EXISTS public.major_projects_50cr (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     s_no INTEGER,
-    division VARCHAR(100) NOT NULL,
-    scheme VARCHAR(150) NOT NULL,
+    division TEXT NOT NULL,
+    scheme TEXT NOT NULL,
     name_of_work TEXT NOT NULL,
     project_cost_cr NUMERIC(12, 2) NOT NULL CHECK (project_cost_cr >= 0),
-    work_stage VARCHAR(50) DEFAULT 'IN_PROGRESS', -- 'IN_PROGRESS' or 'TENDER_STAGE'
+    work_stage TEXT DEFAULT 'IN_PROGRESS', -- 'IN_PROGRESS' or 'TENDER_STAGE'
     progress_percent NUMERIC(5, 2) DEFAULT 0,
-    probable_completion_date VARCHAR(100),
+    probable_completion_date TEXT,
     stage_remarks TEXT,
-    delete_status VARCHAR(50) DEFAULT 'ACTIVE',
+    delete_status TEXT DEFAULT 'ACTIVE',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

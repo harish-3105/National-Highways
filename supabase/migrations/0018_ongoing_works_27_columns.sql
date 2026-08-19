@@ -3,13 +3,13 @@
 
 -- 1. Project Identification & Technical Specifications
 ALTER TABLE public.major_projects_50cr
-    ADD COLUMN IF NOT EXISTS pmis_id VARCHAR(50),
-    ADD COLUMN IF NOT EXISTS old_new_nh VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS pmis_id TEXT,
+    ADD COLUMN IF NOT EXISTS old_new_nh TEXT,
     ADD COLUMN IF NOT EXISTS length_km NUMERIC(10, 3),
-    ADD COLUMN IF NOT EXISTS job_no VARCHAR(150),
-    ADD COLUMN IF NOT EXISTS sanction_date VARCHAR(50),
-    ADD COLUMN IF NOT EXISTS appointed_date VARCHAR(50),
-    ADD COLUMN IF NOT EXISTS scheduled_completion_date VARCHAR(50);
+    ADD COLUMN IF NOT EXISTS job_no TEXT,
+    ADD COLUMN IF NOT EXISTS sanction_date TEXT,
+    ADD COLUMN IF NOT EXISTS appointed_date TEXT,
+    ADD COLUMN IF NOT EXISTS scheduled_completion_date TEXT;
 
 -- 2. Physical Progress Breakdown (Kilometers & Percentage)
 ALTER TABLE public.major_projects_50cr
@@ -27,17 +27,17 @@ ALTER TABLE public.major_projects_50cr
 
 -- 4. Timelines, Delays, EOT & Change of Scope (COS)
 ALTER TABLE public.major_projects_50cr
-    ADD COLUMN IF NOT EXISTS likely_completion_date VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS likely_completion_date TEXT,
     ADD COLUMN IF NOT EXISTS time_overrun_years NUMERIC(5, 2),
     ADD COLUMN IF NOT EXISTS eot_granted_till TEXT,
-    ADD COLUMN IF NOT EXISTS eot_proposal_agency VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS eot_proposal_agency TEXT,
     ADD COLUMN IF NOT EXISTS cos_details TEXT;
 
 -- 5. Field Personnel & Contracting Agency
 ALTER TABLE public.major_projects_50cr
-    ADD COLUMN IF NOT EXISTS de_name_phone VARCHAR(200),
-    ADD COLUMN IF NOT EXISTS contractor_name VARCHAR(250),
-    ADD COLUMN IF NOT EXISTS updated_division_date VARCHAR(150);
+    ADD COLUMN IF NOT EXISTS de_name_phone TEXT,
+    ADD COLUMN IF NOT EXISTS contractor_name TEXT,
+    ADD COLUMN IF NOT EXISTS updated_division_date TEXT;
 
 -- 6. Granular Structural Stage & Land Acquisition Status
 ALTER TABLE public.major_projects_50cr
