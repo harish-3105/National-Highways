@@ -1218,8 +1218,19 @@ function parseOngoingWorks(workbook: XLSX.WorkBook | null, rawRows: any[][], res
       else if (adText.includes('gobi')) division = 'Gobi';
       else if (adText.includes('tirunelveli')) division = 'Tirunelveli';
       else if (adText.includes('salem')) division = 'Salem';
-      else if (adText.includes('trichy')) division = 'Trichy';
+      else if (adText.includes('trichy') || adText.includes('tiruchirappalli')) division = 'Trichy';
+      else if (adText.includes('villup') || adText.includes('viluppuram')) division = 'Villupuram';
+      else if (adText.includes('thanjavur') || adText.includes('tanjore')) division = 'Thanjavur';
+      else if (adText.includes('tiruppur')) division = 'Tiruppur';
+      else if (adText.includes('erode')) division = 'Erode';
+      else if (adText.includes('krishnagiri')) division = 'Krishnagiri';
       else if (adText.includes('chennai')) division = 'Chennai';
+      else {
+        const lines = String(row.AD || '').split(/[\r\n&]+/);
+        if (lines[0] && lines[0].trim()) {
+          division = lines[0].replace(/division/i, '').replace(/[()]/g, '').trim() || 'Chennai';
+        }
+      }
 
       // Scheme
       let scheme = String(row.E || '').trim();
