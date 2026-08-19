@@ -208,7 +208,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     if (norm.includes('6l') || norm.includes('6-lane')) {
       return {
         ...neutralStyle,
-        border: 'border-y-2 border-y-purple-600 dark:border-y-purple-400',
+        border: 'border-y-2 border-y-purple-400 dark:border-y-purple-600',
         label: '6-Lane (6L)',
         heightPx: 150,
       };
@@ -216,7 +216,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     if (norm.includes('4l') || norm.includes('4-lane')) {
       return {
         ...neutralStyle,
-        border: 'border-y-2 border-y-blue-600 dark:border-y-blue-400',
+        border: 'border-y-2 border-y-blue-400 dark:border-y-blue-600',
         label: '4-Lane / 4L+PS',
         heightPx: 110,
       };
@@ -224,7 +224,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     if (norm.includes('2l+ps') || norm.includes('paved')) {
       return {
         ...neutralStyle,
-        border: 'border-y-2 border-y-emerald-600 dark:border-y-emerald-400',
+        border: 'border-y-2 border-y-emerald-400 dark:border-y-emerald-600',
         label: '2L + Paved Shoulder',
         heightPx: 76,
       };
@@ -232,14 +232,14 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     if (norm.includes('2l') || norm.includes('2-lane')) {
       return {
         ...neutralStyle,
-        border: 'border-y-2 border-y-amber-600 dark:border-y-amber-400',
+        border: 'border-y-2 border-y-amber-400 dark:border-y-amber-600',
         label: '2-Lane (2L)',
         heightPx: 40,
       };
     }
     return {
       ...neutralStyle,
-      border: 'border-y-2 border-y-slate-400 dark:border-y-slate-500',
+      border: 'border-y-2 border-y-slate-500 dark:border-y-slate-400',
       label: '< 2-Lane',
       heightPx: 22,
     };
@@ -520,10 +520,10 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {/* Right-Facing Caliper Docking Gauge */}
               <div className="absolute inset-0 flex items-center z-10 pointer-events-none">
                 {[
-                  { label: '6L', width: '20m', heightPx: 150, leftOffset: '12px', color: 'text-purple-600 dark:text-purple-400 border-purple-500' },
-                  { label: '4L / 4L+PS', width: '14m', heightPx: 110, leftOffset: '50px', color: 'text-blue-600 dark:text-blue-400 border-blue-500' },
-                  { label: '2L+PS', width: '10m', heightPx: 76, leftOffset: '115px', color: 'text-emerald-600 dark:text-emerald-400 border-emerald-500' },
-                  { label: '2L', width: '7m', heightPx: 40, leftOffset: '165px', color: 'text-amber-600 dark:text-amber-400 border-amber-500' },
+                  { label: '6L', width: '20m', heightPx: 150, leftOffset: '12px', color: 'text-purple-400 dark:text-purple-600 border-purple-400 dark:border-purple-600' },
+                  { label: '4L / 4L+PS', width: '14m', heightPx: 110, leftOffset: '50px', color: 'text-blue-400 dark:text-blue-600 border-blue-400 dark:border-blue-600' },
+                  { label: '2L+PS', width: '10m', heightPx: 76, leftOffset: '115px', color: 'text-emerald-400 dark:text-emerald-600 border-emerald-400 dark:border-emerald-600' },
+                  { label: '2L', width: '7m', heightPx: 40, leftOffset: '165px', color: 'text-amber-400 dark:text-amber-600 border-amber-400 dark:border-amber-600' },
                 ].map((spec) => (
                   <React.Fragment key={spec.label}>
                     {/* 1. Vertical Line */}
@@ -680,7 +680,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     return (
                       <div
                         key={st.id || i}
-                        className={`absolute top-1/2 -translate-y-1/2 border-r border-white/25 border-y transition-all duration-200 cursor-pointer hover:brightness-110 dark:hover:brightness-125 hover:z-30 shadow-xs ${style.bg} ${style.border} print:bg-slate-200 print:border-slate-500 flex items-center justify-center overflow-hidden px-1`}
+                        className={`absolute top-1/2 -translate-y-1/2 border-r border-slate-300 dark:border-white/20 border-y transition-all duration-200 cursor-pointer hover:brightness-110 dark:hover:brightness-125 hover:z-30 shadow-xs ${style.bg} ${style.border} print:bg-slate-200 print:border-slate-500 flex items-center justify-center overflow-hidden px-1`}
                         style={{
                           left: `${leftPx}px`,
                           width: `${widthPx}px`,
