@@ -9,28 +9,21 @@ interface AddMajorProjectModalProps {
   onClose: () => void;
   onSuccess: () => void;
   nextSNo: number;
+  masterDivisions?: string[];
+  masterSchemes?: string[];
 }
-
-const COMMON_DIVISIONS = ['Vellore', 'Madurai', 'Coimbatore', 'Gobi', 'Chennai', 'Tirunelveli'];
-const COMMON_SCHEMES = [
-  'Annual Plan 2026-27',
-  'Annual Plan 2025-26',
-  'Annual Plan 2024-25',
-  'Annual Plan 2022-23',
-  'Annual Plan 2021-22',
-  'Annual Plan 2020-21',
-  'CRIF 2025-26',
-];
 
 export const AddMajorProjectModal: React.FC<AddMajorProjectModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
   nextSNo,
+  masterDivisions = [],
+  masterSchemes = [],
 }) => {
   const [sNo, setSNo] = useState<string>(String(nextSNo));
-  const [division, setDivision] = useState<string>('Vellore');
-  const [scheme, setScheme] = useState<string>('Annual Plan 2025-26');
+  const [division, setDivision] = useState<string>(masterDivisions[0] || '');
+  const [scheme, setScheme] = useState<string>(masterSchemes[0] || '');
   const [nameOfWork, setNameOfWork] = useState<string>('');
   const [projectCostCr, setProjectCostCr] = useState<string>('');
   const [workStage, setWorkStage] = useState<'IN_PROGRESS' | 'TENDER_STAGE'>('IN_PROGRESS');
@@ -145,17 +138,20 @@ export const AddMajorProjectModal: React.FC<AddMajorProjectModalProps> = ({
               <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Division
               </label>
-              <select
+              <input
+                type="text"
+                list="division-options"
                 value={division}
                 onChange={(e) => setDivision(e.target.value)}
                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-500"
-              >
-                {COMMON_DIVISIONS.map((d) => (
-                  <option key={d} value={d}>
-                    {d} Division
-                  </option>
+                placeholder="Select or type Division..."
+                required
+              />
+              <datalist id="division-options">
+                {masterDivisions.map((d) => (
+                  <option key={d} value={d} />
                 ))}
-              </select>
+              </datalist>
             </div>
 
             <div>
@@ -168,11 +164,11 @@ export const AddMajorProjectModal: React.FC<AddMajorProjectModalProps> = ({
                 value={scheme}
                 onChange={(e) => setScheme(e.target.value)}
                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g. Annual Plan 2025-26"
+                placeholder="Select or type Scheme..."
                 required
               />
               <datalist id="scheme-options">
-                {COMMON_SCHEMES.map((s) => (
+                {masterSchemes.map((s) => (
                   <option key={s} value={s} />
                 ))}
               </datalist>

@@ -9,24 +9,17 @@ interface EditMajorProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  masterDivisions?: string[];
+  masterSchemes?: string[];
 }
-
-const COMMON_DIVISIONS = ['Vellore', 'Madurai', 'Coimbatore', 'Gobi', 'Chennai', 'Tirunelveli'];
-const COMMON_SCHEMES = [
-  'Annual Plan 2026-27',
-  'Annual Plan 2025-26',
-  'Annual Plan 2024-25',
-  'Annual Plan 2022-23',
-  'Annual Plan 2021-22',
-  'Annual Plan 2020-21',
-  'CRIF 2025-26',
-];
 
 export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
   project,
   isOpen,
   onClose,
   onSuccess,
+  masterDivisions = [],
+  masterSchemes = [],
 }) => {
   const [sNo, setSNo] = useState<string>('1');
   const [division, setDivision] = useState<string>('Vellore');
@@ -167,17 +160,20 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
               <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Division
               </label>
-              <select
+              <input
+                type="text"
+                list="division-edit-options"
                 value={division}
                 onChange={(e) => setDivision(e.target.value)}
                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-500"
-              >
-                {COMMON_DIVISIONS.map((d) => (
-                  <option key={d} value={d}>
-                    {d} Division
-                  </option>
+                placeholder="Select or type Division..."
+                required
+              />
+              <datalist id="division-edit-options">
+                {masterDivisions.map((d) => (
+                  <option key={d} value={d} />
                 ))}
-              </select>
+              </datalist>
             </div>
 
             <div>
@@ -190,11 +186,11 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                 value={scheme}
                 onChange={(e) => setScheme(e.target.value)}
                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g. Annual Plan 2025-26"
+                placeholder="Select or type Scheme..."
                 required
               />
               <datalist id="scheme-edit-options">
-                {COMMON_SCHEMES.map((s) => (
+                {masterSchemes.map((s) => (
                   <option key={s} value={s} />
                 ))}
               </datalist>

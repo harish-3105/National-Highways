@@ -13,16 +13,24 @@ import {
   RefreshCw,
   Layers,
   ArrowUpDown,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
+import { OngoingWorksMasterData } from '@/app/api/ongoing-works/master-data/route';
 import { MajorProjectsTable } from './MajorProjectsTable';
 import { AddMajorProjectModal } from './AddMajorProjectModal';
 import { EditMajorProjectModal } from './EditMajorProjectModal';
 import { ViewMajorProjectModal } from './ViewMajorProjectModal';
 import { DeleteMajorProjectModal } from './DeleteMajorProjectModal';
+import { OngoingWorksMasterDataModal } from './OngoingWorksMasterDataModal';
 
 export const MajorProjectsDashboard: React.FC = () => {
   const [projects, setProjects] = useState<MajorProject[]>([]);
+  const [masterData, setMasterData] = useState<OngoingWorksMasterData>({
+    rawItems: [],
+    divisions: [],
+    schemes: [],
+  });
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedDivision, setSelectedDivision] = useState<string>('ALL');
@@ -30,6 +38,7 @@ export const MajorProjectsDashboard: React.FC = () => {
 
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState<boolean>(false);
+  const [isMasterModalOpen, setIsMasterModalOpen] = useState<boolean>(false);
   const [viewingProject, setViewingProject] = useState<MajorProject | null>(null);
   const [editingProject, setEditingProject] = useState<MajorProject | null>(null);
   const [deletingProject, setDeletingProject] = useState<MajorProject | null>(null);
@@ -49,18 +58,31 @@ export const MajorProjectsDashboard: React.FC = () => {
     }
   }, []);
 
+  const fetchMasterData = useCallback(async () => {
+    try {
+      const res = await fetch('/api/ongoing-works/master-data');
+      const data = await res.json();
+      if (data) {
+        setMasterData(data);
+      }
+    } catch (err) {
+      console.error('Failed to load master data config:', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchProjects();
-  }, [fetchProjects]);
+    fetchMasterData();
+  }, [fetchProjects, fetchMasterData]);
 
-  // Divisions list for filter dropdown
+  // Divisions list for filter dropdown (merged master + active project divisions)
   const divisionsList = useMemo(() => {
-    const set = new Set<string>();
+    const set = new Set<string>(masterData.divisions || []);
     projects.forEach((p) => {
       if (p.division) set.add(p.division);
     });
     return Array.from(set).sort();
-  }, [projects]);
+  }, [projects, masterData.divisions]);
 
   // Filtered projects
   const filteredProjects = useMemo(() => {
@@ -125,6 +147,14 @@ export const MajorProjectsDashboard: React.FC = () => {
             title="Refresh Data"
           >
             <RefreshCw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setIsMasterModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+            title="Configure Division & Scheme Dropdown Options"
+          >
+            <SlidersHorizontal className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span>Master Config</span>
           </button>
           <button
             onClick={() => setIsAddOpen(true)}
@@ -290,6 +320,8 @@ export const MajorProjectsDashboard: React.FC = () => {
         onClose={() => setIsAddOpen(false)}
         onSuccess={fetchProjects}
         nextSNo={nextSNo}
+        masterDivisions={masterData.divisions}
+        masterSchemes={masterData.schemes}
       />
 
       <EditMajorProjectModal
@@ -297,6 +329,8 @@ export const MajorProjectsDashboard: React.FC = () => {
         isOpen={!!editingProject}
         onClose={() => setEditingProject(null)}
         onSuccess={fetchProjects}
+        masterDivisions={masterData.divisions}
+        masterSchemes={masterData.schemes}
       />
 
       <ViewMajorProjectModal
@@ -314,6 +348,13 @@ export const MajorProjectsDashboard: React.FC = () => {
         isOpen={!!deletingProject}
         onClose={() => setDeletingProject(null)}
         onSuccess={fetchProjects}
+      />
+
+      <OngoingWorksMasterDataModal
+        isOpen={isMasterModalOpen}
+        onClose={() => setIsMasterModalOpen(false)}
+        masterData={masterData}
+        onRefresh={fetchMasterData}
       />
     </div>
   );
