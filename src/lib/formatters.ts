@@ -1,15 +1,125 @@
 /**
- * Department Human-Readable Formatters & Conversions
+ * Department Human-Readable Formatters & Dynamic Engineering Calculations
  */
 
 /**
+ * Parses diverse date formats (DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY, YYYY-MM-DD) into JavaScript Date objects safely.
+ */
+export function parseDateString(dateStr: string | null | undefined): Date | null {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  if (!s || s === '-' || s === 'NA' || s === 'N/A' || s === '--') return null;
+
+  // DD.MM.YYYY or DD-MM-YYYY or DD/MM/YYYY
+  const dmyMatch = s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10) - 1;
+    const year = parseInt(dmyMatch[3], 10);
+    const d = new Date(year, month, day);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // YYYY-MM-DD
+  const ymdMatch = s.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})$/);
+  if (ymdMatch) {
+    const year = parseInt(ymdMatch[1], 10);
+    const month = parseInt(ymdMatch[2], 10) - 1;
+    const day = parseInt(ymdMatch[3], 10);
+    const d = new Date(year, month, day);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+export interface ProjectDelayResult {
+  delayYears: number;
+  isDelayed: boolean;
+  humanText: string;
+  compactText: string;
+}
+
+/**
+ * Dynamically computes project delay (Time Overrun) using live dates.
+ * Formula:
+ *   - Compares Scheduled Completion Date vs Likely / Actual Date (or Current Date if past schedule & work ongoing).
+ *   - If reference date > scheduled date, computes exact time difference in years, months & days.
+ */
+export function calculateProjectDelay(
+  scheduledDateStr: string | null | undefined,
+  likelyDateStr: string | null | undefined,
+  progressPercent?: number | null
+): ProjectDelayResult {
+  const scheduled = parseDateString(scheduledDateStr);
+  if (!scheduled) {
+    return { delayYears: 0, isDelayed: false, humanText: 'On Schedule', compactText: 'On Schedule' };
+  }
+
+  const likely = parseDateString(likelyDateStr);
+  const now = new Date();
+
+  // Determine comparison reference date
+  let refDate: Date | null = null;
+  if (likely && likely.getTime() > scheduled.getTime()) {
+    refDate = likely;
+  } else if (now.getTime() > scheduled.getTime() && (progressPercent === null || progressPercent === undefined || progressPercent < 100)) {
+    refDate = now;
+  }
+
+  if (!refDate || refDate.getTime() <= scheduled.getTime()) {
+    return { delayYears: 0, isDelayed: false, humanText: 'On Schedule', compactText: 'On Schedule' };
+  }
+
+  const diffMs = refDate.getTime() - scheduled.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  const delayYears = Math.round((diffDays / 365.25) * 100) / 100;
+
+  if (delayYears <= 0) {
+    return { delayYears: 0, isDelayed: false, humanText: 'On Schedule', compactText: 'On Schedule' };
+  }
+
+  const totalMonths = Math.round(delayYears * 12);
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths % 12;
+
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} ${years === 1 ? 'Year' : 'Years'}`);
+  if (months > 0) parts.push(`${months} ${months === 1 ? 'Month' : 'Months'}`);
+
+  const humanStr = parts.length > 0 ? parts.join(' & ') : `${delayYears.toFixed(2)} Yrs`;
+  const compactStr = years > 0 && months > 0 ? `${years}y ${months}m delay` : years > 0 ? `${years}y delay` : `${months}m delay`;
+
+  return {
+    delayYears,
+    isDelayed: true,
+    humanText: `${humanStr} (${delayYears.toFixed(2)} Yrs)`,
+    compactText: compactStr,
+  };
+}
+
+/**
+ * Dynamically computes Financial Progress (%)
+ * Formula:
+ *   Total Financial Expenditure / MAX(Revised RCE Cost, Original TPC Sanction Cost) * 100
+ */
+export function calculateFinancialProgress(
+  cummExpenditureCr: number | null | undefined,
+  revisedCostCr: number | null | undefined,
+  projectCostCr: number | null | undefined
+): number | null {
+  const exp = Number(cummExpenditureCr || 0);
+  const rev = Number(revisedCostCr || 0);
+  const tpc = Number(projectCostCr || 0);
+  const denominator = Math.max(rev, tpc);
+  if (denominator <= 0 || exp <= 0) return null;
+  const pct = (exp / denominator) * 100;
+  return Math.min(100, Math.round(pct * 10) / 10);
+}
+
+/**
  * Formats a decimal year duration into human-readable "X Years & Y Months (Z.ZZ Yrs)" string.
- * Examples:
- *   2.02 -> "2 Years (2.02 Yrs)"
- *   1.83 -> "1 Year & 10 Months (1.83 Yrs)"
- *   0.58 -> "7 Months (0.58 Yrs)"
- *   3.00 -> "3 Years (3.00 Yrs)"
- *   1.00 -> "1 Year (1.00 Yr)"
  */
 export function formatDelayHumanReadable(yearsVal: number | string | null | undefined): string {
   if (yearsVal === null || yearsVal === undefined || yearsVal === '') return 'Nil / On Schedule';
@@ -38,11 +148,6 @@ export function formatDelayHumanReadable(yearsVal: number | string | null | unde
 
 /**
  * Compact version for badges, chips, and small table cells.
- * Examples:
- *   2.02 -> "2y delay"
- *   1.83 -> "1y 10m delay"
- *   0.58 -> "7m delay"
- *   3.00 -> "3y delay"
  */
 export function formatDelayCompact(yearsVal: number | string | null | undefined): string {
   if (yearsVal === null || yearsVal === undefined || yearsVal === '') return 'On Schedule';

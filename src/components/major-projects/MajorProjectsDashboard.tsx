@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
 import { OngoingWorksMasterData } from '@/app/api/ongoing-works/master-data/route';
+import { calculateProjectDelay, calculateFinancialProgress } from '@/lib/formatters';
 import { MajorProjectsTable } from './MajorProjectsTable';
 import { AddMajorProjectModal } from './AddMajorProjectModal';
 import { EditMajorProjectModal } from './EditMajorProjectModal';
@@ -43,6 +44,7 @@ export const MajorProjectsDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedDivision, setSelectedDivision] = useState<string>('ALL');
   const [selectedStage, setSelectedStage] = useState<'ALL' | 'IN_PROGRESS' | 'TENDER_STAGE' | 'DELAYED'>('ALL');
+  const [costAbove50CrOnly, setCostAbove50CrOnly] = useState<boolean>(false);
 
   // Range Filters
   const [delayMin, setDelayMin] = useState<string>('');
@@ -125,6 +127,13 @@ export const MajorProjectsDashboard: React.FC = () => {
         selectedDivision === 'ALL' ||
         (p.division || '').toLowerCase() === selectedDivision.toLowerCase();
 
+      // Dynamic Delay Calculation for accurate stage & range filtering
+      const delayInfo = calculateProjectDelay(
+        p.scheduled_completion_date,
+        p.likely_completion_date || p.probable_completion_date,
+        p.progress_percent
+      );
+
       // 2. Stage filter
       let matchesStage = true;
       if (selectedStage === 'IN_PROGRESS') {
@@ -132,12 +141,12 @@ export const MajorProjectsDashboard: React.FC = () => {
       } else if (selectedStage === 'TENDER_STAGE') {
         matchesStage = p.work_stage === 'TENDER_STAGE';
       } else if (selectedStage === 'DELAYED') {
-        matchesStage = Number(p.time_overrun_years || 0) > 0;
+        matchesStage = delayInfo.isDelayed;
       }
 
       // 3. Delay Range Filter (in years)
       let matchesDelayRange = true;
-      const overrun = Number(p.time_overrun_years || 0);
+      const overrun = delayInfo.delayYears;
       if (delayMin !== '') {
         matchesDelayRange = matchesDelayRange && overrun >= Number(delayMin);
       }
@@ -156,7 +165,18 @@ export const MajorProjectsDashboard: React.FC = () => {
         matchesProgressRange = matchesProgressRange && prog <= Number(progressMax);
       }
 
-      // 5. Search filter
+      // 5. Cost ≥ ₹50 Cr Filter (based on revised_cost if present, else project_cost)
+      let matchesCost50Cr = true;
+      if (costAbove50CrOnly) {
+        const effectiveCost = Number(
+          p.revised_cost_cr && Number(p.revised_cost_cr) > 0
+            ? p.revised_cost_cr
+            : p.project_cost_cr || 0
+        );
+        matchesCost50Cr = effectiveCost >= 50;
+      }
+
+      // 6. Search filter
       const matchesSearch =
         !searchTerm.trim() ||
         (p.name_of_work || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -169,12 +189,20 @@ export const MajorProjectsDashboard: React.FC = () => {
         (p.detailed_stage_status || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.stage_remarks || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-      return matchesDivision && matchesStage && matchesDelayRange && matchesProgressRange && matchesSearch;
+      return (
+        matchesDivision &&
+        matchesStage &&
+        matchesDelayRange &&
+        matchesProgressRange &&
+        matchesCost50Cr &&
+        matchesSearch
+      );
     });
   }, [
     projects,
     selectedDivision,
     selectedStage,
+    costAbove50CrOnly,
     delayMin,
     delayMax,
     progressMin,
@@ -196,8 +224,28 @@ export const MajorProjectsDashboard: React.FC = () => {
     return projects.filter((p) => p.work_stage === 'TENDER_STAGE').length;
   }, [projects]);
 
+  // Dynamic live delayed count
   const delayedCount = useMemo(() => {
-    return projects.filter((p) => Number(p.time_overrun_years || 0) > 0).length;
+    return projects.filter((p) => {
+      const delay = calculateProjectDelay(
+        p.scheduled_completion_date,
+        p.likely_completion_date || p.probable_completion_date,
+        p.progress_percent
+      );
+      return delay.isDelayed;
+    }).length;
+  }, [projects]);
+
+  // Mega project (≥ 50 Cr) count
+  const above50CrCount = useMemo(() => {
+    return projects.filter((p) => {
+      const cost = Number(
+        p.revised_cost_cr && Number(p.revised_cost_cr) > 0
+          ? p.revised_cost_cr
+          : p.project_cost_cr || 0
+      );
+      return cost >= 50;
+    }).length;
   }, [projects]);
 
   const nextSNo = useMemo(() => {
@@ -210,17 +258,28 @@ export const MajorProjectsDashboard: React.FC = () => {
       searchTerm !== '' ||
       selectedDivision !== 'ALL' ||
       selectedStage !== 'ALL' ||
+      costAbove50CrOnly ||
       delayMin !== '' ||
       delayMax !== '' ||
       progressMin !== '' ||
       progressMax !== ''
     );
-  }, [searchTerm, selectedDivision, selectedStage, delayMin, delayMax, progressMin, progressMax]);
+  }, [
+    searchTerm,
+    selectedDivision,
+    selectedStage,
+    costAbove50CrOnly,
+    delayMin,
+    delayMax,
+    progressMin,
+    progressMax,
+  ]);
 
   const handleResetFilters = () => {
     setSearchTerm('');
     setSelectedDivision('ALL');
     setSelectedStage('ALL');
+    setCostAbove50CrOnly(false);
     setDelayMin('');
     setDelayMax('');
     setProgressMin('');
@@ -423,6 +482,28 @@ export const MajorProjectsDashboard: React.FC = () => {
                 </option>
               ))}
             </select>
+
+            {/* ≥ ₹50 Cr Filter Toggle */}
+            <button
+              onClick={() => setCostAbove50CrOnly(!costAbove50CrOnly)}
+              className={`px-3 py-2 rounded-xl transition-all cursor-pointer font-bold text-xs flex items-center gap-1.5 border ${
+                costAbove50CrOnly
+                  ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                  : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-500'
+              }`}
+              title="Toggle filter for Mega Projects (Cost ≥ ₹50 Cr)"
+            >
+              <span>⚡ &ge; ₹50 Cr</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold ${
+                  costAbove50CrOnly
+                    ? 'bg-amber-800 text-white'
+                    : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+                }`}
+              >
+                {above50CrCount}
+              </span>
+            </button>
 
             {/* Stage Selector Pills */}
             <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">

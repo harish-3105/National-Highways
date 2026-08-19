@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import {
   X,
   Printer,
-  Edit3,
   Building2,
   Calendar,
   IndianRupee,
@@ -18,12 +17,16 @@ import {
   Phone,
   HardHat,
   MapPin,
-  FileSpreadsheet,
   TrendingUp,
   ShieldCheck,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
-import { formatDelayHumanReadable, formatDelayCompact } from '@/lib/formatters';
+import {
+  calculateProjectDelay,
+  calculateFinancialProgress,
+} from '@/lib/formatters';
 
 interface ViewMajorProjectModalProps {
   project: MajorProject | null;
@@ -32,23 +35,47 @@ interface ViewMajorProjectModalProps {
   onEdit?: (project: MajorProject) => void;
 }
 
-type TabType = 'overview' | 'physical' | 'financial' | 'timeline' | 'personnel' | 'detailed_stage';
-
 export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
   project,
   isOpen,
   onClose,
-  onEdit,
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [copied, setCopied] = useState(false);
 
   if (!isOpen || !project) return null;
 
   const isTender = project.work_stage === 'TENDER_STAGE';
-  const hasTimeOverrun = Number(project.time_overrun_years || 0) > 0;
+
+  // Dynamic delay calculation based on scheduled vs likely/current date
+  const delayInfo = calculateProjectDelay(
+    project.scheduled_completion_date,
+    project.likely_completion_date || project.probable_completion_date,
+    project.progress_percent
+  );
+
+  // Dynamic financial progress calculation
+  const finProgress = calculateFinancialProgress(
+    project.cumm_financial_expenditure_cr,
+    project.revised_cost_cr,
+    project.project_cost_cr
+  );
+
+  const effectiveCost = Number(
+    project.revised_cost_cr && Number(project.revised_cost_cr) > 0
+      ? project.revised_cost_cr
+      : project.project_cost_cr || 0
+  );
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleCopyStageLog = () => {
+    if (project.detailed_stage_status) {
+      navigator.clipboard.writeText(project.detailed_stage_status);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -61,27 +88,27 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-850/80 flex items-start justify-between gap-4 shrink-0">
           <div className="space-y-1.5 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 bg-blue-600 text-white font-mono font-bold text-xs rounded-md">
+              <span className="px-2 py-0.5 bg-blue-600 text-white font-mono font-bold text-xs rounded-xs">
                 #{project.s_no}
               </span>
-              <span className="px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-md border border-slate-200 dark:border-slate-700">
+              <span className="px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xs border border-slate-200 dark:border-slate-700">
                 {project.division} Division
               </span>
-              <span className="px-2.5 py-0.5 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-semibold text-xs rounded-md border border-purple-200 dark:border-purple-800">
+              <span className="px-2.5 py-0.5 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-semibold text-xs rounded-xs border border-purple-200 dark:border-purple-800">
                 {project.scheme}
               </span>
               {project.old_new_nh && (
-                <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-mono text-[11px] rounded-md font-bold">
+                <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-mono text-[11px] rounded-xs font-bold">
                   NH {project.old_new_nh}
                 </span>
               )}
               {project.pmis_id && (
-                <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-mono text-[11px] rounded-md border border-indigo-200 dark:border-indigo-800">
+                <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-mono text-[11px] rounded-xs border border-indigo-200 dark:border-indigo-800">
                   PMIS: {project.pmis_id}
                 </span>
               )}
               <span
-                className={`px-2.5 py-0.5 rounded-md font-bold text-xs border ${
+                className={`px-2.5 py-0.5 rounded-xs font-bold text-xs border ${
                   isTender
                     ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                     : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
@@ -89,6 +116,11 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
               >
                 {isTender ? 'Tender / Sanction Stage' : 'In Execution'}
               </span>
+              {effectiveCost >= 50 && (
+                <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold text-[10.5px] rounded-xs border border-amber-200 dark:border-amber-800">
+                  ⚡ Mega Project (&ge; ₹50 Cr)
+                </span>
+              )}
             </div>
 
             <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 leading-snug">
@@ -99,24 +131,26 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
           <div className="flex items-center gap-1.5 shrink-0 print:hidden">
             <button
               onClick={handlePrint}
-              className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+              className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xs transition-colors cursor-pointer"
               title="Print Project Passport"
             >
               <Printer className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xs transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* 4 Summary Metric Ribbon */}
-        <div className="px-6 py-3 bg-slate-100/70 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        {/* 4-Metric Quick Header Ribbon */}
+        <div className="px-6 py-3 bg-slate-100/80 dark:bg-slate-850/60 border-b border-slate-200 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs shrink-0">
           <div>
-            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">Total Project Cost</span>
+            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
+              Sanctioned Cost (TPC)
+            </span>
             <div className="font-mono font-extrabold text-emerald-700 dark:text-emerald-400 text-sm">
               ₹ {Number(project.project_cost_cr || 0).toFixed(2)} Cr
               {project.revised_cost_cr && (
@@ -128,7 +162,9 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
           </div>
 
           <div>
-            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">Physical Progress</span>
+            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
+              Physical Progress
+            </span>
             <div className="font-mono font-extrabold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-1.5">
               <span>{isTender ? '—' : `${project.progress_percent || 0}%`}</span>
               {project.total_completed_length_km ? (
@@ -140,433 +176,349 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
           </div>
 
           <div>
-            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">Total Expenditure</span>
-            <div className="font-mono font-extrabold text-blue-700 dark:text-blue-400 text-sm">
-              ₹ {Number(project.cumm_financial_expenditure_cr || project.expenditure_prior_cr || 0).toFixed(2)} Cr
+            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
+              Financial Progress
+            </span>
+            <div className="font-mono font-extrabold text-blue-700 dark:text-blue-400 text-sm flex items-center gap-1.5">
+              <span>{finProgress !== null ? `${finProgress}%` : '—'}</span>
+              <span className="text-[11px] font-normal text-slate-500">
+                (₹{Number(project.cumm_financial_expenditure_cr || project.expenditure_prior_cr || 0).toFixed(2)} Cr)
+              </span>
             </div>
           </div>
 
           <div>
-            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">Target Completion</span>
-            <div className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs flex items-center gap-1">
+            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
+              Likely Completion
+            </span>
+            <div className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs flex items-center gap-1.5 flex-wrap">
               <span>📅 {project.likely_completion_date || project.probable_completion_date || '—'}</span>
-              {hasTimeOverrun && (
+              {delayInfo.isDelayed && (
                 <span className="px-1.5 py-0.2 bg-red-100 text-red-700 dark:bg-red-950/80 dark:text-red-300 text-[10px] font-bold rounded-xs font-mono">
-                  ⚠️ {formatDelayCompact(project.time_overrun_years)}
+                  ⚠️ {delayInfo.compactText}
                 </span>
               )}
             </div>
           </div>
         </div>
 
-        {/* Level 2 Tab Navigation */}
-        <div className="px-6 pt-2 border-b border-slate-200 dark:border-slate-800 flex gap-2 overflow-x-auto bg-slate-50/40 dark:bg-slate-850/40 print:hidden text-xs">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-3.5 py-2 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'overview'
-                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-xl'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            📋 Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('physical')}
-            className={`px-3.5 py-2 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'physical'
-                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-xl'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            🛣️ Physical Progress
-          </button>
-          <button
-            onClick={() => setActiveTab('financial')}
-            className={`px-3.5 py-2 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'financial'
-                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-xl'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            💰 Financials & RCE
-          </button>
-          <button
-            onClick={() => setActiveTab('timeline')}
-            className={`px-3.5 py-2 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'timeline'
-                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-xl'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            ⏱️ Timelines & EOT
-          </button>
-          <button
-            onClick={() => setActiveTab('personnel')}
-            className={`px-3.5 py-2 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'personnel'
-                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-xl'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            👷 Personnel & Agency
-          </button>
-          <button
-            onClick={() => setActiveTab('detailed_stage')}
-            className={`px-3.5 py-2 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'detailed_stage'
-                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-xl'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            🏗️ Civil & LA Stage Notes
-          </button>
-        </div>
-
-        {/* Modal Body / Tab Content */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-5 text-xs text-slate-700 dark:text-slate-300">
-          {/* TAB 1: OVERVIEW */}
-          {activeTab === 'overview' && (
-            <div className="space-y-5">
-              {/* Identification Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
-                    Sanction Job Number
-                  </span>
-                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    {project.job_no || '—'}
-                  </p>
-                </div>
-
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
-                    PMIS / OCMS / PMG ID
-                  </span>
-                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    {project.pmis_id || '—'}
-                  </p>
-                </div>
-
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
-                    Total Design Length
-                  </span>
-                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    {project.length_km ? `${project.length_km} Km` : '—'}
-                  </p>
-                </div>
-
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
-                    Sanction Date
-                  </span>
-                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    {project.sanction_date || '—'}
-                  </p>
-                </div>
-
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
-                    Appointed / Start Date
-                  </span>
-                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    {project.appointed_date || '—'}
-                  </p>
-                </div>
-
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
-                    Scheduled Completion
-                  </span>
-                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    {project.scheduled_completion_date || '—'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Contracting & Personnel Banner */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider block">
-                    Contractor / Agency
-                  </span>
-                  <p className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5">
-                    {project.contractor_name || 'Agency to be appointed / Tendering'}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider block">
-                    Divisional Engineer In-Charge
-                  </span>
-                  <p className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5">
-                    {project.de_name_phone || '—'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Stage Remarks Box */}
-              {(project.stage_remarks || isTender) && (
-                <div className="p-4 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-xl space-y-1.5">
-                  <div className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-300">
-                    <Clock className="w-4 h-4" />
-                    <span>Tender / Pre-Execution Status Remarks</span>
-                  </div>
-                  <p className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed font-medium">
-                    {project.stage_remarks || 'Tender / Sanction process ongoing.'}
-                  </p>
-                </div>
-              )}
+        {/* Single Page Scrollable Passport Body */}
+        <div className="p-6 overflow-y-auto flex-1 space-y-6 text-xs text-slate-700 dark:text-slate-300 scroll-smooth">
+          {/* SECTION 1: GENERAL & TECHNICAL SPECIFICATIONS */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-slate-200 dark:border-slate-800">
+              <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                1. General & Technical Specifications
+              </h3>
             </div>
-          )}
 
-          {/* TAB 2: PHYSICAL PROGRESS */}
-          {activeTab === 'physical' && (
-            <div className="space-y-4">
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
+                  Sanction Job Number
+                </span>
+                <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
+                  {project.job_no || '—'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
+                  PMIS / OCMS / PMG ID
+                </span>
+                <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
+                  {project.pmis_id || '—'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
+                  Total Project Length
+                </span>
+                <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
+                  {project.length_km ? `${project.length_km} km` : '—'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
+                  Sanction Date
+                </span>
+                <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
+                  📅 {project.sanction_date || '—'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 2: DUAL PHYSICAL & FINANCIAL PROGRESS */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-slate-200 dark:border-slate-800">
+              <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                2. Execution Progress & Financial Metrics
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Card A: Physical Progress */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xs border border-slate-200 dark:border-slate-800 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
-                    Cumulative Physical Progress
-                  </span>
-                  <span className="font-mono font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">
-                    {project.progress_percent || 0}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 h-3 rounded-full overflow-hidden shadow-inner">
-                  <div
-                    className="bg-emerald-600 dark:bg-emerald-500 h-full rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, Math.max(0, project.progress_percent || 0))}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">
-                    Completed till 31.03.2026
-                  </span>
-                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    {project.completed_length_prior_km !== null ? `${project.completed_length_prior_km} Km` : '—'}
-                  </p>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">
-                    Completed in 2026-27
-                  </span>
-                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    {project.completed_length_current_fy_km !== null ? `${project.completed_length_current_fy_km} Km` : '—'}
-                  </p>
-                </div>
-
-                <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-1">
-                  <span className="text-[10px] text-emerald-700 dark:text-emerald-300 uppercase font-semibold block">
-                    Total Completed Length
-                  </span>
-                  <p className="font-mono font-extrabold text-emerald-800 dark:text-emerald-300 text-xs">
-                    {project.total_completed_length_km !== null ? `${project.total_completed_length_km} Km` : '—'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: FINANCIALS & RCE */}
-          {activeTab === 'financial' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">
-                    Original TPC
-                  </span>
-                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    ₹ {Number(project.project_cost_cr || 0).toFixed(2)} Cr
-                  </p>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">
-                    Revised / Anticipated Cost
-                  </span>
-                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    {project.revised_cost_cr ? `₹ ${Number(project.revised_cost_cr).toFixed(2)} Cr` : '—'}
-                  </p>
-                </div>
-
-                <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800/60 space-y-1">
-                  <span className="text-[10px] text-amber-700 dark:text-amber-300 uppercase font-semibold block">
-                    Increase in Cost (RCE)
-                  </span>
-                  <p className="font-mono font-bold text-amber-800 dark:text-amber-300 text-xs">
-                    {project.cost_increase_rce_cr ? `₹ ${Number(project.cost_increase_rce_cr).toFixed(2)} Cr` : '—'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Expenditure Breakdown */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
-                <h4 className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">
-                  Booked Financial Expenditure
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <span className="text-[10.5px] text-slate-400 block">Upto 31.03.2026:</span>
-                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
-                      ₹ {Number(project.expenditure_prior_cr || 0).toFixed(2)} Cr
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-emerald-600" />
+                    <span className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">
+                      Physical Progress
                     </span>
                   </div>
-                  <div>
-                    <span className="text-[10.5px] text-slate-400 block">In 2026-27:</span>
-                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
-                      ₹ {Number(project.expenditure_current_fy_cr || 0).toFixed(2)} Cr
+                  <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-base">
+                    {isTender ? 'Tender Stage' : `${project.progress_percent || 0}%`}
+                  </span>
+                </div>
+
+                {!isTender && (
+                  <div className="space-y-1.5">
+                    <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-xs overflow-hidden shadow-inner">
+                      <div
+                        className="bg-emerald-600 dark:bg-emerald-500 h-full rounded-xs transition-all duration-300"
+                        style={{ width: `${Math.min(100, Math.max(0, project.progress_percent || 0))}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                      <span>0%</span>
+                      <span>Target: 100% ({project.length_km || 0} km)</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-200 dark:border-slate-700/60 font-mono">
+                  <div className="p-2 bg-white dark:bg-slate-900 rounded-xs border border-slate-200 dark:border-slate-800">
+                    <span className="text-[9.5px] text-slate-400 block uppercase">Prior Completed</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                      {project.completed_length_prior_km || 0} km
                     </span>
                   </div>
-                  <div>
-                    <span className="text-[10.5px] text-slate-400 block">Cumulative Financial Progress:</span>
-                    <span className="font-mono font-extrabold text-blue-700 dark:text-blue-400 text-xs">
-                      ₹ {Number(project.cumm_financial_expenditure_cr || 0).toFixed(2)} Cr
+                  <div className="p-2 bg-white dark:bg-slate-900 rounded-xs border border-slate-200 dark:border-slate-800">
+                    <span className="text-[9.5px] text-slate-400 block uppercase">Current FY</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                      {project.completed_length_current_fy_km || 0} km
+                    </span>
+                  </div>
+                  <div className="p-2 bg-white dark:bg-slate-900 rounded-xs border border-slate-200 dark:border-slate-800">
+                    <span className="text-[9.5px] text-slate-400 block uppercase">Total Completed</span>
+                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">
+                      {project.total_completed_length_km || 0} km
                     </span>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* TAB 4: TIMELINES & EOT */}
-          {activeTab === 'timeline' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">
-                    Scheduled Date
-                  </span>
-                  <p className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
-                    {project.scheduled_completion_date || '—'}
-                  </p>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">
-                    Likely / Actual Date
-                  </span>
-                  <p className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
-                    {project.likely_completion_date || project.probable_completion_date || '—'}
-                  </p>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">
-                    Time Overrun
-                  </span>
-                  <p className={`font-mono font-bold text-xs ${hasTimeOverrun ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'}`}>
-                    {formatDelayHumanReadable(project.time_overrun_years)}
-                  </p>
-                </div>
-              </div>
-
-              {/* EOT Status */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+              {/* Card B: Financial Progress */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xs border border-slate-200 dark:border-slate-800 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">
+                  <div className="flex items-center gap-2">
+                    <IndianRupee className="w-4 h-4 text-blue-600" />
+                    <span className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">
+                      Financial Progress
+                    </span>
+                  </div>
+                  <span className="font-mono font-black text-blue-600 dark:text-blue-400 text-base">
+                    {finProgress !== null ? `${finProgress}%` : '0%'}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-xs overflow-hidden shadow-inner">
+                    <div
+                      className="bg-blue-600 dark:bg-blue-500 h-full rounded-xs transition-all duration-300"
+                      style={{ width: `${Math.min(100, Math.max(0, finProgress || 0))}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                    <span>Exp: ₹{Number(project.cumm_financial_expenditure_cr || project.expenditure_prior_cr || 0).toFixed(2)} Cr</span>
+                    <span>Budget: ₹{effectiveCost.toFixed(2)} Cr</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-200 dark:border-slate-700/60 font-mono">
+                  <div className="p-2 bg-white dark:bg-slate-900 rounded-xs border border-slate-200 dark:border-slate-800">
+                    <span className="text-[9.5px] text-slate-400 block uppercase">Prior Exp</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                      ₹{Number(project.expenditure_prior_cr || 0).toFixed(2)} Cr
+                    </span>
+                  </div>
+                  <div className="p-2 bg-white dark:bg-slate-900 rounded-xs border border-slate-200 dark:border-slate-800">
+                    <span className="text-[9.5px] text-slate-400 block uppercase">Current FY Exp</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                      ₹{Number(project.expenditure_current_fy_cr || 0).toFixed(2)} Cr
+                    </span>
+                  </div>
+                  <div className="p-2 bg-white dark:bg-slate-900 rounded-xs border border-slate-200 dark:border-slate-800">
+                    <span className="text-[9.5px] text-slate-400 block uppercase">Cumulative Exp</span>
+                    <span className="font-extrabold text-blue-600 dark:text-blue-400 text-xs">
+                      ₹{Number(project.cumm_financial_expenditure_cr || project.expenditure_prior_cr || 0).toFixed(2)} Cr
+                    </span>
+                  </div>
+                </div>
+
+                {project.revised_cost_cr && (
+                  <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 rounded-xs border border-amber-200 dark:border-amber-800/80 flex items-center justify-between text-[11px] font-mono">
+                    <span className="font-bold text-amber-800 dark:text-amber-300">
+                      Revised Cost Estimate (RCE): ₹{Number(project.revised_cost_cr).toFixed(2)} Cr
+                    </span>
+                    <span className="text-amber-700 dark:text-amber-400 font-semibold">
+                      +{Number(project.cost_increase_rce_cr || 0).toFixed(2)} Cr Escalation
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 3: TIMELINES, EOT & DYNAMIC DELAY ANALYSIS */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-slate-200 dark:border-slate-800">
+              <Clock className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                3. Milestones, EOT & Delay Analysis
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Appointed Date</span>
+                <p className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
+                  📅 {project.appointed_date || '—'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Scheduled Completion Date</span>
+                <p className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
+                  📅 {project.scheduled_completion_date || '—'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Likely Completion Date</span>
+                <p className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
+                  📅 {project.likely_completion_date || project.probable_completion_date || '—'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Calculated Time Overrun</span>
+                <p className={`font-mono font-bold text-xs ${delayInfo.isDelayed ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                  {delayInfo.humanText}
+                </p>
+              </div>
+            </div>
+
+            {/* EOT Status & Change of Scope */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xs border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-[11px] uppercase tracking-wider">
                     Extension of Time (EOT) Status
-                  </h4>
+                  </span>
                   {project.eot_proposal_agency && (
-                    <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-mono text-[10px] font-bold rounded">
-                      With Agency: {project.eot_proposal_agency}
+                    <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-mono text-[10px] font-bold rounded-xs">
+                      Agency: {project.eot_proposal_agency}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
+                <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed font-mono">
                   {project.eot_granted_till || 'No EOT granted / Pending submission.'}
                 </p>
               </div>
 
-              {/* Change of Scope */}
-              {project.cos_details && (
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                  <h4 className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">
-                    Change of Scope (COS) Details
-                  </h4>
-                  <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
-                    {project.cos_details}
-                  </p>
-                </div>
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xs border border-slate-200 dark:border-slate-800 space-y-2">
+                <span className="font-bold text-slate-900 dark:text-slate-100 text-[11px] uppercase tracking-wider block">
+                  Change of Scope (COS) Details
+                </span>
+                <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed font-mono">
+                  {project.cos_details || 'No Change of Scope proposal recorded.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 4: PERSONNEL & EXECUTING CONTRACTOR */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-slate-200 dark:border-slate-800">
+              <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                4. Key Personnel & Executing Agency
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Divisional Engineer In-Charge</span>
+                <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                  {project.de_name_phone || '—'}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Executing Contractor / Agency</span>
+                <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                  {project.contractor_name || '—'}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Division Updated Stamp</span>
+                <p className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
+                  {project.updated_division_date || '—'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 5: DETAILED CIVIL, RAILWAY, FOREST & LA STAGE NOTES (COL AC) */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                  5. Granular Engineering Milestones & Land Acquisition Log (Col AC)
+                </h3>
+              </div>
+              {project.detailed_stage_status && (
+                <button
+                  onClick={handleCopyStageLog}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xs transition-colors cursor-pointer"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? 'Copied' : 'Copy Log'}</span>
+                </button>
               )}
             </div>
-          )}
 
-          {/* TAB 5: PERSONNEL & AGENCY */}
-          {activeTab === 'personnel' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* DE Card */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-xs">
-                    <User className="w-4 h-4" />
-                    <span>Divisional Engineer</span>
-                  </div>
-                  <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    {project.de_name_phone || '—'}
-                  </p>
-                </div>
-
-                {/* Contractor Card */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                  <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-xs">
-                    <HardHat className="w-4 h-4" />
-                    <span>Executing Contractor</span>
-                  </div>
-                  <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    {project.contractor_name || '—'}
-                  </p>
-                </div>
+            {project.detailed_stage_status ? (
+              <div className="p-4 bg-slate-50 dark:bg-slate-850/80 rounded-xs border border-slate-200 dark:border-slate-800 text-xs leading-relaxed whitespace-pre-line font-mono text-slate-800 dark:text-slate-200 min-h-[160px] max-h-[400px] overflow-y-auto shadow-inner">
+                {project.detailed_stage_status}
               </div>
-
-              {/* Reporting Division & Timestamp */}
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
-                <span className="text-slate-500">Reporting Division & Update Timestamp:</span>
-                <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
-                  {project.updated_division_date || `${project.division} Division`}
-                </span>
+            ) : (
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/30 rounded-xs border border-dashed border-slate-200 dark:border-slate-800 text-center text-slate-400 italic">
+                No granular structural or land acquisition status log recorded yet for this project.
               </div>
-            </div>
-          )}
-
-          {/* TAB 6: DETAILED STAGE CIVIL & LA NOTES */}
-          {activeTab === 'detailed_stage' && (
-            <div className="space-y-4">
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">
-                  <Layers className="w-4 h-4 text-blue-600" />
-                  <span>Ground Reality & Engineering Milestone Log (Col AC)</span>
-                </div>
-                {project.detailed_stage_status ? (
-                  <div className="p-4 bg-white dark:bg-slate-900 rounded-xs border border-slate-200 dark:border-slate-800 text-xs leading-relaxed whitespace-pre-line font-mono text-slate-800 dark:text-slate-200 min-h-[220px] max-h-[500px] overflow-y-auto shadow-inner">
-                    {project.detailed_stage_status}
-                  </div>
-                ) : (
-                  <p className="text-slate-400 text-xs italic">
-                    No granular structural or land acquisition status log recorded yet for this project.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-850/60 flex items-center justify-between print:hidden">
+        <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-850/80 flex items-center justify-between print:hidden shrink-0">
           <span className="text-[11px] text-slate-400 font-mono">
-            National Highways Project Passport &bull; Level 2 Review System
+            National Highways Project Passport &bull; Complete Single-Page Technical Dossier
           </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-            >
-              Close
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="px-4 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xs text-xs font-bold transition-colors cursor-pointer"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
