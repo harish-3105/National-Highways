@@ -14,6 +14,7 @@ import {
   Layers,
   ArrowUpDown,
   SlidersHorizontal,
+  Archive,
 } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
 import { OngoingWorksMasterData } from '@/app/api/ongoing-works/master-data/route';
@@ -32,6 +33,7 @@ export const MajorProjectsDashboard: React.FC = () => {
     schemes: [],
   });
   const [loading, setLoading] = useState<boolean>(true);
+  const [showArchived, setShowArchived] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedDivision, setSelectedDivision] = useState<string>('ALL');
   const [selectedStage, setSelectedStage] = useState<'ALL' | 'IN_PROGRESS' | 'TENDER_STAGE'>('ALL');
@@ -46,7 +48,7 @@ export const MajorProjectsDashboard: React.FC = () => {
   const fetchProjects = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/major-projects');
+      const res = await fetch(`/api/major-projects?${showArchived ? 'includeDeleted=true' : ''}`);
       const data = await res.json();
       if (data.success) {
         setProjects(data.projects || []);
@@ -56,7 +58,26 @@ export const MajorProjectsDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showArchived]);
+
+  const handleRestoreProject = async (project: MajorProject) => {
+    try {
+      const res = await fetch('/api/major-projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...project,
+          delete_status: 'ACTIVE',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchProjects();
+      }
+    } catch (err) {
+      console.error('Failed to restore project:', err);
+    }
+  };
 
   const fetchMasterData = useCallback(async () => {
     try {
@@ -140,13 +161,25 @@ export const MajorProjectsDashboard: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start md:self-auto">
+        <div className="flex items-center gap-2.5 self-start md:self-auto flex-wrap">
           <button
             onClick={fetchProjects}
             className="p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-blue-600 rounded-xl transition-colors shadow-xs cursor-pointer"
             title="Refresh Data"
           >
             <RefreshCw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setShowArchived((v) => !v)}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+              showArchived
+                ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+            title={showArchived ? 'Hide Archived Records' : 'Show Archived Records'}
+          >
+            <Archive className="w-4 h-4" />
+            <span>{showArchived ? 'Hide Archived' : 'Show Archived'}</span>
           </button>
           <button
             onClick={() => setIsMasterModalOpen(true)}
@@ -312,6 +345,7 @@ export const MajorProjectsDashboard: React.FC = () => {
         onView={(p) => setViewingProject(p)}
         onEdit={(p) => setEditingProject(p)}
         onDelete={(p) => setDeletingProject(p)}
+        onRestore={handleRestoreProject}
       />
 
       {/* Modal Suite */}
