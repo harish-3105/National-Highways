@@ -123,7 +123,7 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                   S.No. {sNo}
                 </span>
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  Edit Major Project Record
+                  Edit Ongoing Work Record
                 </h2>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">

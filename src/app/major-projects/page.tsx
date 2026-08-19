@@ -1,16 +1,5 @@
-import { MajorProjectsDashboard } from "@/components/major-projects/MajorProjectsDashboard";
+import { redirect } from 'next/navigation';
 
-export const metadata = {
-  title: "Major Projects (> Rs. 50 Cr.) | TN National Highways Department",
-  description: "High-value capital works and CM Dashboard review portal for Tamil Nadu National Highways",
-};
-
-export default function MajorProjectsPage() {
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <MajorProjectsDashboard />
-      </main>
-    </div>
-  );
+export default function MajorProjectsRedirect() {
+  redirect('/ongoing-works');
 }

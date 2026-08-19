@@ -20,16 +20,16 @@ const NAV_ITEMS: NavItem[] = [
     description: 'Level 1 Highways & Level 2 Sub-Chainage PCU Data',
   },
   {
-    label: 'Major Works (>50 Cr)',
-    href: '/major-projects',
-    icon: Building2,
-    description: 'High-Value Capital Highway Works & CM Review Extracts',
-  },
-  {
     label: 'DLP Maintenance',
     href: '/dlp',
     icon: ShieldAlert,
     description: 'Defect Liability Period & STMC/PBMC Stretches',
+  },
+  {
+    label: 'Ongoing Works',
+    href: '/ongoing-works',
+    icon: Building2,
+    description: 'Capital Highway Works, Stage Monitoring & CM Review Extracts',
   },
   {
     label: 'Legal Cases',

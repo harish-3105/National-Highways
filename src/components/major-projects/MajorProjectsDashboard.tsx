@@ -107,14 +107,14 @@ export const MajorProjectsDashboard: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="px-2.5 py-0.5 bg-blue-600 text-white font-extrabold text-xs rounded-md uppercase tracking-wider">
-              CM Review Portal
+              Works Module
             </span>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-              Major Projects (&gt; Rs. 50 Crore Works)
+              Ongoing Works
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            High-value national highway bypasses, ROBs, flyovers, and four-laning works across Tamil Nadu divisions.
+            Capital infrastructure works, bypasses, ROBs, flyovers, and four-laning projects across Tamil Nadu divisions.
           </p>
         </div>
 
@@ -131,7 +131,7 @@ export const MajorProjectsDashboard: React.FC = () => {
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Major Project</span>
+            <span>Add Work</span>
           </button>
         </div>
       </div>
@@ -141,11 +141,11 @@ export const MajorProjectsDashboard: React.FC = () => {
         {/* Card 1: Total Works */}
         <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Total Major Works</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Total Ongoing Works</span>
             <div className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono">
               {totalCount}
             </div>
-            <span className="text-[10px] text-slate-500 font-medium">Costing &gt; Rs. 50 Cr.</span>
+            <span className="text-[10px] text-slate-500 font-medium">All registered works</span>
           </div>
           <div className="p-3 bg-blue-50 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400">
             <Building2 className="w-6 h-6" />

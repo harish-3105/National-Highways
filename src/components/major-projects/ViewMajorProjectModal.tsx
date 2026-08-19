@@ -163,7 +163,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
           <span className="text-[11px] text-slate-400 font-mono">
-            CM Dashboard Review &bull; High-Value Capital Works (&gt; Rs. 50 Cr.)
+            Ongoing Infrastructure Works &bull; Stage Monitoring &amp; Project Passports
           </span>
           <button
             onClick={onClose}
