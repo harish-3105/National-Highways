@@ -160,6 +160,33 @@ const roundTo3Decimals = (num: number): number => {
 };
 
 /**
+ * Formats Excel date serial numbers (e.g. 44531, 45849) or date strings into DD.MM.YYYY
+ */
+const formatExcelDate = (val: any): string | null => {
+  if (val === null || val === undefined || val === '') return null;
+  const s = String(val).trim();
+  if (s === '-' || s === 'NA' || s === 'N/A' || s === '--') return null;
+
+  // If already formatted like DD-MM-YYYY or DD.MM.YYYY
+  if (/^\d{1,2}[-./]\d{1,2}[-./]\d{2,4}$/.test(s)) {
+    return s;
+  }
+
+  const num = parseFloat(s);
+  if (!isNaN(num) && num > 30000 && num < 60000) {
+    const date = new Date(Math.round((num - 25569) * 86400 * 1000));
+    if (!isNaN(date.getTime())) {
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const year = date.getUTCFullYear();
+      return `${day}.${month}.${year}`;
+    }
+  }
+
+  return s;
+};
+
+/**
  * Converts Indian chainage notation (e.g. 63/2, 110/2, 0/0, 60/600) into clean decimal numbers (63.2, 110.2, 0.0, 60.6)
  */
 /**
@@ -1222,7 +1249,7 @@ function parseOngoingWorks(workbook: XLSX.WorkBook | null, rawRows: any[][], res
         project_cost_cr: costCr,
         work_stage: currentSection === 'TENDER_STAGE' ? 'TENDER_STAGE' : 'IN_PROGRESS',
         progress_percent: prog,
-        probable_completion_date: row.V || row.T || null,
+        probable_completion_date: formatExcelDate(row.V || row.T),
         stage_remarks: currentSection === 'TENDER_STAGE' ? String(row.AC || '').trim() || 'Tender / Sanction process ongoing.' : null,
 
         // 27-Column parameters
@@ -1230,9 +1257,9 @@ function parseOngoingWorks(workbook: XLSX.WorkBook | null, rawRows: any[][], res
         old_new_nh: String(row.D || '').trim() || null,
         length_km: row.F ? parseFloat(String(row.F)) || null : null,
         job_no: String(row.G || '').trim() || null,
-        sanction_date: String(row.H || '').trim() || null,
-        appointed_date: String(row.J || '').trim() || null,
-        scheduled_completion_date: String(row.U || '').trim() || null,
+        sanction_date: formatExcelDate(row.H),
+        appointed_date: formatExcelDate(row.J),
+        scheduled_completion_date: formatExcelDate(row.U),
 
         completed_length_prior_km: row.K ? parseFloat(String(row.K)) || 0 : 0,
         completed_length_current_fy_km: row.L ? parseFloat(String(row.L)) || 0 : 0,
@@ -1244,7 +1271,7 @@ function parseOngoingWorks(workbook: XLSX.WorkBook | null, rawRows: any[][], res
         expenditure_current_fy_cr: row.R && row.R !== '-' ? parseFloat(String(row.R)) || 0 : 0,
         cumm_financial_expenditure_cr: row.S ? parseFloat(String(row.S)) || 0 : 0,
 
-        likely_completion_date: String(row.V || row.T || '').trim() || null,
+        likely_completion_date: formatExcelDate(row.V || row.T),
         time_overrun_years: row.W ? parseFloat(String(row.W)) || null : null,
         eot_granted_till: String(row.X || '').trim() || null,
         eot_proposal_agency: String(row.Y || '').trim() || null,
