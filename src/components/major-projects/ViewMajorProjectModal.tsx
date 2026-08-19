@@ -23,6 +23,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
+import { formatDelayHumanReadable, formatDelayCompact } from '@/lib/formatters';
 
 interface ViewMajorProjectModalProps {
   project: MajorProject | null;
@@ -150,8 +151,8 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
             <div className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs flex items-center gap-1">
               <span>📅 {project.likely_completion_date || project.probable_completion_date || '—'}</span>
               {hasTimeOverrun && (
-                <span className="px-1.5 py-0.2 bg-red-100 text-red-700 dark:bg-red-950/80 dark:text-red-300 text-[10px] font-bold rounded">
-                  +{project.time_overrun_years}y delay
+                <span className="px-1.5 py-0.2 bg-red-100 text-red-700 dark:bg-red-950/80 dark:text-red-300 text-[10px] font-bold rounded-xs font-mono">
+                  ⚠️ {formatDelayCompact(project.time_overrun_years)}
                 </span>
               )}
             </div>
@@ -457,8 +458,8 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block">
                     Time Overrun
                   </span>
-                  <p className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
-                    {project.time_overrun_years ? `${project.time_overrun_years} Years` : 'Nil / On Schedule'}
+                  <p className={`font-mono font-bold text-xs ${hasTimeOverrun ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                    {formatDelayHumanReadable(project.time_overrun_years)}
                   </p>
                 </div>
               </div>

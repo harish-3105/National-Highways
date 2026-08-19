@@ -3,6 +3,7 @@
 import React from 'react';
 import { Eye, Edit3, Trash2, Clock, CheckCircle2, IndianRupee, RotateCcw, Archive } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
+import { formatDelayCompact } from '@/lib/formatters';
 
 interface MajorProjectsTableProps {
   projects: MajorProject[];
@@ -155,9 +156,16 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
 
                       {/* Probable Date of Completion */}
                       <td className="py-3.5 px-3 font-mono font-bold text-slate-800 dark:text-slate-200 text-[11px]">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700">
-                          📅 {item.probable_completion_date || '—'}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded-xs border border-slate-200 dark:border-slate-700 w-fit">
+                            📅 {item.likely_completion_date || item.probable_completion_date || '—'}
+                          </span>
+                          {Number(item.time_overrun_years || 0) > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-rose-600 dark:text-rose-400">
+                              ⏱️ {formatDelayCompact(item.time_overrun_years)}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </>
                   )}
