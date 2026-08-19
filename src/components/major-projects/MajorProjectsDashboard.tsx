@@ -15,6 +15,10 @@ import {
   ArrowUpDown,
   SlidersHorizontal,
   Archive,
+  AlertTriangle,
+  RotateCcw,
+  Percent,
+  X,
 } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
 import { OngoingWorksMasterData } from '@/app/api/ongoing-works/master-data/route';
@@ -34,9 +38,17 @@ export const MajorProjectsDashboard: React.FC = () => {
   });
   const [loading, setLoading] = useState<boolean>(true);
   const [showArchived, setShowArchived] = useState<boolean>(false);
+
+  // Filters State
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedDivision, setSelectedDivision] = useState<string>('ALL');
-  const [selectedStage, setSelectedStage] = useState<'ALL' | 'IN_PROGRESS' | 'TENDER_STAGE'>('ALL');
+  const [selectedStage, setSelectedStage] = useState<'ALL' | 'IN_PROGRESS' | 'TENDER_STAGE' | 'DELAYED'>('ALL');
+
+  // Range Filters
+  const [delayMin, setDelayMin] = useState<string>('');
+  const [delayMax, setDelayMax] = useState<string>('');
+  const [progressMin, setProgressMin] = useState<string>('');
+  const [progressMax, setProgressMax] = useState<string>('');
 
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState<boolean>(false);
@@ -108,21 +120,67 @@ export const MajorProjectsDashboard: React.FC = () => {
   // Filtered projects
   const filteredProjects = useMemo(() => {
     return projects.filter((p) => {
+      // 1. Division filter
       const matchesDivision =
         selectedDivision === 'ALL' ||
         (p.division || '').toLowerCase() === selectedDivision.toLowerCase();
-      const matchesStage =
-        selectedStage === 'ALL' || p.work_stage === selectedStage;
+
+      // 2. Stage filter
+      let matchesStage = true;
+      if (selectedStage === 'IN_PROGRESS') {
+        matchesStage = p.work_stage === 'IN_PROGRESS';
+      } else if (selectedStage === 'TENDER_STAGE') {
+        matchesStage = p.work_stage === 'TENDER_STAGE';
+      } else if (selectedStage === 'DELAYED') {
+        matchesStage = Number(p.time_overrun_years || 0) > 0;
+      }
+
+      // 3. Delay Range Filter (in years)
+      let matchesDelayRange = true;
+      const overrun = Number(p.time_overrun_years || 0);
+      if (delayMin !== '') {
+        matchesDelayRange = matchesDelayRange && overrun >= Number(delayMin);
+      }
+      if (delayMax !== '') {
+        matchesDelayRange = matchesDelayRange && overrun <= Number(delayMax);
+      }
+
+      // 4. Progress Range Filter (in %)
+      let matchesProgressRange = true;
+      const prog =
+        p.progress_percent !== undefined && p.progress_percent !== null ? Number(p.progress_percent) : 0;
+      if (progressMin !== '') {
+        matchesProgressRange = matchesProgressRange && prog >= Number(progressMin);
+      }
+      if (progressMax !== '') {
+        matchesProgressRange = matchesProgressRange && prog <= Number(progressMax);
+      }
+
+      // 5. Search filter
       const matchesSearch =
         !searchTerm.trim() ||
         (p.name_of_work || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.scheme || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.division || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.pmis_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.job_no || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.contractor_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.de_name_phone || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.detailed_stage_status || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.stage_remarks || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-      return matchesDivision && matchesStage && matchesSearch;
+      return matchesDivision && matchesStage && matchesDelayRange && matchesProgressRange && matchesSearch;
     });
-  }, [projects, selectedDivision, selectedStage, searchTerm]);
+  }, [
+    projects,
+    selectedDivision,
+    selectedStage,
+    delayMin,
+    delayMax,
+    progressMin,
+    progressMax,
+    searchTerm,
+  ]);
 
   // Aggregate KPI metrics
   const totalCount = projects.length;
@@ -138,10 +196,36 @@ export const MajorProjectsDashboard: React.FC = () => {
     return projects.filter((p) => p.work_stage === 'TENDER_STAGE').length;
   }, [projects]);
 
+  const delayedCount = useMemo(() => {
+    return projects.filter((p) => Number(p.time_overrun_years || 0) > 0).length;
+  }, [projects]);
+
   const nextSNo = useMemo(() => {
     if (projects.length === 0) return 1;
     return Math.max(...projects.map((p) => p.s_no || 0)) + 1;
   }, [projects]);
+
+  const hasActiveFilters = useMemo(() => {
+    return (
+      searchTerm !== '' ||
+      selectedDivision !== 'ALL' ||
+      selectedStage !== 'ALL' ||
+      delayMin !== '' ||
+      delayMax !== '' ||
+      progressMin !== '' ||
+      progressMax !== ''
+    );
+  }, [searchTerm, selectedDivision, selectedStage, delayMin, delayMax, progressMin, progressMax]);
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setSelectedDivision('ALL');
+    setSelectedStage('ALL');
+    setDelayMin('');
+    setDelayMax('');
+    setProgressMin('');
+    setProgressMax('');
+  };
 
   return (
     <div className="space-y-6">
@@ -199,33 +283,40 @@ export const MajorProjectsDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 4 Top KPI Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      {/* 5 Top KPI Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
         {/* Card 1: Total Works */}
-        <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
+        <div
+          onClick={() => setSelectedStage('ALL')}
+          className={`p-4 rounded-2xl border shadow-xs flex items-center justify-between cursor-pointer transition-all ${
+            selectedStage === 'ALL' && !hasActiveFilters
+              ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-400'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-blue-300'
+          }`}
+        >
           <div className="space-y-1">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Total Ongoing Works</span>
+            <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider block">Total Ongoing Works</span>
             <div className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono">
               {totalCount}
             </div>
             <span className="text-[10px] text-slate-500 font-medium">All registered works</span>
           </div>
           <div className="p-3 bg-blue-50 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400">
-            <Building2 className="w-6 h-6" />
+            <Building2 className="w-5 h-5" />
           </div>
         </div>
 
         {/* Card 2: Total Project Cost */}
         <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Total Capital Outlay</span>
-            <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+            <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider block">Total Capital Outlay</span>
+            <div className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
               ₹ {totalCostCr.toLocaleString('en-IN', { maximumFractionDigits: 2 })} Cr
             </div>
             <span className="text-[10px] text-slate-500 font-medium">Approved Outlay</span>
           </div>
           <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl text-emerald-600 dark:text-emerald-400">
-            <IndianRupee className="w-6 h-6" />
+            <IndianRupee className="w-5 h-5" />
           </div>
         </div>
 
@@ -239,14 +330,14 @@ export const MajorProjectsDashboard: React.FC = () => {
           }`}
         >
           <div className="space-y-1">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Under Execution</span>
+            <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider block">Under Execution</span>
             <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
               {inProgressCount}
             </div>
             <span className="text-[10px] text-slate-500 font-medium">Physical works active</span>
           </div>
           <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl text-emerald-600 dark:text-emerald-400">
-            <Activity className="w-6 h-6" />
+            <Activity className="w-5 h-5" />
           </div>
         </div>
 
@@ -260,81 +351,294 @@ export const MajorProjectsDashboard: React.FC = () => {
           }`}
         >
           <div className="space-y-1">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Tender / Pre-Construction</span>
+            <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider block">Tender / Pre-Const.</span>
             <div className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
               {tenderCount}
             </div>
-            <span className="text-[10px] text-slate-500 font-medium">Bidding / Scrutiny / LOA</span>
+            <span className="text-[10px] text-slate-500 font-medium">Bidding / Scrutiny</span>
           </div>
           <div className="p-3 bg-amber-50 dark:bg-amber-950/60 rounded-xl text-amber-600 dark:text-amber-400">
-            <Clock className="w-6 h-6" />
+            <Clock className="w-5 h-5" />
+          </div>
+        </div>
+
+        {/* Card 5: Delayed Works (Time Overrun) */}
+        <div
+          onClick={() => {
+            if (selectedStage === 'DELAYED') {
+              setSelectedStage('ALL');
+              setDelayMin('');
+            } else {
+              setSelectedStage('DELAYED');
+              setDelayMin('0.01');
+            }
+          }}
+          className={`p-4 rounded-2xl border shadow-xs flex items-center justify-between cursor-pointer transition-all ${
+            selectedStage === 'DELAYED' || (delayMin !== '' && Number(delayMin) > 0)
+              ? 'bg-rose-50/80 dark:bg-rose-950/40 border-rose-500 ring-2 ring-rose-500/20'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-rose-300'
+          }`}
+        >
+          <div className="space-y-1">
+            <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider block">Delayed Works</span>
+            <div className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono">
+              {delayedCount}
+            </div>
+            <span className="text-[10px] text-slate-500 font-medium">Time Overrun &gt; 0y</span>
+          </div>
+          <div className="p-3 bg-rose-50 dark:bg-rose-950/60 rounded-xl text-rose-600 dark:text-rose-400">
+            <AlertTriangle className="w-5 h-5" />
           </div>
         </div>
       </div>
 
-      {/* Filter Toolbar */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        {/* Search Input */}
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by work, NH, scheme, division..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
-          />
+      {/* Comprehensive Filter Panel */}
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
+        {/* Tier 1: Search, Division & Stage Tabs */}
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-3">
+          {/* Search Input */}
+          <div className="relative w-full lg:w-80">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by work, NH, scheme, division..."
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
+            />
+          </div>
+
+          {/* Controls Group */}
+          <div className="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end flex-wrap">
+            {/* Division Filter */}
+            <select
+              value={selectedDivision}
+              onChange={(e) => setSelectedDivision(e.target.value)}
+              className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            >
+              <option value="ALL">All Divisions ({divisionsList.length})</option>
+              {divisionsList.map((d) => (
+                <option key={d} value={d}>
+                  {d} Division
+                </option>
+              ))}
+            </select>
+
+            {/* Stage Selector Pills */}
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+              <button
+                onClick={() => setSelectedStage('ALL')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  selectedStage === 'ALL'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                All ({totalCount})
+              </button>
+              <button
+                onClick={() => setSelectedStage('IN_PROGRESS')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  selectedStage === 'IN_PROGRESS'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                In Progress ({inProgressCount})
+              </button>
+              <button
+                onClick={() => setSelectedStage('TENDER_STAGE')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  selectedStage === 'TENDER_STAGE'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                Tender ({tenderCount})
+              </button>
+              <button
+                onClick={() => setSelectedStage('DELAYED')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  selectedStage === 'DELAYED'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-rose-600'
+                }`}
+              >
+                Delayed ({delayedCount})
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Filters Group */}
-        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
-          {/* Division Filter */}
-          <select
-            value={selectedDivision}
-            onChange={(e) => setSelectedDivision(e.target.value)}
-            className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="ALL">All Divisions ({divisionsList.length})</option>
-            {divisionsList.map((d) => (
-              <option key={d} value={d}>
-                {d} Division
-              </option>
-            ))}
-          </select>
+        {/* Tier 2: From & To Range Filters for Delay & Physical Progress */}
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-3 text-xs flex-wrap">
+          <div className="flex items-center gap-4 flex-wrap w-full md:w-auto">
+            {/* 1. Delay (Years) Range Filter */}
+            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-rose-500" />
+                <span>Delay (Yrs):</span>
+              </span>
+              <div className="flex items-center gap-1.5 font-mono">
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder="From"
+                  value={delayMin}
+                  onChange={(e) => setDelayMin(e.target.value)}
+                  className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-rose-500"
+                />
+                <span className="text-slate-400">to</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder="To"
+                  value={delayMax}
+                  onChange={(e) => setDelayMax(e.target.value)}
+                  className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
 
-          {/* Stage Filter Tabs */}
-          <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
-            <button
-              onClick={() => setSelectedStage('ALL')}
-              className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                selectedStage === 'ALL'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              All ({projects.length})
-            </button>
-            <button
-              onClick={() => setSelectedStage('IN_PROGRESS')}
-              className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                selectedStage === 'IN_PROGRESS'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              In Progress ({inProgressCount})
-            </button>
-            <button
-              onClick={() => setSelectedStage('TENDER_STAGE')}
-              className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                selectedStage === 'TENDER_STAGE'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              Tender ({tenderCount})
-            </button>
+              {/* Quick delay preset chips */}
+              <div className="hidden sm:flex items-center gap-1 ml-1 text-[10.5px]">
+                <button
+                  onClick={() => {
+                    setDelayMin('0.01');
+                    setDelayMax('1');
+                  }}
+                  className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded cursor-pointer"
+                >
+                  &lt;1y
+                </button>
+                <button
+                  onClick={() => {
+                    setDelayMin('1');
+                    setDelayMax('3');
+                  }}
+                  className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded cursor-pointer"
+                >
+                  1-3y
+                </button>
+                <button
+                  onClick={() => {
+                    setDelayMin('3');
+                    setDelayMax('');
+                  }}
+                  className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded cursor-pointer"
+                >
+                  &gt;3y
+                </button>
+              </div>
+
+              {(delayMin !== '' || delayMax !== '') && (
+                <button
+                  onClick={() => {
+                    setDelayMin('');
+                    setDelayMax('');
+                  }}
+                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  title="Clear Delay Filter"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* 2. Progress (%) Range Filter */}
+            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                <Percent className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Progress (%):</span>
+              </span>
+              <div className="flex items-center gap-1.5 font-mono">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="Min"
+                  value={progressMin}
+                  onChange={(e) => setProgressMin(e.target.value)}
+                  className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-emerald-500"
+                />
+                <span className="text-slate-400">to</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="Max"
+                  value={progressMax}
+                  onChange={(e) => setProgressMax(e.target.value)}
+                  className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+
+              {/* Quick progress preset chips */}
+              <div className="hidden sm:flex items-center gap-1 ml-1 text-[10.5px]">
+                <button
+                  onClick={() => {
+                    setProgressMin('0');
+                    setProgressMax('25');
+                  }}
+                  className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded cursor-pointer"
+                >
+                  &lt;25%
+                </button>
+                <button
+                  onClick={() => {
+                    setProgressMin('25');
+                    setProgressMax('50');
+                  }}
+                  className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded cursor-pointer"
+                >
+                  25-50%
+                </button>
+                <button
+                  onClick={() => {
+                    setProgressMin('50');
+                    setProgressMax('75');
+                  }}
+                  className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded cursor-pointer"
+                >
+                  50-75%
+                </button>
+                <button
+                  onClick={() => {
+                    setProgressMin('75');
+                    setProgressMax('100');
+                  }}
+                  className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded cursor-pointer"
+                >
+                  &gt;75%
+                </button>
+              </div>
+
+              {(progressMin !== '' || progressMax !== '') && (
+                <button
+                  onClick={() => {
+                    setProgressMin('');
+                    setProgressMax('');
+                  }}
+                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  title="Clear Progress Filter"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Reset Filters Action */}
+          {hasActiveFilters && (
+            <button
+              onClick={handleResetFilters}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition-colors cursor-pointer font-bold text-xs self-end md:self-auto"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset Filters</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -371,10 +675,6 @@ export const MajorProjectsDashboard: React.FC = () => {
         project={viewingProject}
         isOpen={!!viewingProject}
         onClose={() => setViewingProject(null)}
-        onEdit={(p) => {
-          setViewingProject(null);
-          setEditingProject(p);
-        }}
       />
 
       <DeleteMajorProjectModal
