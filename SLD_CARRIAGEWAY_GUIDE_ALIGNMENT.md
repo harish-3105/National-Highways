@@ -47,6 +47,10 @@ During implementation, two subpixel rendering challenges were diagnosed and reso
   - Bottom Arm: `top: calc(50% + ${spec.heightPx / 2}px - 2px)` with `border-t-2`
   This guarantees that top and bottom 2px border strokes occupy identical vertical coordinates on both the fixed sidebar and the scrollable canvas.
 
+### C. Cross-Device Horizontal Scrollbar Height Absorption (Windows/Linux vs macOS)
+- **Issue**: On devices with physical/classic horizontal scrollbars (Windows, Linux, non-retina displays, external mouse on macOS), the scrollbar consumed 15px–17px of vertical height inside the right scrollable canvas. Because Row 3 / Track 3 used `flex-1`, Track 3 absorbed the entire 17px height loss, shifting its `top-1/2` centerline ~8.5px upwards relative to the left sidebar.
+- **Fix**: Locked both the Left Sidebar Gauge (Row 3) and the Right Canvas Road Corridor (Track 3) to an explicit, matched pixel height (`h-[220px] shrink-0`), and removed asymmetric `py-2` padding. Both centerline axes are now mathematically locked at $Y = 110\text{px}$ from container top on all operating systems and viewports.
+
 ---
 
 ## 4. Implementation Code Reference

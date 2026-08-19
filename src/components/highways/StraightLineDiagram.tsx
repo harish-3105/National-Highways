@@ -480,7 +480,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
         {/* FULL SCREEN DYNAMICALLY STRETCHED MATRIX SLD BOARD */}
         <div
-          className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-1 min-h-[500px] print:border-slate-400 print:bg-white print:shadow-none print:rounded-none print:min-h-0 print:overflow-visible sld-matrix-board-print-scale"
+          className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex print:border-slate-400 print:bg-white print:shadow-none print:rounded-none print:min-h-0 print:overflow-visible sld-matrix-board-print-scale"
         >
           
           {/* LEFT FIXED SIDEBAR: Row Labels Locked 1-to-1 to Right Canvas Rows */}
@@ -500,7 +500,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
             </div>
 
             {/* Row 3: Height-Matched Clean Carriageway Width Dimension Arrow Gauge */}
-            <div className="flex-1 min-h-[200px] border-b border-slate-800 px-2 py-2 flex flex-col justify-between shrink-0 select-none relative overflow-hidden bg-slate-950">
+            <div className="h-[220px] border-b border-slate-800 px-2 shrink-0 select-none relative overflow-hidden bg-slate-950">
               {/* Horizontal Centerline Axis Guide Line */}
               <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/25 z-0 pointer-events-none" />
 
@@ -604,7 +604,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
           {/* RIGHT HORIZONTAL SCROLL AREA: Matrix Tracks Matching Sidebar Rows */}
           <div className="flex-1 overflow-x-auto bg-slate-900 flex flex-col">
             <div
-              className="relative transition-all duration-300 flex flex-col flex-1"
+              className="relative transition-all duration-300 flex flex-col shrink-0"
               style={{ width: `${canvasWidthPxActual}px` }}
             >
               {/* TRACK 1: Important Towns Grid Row (Height 48px / h-12) */}
@@ -656,7 +656,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               </div>
 
               {/* TRACK 3: CENTERLINE-ALIGNED ROAD CORRIDOR (PROPORTIONAL PHYSICAL LENGTH) */}
-              <div className="relative flex-1 min-h-[200px] border-b border-slate-800 bg-slate-950/90 flex items-center shrink-0 overflow-hidden">
+              <div className="relative h-[220px] border-b border-slate-800 bg-slate-950/90 flex items-center shrink-0 overflow-hidden">
                 {/* Horizontal Road Centerline Guide Line */}
                 <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/25 z-0 pointer-events-none" />
 
