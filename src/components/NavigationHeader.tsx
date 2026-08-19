@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Road, ShieldAlert, Scale, FileSpreadsheet, UploadCloud, Users, Menu, X } from 'lucide-react';
+import { Road, ShieldAlert, Scale, FileSpreadsheet, UploadCloud, Users, Building2, Menu, X } from 'lucide-react';
 
 interface NavItem {
   label: string;
@@ -18,6 +18,12 @@ const NAV_ITEMS: NavItem[] = [
     href: '/highways',
     icon: Road,
     description: 'Level 1 Highways & Level 2 Sub-Chainage PCU Data',
+  },
+  {
+    label: 'Major Works (>50 Cr)',
+    href: '/major-projects',
+    icon: Building2,
+    description: 'High-Value Capital Highway Works & CM Review Extracts',
   },
   {
     label: 'DLP Maintenance',
