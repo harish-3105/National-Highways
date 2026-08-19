@@ -1,120 +1,125 @@
-# Comprehensive Project Handover & Current Status Document
+# Comprehensive System Handover & Status Documentation
 
 **Project**: Tamil Nadu National Highways Department Management System  
 **Repository Remote**: `git@github.com:tnhighwaysdep/highways_project.git`  
-**Active Production Branch**: `main`  
-**Latest Deployed Commit**: `2354cf8`  
-
-**Date**: August 13, 2026  
+**Active Production Branches**: `main` (Production) & `mathir` (Development Sync)  
+**Date**: August 19, 2026  
 
 ---
 
-## 1. Executive Overview
+## 1. Executive Summary
 
-The codebase has been fully consolidated, audited, built, and deployed to `main`. All legacy/archived code and temporary progress markdown files have been cleaned out from git tracking. All API endpoints and React page components have been completely purged of hardcoded sample/dummy fallback records, connecting directly to Supabase cloud database tables and returning clean empty arrays (`[]`) when database tables are empty. All API routes have been aligned with the exact live Supabase database schemas for seamless Create, Read, Update, and Soft-Delete operations. All core modules (`/highways`, `/dlp`, `/legal`, `/ingest`) share a unified light/dark design system.
+The Tamil Nadu National Highways Department Management System is a centralized, high-performance web application designed to digitize and manage the core operations of the National Highways division across Tamil Nadu.
 
----
-
-## 2. Implemented Production Modules
-
-### A. Legal & Litigation Management Portal (`/legal`)
-- **UI Components**:
-  - [`src/components/legal/LegalDashboard.tsx`](file:///home/mathir14/nh_proj/src/components/legal/LegalDashboard.tsx): Master case list table with Circle/Division filters, Search bar, Counter Affidavit status filters, and CRUD action buttons.
-  - [`src/components/legal/CaseEntryForm.tsx`](file:///home/mathir14/nh_proj/src/components/legal/CaseEntryForm.tsx): **100% of Harish's 48 fields** across Module 1 and Module 2:
-    - **Section 1**: Circle (`SearchableSelect`) & Division (`SearchableSelect` dynamically dependent on Circle).
-    - **Section 2**: Case Number, Case Year (4-digit regex validation `1950` - `currentYear+1`), Category, Court Name, Respondent Name, Case Pertains To (`GOTN`/`MoRTH`/`Both`), Nature of Case (with `specifyNatureOfCase` when `Other`), Brief of Prayer, Present Status.
-    - **Section 3**: Counter Affidavit Filed toggle (`Yes`/`No`), Date of Filing (`DatePickerInput` with `maxToday`), Last Hearing Date, Next Hearing Date, Affidavit Details, Post Hearing Details (Action before next hearing, Interim/Final Order, Order Date, Compliance Period, End Date for Compliance, Status of Action Taken for Compliance, Appeal Eligibility (`Yes`/`No`), Action Taken for Appeal).
-    - **Pending Counter Affidavit Action**: Textarea required if Counter Affidavit is `No`.
-    - **MODULE 2: Converted Case Proceedings (Collapsible Accordion)**: Category, Type of Petition (with specify if `Other`), Case Number, Case Year, State (`Tamil Nadu` read-only), District (`SearchableSelect`), Court Complex (`SearchableSelect` dynamically dependent on District), Petitioner Name, Respondent Name, Impugned Case Number, Order Issued, Order Date, Brief of Prayer, Present Status, Petition Counter Affidavit toggle & sub-fields.
-  - [`src/components/legal/CaseViewModal.tsx`](file:///home/mathir14/nh_proj/src/components/legal/CaseViewModal.tsx): View modal displaying all Module 1 & Module 2 fields with **Print Record** functionality.
-- **Common Inputs**:
-  - [`src/components/common/SearchableSelect.tsx`](file:///home/mathir14/nh_proj/src/components/common/SearchableSelect.tsx): Dropdown with filter text search, clear action, and outside click dismissal.
-  - [`src/components/common/DatePickerInput.tsx`](file:///home/mathir14/nh_proj/src/components/common/DatePickerInput.tsx): Date picker with calendar icon and `maxToday` constraints.
-- **Backend API Route Handler**:
-  - [`src/app/api/legal/route.ts`](file:///home/mathir14/nh_proj/src/app/api/legal/route.ts): Full CRUD endpoints:
-    - `GET`: Selects records where `delete_status != 'DELETED'`. Returns `[]` if table is empty (no dummy fallbacks).
-    - `POST`: Performs `update()` for existing UUIDs or `insert()` for new records.
-    - `DELETE`: Performs soft-delete by setting `delete_status = 'DELETED'`.
+The system encompasses **8 fully integrated production modules**:
+1. **Ongoing Works & Major Projects Portal (`/ongoing-works` / `/major-projects`)**
+2. **Interactive Straight-Line Diagram (SLD) (`/highways/[id]/sld`)**
+3. **Master Highways Catalog & Linear Assets (`/highways`)**
+4. **Defect Liability Period (DLP) & Maintenance Warranties (`/dlp`)**
+5. **Legal & Litigation Proceedings Portal (`/legal`)**
+6. **Legal Fee Bills & Voucher Management (`/fee-bills`)**
+7. **Departmental Staff Directory (`/staff`)**
+8. **Bulk Data Ingestion Engine (`/ingest`)**
 
 ---
 
-### B. DLP & Warranty Contract Tracker (`/dlp`)
-- **Route**: [`src/app/dlp/page.tsx`](file:///home/mathir14/nh_proj/src/app/dlp/page.tsx)
-- **Purged Dummy Data**: Removed `SAMPLE_DLP_CONTRACTS` array completely. Initialized state to `[]` and updated fetch handler to set database items directly.
-- **UI Components**: 4-tier warranty status badges (`ACTIVE`, `EXPIRING_SOON`, `EXPIRED`, `UNDER_MAINTENANCE`), date range popover filter ([`DlpCalendarDateFilter.tsx`](file:///home/mathir14/nh_proj/src/components/dlp/DlpCalendarDateFilter.tsx)).
-- **Backend API**: [`src/app/api/dlp/route.ts`](file:///home/mathir14/nh_proj/src/app/api/dlp/route.ts) (returns pure DB records from `dlp_contracts` table without dummy fallbacks).
+## 2. Deep Dive: Ongoing Works & Major Projects (`/ongoing-works`)
+
+### A. 29-Column Deep Data Architecture (Cols A through AD)
+Fully maps 100% of the departmental Excel spreadsheet (`Major ongoing works above Rs.50 cr and other important projects in NH wing.xlsx`):
+
+* **General & Identification**: `S.No` (Col A), `Name of Work` (Col B), `PMIS/OCMS/PMG ID` (Col C), `Old/New NH` (Col D), `Scheme` (Col E), `Length in Km` (Col F), `Job No` (Col G), `Sanction Date` (Col H).
+* **Financials & RCE**: `Sanctioned TPC (₹ Cr)` (Col I), `Revised Cost / RCE (₹ Cr)` (Col O), `Cost Increase in RCE` (Col P), `Exp upto Prior FY` (Col Q), `Exp in Current FY` (Col R), `Cumulative Financial Progress` (Col S).
+* **Physical Progress**: `Appointed Date` (Col J), `Length Completed Prior FY` (Col K), `Length Completed Current FY` (Col L), `Total Completed Length` (Col M), `Physical Progress %` (Col N).
+* **Timelines & EOT**: `Scheduled Date` (Col U), `Likely Completion Date` (Col T/V), `Time Overrun in Years` (Col W), `EOT Granted Till` (Col X), `EOT Proposal Agency` (Col Y), `Change of Scope (COS) Details` (Col Z).
+* **Personnel & Field Logs**: `Divisional Engineer Name & Phone` (Col AA), `Contractor/Agency` (Col AB), `Detailed Stage Log for Piers/Decks/Forest/CALA` (Col AC), `Division & Timestamp` (Col AD).
+
+### B. Mathematical Formulas & Automated Business Logic
+
+1. **Automatic Financial Progress Metric (%)**:
+   $$\text{Financial Progress (\%)} = \frac{\text{Cumulative Financial Expenditure (₹ Cr)}}{\max(\text{Revised Cost (RCE)}, \text{Sanctioned TPC})} \times 100$$
+   * Rendered as dual progress bars (Physical in Emerald, Financial in Blue) in both dashboard table rows and executive passport cards.
+
+2. **Live Dynamic Delay Gap Calculation**:
+   $$\text{Delay} = \text{Current Date} - \text{Scheduled Completion Date}$$
+   * Evaluated dynamically in real-time without relying on static Excel column W numbers.
+   * If $\text{Current Date} > \text{Scheduled Date}$ (and Physical Progress $< 100\%$): Displays elapsed time in **Years, Months & Days** (e.g. `1 Year & 6 Months (1.50 Yrs)` or `⚠️ 11d delay`).
+   * If $\text{Current Date} \le \text{Scheduled Date}$ or work is $100\%$ complete: Automatically marked **`On Schedule`** (`0 delay`).
+
+3. **Mega Projects Filter (`≥ ₹50 Cr`)**:
+   $$\text{Cost Basis} = \text{Revised Cost (if present)} \text{ or } \text{Sanctioned Cost (TPC)} \ge 50\text{ Cr}$$
+   * Quick filter toggle pill `[ ⚡ ≥ ₹50 Cr ({count}) ]` to isolate major high-value corridors with gold badge indicators.
+
+4. **Strict Non-Overlapping Interval Presets**:
+   * **Delay Filters**: `< 1 Year` ($[0, 1)$), `1 - 3 Years` ($[1, 3]$), `> 3 Years` ($> 3$).
+   * **Progress Filters**: `< 25%` ($[0, 25)$), `25 - 50%` ($[25, 50)$), `50 - 75%` ($[50, 75)$), `75 - 100%` ($[75, 100]$).
+
+### C. Modal Experiences
+* **Single-Page Executive Passport (`ViewMajorProjectModal.tsx`)**: Continuous vertically scrollable technical dossier with 5 structured cards and a 1-click **"Copy Log"** button for long multi-paragraph structural logs.
+* **Multi-Tab Data Entry Form (`EditMajorProjectModal.tsx`)**: 6 logical tabs (`General`, `Sanction & IDs`, `Physical Progress`, `Financials & RCE`, `Timelines & EOT`, `Personnel & Notes`) with live mathematical helpers to prevent human data entry errors.
 
 ---
 
-### C. Master Highways Management Catalog (`/highways`)
-- **Route**: [`src/app/highways/page.tsx`](file:///home/mathir14/nh_proj/src/app/highways/page.tsx)
-- **UI & Controls**: Grid & Table views, KPI header summary cards, Search and configuration filter controls. Mounted **Export Catalog** (`Download`) and **Add Highway** (`Plus`) action buttons in page header banner.
-- **Modals Suite**:
-  - [`AddHighwayModal.tsx`](file:///home/mathir14/nh_proj/src/components/highways/AddHighwayModal.tsx): Live modal form for creating highways with automatic chainage distance calculations.
-  - [`EditHighwayModal.tsx`](file:///home/mathir14/nh_proj/src/components/highways/EditHighwayModal.tsx): Edit modal form for updating corridor title, endpoints, and lane configurations.
-  - [`DeleteHighwayModal.tsx`](file:///home/mathir14/nh_proj/src/components/highways/DeleteHighwayModal.tsx): Soft-delete confirmation modal.
-  - [`ExportHighwayModal.tsx`](file:///home/mathir14/nh_proj/src/components/highways/ExportHighwayModal.tsx): Custom report exporter (Excel `.xlsx` / CSV `.csv`) with scope & parameter selectors.
-- **Backend API Handler**: [`src/app/api/highways/route.ts`](file:///home/mathir14/nh_proj/src/app/api/highways/route.ts)
-  - **Schema Alignment**: Exactly matched live table columns (`id`, `road_code`, `road_name`, `from_location`, `to_location`, `from_chainage`, `to_chainage`, `length_km`, `configuration`, `status`, `start_latitude`, `start_longitude`, `end_latitude`, `end_longitude`, `created_at`, `updated_at`).
-  - **HTTP Method Handlers**: Exported `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`.
-  - **Soft-Delete**: `DELETE` updates `status = 'DELETED'` directly on the database table.
+## 3. Deep Dive: Interactive Straight-Line Diagram (`/highways/[id]/sld`)
+
+* **Dual Theme Parity**: 100% support for both **Light Mode** (crisp white background, neutral zinc panels) and **Dark Mode** (sharp VS Code neutral theme).
+* **Distance-Proportional Physical Bar Scaling**: Dynamic canvas scaling based on physical distance (`length_km`) with minimum width protection (`150px`) for high legibility.
+* **7 Interactive Matrix Layers**:
+  1. **Towns & Landmarks**: Key urban centers along the corridor.
+  2. **Chainage Splits**: Physical chainage ruler with `Km X → Km Y` tags.
+  3. **Road Corridor**: Symmetrical centerline-aligned carriageway expansion (`6L`, `4L/4L+PS`, `2L+PS`, `2L`, `<2L`).
+  4. **Carriageway Specs**: Official carriageway widths (`20m`, `14m`, `10m`, `7m`).
+  5. **Traffic PCU Volume**: Passenger Car Unit counts with color ranges.
+  6. **Right of Way (ROW)**: Corridor land boundary widths.
+  7. **DPR & Sanctioned Proposals**: Project development proposals and bridge clearance statuses.
+* **Height-Matched Caliper Dimension Gauge**: Fixed sidebar caliper lines seamlessly matching the road corridor's vertical lane heights.
+* **Export Engine**: Full browser `@media print` landscape export with official department header and technical legend.
 
 ---
 
-### D. Data Ingestion Engine (`/ingest`)
-- **Route**: [`src/app/ingest/page.tsx`](file:///home/mathir14/nh_proj/src/app/ingest/page.tsx)
-- **Design System Parity**: Restyled with light/dark responsive theme (`bg-slate-50 dark:bg-slate-950`), custom upload dropzone, blue/emerald status badges, and Lucide icons (`UploadCloud`, `Database`, `FileSpreadsheet`).
-- **Engine**: [`src/lib/ingestion/parser.ts`](file:///home/mathir14/nh_proj/src/lib/ingestion/parser.ts) handles merged cells (`!merges`), chainage format conversions (e.g. `63/2` &rarr; `63.200`), date normalizations, and bulk Supabase inserts.
+## 4. Other Production Modules
+
+### A. Master Highways Catalog (`/highways`)
+* **Level 1 Inventory**: Complete NH corridor catalog across Tamil Nadu with Old/New NH numbers, endpoints, and configuration breakdowns.
+* **Quadrant KPI Matrix**: Clickable quadrant cards to filter and isolate specific lane distributions.
+* **CRUD & Exporter**: In-place Add/Edit/Soft-Delete modals + Excel/CSV report generation.
+
+### B. Defect Liability Period (DLP) & Maintenance (`/dlp`)
+* **26-Column Excel Parity**: Complete coverage of departmental maintenance spreadsheets.
+* **1-to-N Sub-Contract Engine**: Dynamic sub-contract repeaters storing multiple contractor warranties in `contract_details` JSONB.
+* **4-Tier Status Tracking**: `ACTIVE`, `EXPIRING_SOON`, `EXPIRED`, `UNDER_MAINTENANCE` with calendar date range filters.
+
+### C. Legal & Litigation Proceedings Portal (`/legal`)
+* **48 Departmental Fields**: Case Numbers, Courts, Prayers, Counter Affidavits, Compliance Dates, and Converted Case Proceedings (Module 1 & 2).
+* **Cascading Autocomplete**: Dynamic Circle $\rightarrow$ Division and District $\rightarrow$ Court Complex selectors.
+
+### D. Fee Bills & Voucher Management (`/fee-bills`)
+* **Fee Voucher Processing**: Invoice logging, pendency tracking, voucher auditing, lawyer fees, and printable letterheads.
+
+### E. Departmental Staff Management (`/staff`)
+* **Staff Inventory**: Personnel directory with dynamic master dropdowns (`Circle`, `Division`, `Sub-Division`, `Section`, `Designation`).
+
+### F. Data Ingestion Engine (`/ingest`)
+* **Dynamic Excel Parser (`parser.ts`)**: Handles merged cells (`!merges`), Indian date format conversions (`parseIndianDate`), Excel numeric serials (`44531`), slashes/extension highway code normalization, and multi-division regex identification.
 
 ---
 
-### E. Unified Navigation Header
-- **Component**: [`src/components/NavigationHeader.tsx`](file:///home/mathir14/nh_proj/src/components/NavigationHeader.tsx) mounted in root layout linking `/highways`, `/dlp`, `/legal`, and `/ingest`.
+## 5. UI/UX Design System: VS Code Charcoal Makeover
+
+* **Design Aesthetic**: VS Code Minimalist Charcoal / Zinc theme.
+* **Sharp Corners**: `--radius-*: 2px` (`rounded-xs`) across all cards, buttons, badges, tables, and modal dialogs.
+* **Neutral Charcoal Palette**:
+  * Light Mode: Pure white (`#ffffff`), canvas neutral zinc (`#f4f4f5`), slate-800 text (`#181a1f`).
+  * Dark Mode: Zinc editor charcoal (`#181a1f`), panel charcoal (`#25282f`), border slate (`#383c44`), crisp white text (`#f4f4f5`).
+* **Editor Tab Navigation Bar**: Top navigation bar with active blue indicator line and subtle hover states.
+* **Viewport-Locked Modals**: Enlarged modal dialogs (`max-w-5xl lg:max-w-6xl h-[92vh]`) with smooth vertical scrollbars.
 
 ---
 
-## 3. Database Schema Migrations
+## 6. Technology Stack & Verification
 
-Located in `supabase/migrations/`:
-- `0000_init.sql`: Core schema initialization.
-- `0001_initial_schema.sql`: Base highways table structure.
-- `0002_excel_ingestion_tables.sql`: Ingestion log & raw staging tables.
-- `0003_fix_rls_update_policies.sql`: Row Level Security policies for read/write.
-- `0004_add_delete_status_column.sql`: Soft delete status column for highways table.
-- `0005_legal_cases_schema.sql`: `legal_cases` and `lawyers` tables with JSONB fields, indexes, and `delete_status`.
-
----
-
-## 4. Git Deployment Log (`main` branch)
-
-| Commit SHA | Message |
-| :--- | :--- |
-| **`6ad82c2`** | `feat(prod): integrated DLP, Navigation Header & Legal Litigation modules from baizo and harish` |
-| **`2867b0b`** | `chore(prod): removed archived code, legacy NestJS/Vite files, and scratch progress markdown files from main` |
-| **`7507f22`** | `feat(legal): fully migrated 100% of harish legal cases entry form, searchable selects, date pickers, and converted case accordion module` |
-| **`3e3bc28`** | `feat(legal): fully wired full DB CRUD (create, read, update, soft-delete) and schema 0005 delete_status support` |
-| **`a69a682`** | `chore(prod): completely purged hardcoded fallback dummy data across all API routes (legal, dlp, highways)` |
-| **`f5985a9`** | `chore(dlp): purged hardcoded SAMPLE_DLP_CONTRACTS array from DlpPage component` |
-| **`0e8db68`** | `feat(highways): mounted Add Highway and Export Catalog action buttons in highways page header` |
-| **`d4b21b8`** | `fix(highways): aligned highways API route to match exact live database schema (removed delete_status, district, division_name dependencies)` |
-| **`ba970d0`** | `fix(api): added PATCH and PUT route handlers to highways API and enabled editing highway details without re-requiring road_code` |
-| **`97cad17`** | `style(ingest): aligned Data Ingestion module theme and color scheme with unified light/dark design system` |
-| **`2e28daa`** | `fix(legal): fix print record duplication and render 100% full case details in CaseViewModal` |
-| **`4d9bac0`** | `feat(legal): add formal legal letterhead template for PDF export while preserving web modal UI` |
-| **`0c5b58d`** | `fix(sld): resolve blank page on print/export PDF and format printable layout` |
-| **`b0997f9`** | `fix(sld): restrict print scale zoom strictly to @media print block so web view remains 100% full size` |
-| **`1035127`** | `feat(highways): implement proposed changes 1-4 (2x2 KPI grid, streamlined table columns, percentage share in view modal, interactive KPI lane breakdown filter)` |
-| **`6ac0d57`** | `docs: update PROPOSED_CHANGES.md status for completed Changes 1-4` |
-| **`c65a3dd`** | `fix(highways): remove un-removed DLP Coverage td cell from HighwaysTable tbody row` |
-| **`bf07559`** | `feat(sld): proportional physical bar length scaling, inner bar text truncation, and DLP work card placeholder in hovercard` |
-| **`a8b3005`** | `feat(sld): enforce minimum bar width floor for legibility of chainage splits while preserving proportional scaling` |
-| **`2354cf8`** | `style(sld): update minimum bar width floor to 150px for spacious chainage split rendering` |
-
-
----
-
-## 5. Build Verification Metrics
-
-- **TypeScript Compilation**: `npx tsc --noEmit` &rarr; **0 Errors**.
-- **Next.js Turbopack Build**: `npm run build` &rarr; **Compiled in 1819ms (9/9 static & dynamic routes)**.
-- **Git Remote**: Synchronized with `origin/main` (`git@github.com:tnhighwaysdep/highways_project.git`).
+* **Framework**: Next.js 16 (App Router, Turbopack)
+* **Frontend**: React 19, Tailwind CSS v4, Lucide React Icons
+* **Database**: Supabase PostgreSQL with Row Level Security (RLS)
+* **Build Verification**: `npm run build` verified (16/16 static and dynamic routes compiled successfully with 0 errors).
+* **Branch Synchronization**: Both `main` and `mathir` branches are fully synchronized.

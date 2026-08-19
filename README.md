@@ -1,43 +1,61 @@
 # Tamil Nadu National Highways Department Management System
 
-A state-of-the-art web application for managing National Highway corridors, linear asset geometries, Defect Liability Period (DLP) warranties, legal case proceedings, legal fee bills, and departmental staff inventory across Tamil Nadu.
+A centralized web application for managing National Highway corridors, linear asset geometries, Defect Liability Period (DLP) warranties, Ongoing Works (Major Projects), legal case proceedings, legal fee bills, and departmental staff inventory across Tamil Nadu.
 
 ---
 
 ## 🚀 Key Modules & System Architecture
 
-### 1. Master Highways Catalog (`/highways`)
-- **Level 1 Master Catalog**: Ground-truth inventory of all NH corridors in Tamil Nadu with Old/New NH numbers, chainage spans, length metrics, and multi-lane configuration distribution (`<2L`, `2L`, `2L+PS`, `4L`, `6L`).
-- **Interactive KPI Dashboard**: 2x2 quadrant summary grid with clickable lane configuration filters that isolate specific lane distance metrics in table rows.
-- **Streamlined Catalog Table**: Quick actions for Viewing Passport Cards, Editing Corridors, Soft-Deleting, and Launching SLD Timelines.
+### 1. Ongoing Works & Major Projects (`/ongoing-works` / `/major-projects`)
+- **29-Column Deep Data Mapping (Cols A through AD)**: Ground-truth coverage of high-value corridor projects with live database sync.
+- **Dynamic Financial Progress Metric**:
+  $$\text{Financial Progress (\%)} = \frac{\text{Cumulative Expenditure}}{\max(\text{Revised RCE Cost}, \text{Sanctioned TPC})} \times 100$$
+- **Live Dynamic Delay Gap Calculation**:
+  $$\text{Delay} = \text{Current Date} - \text{Scheduled Completion Date}$$
+  Evaluates real-time elapsed gap in Years, Months, and exact sub-month Day intervals (`11d delay`).
+- **Mega Projects Filter (`⚡ ≥ ₹50 Cr`)**: Quick filter toggle for major works with Sanctioned/Revised cost $\ge 50$ Cr.
+- **Single-Page Executive Passport (`ViewMajorProjectModal.tsx`)**: Continuous vertically scrollable technical dossier with 5 structured cards and a one-click "Copy Log" button for structural bridge and clearance notes.
+- **Multi-Tab Data Entry Form (`EditMajorProjectModal.tsx`)**: 6 structured tabs with automated sum and cost escalation calculations to eliminate human error.
 
 ### 2. Level 3 Interactive Straight-Line Diagram (`/highways/[id]/sld`)
-- **Linear Asset Timeline**: Web-based interactive Straight-Line Diagram (SLD) replacing manual Excel bar charts.
-- **Distance-Proportional Physical Bar Scaling**: Horizontal bar widths and matrix positions are directly proportional to physical distance (`length_km`), so longer stretches expand proportionally larger on screen.
-- **150px Minimum Bar Width Floor**: Enforces a 150px minimum width floor (`minBarWidthPx = 150px`) for short stretches, ensuring chainage splits (`Km X → Km Y`), length badges, and town labels render with 100% legibility without text overlap.
-- **Auto-Truncated Bar Text**: Text inside baseline road bars auto-truncates cleanly (`truncate`), displaying full text in wide bars and clipped 1-2 words in narrow bars.
-- **Centerline Symmetrical Road Expansion**: Visual carriageway bar height expansion matching lane widths (`6L`, `4L/4L+PS`, `2L+PS`, `2L`).
-- **Interactive Hovercard with DLP Work Section**: Hovering or clicking any stretch displays full asset metrics plus a formatted DLP Work Details container.
-- **Print & Export PDF Engine**: Landscape print system with dynamic scaling (`--sld-print-scale`), official department letterhead, and technical legend footers.
+- **Dual Light/Dark Mode Support**: Full theme compatibility for both Light Mode (clean white canvas) and Dark Mode (VS Code neutral charcoal).
+- **Distance-Proportional Physical Bar Scaling**: Dynamic horizontal scaling proportional to physical distance (`length_km`) with a 150px minimum width floor.
+- **7 Interactive Matrix Layers**: Towns & Landmarks, Chainage Splits Ruler, Proportional Physical Road Corridor, Carriageway Specs, Traffic PCU Volumes, Right of Way (ROW), and DPR/Scheme Proposals.
+- **Height-Matched Caliper Dimension Gauge**: Fixed sidebar calipers matching corridor lane heights (`6L`, `4L/4L+PS`, `2L+PS`, `2L`).
+- **Landscape Print & Export PDF Engine**: Built-in `@media print` system with department header and technical legend.
 
-### 3. Defect Liability Period & Warranty Tracker (`/dlp`)
+### 3. Master Highways Catalog (`/highways`)
+- **Level 1 Inventory**: Complete NH corridor catalog across Tamil Nadu with Old/New NH numbers, endpoints, and configuration breakdowns.
+- **Quadrant KPI Matrix**: Clickable quadrant cards to filter and isolate specific lane distributions.
+- **CRUD & Exporter**: In-place Add/Edit/Soft-Delete modals + Excel/CSV report generation.
+
+### 4. Defect Liability Period & Warranty Tracker (`/dlp`)
 - **26-Column Excel Parity**: Complete coverage of departmental maintenance spreadsheets with 1-to-N child sub-contract extractors.
-- **Warranty Status Engine**: 4-tier tracking (`ACTIVE`, `EXPIRING_SOON`, `EXPIRED`, `UNDER_MAINTENANCE`).
+- **Warranty Status Engine**: 4-tier tracking (`ACTIVE`, `EXPIRING_SOON`, `EXPIRED`, `UNDER_MAINTENANCE`) with calendar date range filters.
 
-### 4. Legal Cases & Litigation Portal (`/legal`)
-- **Comprehensive Case Records**: 48 departmental fields covering Case Numbers, Courts, Prayers, Counter Affidavits, Compliance Dates, and Converted Case Proceedings.
+### 5. Legal Cases & Litigation Portal (`/legal`)
+- **Comprehensive Case Records**: 48 departmental fields covering Case Numbers, Courts, Prayers, Counter Affidavits, Compliance Dates, and Converted Case Proceedings (Module 1 & 2).
 - **Official Letterhead Export**: Dedicated PDF print letterhead formatting.
 
-### 5. Legal Fee Bills & Voucher Management (`/fee-bills`)
+### 6. Legal Fee Bills & Voucher Management (`/fee-bills`)
 - **Fee Voucher Tracker**: Invoice processing, voucher auditing, lawyer fees, and printable letterheads.
 - **Dynamic Master Data Config**: Dynamic dropdown list management.
 
-### 6. Staff Management System (`/staff`)
-- **Departmental Staff Directory**: Staff inventory with dynamic master dropdowns (`Circle`, `Division`, `Sub-Division`, `Section`, `Sub-Section`, `Designation`).
+### 7. Staff Management System (`/staff`)
+- **Departmental Staff Directory**: Staff inventory with dynamic master dropdowns (`Circle`, `Division`, `Sub-Division`, `Section`, `Designation`).
 - **Inline Editing & Archiving**: Soft-delete archive toggles with 1-click restore functionality.
 
-### 7. Data Ingestion Engine (`/ingest`)
-- **Excel Parser**: Resilient parser with merged cell resolution (`!merges`), Indian date format normalization (`parseIndianDate`), slashes/extension highway code sanitization, and subtotal row filtering.
+### 8. Data Ingestion Engine (`/ingest`)
+- **Excel Parser**: Resilient parser with merged cell resolution (`!merges`), Indian date format normalization (`parseIndianDate`), Excel numeric date serials (`44531`), slashes/extension highway code sanitization, and multi-division regex recognition.
+
+---
+
+## 🎨 UI/UX Design System: VS Code Minimalist Makeover
+
+- **Theme Palette**: Neutral charcoal & zinc (`#181a1f`, `#25282f`, `#383c44`, `#f4f4f5`) with VS Code signature blue accents.
+- **Sharp Corners**: Modern `--radius-*: 2px` (`rounded-xs`) across all cards, modals, buttons, tables, and chips.
+- **Navigation Bar**: Tab-bar aesthetic with active blue indicator line.
+- **Large Viewport Modals**: Screen-optimized modals (`max-w-5xl lg:max-w-6xl h-[92vh]`) with smooth vertical scrollbars.
 
 ---
 
@@ -45,7 +63,7 @@ A state-of-the-art web application for managing National Highway corridors, line
 
 - **Framework**: [Next.js 16](https://nextjs.org/) (App Router, Turbopack)
 - **Library**: React 19
-- **Styling**: Vanilla CSS & TailwindCSS v4 with custom light/dark design system
+- **Styling**: TailwindCSS v4 with custom dual light/dark design system
 - **Database**: [Supabase](https://supabase.com/) PostgreSQL with Row Level Security (RLS)
 - **Icons**: Lucide React (`lucide-react`)
 - **Document Export**: Built-in browser landscape `@media print` system & XLSX/CSV generator
