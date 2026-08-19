@@ -66,23 +66,35 @@ export function calculateProjectDelay(
     return { delayYears: 0, isDelayed: false, humanText: 'On Schedule', compactText: 'On Schedule' };
   }
 
-  const diffDays = diffMs / (1000 * 60 * 60 * 24);
-  const delayYears = Math.round((diffDays / 365.25) * 100) / 100;
-
-  if (delayYears <= 0) {
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) {
     return { delayYears: 0, isDelayed: false, humanText: 'On Schedule', compactText: 'On Schedule' };
   }
 
-  const totalMonths = Math.round(delayYears * 12);
-  const years = Math.floor(totalMonths / 12);
-  const months = totalMonths % 12;
+  const delayYears = Math.round((diffDays / 365.25) * 100) / 100;
+  const years = Math.floor(diffDays / 365.25);
+  const remainingDays = diffDays - Math.floor(years * 365.25);
+  const months = Math.floor(remainingDays / 30.4375);
 
   const parts: string[] = [];
   if (years > 0) parts.push(`${years} ${years === 1 ? 'Year' : 'Years'}`);
   if (months > 0) parts.push(`${months} ${months === 1 ? 'Month' : 'Months'}`);
+  if (parts.length === 0 && diffDays > 0) {
+    parts.push(`${diffDays} ${diffDays === 1 ? 'Day' : 'Days'}`);
+  }
 
-  const humanStr = parts.length > 0 ? parts.join(' & ') : `${delayYears.toFixed(2)} Yrs`;
-  const compactStr = years > 0 && months > 0 ? `${years}y ${months}m delay` : years > 0 ? `${years}y delay` : `${months}m delay`;
+  const humanStr = parts.join(' & ');
+
+  let compactStr = '';
+  if (years > 0 && months > 0) {
+    compactStr = `${years}y ${months}m delay`;
+  } else if (years > 0) {
+    compactStr = `${years}y delay`;
+  } else if (months > 0) {
+    compactStr = `${months}m delay`;
+  } else {
+    compactStr = `${diffDays}d delay`;
+  }
 
   return {
     delayYears,
@@ -119,20 +131,16 @@ export function formatDelayHumanReadable(yearsVal: number | string | null | unde
   const val = Number(yearsVal);
   if (isNaN(val) || val <= 0) return 'Nil / On Schedule';
 
-  const totalMonths = Math.round(val * 12);
-  const years = Math.floor(totalMonths / 12);
-  const months = totalMonths % 12;
+  const totalDays = Math.round(val * 365.25);
+  const years = Math.floor(totalDays / 365.25);
+  const remainingDays = totalDays - Math.floor(years * 365.25);
+  const months = Math.floor(remainingDays / 30.4375);
 
   const parts: string[] = [];
-  if (years > 0) {
-    parts.push(`${years} ${years === 1 ? 'Year' : 'Years'}`);
-  }
-  if (months > 0) {
-    parts.push(`${months} ${months === 1 ? 'Month' : 'Months'}`);
-  }
-
-  if (parts.length === 0) {
-    return `${val.toFixed(2)} Yrs (< 1 Mo)`;
+  if (years > 0) parts.push(`${years} ${years === 1 ? 'Year' : 'Years'}`);
+  if (months > 0) parts.push(`${months} ${months === 1 ? 'Month' : 'Months'}`);
+  if (parts.length === 0 && totalDays > 0) {
+    parts.push(`${totalDays} ${totalDays === 1 ? 'Day' : 'Days'}`);
   }
 
   const humanStr = parts.join(' & ');
@@ -147,9 +155,10 @@ export function formatDelayCompact(yearsVal: number | string | null | undefined)
   const val = Number(yearsVal);
   if (isNaN(val) || val <= 0) return 'On Schedule';
 
-  const totalMonths = Math.round(val * 12);
-  const years = Math.floor(totalMonths / 12);
-  const months = totalMonths % 12;
+  const totalDays = Math.round(val * 365.25);
+  const years = Math.floor(totalDays / 365.25);
+  const remainingDays = totalDays - Math.floor(years * 365.25);
+  const months = Math.floor(remainingDays / 30.4375);
 
   if (years > 0 && months > 0) {
     return `${years}y ${months}m delay`;
@@ -157,5 +166,8 @@ export function formatDelayCompact(yearsVal: number | string | null | undefined)
   if (years > 0) {
     return `${years}y delay`;
   }
-  return `${months}m delay`;
+  if (months > 0) {
+    return `${months}m delay`;
+  }
+  return `${totalDays}d delay`;
 }
