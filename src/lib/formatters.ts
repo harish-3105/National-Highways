@@ -43,13 +43,13 @@ export interface ProjectDelayResult {
 
 /**
  * Dynamically computes project delay (Time Overrun) using live dates.
- * Formula:
- *   - Compares Scheduled Completion Date vs Likely / Actual Date (or Current Date if past schedule & work ongoing).
- *   - If reference date > scheduled date, computes exact time difference in years, months & days.
+ * Strict Formula:
+ *   Delay = Current Date - Scheduled Completion Date (for active ongoing works)
+ *   If Current Date <= Scheduled Date (or work physically 100% completed), Delay = 0 (On Schedule).
  */
 export function calculateProjectDelay(
   scheduledDateStr: string | null | undefined,
-  likelyDateStr: string | null | undefined,
+  likelyDateStr?: string | null | undefined,
   progressPercent?: number | null
 ): ProjectDelayResult {
   const scheduled = parseDateString(scheduledDateStr);
@@ -57,22 +57,15 @@ export function calculateProjectDelay(
     return { delayYears: 0, isDelayed: false, humanText: 'On Schedule', compactText: 'On Schedule' };
   }
 
-  const likely = parseDateString(likelyDateStr);
+  // Pure Current Date minus Scheduled Date
   const now = new Date();
+  const diffMs = now.getTime() - scheduled.getTime();
 
-  // Determine comparison reference date
-  let refDate: Date | null = null;
-  if (likely && likely.getTime() > scheduled.getTime()) {
-    refDate = likely;
-  } else if (now.getTime() > scheduled.getTime() && (progressPercent === null || progressPercent === undefined || progressPercent < 100)) {
-    refDate = now;
-  }
-
-  if (!refDate || refDate.getTime() <= scheduled.getTime()) {
+  // If not past scheduled deadline or if already 100% completed
+  if (diffMs <= 0 || (progressPercent !== null && progressPercent !== undefined && Number(progressPercent) >= 100)) {
     return { delayYears: 0, isDelayed: false, humanText: 'On Schedule', compactText: 'On Schedule' };
   }
 
-  const diffMs = refDate.getTime() - scheduled.getTime();
   const diffDays = diffMs / (1000 * 60 * 60 * 24);
   const delayYears = Math.round((diffDays / 365.25) * 100) / 100;
 
