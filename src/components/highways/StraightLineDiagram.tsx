@@ -517,83 +517,58 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 <span>Carriageway Gauge</span>
               </div>
 
-              {/* Right-Facing Caliper Docking Gauge: 100% Exact Single-Polyline Continuous Vector Paths */}
-              <svg className="absolute inset-0 w-full h-[220px] pointer-events-none z-10" viewBox="0 0 224 220" preserveAspectRatio="none">
+              {/* Right-Facing Caliper Docking Gauge */}
+              <div className="absolute inset-0 flex items-center z-10 pointer-events-none">
                 {[
-                  { label: '6L', width: '20m', heightPx: 150, leftOffset: 12, colorClass: 'text-purple-400 dark:text-purple-600' },
-                  { label: '4L / 4L+PS', width: '14m', heightPx: 110, leftOffset: 50, colorClass: 'text-blue-400 dark:text-blue-600' },
-                  { label: '2L+PS', width: '10m', heightPx: 76, leftOffset: 115, colorClass: 'text-emerald-400 dark:text-emerald-600' },
-                  { label: '2L', width: '7m', heightPx: 40, leftOffset: 165, colorClass: 'text-amber-400 dark:text-amber-600' },
-                ].map((spec) => {
-                  const centerY = 110;
-                  const yTop = centerY - spec.heightPx / 2;
-                  const yBottom = centerY + spec.heightPx / 2;
-                  const x = spec.leftOffset;
-                  const rightX = 224;
-
-                  return (
-                    <g key={spec.label} className={spec.colorClass}>
-                      {/* Single continuous vector polyline: Right -> Left Corner -> Down Stem -> Bottom Corner -> Right */}
-                      <polyline
-                        points={`${rightX},${yTop} ${x},${yTop} ${x},${yBottom} ${rightX},${yBottom}`}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinejoin="miter"
-                        strokeLinecap="square"
-                      />
-
-                      {/* Top Right Arrowhead */}
-                      <polyline
-                        points={`${rightX - 5},${yTop - 3.5} ${rightX - 1},${yTop} ${rightX - 5},${yTop + 3.5}`}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-
-                      {/* Bottom Right Arrowhead */}
-                      <polyline
-                        points={`${rightX - 5},${yBottom - 3.5} ${rightX - 1},${yBottom} ${rightX - 5},${yBottom + 3.5}`}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </g>
-                  );
-                })}
-              </svg>
-
-              {/* Bracket Text Labels */}
-              <div className="absolute inset-0 pointer-events-none z-20">
-                {[
-                  { label: '6L', width: '20m', heightPx: 150, leftOffset: 12, colorClass: 'text-purple-400 dark:text-purple-600' },
-                  { label: '4L / 4L+PS', width: '14m', heightPx: 110, leftOffset: 50, colorClass: 'text-blue-400 dark:text-blue-600' },
-                  { label: '2L+PS', width: '10m', heightPx: 76, leftOffset: 115, colorClass: 'text-emerald-400 dark:text-emerald-600' },
-                  { label: '2L', width: '7m', heightPx: 40, leftOffset: 165, colorClass: 'text-amber-400 dark:text-amber-600' },
-                ].map((spec) => {
-                  const yTop = 110 - spec.heightPx / 2;
-                  return (
+                  { label: '6L', width: '20m', heightPx: 150, leftOffset: '12px', color: 'text-purple-400 dark:text-purple-600 border-purple-400 dark:border-purple-600' },
+                  { label: '4L / 4L+PS', width: '14m', heightPx: 110, leftOffset: '50px', color: 'text-blue-400 dark:text-blue-600 border-blue-400 dark:border-blue-600' },
+                  { label: '2L+PS', width: '10m', heightPx: 76, leftOffset: '115px', color: 'text-emerald-400 dark:text-emerald-600 border-emerald-400 dark:border-emerald-600' },
+                  { label: '2L', width: '7m', heightPx: 40, leftOffset: '165px', color: 'text-amber-400 dark:text-amber-600 border-amber-400 dark:border-amber-600' },
+                ].map((spec) => (
+                  <React.Fragment key={spec.label}>
+                    {/* 1. Vertical Line */}
                     <div
-                      key={spec.label}
-                      className={`absolute flex flex-col items-start leading-none pointer-events-none ${spec.colorClass}`}
+                      className={`absolute top-1/2 -translate-y-1/2 w-0.5 bg-current ${spec.color}`}
+                      style={{ left: spec.leftOffset, height: `${spec.heightPx}px` }}
+                    />
+
+                    {/* 2. Top Horizontal Line */}
+                    <div
+                      className={`absolute h-0 overflow-visible border-t-2 ${spec.color}`}
                       style={{
-                        left: `${spec.leftOffset + 6}px`,
-                        top: `${yTop + 4}px`,
+                        top: `calc(50% - ${spec.heightPx / 2}px)`,
+                        left: spec.leftOffset,
+                        right: 0,
+                      }}
+                    />
+
+                    {/* 3. Bottom Horizontal Line */}
+                    <div
+                      className={`absolute h-0 overflow-visible border-t-2 ${spec.color}`}
+                      style={{
+                        top: `calc(50% + ${spec.heightPx / 2}px - 2px)`,
+                        left: spec.leftOffset,
+                        right: 0,
+                      }}
+                    />
+
+                    {/* 4. Bracket Text Label */}
+                    <div
+                      className="absolute flex flex-col items-start leading-none pointer-events-none z-20"
+                      style={{
+                        left: `calc(${spec.leftOffset} + 6px)`,
+                        top: `calc(50% - ${spec.heightPx / 2}px + 4px)`,
                       }}
                     >
-                      <span className="text-[8.5px] font-extrabold font-mono tracking-tighter">
+                      <span className={`text-[8.5px] font-extrabold font-mono tracking-tighter ${spec.color}`}>
                         {spec.label}
                       </span>
-                      <span className="text-[7.5px] font-mono font-bold text-slate-500 dark:text-slate-400 mt-0.5">
+                      <span className="text-[7.5px] font-mono font-bold text-slate-500 dark:text-slate-400">
                         {spec.width}
                       </span>
                     </div>
-                  );
-                })}
+                  </React.Fragment>
+                ))}
               </div>
             </div>
 
