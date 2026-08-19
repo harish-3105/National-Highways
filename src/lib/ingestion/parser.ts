@@ -7,7 +7,8 @@ export type DatasetType =
   | 'DLP_CONTRACTS'
   | 'HIGHWAY_MILESTONES'
   | 'ACCIDENT_BLACKSPOTS'
-  | 'LEGAL_CASES';
+  | 'LEGAL_CASES'
+  | 'ONGOING_WORKS';
 
 export interface ParseResult<T = unknown> {
   success: boolean;
@@ -358,6 +359,9 @@ export async function parseDatasetFile(
       break;
     case 'LEGAL_CASES':
       parseLegalCases(rawRows, result);
+      break;
+    case 'ONGOING_WORKS':
+      parseOngoingWorks(workbook, rawRows, result);
       break;
     default:
       result.success = false;
@@ -1093,3 +1097,170 @@ function parseLegalCases(rawRows: any[][], result: ParseResult) {
   result.data = parsedData;
   return result;
 }
+
+export interface OngoingWorkRow {
+  s_no: number;
+  division: string;
+  scheme: string;
+  name_of_work: string;
+  project_cost_cr: number;
+  work_stage: 'IN_PROGRESS' | 'TENDER_STAGE';
+  progress_percent?: number | null;
+  probable_completion_date?: string | null;
+  stage_remarks?: string | null;
+
+  // Level 2 (27-Column fields)
+  pmis_id?: string | null;
+  old_new_nh?: string | null;
+  length_km?: number | null;
+  job_no?: string | null;
+  sanction_date?: string | null;
+  appointed_date?: string | null;
+  scheduled_completion_date?: string | null;
+
+  completed_length_prior_km?: number | null;
+  completed_length_current_fy_km?: number | null;
+  total_completed_length_km?: number | null;
+
+  revised_cost_cr?: number | null;
+  cost_increase_rce_cr?: number | null;
+  expenditure_prior_cr?: number | null;
+  expenditure_current_fy_cr?: number | null;
+  cumm_financial_expenditure_cr?: number | null;
+
+  likely_completion_date?: string | null;
+  time_overrun_years?: number | null;
+  eot_granted_till?: string | null;
+  eot_proposal_agency?: string | null;
+  cos_details?: string | null;
+
+  de_name_phone?: string | null;
+  contractor_name?: string | null;
+  updated_division_date?: string | null;
+  detailed_stage_status?: string | null;
+}
+
+function parseOngoingWorks(workbook: XLSX.WorkBook | null, rawRows: any[][], result: ParseResult) {
+  const parsedData: OngoingWorkRow[] = [];
+
+  let rowsToProcess: any[] = [];
+  if (workbook) {
+    const targetSheetName =
+      workbook.SheetNames.find((name) => /ongoing/i.test(name)) ||
+      workbook.SheetNames[0];
+    const sheet = workbook.Sheets[targetSheetName];
+    rowsToProcess = XLSX.utils.sheet_to_json(sheet, { header: 'A', defval: '', raw: false });
+  } else {
+    // If CSV
+    rowsToProcess = rawRows.map((r) => {
+      const obj: Record<string, string> = {};
+      const cols = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','AA','AB','AC','AD'];
+      cols.forEach((col, idx) => {
+        obj[col] = r[idx] !== undefined && r[idx] !== null ? String(r[idx]) : '';
+      });
+      return obj;
+    });
+  }
+
+  let currentSection = 'IN_PROGRESS';
+
+  for (let i = 0; i < rowsToProcess.length; i++) {
+    const row = rowsToProcess[i];
+    if (!row) continue;
+
+    const colA = String(row.A || '').trim();
+    const colB = String(row.B || '').trim();
+
+    if (colA.toLowerCase().includes('awarded and to be appointed') || colB.toLowerCase().includes('awarded and to be appointed')) {
+      currentSection = 'AWARDED_NOT_APPOINTED';
+      continue;
+    }
+    if (colA.toLowerCase().includes('to be awarded') || colB.toLowerCase().includes('to be awarded')) {
+      currentSection = 'TENDER_STAGE';
+      continue;
+    }
+
+    // Check if row has numeric S.No and substantial project title
+    if (/^\d+$/.test(colA) && colB.length > 5) {
+      // Determine Division from Col AD
+      let division = 'Chennai';
+      const adText = String(row.AD || '').toLowerCase();
+      if (adText.includes('vellore')) division = 'Vellore';
+      else if (adText.includes('madurai')) division = 'Madurai';
+      else if (adText.includes('coimbatore')) division = 'Coimbatore';
+      else if (adText.includes('gobi')) division = 'Gobi';
+      else if (adText.includes('tirunelveli')) division = 'Tirunelveli';
+      else if (adText.includes('salem')) division = 'Salem';
+      else if (adText.includes('trichy')) division = 'Trichy';
+      else if (adText.includes('chennai')) division = 'Chennai';
+
+      // Scheme
+      let scheme = String(row.E || '').trim();
+      if (scheme && !scheme.toLowerCase().includes('annual') && !scheme.toLowerCase().includes('crif')) {
+        scheme = 'Annual Plan ' + scheme;
+      }
+      if (!scheme) scheme = 'Annual Plan 2025-26';
+
+      // Progress %
+      let prog: number | null = null;
+      if (row.N !== undefined && row.N !== '' && row.N !== '-') {
+        const pVal = parseFloat(String(row.N).replace('%', ''));
+        if (!isNaN(pVal)) {
+          prog = pVal <= 1.0 && pVal > 0 ? Math.round(pVal * 100) : pVal;
+        }
+      }
+
+      // Cost
+      const costCr = row.I ? parseFloat(String(row.I).replace(/[^0-9.]/g, '')) || 0 : 0;
+      const sNoNum = parseInt(colA, 10);
+
+      parsedData.push({
+        s_no: sNoNum,
+        division,
+        scheme,
+        name_of_work: colB,
+        project_cost_cr: costCr,
+        work_stage: currentSection === 'TENDER_STAGE' ? 'TENDER_STAGE' : 'IN_PROGRESS',
+        progress_percent: prog,
+        probable_completion_date: row.V || row.T || null,
+        stage_remarks: currentSection === 'TENDER_STAGE' ? String(row.AC || '').trim() || 'Tender / Sanction process ongoing.' : null,
+
+        // 27-Column parameters
+        pmis_id: String(row.C || '').trim() || null,
+        old_new_nh: String(row.D || '').trim() || null,
+        length_km: row.F ? parseFloat(String(row.F)) || null : null,
+        job_no: String(row.G || '').trim() || null,
+        sanction_date: String(row.H || '').trim() || null,
+        appointed_date: String(row.J || '').trim() || null,
+        scheduled_completion_date: String(row.U || '').trim() || null,
+
+        completed_length_prior_km: row.K ? parseFloat(String(row.K)) || 0 : 0,
+        completed_length_current_fy_km: row.L ? parseFloat(String(row.L)) || 0 : 0,
+        total_completed_length_km: row.M ? parseFloat(String(row.M)) || 0 : 0,
+
+        revised_cost_cr: row.O ? parseFloat(String(row.O)) || null : null,
+        cost_increase_rce_cr: row.P ? parseFloat(String(row.P)) || null : null,
+        expenditure_prior_cr: row.Q ? parseFloat(String(row.Q)) || 0 : 0,
+        expenditure_current_fy_cr: row.R && row.R !== '-' ? parseFloat(String(row.R)) || 0 : 0,
+        cumm_financial_expenditure_cr: row.S ? parseFloat(String(row.S)) || 0 : 0,
+
+        likely_completion_date: String(row.V || row.T || '').trim() || null,
+        time_overrun_years: row.W ? parseFloat(String(row.W)) || null : null,
+        eot_granted_till: String(row.X || '').trim() || null,
+        eot_proposal_agency: String(row.Y || '').trim() || null,
+        cos_details: String(row.Z || '').trim() || null,
+
+        de_name_phone: String(row.AA || '').trim() || null,
+        contractor_name: String(row.AB || '').trim() || null,
+        detailed_stage_status: String(row.AC || '').trim() || null,
+        updated_division_date: String(row.AD || '').trim() || null,
+      });
+    }
+  }
+
+  result.totalRows = rowsToProcess.length;
+  result.validRows = parsedData.length;
+  result.data = parsedData;
+  return result;
+}
+

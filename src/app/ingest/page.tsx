@@ -51,6 +51,12 @@ const DATASETS: { type: DatasetType; label: string; description: string; countHi
     description: 'High Court & District Court litigation, counter-affidavits & converted petitions',
     countHint: 'Legal cases table (public.legal_cases)',
   },
+  {
+    type: 'ONGOING_WORKS',
+    label: '7. Ongoing Works (27-Column Present Status Review)',
+    description: 'Level 1 overview & Level 2 technical, financial, delay, EOT, RCE & civil stage metrics',
+    countHint: 'Ongoing works table (public.major_projects_50cr)',
+  },
 ];
 
 export default function IngestPage() {

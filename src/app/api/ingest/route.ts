@@ -250,6 +250,56 @@ export async function POST(request: Request) {
       });
       insertedCount = result.totalInserted;
       dbError = result.error;
+    } else if (datasetType === 'ONGOING_WORKS') {
+      const cleanData = parseResult.data.map((item: any) => ({
+        s_no: Number(item.s_no) || 1,
+        division: item.division || 'Chennai',
+        scheme: item.scheme || 'Annual Plan 2025-26',
+        name_of_work: item.name_of_work,
+        project_cost_cr: Number(item.project_cost_cr) || 0,
+        work_stage: item.work_stage || 'IN_PROGRESS',
+        progress_percent:
+          item.progress_percent !== undefined && item.progress_percent !== null
+            ? Number(item.progress_percent)
+            : null,
+        probable_completion_date: item.probable_completion_date || null,
+        stage_remarks: item.stage_remarks || null,
+        delete_status: 'ACTIVE',
+
+        pmis_id: item.pmis_id || null,
+        old_new_nh: item.old_new_nh || null,
+        length_km: item.length_km ? Number(item.length_km) : null,
+        job_no: item.job_no || null,
+        sanction_date: item.sanction_date || null,
+        appointed_date: item.appointed_date || null,
+        scheduled_completion_date: item.scheduled_completion_date || null,
+
+        completed_length_prior_km: item.completed_length_prior_km ? Number(item.completed_length_prior_km) : 0,
+        completed_length_current_fy_km: item.completed_length_current_fy_km ? Number(item.completed_length_current_fy_km) : 0,
+        total_completed_length_km: item.total_completed_length_km ? Number(item.total_completed_length_km) : 0,
+
+        revised_cost_cr: item.revised_cost_cr ? Number(item.revised_cost_cr) : null,
+        cost_increase_rce_cr: item.cost_increase_rce_cr ? Number(item.cost_increase_rce_cr) : null,
+        expenditure_prior_cr: item.expenditure_prior_cr ? Number(item.expenditure_prior_cr) : 0,
+        expenditure_current_fy_cr: item.expenditure_current_fy_cr ? Number(item.expenditure_current_fy_cr) : 0,
+        cumm_financial_expenditure_cr: item.cumm_financial_expenditure_cr ? Number(item.cumm_financial_expenditure_cr) : 0,
+
+        likely_completion_date: item.likely_completion_date || null,
+        time_overrun_years: item.time_overrun_years ? Number(item.time_overrun_years) : null,
+        eot_granted_till: item.eot_granted_till || null,
+        eot_proposal_agency: item.eot_proposal_agency || null,
+        cos_details: item.cos_details || null,
+
+        de_name_phone: item.de_name_phone || null,
+        contractor_name: item.contractor_name || null,
+        detailed_stage_status: item.detailed_stage_status || null,
+        updated_division_date: item.updated_division_date || null,
+        updated_at: new Date().toISOString(),
+      }));
+
+      const result = await batchInsertOrUpsert(supabase, 'major_projects_50cr', cleanData);
+      insertedCount = result.totalInserted;
+      dbError = result.error;
     }
 
     if (dbError) {
