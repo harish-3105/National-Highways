@@ -28,7 +28,7 @@ interface ViewMajorProjectModalProps {
   project: MajorProject | null;
   isOpen: boolean;
   onClose: () => void;
-  onEdit: (project: MajorProject) => void;
+  onEdit?: (project: MajorProject) => void;
 }
 
 type TabType = 'overview' | 'physical' | 'financial' | 'timeline' | 'personnel' | 'detailed_stage';
@@ -102,13 +102,6 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
               title="Print Project Passport"
             >
               <Printer className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onEdit(project)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
-            >
-              <Edit3 className="w-3.5 h-3.5" />
-              <span>Edit</span>
             </button>
             <button
               onClick={onClose}
@@ -567,14 +560,8 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
           </span>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onEdit(project)}
-              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
-            >
-              Edit 27-Col Data
-            </button>
-            <button
               onClick={onClose}
-              className="px-3.5 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              className="px-4 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors cursor-pointer"
             >
               Close
             </button>

@@ -15,10 +15,6 @@ import {
   ArrowUpDown,
   SlidersHorizontal,
   Archive,
-  FileSpreadsheet,
-  Upload,
-  AlertCircle,
-  X,
 } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
 import { OngoingWorksMasterData } from '@/app/api/ongoing-works/master-data/route';
@@ -30,7 +26,6 @@ import { DeleteMajorProjectModal } from './DeleteMajorProjectModal';
 import { OngoingWorksMasterDataModal } from './OngoingWorksMasterDataModal';
 
 export const MajorProjectsDashboard: React.FC = () => {
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [projects, setProjects] = useState<MajorProject[]>([]);
   const [masterData, setMasterData] = useState<OngoingWorksMasterData>({
     rawItems: [],
@@ -38,8 +33,6 @@ export const MajorProjectsDashboard: React.FC = () => {
     schemes: [],
   });
   const [loading, setLoading] = useState<boolean>(true);
-  const [importing, setImporting] = useState<boolean>(false);
-  const [importMessage, setImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showArchived, setShowArchived] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedDivision, setSelectedDivision] = useState<string>('ALL');
@@ -83,49 +76,6 @@ export const MajorProjectsDashboard: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to restore project:', err);
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setImporting(true);
-      setImportMessage(null);
-
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('datasetType', 'ONGOING_WORKS');
-
-      const res = await fetch('/api/ingest', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setImportMessage({
-          type: 'success',
-          text: `Successfully imported ${data.insertedCount} Ongoing Works records from "${file.name}"!`,
-        });
-        fetchProjects();
-        fetchMasterData();
-      } else {
-        setImportMessage({
-          type: 'error',
-          text: data.message || 'Failed to import 27-Column Excel file.',
-        });
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setImportMessage({
-        type: 'error',
-        text: `Upload error: ${msg}`,
-      });
-    } finally {
-      setImporting(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -212,37 +162,12 @@ export const MajorProjectsDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5 self-start md:self-auto flex-wrap">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            accept=".xlsx,.xls,.csv"
-            className="hidden"
-          />
           <button
             onClick={fetchProjects}
             className="p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-blue-600 rounded-xl transition-colors shadow-xs cursor-pointer"
             title="Refresh Data"
           >
             <RefreshCw className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
-            title="Import 27-Column Departmental Status Review Excel file"
-          >
-            {importing ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                <span>Importing...</span>
-              </>
-            ) : (
-              <>
-                <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Import 27-Col Excel</span>
-              </>
-            )}
           </button>
           <button
             onClick={() => setShowArchived((v) => !v)}
@@ -273,32 +198,6 @@ export const MajorProjectsDashboard: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* Import Notification Banner */}
-      {importMessage && (
-        <div
-          className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs animate-in fade-in duration-200 ${
-            importMessage.type === 'success'
-              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-              : 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {importMessage.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            ) : (
-              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-            )}
-            <span className="font-semibold">{importMessage.text}</span>
-          </div>
-          <button
-            onClick={() => setImportMessage(null)}
-            className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       {/* 4 Top KPI Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
