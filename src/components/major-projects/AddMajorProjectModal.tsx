@@ -277,23 +277,13 @@ export const AddMajorProjectModal: React.FC<AddMajorProjectModalProps> = ({
               </div>
             </div>
           ) : (
-            <div className="p-4 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl space-y-3 animate-in fade-in duration-150">
+            <div className="p-4 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl space-y-1 text-xs animate-in fade-in duration-150">
               <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider block">
-                Tender Stage Status &amp; Milestone Remarks (Merged Columns)
+                Pre-Construction / Tender Stage Selected
               </span>
-              <div>
-                <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Tender / Sanction Milestone Details
-                </label>
-                <textarea
-                  rows={2}
-                  value={stageRemarks}
-                  onChange={(e) => setStageRemarks(e.target.value)}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 rounded-xl text-xs leading-relaxed"
-                  placeholder="e.g. Tender invited by MoRTH HQ on 30.07.2026. Bid due date: 15.09.2026. or LOA issued..."
-                  required
-                />
-              </div>
+              <p className="text-amber-700 dark:text-amber-400">
+                Detailed tender milestone history and sanction updates are recorded in the <strong>Column 27 Log</strong> section below.
+              </p>
             </div>
           )}
 

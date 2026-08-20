@@ -475,17 +475,13 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Tender Stage & Sanction Status Remarks
-                  </label>
-                  <textarea
-                    value={stageRemarks}
-                    onChange={(e) => setStageRemarks(e.target.value)}
-                    rows={2}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter tender milestone, bid opening, LOA, or estimate scrutiny details..."
-                  />
+                <div className="p-3 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-xl text-xs space-y-1">
+                  <span className="font-bold text-amber-800 dark:text-amber-300 block">
+                    Pre-Construction / Tender Stage Selected
+                  </span>
+                  <p className="text-amber-700 dark:text-amber-400">
+                    Detailed tender milestone history, estimate scrutiny, and sanction remarks are managed in the <strong>📝 Engineering Log (Col 27)</strong> tab.
+                  </p>
                 </div>
               )}
             </div>
@@ -682,30 +678,29 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  {workStage === 'TENDER_STAGE'
-                    ? 'Tender Stage Status & Pre-Construction Milestone Details'
-                    : 'Physical Progress Remarks'}
-                </label>
-                <textarea
-                  rows={3}
-                  value={workStage === 'TENDER_STAGE' ? stageRemarks : progressRemarks}
-                  onChange={(e) => {
-                    if (workStage === 'TENDER_STAGE') {
-                      setStageRemarks(e.target.value);
-                    } else {
-                      setProgressRemarks(e.target.value);
-                    }
-                  }}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs leading-relaxed"
-                  placeholder={
-                    workStage === 'TENDER_STAGE'
-                      ? 'e.g. Tender invited by MoRTH HQ on 30.07.2026. Bid due date: 15.09.2026, technical evaluation, or LOA issued...'
-                      : 'e.g. Bridge substructure 80% complete, carriageway DBM in progress, or milestone update...'
-                  }
-                />
-              </div>
+              {workStage === 'IN_PROGRESS' ? (
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Physical Progress Remarks
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={progressRemarks}
+                    onChange={(e) => setProgressRemarks(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs leading-relaxed"
+                    placeholder="e.g. Bridge substructure 80% complete, carriageway DBM in progress, or milestone update..."
+                  />
+                </div>
+              ) : (
+                <div className="p-3 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-xl text-xs space-y-1">
+                  <span className="font-bold text-amber-800 dark:text-amber-300 block">
+                    Pre-Construction / Tender Stage
+                  </span>
+                  <p className="text-amber-700 dark:text-amber-400">
+                    Tender milestone history and sanction status notes are managed in the <strong>📝 Engineering Log (Col 27)</strong> tab.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
