@@ -13,6 +13,7 @@ interface SearchableSelectProps {
   error?: string;
   disabled?: boolean;
   helpText?: string;
+  className?: string;
 }
 
 export const SearchableSelect: React.FC<SearchableSelectProps> = ({
@@ -25,6 +26,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   error,
   disabled = false,
   helpText,
+  className = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,14 +52,14 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Determine smart drop direction (top or bottom) and reset search on open
+  // Determine smart drop direction (top or bottom) and focus search input on open
   useEffect(() => {
     if (isOpen) {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         const spaceBelow = window.innerHeight - rect.bottom;
         const spaceAbove = rect.top;
-        if (spaceBelow < 250 && spaceAbove > spaceBelow) {
+        if (spaceBelow < 260 && spaceAbove > spaceBelow) {
           setDropdownPosition('top');
         } else {
           setDropdownPosition('bottom');
@@ -68,9 +70,13 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
         value ? filteredOptions.findIndex((opt) => opt === value) : 0
       );
 
-      if (options.length > 6 && searchInputRef.current) {
-        searchInputRef.current.focus();
-      }
+      // Auto-focus the search filter input immediately on open for every dropdown
+      const timer = setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }, 40);
+      return () => clearTimeout(timer);
     } else {
       setSearchTerm('');
       setHighlightedIndex(-1);
@@ -163,7 +169,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
 
   return (
     <div
-      className="relative flex flex-col gap-1.5 w-full"
+      className={`relative flex flex-col gap-1.5 w-full ${className}`}
       ref={containerRef}
       onKeyDown={handleKeyDown}
     >
@@ -229,31 +235,29 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             overscrollBehavior: 'contain',
           }}
         >
-          {/* Search Header for lists > 6 options */}
-          {options.length > 6 && (
-            <div className="p-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between gap-2 shrink-0">
-              <div className="flex items-center gap-2 flex-1">
-                <Search className="w-4 h-4 text-slate-400 shrink-0" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder="Filter options..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setHighlightedIndex(0);
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-full bg-transparent text-xs font-medium text-slate-900 dark:text-slate-100 outline-none placeholder:text-slate-400"
-                />
-              </div>
-              {searchTerm && (
-                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded shrink-0">
-                  {filteredOptions.length} found
-                </span>
-              )}
+          {/* Search Filter Header - Included for EVERY dropdown across all modules */}
+          <div className="p-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-2 flex-1">
+              <Search className="w-4 h-4 text-slate-400 shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Filter options..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setHighlightedIndex(0);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full bg-transparent text-xs font-medium text-slate-900 dark:text-slate-100 outline-none placeholder:text-slate-400"
+              />
             </div>
-          )}
+            {searchTerm && (
+              <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded shrink-0">
+                {filteredOptions.length} found
+              </span>
+            )}
+          </div>
 
           {/* Full-Length Options Container with Page Scroll Isolation */}
           <div

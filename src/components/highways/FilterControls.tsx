@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Search, X, LayoutGrid, Table, ArrowUpDown, Filter, Archive } from 'lucide-react';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 interface FilterControlsProps {
   search: string;
@@ -103,17 +104,23 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
         )}
 
         {/* Sort Selector */}
-        <div className="relative flex items-center">
-          <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
-          <select
-            value={sortBy}
-            onChange={(e) => onSortChange(e.target.value)}
-            className="pl-8 pr-8 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none"
-          >
-            <option value="length_desc">Sort: Length (Longest)</option>
-            <option value="length_asc">Sort: Length (Shortest)</option>
-            <option value="code_asc">Sort: Road Code (A-Z)</option>
-          </select>
+        <div className="w-48">
+          <SearchableSelect
+            options={['Sort: Length (Longest)', 'Sort: Length (Shortest)', 'Sort: Road Code (A-Z)']}
+            value={
+              sortBy === 'length_desc'
+                ? 'Sort: Length (Longest)'
+                : sortBy === 'length_asc'
+                ? 'Sort: Length (Shortest)'
+                : 'Sort: Road Code (A-Z)'
+            }
+            onChange={(val) => {
+              if (val.includes('Longest')) onSortChange('length_desc');
+              else if (val.includes('Shortest')) onSortChange('length_asc');
+              else onSortChange('code_asc');
+            }}
+            placeholder="Sort by..."
+          />
         </div>
 
         {/* View Toggle */}

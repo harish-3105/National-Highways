@@ -15,6 +15,7 @@ import {
   ALL_DLP_DIVISIONS,
   getCircleForDivision,
 } from '@/lib/dlp/masterData';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 import {
   ShieldCheck,
   Clock,
@@ -389,35 +390,27 @@ export default function DlpPage() {
             </div>
 
             {/* Circle Filter */}
-            <select
-              value={selectedCircle}
-              onChange={(e) => {
-                setSelectedCircle(e.target.value);
-                setSelectedDivision('');
-              }}
-              className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Circles</option>
-              {DLP_CIRCLE_OPTIONS.map((c) => (
-                <option key={c} value={c}>
-                  {c} Circle
-                </option>
-              ))}
-            </select>
+            <div className="w-full">
+              <SearchableSelect
+                options={['All Circles', ...DLP_CIRCLE_OPTIONS]}
+                value={selectedCircle ? `${selectedCircle}` : 'All Circles'}
+                onChange={(val) => {
+                  setSelectedCircle(val === 'All Circles' ? '' : val);
+                  setSelectedDivision('');
+                }}
+                placeholder="Filter Circle..."
+              />
+            </div>
 
             {/* Division Filter (Cascading) */}
-            <select
-              value={selectedDivision}
-              onChange={(e) => setSelectedDivision(e.target.value)}
-              className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Divisions</option>
-              {divisionOptions.map((d) => (
-                <option key={d} value={d}>
-                  {d} Division
-                </option>
-              ))}
-            </select>
+            <div className="w-full">
+              <SearchableSelect
+                options={['All Divisions', ...divisionOptions]}
+                value={selectedDivision ? `${selectedDivision}` : 'All Divisions'}
+                onChange={(val) => setSelectedDivision(val === 'All Divisions' ? '' : val)}
+                placeholder="Filter Division..."
+              />
+            </div>
 
             {/* Calendar Date Filter */}
             <DlpCalendarDateFilter

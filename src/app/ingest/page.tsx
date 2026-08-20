@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { DatasetType } from '@/lib/ingestion/parser';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 import {
   FileSpreadsheet,
   Upload,
@@ -180,17 +181,15 @@ export default function IngestPage() {
             <label className="block font-bold text-xs uppercase text-slate-700 dark:text-slate-300 tracking-wider">
               Step 1: Select Target PostgreSQL Dataset Table
             </label>
-            <select
-              value={selectedDataset}
-              onChange={(e) => setSelectedDataset(e.target.value as DatasetType)}
-              className="w-full py-3 px-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-            >
-              {DATASETS.map((d) => (
-                <option key={d.type} value={d.type}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              options={DATASETS.map((d) => d.label)}
+              value={DATASETS.find((d) => d.type === selectedDataset)?.label || ''}
+              onChange={(val) => {
+                const found = DATASETS.find((d) => d.label === val);
+                if (found) setSelectedDataset(found.type);
+              }}
+              placeholder="Select Target Dataset..."
+            />
             {currentDatasetInfo && (
               <p className="text-xs text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-950/40 p-3 rounded-xl border border-blue-100 dark:border-blue-900">
                 📌 <strong>Target:</strong> {currentDatasetInfo.description} ({currentDatasetInfo.countHint})

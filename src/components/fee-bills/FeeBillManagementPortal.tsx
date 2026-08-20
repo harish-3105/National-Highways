@@ -10,6 +10,7 @@ import { FeeBillAnalysisDashboard } from './FeeBillAnalysisDashboard';
 import { MasterDataManagement } from './MasterDataManagement';
 import { FeeBillDetailModal } from './FeeBillDetailModal';
 import { FeeBillAuditModal } from './FeeBillAuditModal';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 import {
   FileText,
   Plus,
@@ -283,34 +284,26 @@ export function FeeBillManagementPortal() {
               />
             </div>
 
-            <select
-              value={selectedCircle}
-              onChange={(e) => {
-                setSelectedCircle(e.target.value);
-                setSelectedDivision('');
-              }}
-              className="py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-            >
-              <option value="">All Circles</option>
-              {masterData.circles.map((c) => (
-                <option key={c.id} value={c.name}>
-                  {c.name} Circle
-                </option>
-              ))}
-            </select>
+            <div className="w-full sm:w-44">
+              <SearchableSelect
+                options={['All Circles', ...masterData.circles.map((c) => c.name)]}
+                value={selectedCircle ? `${selectedCircle}` : 'All Circles'}
+                onChange={(val) => {
+                  setSelectedCircle(val === 'All Circles' ? '' : val);
+                  setSelectedDivision('');
+                }}
+                placeholder="Filter Circle..."
+              />
+            </div>
 
-            <select
-              value={selectedDivision}
-              onChange={(e) => setSelectedDivision(e.target.value)}
-              className="py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-            >
-              <option value="">All Divisions</option>
-              {availableDivisions.map((d) => (
-                <option key={d.id} value={d.name}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+            <div className="w-full sm:w-48">
+              <SearchableSelect
+                options={['All Divisions', ...availableDivisions.map((d) => d.name)]}
+                value={selectedDivision ? `${selectedDivision}` : 'All Divisions'}
+                onChange={(val) => setSelectedDivision(val === 'All Divisions' ? '' : val)}
+                placeholder="Filter Division..."
+              />
+            </div>
 
             <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-1">
               {(['ALL', 'Not Settled', 'Settled'] as const).map((st) => (

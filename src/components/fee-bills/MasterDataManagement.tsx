@@ -18,6 +18,8 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
+import { SearchableSelect } from '@/components/common/SearchableSelect';
+
 interface MasterDataManagementProps {
   masterData: FeeBillMasterDataConfig;
   onUpdateMasterData: (newData: FeeBillMasterDataConfig) => void;
@@ -226,17 +228,14 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
       {/* Add / Filter Bar */}
       <div className="flex flex-col sm:flex-row items-center gap-3">
         {activeTab === 'divisions' && (
-          <select
-            value={selectedCircleForDiv}
-            onChange={(e) => setSelectedCircleForDiv(e.target.value)}
-            className="w-full sm:w-48 py-2 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-          >
-            {masterData.circles.map((c) => (
-              <option key={c.id} value={c.name}>
-                {c.name} Circle
-              </option>
-            ))}
-          </select>
+          <div className="w-full sm:w-56">
+            <SearchableSelect
+              options={masterData.circles.map((c) => c.name)}
+              value={selectedCircleForDiv}
+              onChange={(val) => setSelectedCircleForDiv(val)}
+              placeholder="Select Circle..."
+            />
+          </div>
         )}
 
         <input

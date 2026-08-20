@@ -24,6 +24,7 @@ import { StaffEntryForm } from "./StaffEntryForm";
 import { ViewStaffModal } from "./ViewStaffModal";
 import { DeleteStaffModal } from "./DeleteStaffModal";
 import { StaffMasterDataModal } from "./StaffMasterDataModal";
+import { SearchableSelect } from "@/components/common/SearchableSelect";
 
 export const StaffDashboard: React.FC = () => {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
@@ -249,46 +250,34 @@ export const StaffDashboard: React.FC = () => {
               {/* Filters */}
               <div className="flex items-center gap-2.5 w-full md:w-auto flex-wrap">
                 {/* Circle Filter */}
-                <select
-                  value={selectedCircle}
-                  onChange={(e) => setSelectedCircle(e.target.value)}
-                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">All Circles</option>
-                  {masterConfig.circles.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
+                <div className="w-full sm:w-40">
+                  <SearchableSelect
+                    options={['All Circles', ...masterConfig.circles]}
+                    value={selectedCircle ? `${selectedCircle}` : 'All Circles'}
+                    onChange={(val) => setSelectedCircle(val === 'All Circles' ? '' : val)}
+                    placeholder="Filter Circle..."
+                  />
+                </div>
 
                 {/* Division Filter */}
-                <select
-                  value={selectedDivision}
-                  onChange={(e) => setSelectedDivision(e.target.value)}
-                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">All Divisions</option>
-                  {masterConfig.divisions.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
+                <div className="w-full sm:w-44">
+                  <SearchableSelect
+                    options={['All Divisions', ...masterConfig.divisions]}
+                    value={selectedDivision ? `${selectedDivision}` : 'All Divisions'}
+                    onChange={(val) => setSelectedDivision(val === 'All Divisions' ? '' : val)}
+                    placeholder="Filter Division..."
+                  />
+                </div>
 
                 {/* Designation Filter */}
-                <select
-                  value={selectedDesignation}
-                  onChange={(e) => setSelectedDesignation(e.target.value)}
-                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">All Designations</option>
-                  {masterConfig.designations.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
+                <div className="w-full sm:w-48">
+                  <SearchableSelect
+                    options={['All Designations', ...masterConfig.designations]}
+                    value={selectedDesignation ? `${selectedDesignation}` : 'All Designations'}
+                    onChange={(val) => setSelectedDesignation(val === 'All Designations' ? '' : val)}
+                    placeholder="Filter Designation..."
+                  />
+                </div>
 
                 {/* Clear Filters */}
                 {(selectedCircle || selectedDivision || selectedDesignation || searchQuery) && (

@@ -22,6 +22,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { CIRCLE_OPTIONS, CIRCLE_DIVISION_MAP } from '@/lib/legal/masterData';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 export const LegalDashboard: React.FC = () => {
   const [cases, setCases] = useState<CaseEntryFormData[]>([]);
@@ -221,43 +222,47 @@ export const LegalDashboard: React.FC = () => {
           </div>
 
           {/* Circle Filter */}
-          <select
-            value={filterCircle}
-            onChange={(e) => {
-              setFilterCircle(e.target.value);
-              setFilterDivision('');
-            }}
-            className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Circles</option>
-            {CIRCLE_OPTIONS.map((c) => (
-              <option key={c} value={c}>{c} Circle</option>
-            ))}
-          </select>
+          <div className="w-full">
+            <SearchableSelect
+              options={['All Circles', ...CIRCLE_OPTIONS]}
+              value={filterCircle ? `${filterCircle}` : 'All Circles'}
+              onChange={(val) => {
+                setFilterCircle(val === 'All Circles' ? '' : val);
+                setFilterDivision('');
+              }}
+              placeholder="Filter Circle..."
+            />
+          </div>
 
           {/* Division Filter */}
-          <select
-            value={filterDivision}
-            onChange={(e) => setFilterDivision(e.target.value)}
-            disabled={!filterCircle}
-            className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            <option value="">All Divisions</option>
-            {divisionOptions.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
+          <div className="w-full">
+            <SearchableSelect
+              options={['All Divisions', ...divisionOptions]}
+              value={filterDivision ? `${filterDivision}` : 'All Divisions'}
+              onChange={(val) => setFilterDivision(val === 'All Divisions' ? '' : val)}
+              placeholder="Filter Division..."
+            />
+          </div>
 
           {/* Counter Affidavit Status Filter */}
-          <select
-            value={filterCounterStatus}
-            onChange={(e) => setFilterCounterStatus(e.target.value)}
-            className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Affidavit Statuses</option>
-            <option value="Yes">Counter Filed</option>
-            <option value="No">Counter Pending</option>
-          </select>
+          <div className="w-full">
+            <SearchableSelect
+              options={['All Affidavit Statuses', 'Counter Filed (Yes)', 'Counter Pending (No)']}
+              value={
+                filterCounterStatus === 'Yes'
+                  ? 'Counter Filed (Yes)'
+                  : filterCounterStatus === 'No'
+                  ? 'Counter Pending (No)'
+                  : 'All Affidavit Statuses'
+              }
+              onChange={(val) => {
+                if (val.includes('Yes')) setFilterCounterStatus('Yes');
+                else if (val.includes('No')) setFilterCounterStatus('No');
+                else setFilterCounterStatus('');
+              }}
+              placeholder="Affidavit Status..."
+            />
+          </div>
         </div>
       </div>
 

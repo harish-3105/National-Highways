@@ -28,6 +28,7 @@ import { OngoingWorkEntryForm } from './OngoingWorkEntryForm';
 import { ViewMajorProjectModal } from './ViewMajorProjectModal';
 import { DeleteMajorProjectModal } from './DeleteMajorProjectModal';
 import { OngoingWorksMasterDataModal } from './OngoingWorksMasterDataModal';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 export const MajorProjectsDashboard: React.FC = () => {
   const [projects, setProjects] = useState<MajorProject[]>([]);
@@ -509,18 +510,14 @@ export const MajorProjectsDashboard: React.FC = () => {
           {/* Controls Group */}
           <div className="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end flex-wrap">
             {/* Division Filter */}
-            <select
-              value={selectedDivision}
-              onChange={(e) => setSelectedDivision(e.target.value)}
-              className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 cursor-pointer"
-            >
-              <option value="ALL">All Divisions ({divisionsList.length})</option>
-              {divisionsList.map((d) => (
-                <option key={d} value={d}>
-                  {d} Division
-                </option>
-              ))}
-            </select>
+            <div className="w-48">
+              <SearchableSelect
+                options={['All Divisions', ...divisionsList]}
+                value={selectedDivision === 'ALL' || !selectedDivision ? 'All Divisions' : selectedDivision}
+                onChange={(val) => setSelectedDivision(val === 'All Divisions' ? 'ALL' : val)}
+                placeholder="Filter Division..."
+              />
+            </div>
 
             {/* ≥ ₹50 Cr Filter Toggle */}
             <button
