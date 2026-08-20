@@ -31,6 +31,7 @@ export const AddMajorProjectModal: React.FC<AddMajorProjectModalProps> = ({
   const [progressPercent, setProgressPercent] = useState<string>('');
   const [probableCompletionDate, setProbableCompletionDate] = useState<string>('');
   const [stageRemarks, setStageRemarks] = useState<string>('');
+  const [progressRemarks, setProgressRemarks] = useState<string>('');
 
   // Column 27 (Col AC): Detailed Stage Status & Technical Execution Remarks
   const [detailedStageStatus, setDetailedStageStatus] = useState<string>('');
@@ -74,7 +75,8 @@ export const AddMajorProjectModal: React.FC<AddMajorProjectModalProps> = ({
           work_stage: workStage,
           progress_percent: workStage === 'IN_PROGRESS' ? (progressPercent ? Number(progressPercent) : 0) : null,
           probable_completion_date: workStage === 'IN_PROGRESS' ? probableCompletionDate.trim() : null,
-          stage_remarks: workStage === 'TENDER_STAGE' ? stageRemarks.trim() : (stageRemarks.trim() || null),
+          stage_remarks: workStage === 'TENDER_STAGE' ? stageRemarks.trim() || null : null,
+          progress_remarks: workStage === 'IN_PROGRESS' ? progressRemarks.trim() || null : null,
           detailed_stage_status: detailedStageStatus.trim() || null,
           issue_land: issueLand.trim() || null,
           issue_forest: issueForest.trim() || null,
@@ -267,8 +269,8 @@ export const AddMajorProjectModal: React.FC<AddMajorProjectModalProps> = ({
                 </label>
                 <textarea
                   rows={2}
-                  value={stageRemarks}
-                  onChange={(e) => setStageRemarks(e.target.value)}
+                  value={progressRemarks}
+                  onChange={(e) => setProgressRemarks(e.target.value)}
                   className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-xl text-xs leading-relaxed"
                   placeholder="e.g. Bridge substructure 80% complete, carriageway DBM in progress..."
                 />

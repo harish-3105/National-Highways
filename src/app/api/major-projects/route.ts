@@ -14,6 +14,7 @@ export interface MajorProject {
   progress_percent?: number | null;
   probable_completion_date?: string | null;
   stage_remarks?: string | null;
+  progress_remarks?: string | null;
   delete_status?: string | null;
 
   // Level 2 (27-Column Deep Technical & Financial Data)
@@ -166,6 +167,7 @@ export async function POST(request: Request) {
       progress_percent,
       probable_completion_date,
       stage_remarks,
+      progress_remarks,
       delete_status,
 
       // Level 2 (27-Column fields)
@@ -228,6 +230,7 @@ export async function POST(request: Request) {
       probable_completion_date:
         work_stage === 'TENDER_STAGE' ? null : probable_completion_date?.trim() || null,
       stage_remarks: stage_remarks?.trim() || null,
+      progress_remarks: progress_remarks?.trim() || null,
       delete_status: delete_status || 'ACTIVE',
 
       // Level 2 fields

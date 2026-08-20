@@ -48,6 +48,7 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
   const [progressPercent, setProgressPercent] = useState<string>('');
   const [probableCompletionDate, setProbableCompletionDate] = useState<string>('');
   const [stageRemarks, setStageRemarks] = useState<string>('');
+  const [progressRemarks, setProgressRemarks] = useState<string>('');
 
   // Level 2 27-Column fields
   const [pmisId, setPmisId] = useState<string>('');
@@ -100,6 +101,7 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
       setProgressPercent(project.progress_percent !== undefined && project.progress_percent !== null ? String(project.progress_percent) : '');
       setProbableCompletionDate(project.probable_completion_date || '');
       setStageRemarks(project.stage_remarks || '');
+      setProgressRemarks(project.progress_remarks || '');
 
       setPmisId(project.pmis_id || '');
       setOldNewNh(project.old_new_nh || '');
@@ -164,7 +166,8 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
         work_stage: workStage,
         progress_percent: workStage === 'TENDER_STAGE' ? null : progressPercent !== '' ? Number(progressPercent) : null,
         probable_completion_date: workStage === 'TENDER_STAGE' ? null : probableCompletionDate.trim() || null,
-        stage_remarks: stageRemarks.trim() || null,
+        stage_remarks: workStage === 'TENDER_STAGE' ? stageRemarks.trim() || null : null,
+        progress_remarks: workStage === 'IN_PROGRESS' ? progressRemarks.trim() || null : null,
 
         // 27-Column parameters
         pmis_id: pmisId.trim() || null,
@@ -672,12 +675,18 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                 <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                   {workStage === 'TENDER_STAGE'
                     ? 'Tender Stage Status & Pre-Construction Milestone Details'
-                    : 'Physical Progress & Work Stage Remarks'}
+                    : 'Physical Progress Remarks'}
                 </label>
                 <textarea
                   rows={3}
-                  value={stageRemarks}
-                  onChange={(e) => setStageRemarks(e.target.value)}
+                  value={workStage === 'TENDER_STAGE' ? stageRemarks : progressRemarks}
+                  onChange={(e) => {
+                    if (workStage === 'TENDER_STAGE') {
+                      setStageRemarks(e.target.value);
+                    } else {
+                      setProgressRemarks(e.target.value);
+                    }
+                  }}
                   className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs leading-relaxed"
                   placeholder={
                     workStage === 'TENDER_STAGE'

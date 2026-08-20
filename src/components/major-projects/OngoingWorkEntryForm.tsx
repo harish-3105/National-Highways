@@ -109,6 +109,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
     initialData?.scheduled_completion_date || ''
   );
   const [stageRemarks, setStageRemarks] = useState<string>(initialData?.stage_remarks || '');
+  const [progressRemarks, setProgressRemarks] = useState<string>(initialData?.progress_remarks || '');
 
   // 5 Issues Fields (Client Specification)
   const [issueLand, setIssueLand] = useState<string>(initialIssues.land);
@@ -211,7 +212,8 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       probable_completion_date:
         workStage === 'IN_PROGRESS' && probableCompletionDate ? probableCompletionDate.trim() : null,
       scheduled_completion_date: scheduledCompletionDate ? scheduledCompletionDate.trim() : null,
-      stage_remarks: stageRemarks.trim() || null,
+      stage_remarks: workStage === 'TENDER_STAGE' ? stageRemarks.trim() || null : null,
+      progress_remarks: workStage === 'IN_PROGRESS' ? progressRemarks.trim() || null : null,
       detailed_stage_status: detailedStageStatus.trim() || null,
       issue_land: issueLand.trim() || null,
       issue_forest: issueForest.trim() || null,
@@ -592,17 +594,17 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                 </div>
               )}
 
-              {/* Physical Progress & Work Stage Remarks */}
+              {/* Physical Progress Remarks */}
               <div className="pt-2">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Physical Progress &amp; Work Stage Remarks
+                  Physical Progress Remarks
                 </label>
                 <textarea
                   rows={3}
-                  value={stageRemarks}
-                  onChange={(e) => setStageRemarks(e.target.value)}
+                  value={progressRemarks}
+                  onChange={(e) => setProgressRemarks(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. Work in active progress, pier foundation completed, or milestone update..."
+                  placeholder="e.g. Work in active progress, pier foundation completed, or physical milestone update..."
                 />
               </div>
             </div>
