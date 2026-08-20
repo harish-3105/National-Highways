@@ -24,8 +24,7 @@ import { MajorProject } from '@/app/api/major-projects/route';
 import { OngoingWorksMasterData } from '@/app/api/ongoing-works/master-data/route';
 import { calculateProjectDelay, calculateFinancialProgress } from '@/lib/formatters';
 import { MajorProjectsTable } from './MajorProjectsTable';
-import { AddMajorProjectModal } from './AddMajorProjectModal';
-import { EditMajorProjectModal } from './EditMajorProjectModal';
+import { OngoingWorkEntryForm } from './OngoingWorkEntryForm';
 import { ViewMajorProjectModal } from './ViewMajorProjectModal';
 import { DeleteMajorProjectModal } from './DeleteMajorProjectModal';
 import { OngoingWorksMasterDataModal } from './OngoingWorksMasterDataModal';
@@ -40,6 +39,10 @@ export const MajorProjectsDashboard: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [showArchived, setShowArchived] = useState<boolean>(false);
 
+  // Screen state: 'LIST' | 'FORM'
+  const [uiMode, setUiMode] = useState<'LIST' | 'FORM'>('LIST');
+  const [selectedProjectForEdit, setSelectedProjectForEdit] = useState<MajorProject | null>(null);
+
   // Filters State
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedDivision, setSelectedDivision] = useState<string>('ALL');
@@ -53,10 +56,8 @@ export const MajorProjectsDashboard: React.FC = () => {
   const [progressMax, setProgressMax] = useState<string>('');
 
   // Modals state
-  const [isAddOpen, setIsAddOpen] = useState<boolean>(false);
   const [isMasterModalOpen, setIsMasterModalOpen] = useState<boolean>(false);
   const [viewingProject, setViewingProject] = useState<MajorProject | null>(null);
-  const [editingProject, setEditingProject] = useState<MajorProject | null>(null);
   const [deletingProject, setDeletingProject] = useState<MajorProject | null>(null);
 
   const fetchProjects = useCallback(async () => {
@@ -90,6 +91,24 @@ export const MajorProjectsDashboard: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to restore project:', err);
+    }
+  };
+
+  const handleSaveProject = async (projectData: Partial<MajorProject>) => {
+    try {
+      const res = await fetch('/api/major-projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(projectData),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUiMode('LIST');
+        setSelectedProjectForEdit(null);
+        fetchProjects();
+      }
+    } catch (err) {
+      console.error('Failed to save project:', err);
     }
   };
 
@@ -286,6 +305,22 @@ export const MajorProjectsDashboard: React.FC = () => {
     setProgressMax('');
   };
 
+  if (uiMode === 'FORM') {
+    return (
+      <OngoingWorkEntryForm
+        initialData={selectedProjectForEdit || undefined}
+        nextSNo={nextSNo}
+        masterDivisions={masterData.divisions}
+        masterSchemes={masterData.schemes}
+        onSave={handleSaveProject}
+        onCancel={() => {
+          setUiMode('LIST');
+          setSelectedProjectForEdit(null);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Top Banner Header */}
@@ -333,7 +368,10 @@ export const MajorProjectsDashboard: React.FC = () => {
             <span>Master Config</span>
           </button>
           <button
-            onClick={() => setIsAddOpen(true)}
+            onClick={() => {
+              setSelectedProjectForEdit(null);
+              setUiMode('FORM');
+            }}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4" />
@@ -798,34 +836,24 @@ export const MajorProjectsDashboard: React.FC = () => {
         projects={filteredProjects}
         loading={loading}
         onView={(p) => setViewingProject(p)}
-        onEdit={(p) => setEditingProject(p)}
+        onEdit={(p) => {
+          setSelectedProjectForEdit(p);
+          setUiMode('FORM');
+        }}
         onDelete={(p) => setDeletingProject(p)}
         onRestore={handleRestoreProject}
       />
 
       {/* Modal Suite */}
-      <AddMajorProjectModal
-        isOpen={isAddOpen}
-        onClose={() => setIsAddOpen(false)}
-        onSuccess={fetchProjects}
-        nextSNo={nextSNo}
-        masterDivisions={masterData.divisions}
-        masterSchemes={masterData.schemes}
-      />
-
-      <EditMajorProjectModal
-        project={editingProject}
-        isOpen={!!editingProject}
-        onClose={() => setEditingProject(null)}
-        onSuccess={fetchProjects}
-        masterDivisions={masterData.divisions}
-        masterSchemes={masterData.schemes}
-      />
-
       <ViewMajorProjectModal
         project={viewingProject}
         isOpen={!!viewingProject}
         onClose={() => setViewingProject(null)}
+        onEdit={(p) => {
+          setViewingProject(null);
+          setSelectedProjectForEdit(p);
+          setUiMode('FORM');
+        }}
       />
 
       <DeleteMajorProjectModal

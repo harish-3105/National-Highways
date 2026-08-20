@@ -6,8 +6,7 @@ import { KpiHeaderCards } from '@/components/highways/KpiHeaderCards';
 import { FilterControls } from '@/components/highways/FilterControls';
 import { HighwaysTable } from '@/components/highways/HighwaysTable';
 import { HighwaysGrid } from '@/components/highways/HighwaysGrid';
-import { AddHighwayModal } from '@/components/highways/AddHighwayModal';
-import { EditHighwayModal } from '@/components/highways/EditHighwayModal';
+import { HighwayEntryForm } from '@/components/highways/HighwayEntryForm';
 import { ViewHighwayModal } from '@/components/highways/ViewHighwayModal';
 import { DeleteHighwayModal } from '@/components/highways/DeleteHighwayModal';
 import { ExportHighwayModal } from '@/components/highways/ExportHighwayModal';
@@ -50,10 +49,12 @@ export default function HighwaysPage() {
   // Archive Toggle
   const [showArchived, setShowArchived] = useState(false);
 
+  // Screen State: 'LIST' | 'FORM'
+  const [uiMode, setUiMode] = useState<'LIST' | 'FORM'>('LIST');
+  const [selectedHighwayForEdit, setSelectedHighwayForEdit] = useState<HighwayCorridor | null>(null);
+
   // Modal Visibility States
-  const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [viewingHighway, setViewingHighway] = useState<HighwayCorridor | null>(null);
-  const [editingHighway, setEditingHighway] = useState<HighwayCorridor | null>(null);
   const [deletingHighway, setDeletingHighway] = useState<HighwayCorridor | null>(null);
 
   const [activeLaneFilter, setActiveLaneFilter] = useState<string | null>(null);
@@ -137,6 +138,24 @@ export default function HighwaysPage() {
     }
   };
 
+  const handleSaveHighway = async (formData: Record<string, unknown>) => {
+    try {
+      const res = await fetch('/api/highways', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUiMode('LIST');
+        setSelectedHighwayForEdit(null);
+        fetchHighways();
+      }
+    } catch (err) {
+      console.error('Failed to save highway:', err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       {/* Global Navigation Header */}
@@ -144,43 +163,57 @@ export default function HighwaysPage() {
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header Title */}
-        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-              <Route className="w-6 h-6 text-blue-600" />
-              Master Corridor Catalog & Management
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Verified Level 1 ground-truth inventory with Old/New NH numbers, multi-lane breakdown, Add, Edit, Print, and Data Export.
-            </p>
-          </div>
+        {uiMode === 'FORM' ? (
+          <HighwayEntryForm
+            initialData={selectedHighwayForEdit || undefined}
+            onSave={handleSaveHighway}
+            onCancel={() => {
+              setUiMode('LIST');
+              setSelectedHighwayForEdit(null);
+            }}
+          />
+        ) : (
+          <>
+            {/* Page Header Title */}
+            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
+                  <Route className="w-6 h-6 text-blue-600" />
+                  Master Corridor Catalog & Management
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Verified Level 1 ground-truth inventory with Old/New NH numbers, multi-lane breakdown, Add, Edit, Print, and Data Export.
+                </p>
+              </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <button
-              onClick={() => fetchHighways()}
-              disabled={loading}
-              className="p-2.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
-              title="Refresh Catalog"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <button
+                  onClick={() => fetchHighways()}
+                  disabled={loading}
+                  className="p-2.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
+                  title="Refresh Catalog"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                </button>
 
-            <button
-              onClick={() => setIsExportModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
-            >
-              <Download className="w-4 h-4" /> Export Catalog
-            </button>
+                <button
+                  onClick={() => setIsExportModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                >
+                  <Download className="w-4 h-4" /> Export Catalog
+                </button>
 
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" /> Add Highway
-            </button>
-          </div>
-        </div>
+                <button
+                  onClick={() => {
+                    setSelectedHighwayForEdit(null);
+                    setUiMode('FORM');
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" /> Add Highway
+                </button>
+              </div>
+            </div>
 
         {/* Section A: KPI Summary Cards */}
         <KpiHeaderCards
@@ -220,7 +253,10 @@ export default function HighwaysPage() {
             onToggleSelect={handleToggleSelect}
             onSelectAll={handleSelectAll}
             onView={(h) => setViewingHighway(h)}
-            onEdit={(h) => setEditingHighway(h)}
+            onEdit={(h) => {
+              setSelectedHighwayForEdit(h);
+              setUiMode('FORM');
+            }}
             onDelete={(h) => setDeletingHighway(h)}
             activeLaneFilter={activeLaneFilter}
           />
@@ -231,31 +267,27 @@ export default function HighwaysPage() {
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
             onView={(h) => setViewingHighway(h)}
-            onEdit={(h) => setEditingHighway(h)}
+            onEdit={(h) => {
+              setSelectedHighwayForEdit(h);
+              setUiMode('FORM');
+            }}
             onDelete={(h) => setDeletingHighway(h)}
           />
+        )}
+          </>
         )}
       </main>
 
       {/* Modals Suite */}
-      <AddHighwayModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSuccess={() => fetchHighways()}
-      />
-
       <ViewHighwayModal
         highway={viewingHighway}
         isOpen={Boolean(viewingHighway)}
         onClose={() => setViewingHighway(null)}
-        onEdit={(h) => setEditingHighway(h)}
-      />
-
-      <EditHighwayModal
-        highway={editingHighway}
-        isOpen={Boolean(editingHighway)}
-        onClose={() => setEditingHighway(null)}
-        onSuccess={() => fetchHighways()}
+        onEdit={(h) => {
+          setViewingHighway(null);
+          setSelectedHighwayForEdit(h);
+          setUiMode('FORM');
+        }}
       />
 
       <DeleteHighwayModal

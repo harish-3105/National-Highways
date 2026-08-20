@@ -4,8 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { DlpCalendarDateFilter, DateRangeFilter } from '@/components/dlp/DlpCalendarDateFilter';
-import AddDlpContractModal from '@/components/dlp/AddDlpContractModal';
-import EditDlpContractModal from '@/components/dlp/EditDlpContractModal';
+import { DlpContractEntryForm } from '@/components/dlp/DlpContractEntryForm';
 import DeleteDlpContractModal from '@/components/dlp/DeleteDlpContractModal';
 import ViewDlpContractModal from '@/components/dlp/ViewDlpContractModal';
 import {
@@ -117,14 +116,34 @@ export default function DlpPage() {
     setExpandedRows((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // Screen state: 'LIST' | 'FORM'
+  const [uiMode, setUiMode] = useState<'LIST' | 'FORM'>('LIST');
+
   // Modal States
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedContractForView, setSelectedContractForView] = useState<DLPContractItem | null>(null);
   const [selectedContractForEdit, setSelectedContractForEdit] = useState<DLPContractItem | null>(null);
   const [selectedContractForDelete, setSelectedContractForDelete] = useState<DLPContractItem | null>(null);
 
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+
+  const handleSaveDlpContract = async (contractData: Partial<DLPContractItem>) => {
+    try {
+      const res = await fetch('/api/dlp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contractData),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUiMode('LIST');
+        setSelectedContractForEdit(null);
+        fetchDlpContracts();
+      }
+    } catch (err) {
+      console.error('Failed to save DLP contract:', err);
+    }
+  };
 
   const fetchDlpContracts = useCallback(async () => {
     try {
@@ -249,56 +268,70 @@ export default function DlpPage() {
       <NavigationHeader />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {notificationMsg && (
-          <div className="mb-6 p-4 bg-emerald-100 border border-emerald-300 text-emerald-900 rounded-xl font-bold text-sm shadow-md animate-fade-in flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-            <span>{notificationMsg}</span>
-          </div>
-        )}
+        {uiMode === 'FORM' ? (
+          <DlpContractEntryForm
+            initialData={selectedContractForEdit || undefined}
+            onSave={handleSaveDlpContract}
+            onCancel={() => {
+              setUiMode('LIST');
+              setSelectedContractForEdit(null);
+            }}
+          />
+        ) : (
+          <>
+            {notificationMsg && (
+              <div className="mb-6 p-4 bg-emerald-100 border border-emerald-300 text-emerald-900 rounded-xl font-bold text-sm shadow-md animate-fade-in flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span>{notificationMsg}</span>
+              </div>
+            )}
 
-        {/* Header Banner */}
-        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-              <ShieldCheck className="w-6 h-6 text-blue-600" />
-              Defect Liability Period (DLP) & Maintenance Portal
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Active maintenance guarantees, STMC, PBMC, Construction & Uncontracted stretch logs across Circles & Divisions.
-            </p>
-          </div>
+            {/* Header Banner */}
+            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
+                  <ShieldCheck className="w-6 h-6 text-blue-600" />
+                  Defect Liability Period (DLP) & Maintenance Portal
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Active maintenance guarantees, STMC, PBMC, Construction & Uncontracted stretch logs across Circles & Divisions.
+                </p>
+              </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => fetchDlpContracts()}
-              disabled={loading}
-              className="p-2.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
-              title="Refresh Contracts"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => fetchDlpContracts()}
+                  disabled={loading}
+                  className="p-2.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
+                  title="Refresh Contracts"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                </button>
 
-            <button
-              onClick={() => setShowArchived((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                showArchived
-                  ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
-              title={showArchived ? 'Hide Archived Records' : 'Show Archived Records'}
-            >
-              <Archive className="w-4 h-4" />
-              {showArchived ? 'Hide Archived' : 'Show Archived'}
-            </button>
+                <button
+                  onClick={() => setShowArchived((v) => !v)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                    showArchived
+                      ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                  title={showArchived ? 'Hide Archived Records' : 'Show Archived Records'}
+                >
+                  <Archive className="w-4 h-4" />
+                  {showArchived ? 'Hide Archived' : 'Show Archived'}
+                </button>
 
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" /> Add DLP Contract
-            </button>
-          </div>
-        </div>
+                <button
+                  onClick={() => {
+                    setSelectedContractForEdit(null);
+                    setUiMode('FORM');
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" /> Add DLP Contract
+                </button>
+              </div>
+            </div>
 
         {/* Filter Bar */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 mb-6 shadow-xs space-y-4">
@@ -524,7 +557,10 @@ export default function DlpPage() {
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => setSelectedContractForEdit(item)}
+                              onClick={() => {
+                                setSelectedContractForEdit(item);
+                                setUiMode('FORM');
+                              }}
                               className="p-1.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                               title="Edit Record"
                             >
@@ -597,27 +633,14 @@ export default function DlpPage() {
             </table>
           </div>
         </div>
+          </>
+        )}
       </main>
 
       {/* View Modal */}
       <ViewDlpContractModal
         contract={selectedContractForView}
         onClose={() => setSelectedContractForView(null)}
-      />
-
-      {/* Add Modal */}
-      <AddDlpContractModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSuccess={() => fetchDlpContracts()}
-      />
-
-      {/* Edit Modal */}
-      <EditDlpContractModal
-        contract={selectedContractForEdit}
-        isOpen={!!selectedContractForEdit}
-        onClose={() => setSelectedContractForEdit(null)}
-        onSuccess={() => fetchDlpContracts()}
       />
 
       {/* Delete Confirmation Modal */}

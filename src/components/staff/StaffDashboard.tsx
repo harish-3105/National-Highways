@@ -20,8 +20,7 @@ import { NavigationHeader } from "@/components/NavigationHeader";
 import { StaffMember, StaffMasterConfig } from "./StaffTypes";
 
 import { StaffTable } from "./StaffTable";
-import { AddStaffModal } from "./AddStaffModal";
-import { EditStaffModal } from "./EditStaffModal";
+import { StaffEntryForm } from "./StaffEntryForm";
 import { ViewStaffModal } from "./ViewStaffModal";
 import { DeleteStaffModal } from "./DeleteStaffModal";
 import { StaffMasterDataModal } from "./StaffMasterDataModal";
@@ -42,14 +41,16 @@ export const StaffDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
 
+  // Screen state: 'LIST' | 'FORM'
+  const [uiMode, setUiMode] = useState<'LIST' | 'FORM'>('LIST');
+  const [selectedStaffForEdit, setSelectedStaffForEdit] = useState<StaffMember | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCircle, setSelectedCircle] = useState("");
   const [selectedDivision, setSelectedDivision] = useState("");
   const [selectedDesignation, setSelectedDesignation] = useState("");
 
   // Modals state
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isMasterDataOpen, setIsMasterDataOpen] = useState(false);
@@ -98,6 +99,23 @@ export const StaffDashboard: React.FC = () => {
     }
   };
 
+  const handleSaveStaff = async (staffData: Partial<StaffMember>) => {
+    try {
+      const res = await fetch("/api/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(staffData),
+      });
+      if (res.ok) {
+        setUiMode("LIST");
+        setSelectedStaffForEdit(null);
+        fetchStaffData();
+      }
+    } catch (err) {
+      console.error("Failed to save staff member:", err);
+    }
+  };
+
   // Filter staff list
   const filteredStaff = staffList.filter((m) => {
     const matchesSearch =
@@ -131,191 +149,193 @@ export const StaffDashboard: React.FC = () => {
 
       {/* Main Content Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Header Banner */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-
-        <div className="flex items-center gap-4">
-          <div className="p-3.5 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/20">
-            <Users className="w-7 h-7" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-              Staff Management Portal
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Tamil Nadu National Highways Department Personnel Directory
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Show/Hide Archived Toggle Button */}
-          <button
-            onClick={() => setShowArchived(!showArchived)}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
-              showArchived
-                ? "bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800 shadow-sm"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
-            }`}
-            title={showArchived ? "Hide Archived Staff Records" : "Show Soft-Deleted/Archived Staff Records"}
-          >
-            <Archive className="w-3.5 h-3.5" />
-            <span>{showArchived ? "Hide Archived" : "Show Archived"}</span>
-            {archivedStaffCount > 0 && (
-              <span className={`px-1.5 py-0.2 text-[10px] font-extrabold rounded-full ${
-                showArchived
-                  ? "bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200"
-                  : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
-              }`}>
-                {archivedStaffCount}
-              </span>
-            )}
-          </button>
-
-
-          <button
-            onClick={() => setIsMasterDataOpen(true)}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-2 transition"
-          >
-            <Settings className="w-4 h-4 text-blue-500" />
-            <span>Master Data Config</span>
-          </button>
-
-          <button
-            onClick={fetchStaffData}
-            title="Refresh Data"
-            className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
-
-          <button
-            onClick={() => setIsAddOpen(true)}
-            className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 flex items-center gap-2 transition"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>Add Staff Member</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Toolbar & Filters */}
-
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        {/* Search */}
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search staff by name, designation, division..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        {uiMode === "FORM" ? (
+          <StaffEntryForm
+            initialData={selectedStaffForEdit || undefined}
+            masterConfig={masterConfig}
+            onSave={handleSaveStaff}
+            onCancel={() => {
+              setUiMode("LIST");
+              setSelectedStaffForEdit(null);
+            }}
           />
-        </div>
+        ) : (
+          <>
+            {/* Header Banner */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="p-3.5 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/20">
+                  <Users className="w-7 h-7" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                    Staff Management Portal
+                  </h1>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Tamil Nadu National Highways Department Personnel Directory
+                  </p>
+                </div>
+              </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-2.5 w-full md:w-auto flex-wrap">
-          {/* Circle Filter */}
-          <select
-            value={selectedCircle}
-            onChange={(e) => setSelectedCircle(e.target.value)}
-            className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Circles</option>
-            {masterConfig.circles.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                {/* Show/Hide Archived Toggle Button */}
+                <button
+                  onClick={() => setShowArchived(!showArchived)}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
+                    showArchived
+                      ? "bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800 shadow-sm"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
+                  }`}
+                  title={showArchived ? "Hide Archived Staff Records" : "Show Soft-Deleted/Archived Staff Records"}
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  <span>{showArchived ? "Hide Archived" : "Show Archived"}</span>
+                  {archivedStaffCount > 0 && (
+                    <span
+                      className={`px-1.5 py-0.2 text-[10px] font-extrabold rounded-full ${
+                        showArchived
+                          ? "bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200"
+                          : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                      }`}
+                    >
+                      {archivedStaffCount}
+                    </span>
+                  )}
+                </button>
 
-          {/* Division Filter */}
-          <select
-            value={selectedDivision}
-            onChange={(e) => setSelectedDivision(e.target.value)}
-            className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Divisions</option>
-            {masterConfig.divisions.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
+                <button
+                  onClick={() => setIsMasterDataOpen(true)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-2 transition"
+                >
+                  <Settings className="w-4 h-4 text-blue-500" />
+                  <span>Master Data Config</span>
+                </button>
 
-          {/* Designation Filter */}
-          <select
-            value={selectedDesignation}
-            onChange={(e) => setSelectedDesignation(e.target.value)}
-            className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Designations</option>
-            {masterConfig.designations.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
+                <button
+                  onClick={fetchStaffData}
+                  title="Refresh Data"
+                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                </button>
 
-          {/* Clear Filters */}
-          {(selectedCircle || selectedDivision || selectedDesignation || searchQuery) && (
-            <button
-              onClick={() => {
-                setSelectedCircle("");
-                setSelectedDivision("");
-                setSelectedDesignation("");
-                setSearchQuery("");
-              }}
-              className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold px-2"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </div>
+                <button
+                  onClick={() => {
+                    setSelectedStaffForEdit(null);
+                    setUiMode("FORM");
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 flex items-center gap-2 transition cursor-pointer"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Add Staff Member</span>
+                </button>
+              </div>
+            </div>
 
-      {/* Staff Master Table */}
-      {loading ? (
-        <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <RefreshCw className="w-6 h-6 animate-spin text-blue-600 mx-auto mb-2" />
-          <p className="text-xs text-slate-500">Loading staff records...</p>
-        </div>
-      ) : (
-        <StaffTable
-          staffList={filteredStaff}
-          onView={(s) => {
-            setSelectedStaff(s);
-            setIsViewOpen(true);
-          }}
-          onEdit={(s) => {
-            setSelectedStaff(s);
-            setIsEditOpen(true);
-          }}
-          onDelete={(s) => {
-            setSelectedStaff(s);
-            setIsDeleteOpen(true);
-          }}
-          onRestore={handleRestoreStaff}
-        />
-      )}
+            {/* Toolbar & Filters */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              {/* Search */}
+              <div className="relative w-full md:w-80">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search staff by name, designation, division..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Filters */}
+              <div className="flex items-center gap-2.5 w-full md:w-auto flex-wrap">
+                {/* Circle Filter */}
+                <select
+                  value={selectedCircle}
+                  onChange={(e) => setSelectedCircle(e.target.value)}
+                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Circles</option>
+                  {masterConfig.circles.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Division Filter */}
+                <select
+                  value={selectedDivision}
+                  onChange={(e) => setSelectedDivision(e.target.value)}
+                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Divisions</option>
+                  {masterConfig.divisions.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Designation Filter */}
+                <select
+                  value={selectedDesignation}
+                  onChange={(e) => setSelectedDesignation(e.target.value)}
+                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Designations</option>
+                  {masterConfig.designations.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Clear Filters */}
+                {(selectedCircle || selectedDivision || selectedDesignation || searchQuery) && (
+                  <button
+                    onClick={() => {
+                      setSelectedCircle("");
+                      setSelectedDivision("");
+                      setSelectedDesignation("");
+                      setSearchQuery("");
+                    }}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold px-2 cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Staff Master Table */}
+            {loading ? (
+              <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <RefreshCw className="w-6 h-6 animate-spin text-blue-600 mx-auto mb-2" />
+                <p className="text-xs text-slate-500">Loading staff records...</p>
+              </div>
+            ) : (
+              <StaffTable
+                staffList={filteredStaff}
+                onView={(s) => {
+                  setSelectedStaff(s);
+                  setIsViewOpen(true);
+                }}
+                onEdit={(s) => {
+                  setSelectedStaffForEdit(s);
+                  setUiMode("FORM");
+                }}
+                onDelete={(s) => {
+                  setSelectedStaff(s);
+                  setIsDeleteOpen(true);
+                }}
+                onRestore={handleRestoreStaff}
+              />
+            )}
+          </>
+        )}
+      </main>
 
       {/* Modals Suite */}
-      <AddStaffModal
-        isOpen={isAddOpen}
-        onClose={() => setIsAddOpen(false)}
-        onSuccess={fetchStaffData}
-        masterConfig={masterConfig}
-      />
-
-      <EditStaffModal
-        isOpen={isEditOpen}
-        onClose={() => setIsEditOpen(false)}
-        onSuccess={fetchStaffData}
-        staff={selectedStaff}
-        masterConfig={masterConfig}
-      />
-
       <ViewStaffModal
         isOpen={isViewOpen}
         onClose={() => setIsViewOpen(false)}
@@ -335,7 +355,6 @@ export const StaffDashboard: React.FC = () => {
         masterConfig={masterConfig}
         onRefresh={fetchStaffData}
       />
-      </main>
     </div>
   );
 };
