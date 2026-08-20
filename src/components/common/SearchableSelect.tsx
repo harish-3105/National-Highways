@@ -29,6 +29,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+  const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -49,13 +50,25 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // When opening, reset search and focus input if available
+  // Determine smart drop direction (top or bottom) and reset search on open
   useEffect(() => {
     if (isOpen) {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        if (spaceBelow < 250 && spaceAbove > spaceBelow) {
+          setDropdownPosition('top');
+        } else {
+          setDropdownPosition('bottom');
+        }
+      }
+
       setHighlightedIndex(
         value ? filteredOptions.findIndex((opt) => opt === value) : 0
       );
-      if (options.length > 5 && searchInputRef.current) {
+
+      if (options.length > 6 && searchInputRef.current) {
         searchInputRef.current.focus();
       }
     } else {
@@ -74,6 +87,22 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
       }
     }
   }, [highlightedIndex, isOpen]);
+
+  // Prevent any wheel event from propagating to the background webpage
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const isScrollingUp = e.deltaY < 0;
+    const isScrollingDown = e.deltaY > 0;
+    const isAtTop = el.scrollTop <= 0;
+    const isAtBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+
+    if ((isScrollingUp && isAtTop) || (isScrollingDown && isAtBottom)) {
+      e.preventDefault();
+      e.stopPropagation();
+    } else {
+      e.stopPropagation();
+    }
+  };
 
   const handleSelect = useCallback(
     (option: string) => {
@@ -132,13 +161,6 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
     }
   };
 
-  // Dynamic Height Calculation:
-  // Show clean vertical scrollbar when options exceed height
-  const isShortList = filteredOptions.length <= 8;
-  const listHeightClass = isShortList
-    ? 'max-h-60 overflow-y-auto'
-    : 'max-h-64 sm:max-h-72 overflow-y-auto';
-
   return (
     <div
       className="relative flex flex-col gap-1.5 w-full"
@@ -195,11 +217,20 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
 
       {isOpen && !disabled && (
         <div
-          className="absolute top-[calc(100%+4px)] left-0 right-0 z-[99999] bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
-          style={{ minWidth: '100%' }}
+          data-dropdown-container
+          onWheel={handleWheel}
+          className={`absolute ${
+            dropdownPosition === 'top'
+              ? 'bottom-[calc(100%+4px)]'
+              : 'top-[calc(100%+4px)]'
+          } left-0 right-0 z-[99999] bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 overscroll-contain`}
+          style={{
+            minWidth: '100%',
+            overscrollBehavior: 'contain',
+          }}
         >
-          {/* Search Header for lists > 5 options */}
-          {options.length > 5 && (
+          {/* Search Header for lists > 6 options */}
+          {options.length > 6 && (
             <div className="p-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between gap-2 shrink-0">
               <div className="flex items-center gap-2 flex-1">
                 <Search className="w-4 h-4 text-slate-400 shrink-0" />
@@ -224,10 +255,15 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             </div>
           )}
 
-          {/* Dynamic Scrollable or Full-Length Options Container */}
+          {/* Full-Length Options Container with Page Scroll Isolation */}
           <div
             ref={listRef}
-            className={`dropdown-scroll divide-y divide-slate-100 dark:divide-slate-800/40 ${listHeightClass}`}
+            data-dropdown-list
+            onWheel={handleWheel}
+            className="dropdown-scroll divide-y divide-slate-100 dark:divide-slate-800/40 max-h-[80vh] overflow-y-auto overscroll-contain"
+            style={{
+              overscrollBehavior: 'contain',
+            }}
           >
             {filteredOptions.length > 0 ? (
               filteredOptions.map((opt, idx) => {
@@ -264,14 +300,6 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
               </div>
             )}
           </div>
-
-          {/* Bottom count badge for long lists */}
-          {options.length > 10 && !isShortList && (
-            <div className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 text-[10.5px] font-medium text-slate-400 dark:text-slate-500 flex items-center justify-between shrink-0">
-              <span>Showing {filteredOptions.length} of {options.length} options</span>
-              <span className="text-[9.5px]">Scroll for more</span>
-            </div>
-          )}
         </div>
       )}
 

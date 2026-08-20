@@ -305,7 +305,7 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
           </div>
 
           {/* Options List */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 max-h-72 overflow-y-auto dropdown-scroll">
+          <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 max-h-[60vh] overflow-y-auto dropdown-scroll overscroll-contain">
             {filteredItems.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-400 font-medium">
                 {searchTerm ? 'No options match your filter.' : 'No options configured yet.'}

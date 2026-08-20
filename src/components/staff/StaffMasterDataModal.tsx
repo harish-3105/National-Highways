@@ -243,7 +243,7 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
             </form>
 
             {/* Options List */}
-            <div className="flex-1 overflow-y-auto max-h-72 dropdown-scroll border border-slate-200 dark:border-slate-800 rounded-xl divide-y divide-slate-100 dark:divide-slate-800/60">
+            <div className="flex-1 overflow-y-auto max-h-[60vh] dropdown-scroll overscroll-contain border border-slate-200 dark:border-slate-800 rounded-xl divide-y divide-slate-100 dark:divide-slate-800/60">
               {currentCategoryItems.length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-400">
                   No custom options added for {CATEGORY_LABELS[activeCategory]} yet. Click "Add" above to create options.

@@ -305,7 +305,7 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
           </div>
 
           {/* List of Options Container with Vertical Scroller */}
-          <div className="space-y-2 mt-2 max-h-72 overflow-y-auto dropdown-scroll pr-1">
+          <div className="space-y-2 mt-2 max-h-[60vh] overflow-y-auto dropdown-scroll overscroll-contain pr-1">
             {filteredItems.length === 0 ? (
               <div className="p-8 text-center text-slate-400">
                 No {categoryLabel.toLowerCase()} options found. Add one above!
