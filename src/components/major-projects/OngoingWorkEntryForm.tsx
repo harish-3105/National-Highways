@@ -37,31 +37,28 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   onSave,
   onCancel,
 }) => {
-  // Parse any existing issues from stage_remarks / detailed_stage_status if stored as JSON or text
+  // Parse any existing issues from stage_remarks without touching detailed_stage_status (Col 27)
   const initialIssues = useMemo(() => {
-    let land = '';
-    let forest = '';
-    let utility = '';
-    let railways = '';
-    let others = '';
+    let land = initialData?.issue_land || '';
+    let forest = initialData?.issue_forest || '';
+    let utility = initialData?.issue_utility || '';
+    let railways = initialData?.issue_railways || '';
+    let others = initialData?.issue_others || '';
 
-    const text = initialData?.stage_remarks || initialData?.detailed_stage_status || '';
-    if (text) {
-      const landMatch = text.match(/Land Acquisition:?\s*([^\n;]+)/i);
-      const forestMatch = text.match(/Forest:?\s*([^\n;]+)/i);
-      const utilityMatch = text.match(/Utility:?\s*([^\n;]+)/i);
-      const railMatch = text.match(/Railways:?\s*([^\n;]+)/i);
-      const othersMatch = text.match(/Others:?\s*([^\n;]+)/i);
+    // Only parse from stage_remarks if individual issue fields are empty
+    const text = initialData?.stage_remarks || '';
+    if (text && (!land && !forest && !utility && !railways && !others)) {
+      const landMatch = text.match(/Land Acquisition:?\s*([^\n;|]+)/i);
+      const forestMatch = text.match(/Forest:?\s*([^\n;|]+)/i);
+      const utilityMatch = text.match(/Utility:?\s*([^\n;|]+)/i);
+      const railMatch = text.match(/Railways:?\s*([^\n;|]+)/i);
+      const othersMatch = text.match(/Others:?\s*([^\n;|]+)/i);
 
       if (landMatch) land = landMatch[1].trim();
       if (forestMatch) forest = forestMatch[1].trim();
       if (utilityMatch) utility = utilityMatch[1].trim();
       if (railMatch) railways = railMatch[1].trim();
       if (othersMatch) others = othersMatch[1].trim();
-
-      if (!land && !forest && !utility && !railways && !others) {
-        others = text;
-      }
     }
 
     return { land, forest, utility, railways, others };
@@ -72,6 +69,11 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   const [division, setDivision] = useState<string>(initialData?.division || '');
   const [scheme, setScheme] = useState<string>(initialData?.scheme || '');
   const [nameOfWork, setNameOfWork] = useState<string>(initialData?.name_of_work || '');
+
+  // Column 27 (Col AC): Detailed Stage Status & Technical Execution Remarks
+  const [detailedStageStatus, setDetailedStageStatus] = useState<string>(
+    initialData?.detailed_stage_status || ''
+  );
 
   // Financial
   const [projectCostCr, setProjectCostCr] = useState<string>(
@@ -208,8 +210,13 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       probable_completion_date:
         workStage === 'IN_PROGRESS' && probableCompletionDate ? probableCompletionDate.trim() : null,
       scheduled_completion_date: scheduledCompletionDate ? scheduledCompletionDate.trim() : null,
-      stage_remarks: consolidatedIssues || null,
-      detailed_stage_status: consolidatedIssues || null,
+      detailed_stage_status: detailedStageStatus.trim() || null,
+      stage_remarks: consolidatedIssues || (workStage === 'TENDER_STAGE' ? detailedStageStatus.trim() : null) || null,
+      issue_land: issueLand.trim() || null,
+      issue_forest: issueForest.trim() || null,
+      issue_utility: issueUtility.trim() || null,
+      issue_railways: issueRailways.trim() || null,
+      issue_others: issueOthers.trim() || null,
       contractor_name: contractorName.trim() || null,
       de_name_phone: deNamePhone.trim() || null,
       old_new_nh: oldNewNh.trim() || null,
@@ -564,6 +571,20 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
               </span>
             </div>
           )}
+
+          {/* Column 27 (Col AC): Detailed Stage Status & Technical Execution Remarks */}
+          <div className="pt-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Detailed Work Stage Status & Physical Execution Remarks (Col 27 / Col AC)
+            </label>
+            <textarea
+              rows={4}
+              value={detailedStageStatus}
+              onChange={(e) => setDetailedStageStatus(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed font-mono"
+              placeholder="Granular site execution notes, structural milestone progress (e.g. 4/6 spans casted, pier P3 cap completed), earthwork/pavement status, or pre-construction tender stage remarks..."
+            />
+          </div>
         </div>
       </div>
 

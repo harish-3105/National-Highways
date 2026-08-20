@@ -46,6 +46,13 @@ export interface MajorProject {
   updated_division_date?: string | null;
   detailed_stage_status?: string | null;
 
+  // 5 Issues Fields
+  issue_land?: string | null;
+  issue_forest?: string | null;
+  issue_utility?: string | null;
+  issue_railways?: string | null;
+  issue_others?: string | null;
+
   created_at?: string;
   updated_at?: string;
 }
@@ -190,6 +197,12 @@ export async function POST(request: Request) {
       contractor_name,
       updated_division_date,
       detailed_stage_status,
+
+      issue_land,
+      issue_forest,
+      issue_utility,
+      issue_railways,
+      issue_others,
     } = body;
 
     if (!name_of_work || !division || !scheme) {
@@ -281,6 +294,12 @@ export async function POST(request: Request) {
       contractor_name: contractor_name ? String(contractor_name).trim() : null,
       updated_division_date: updated_division_date ? String(updated_division_date).trim() : null,
       detailed_stage_status: detailed_stage_status ? String(detailed_stage_status).trim() : null,
+
+      issue_land: issue_land ? String(issue_land).trim() : null,
+      issue_forest: issue_forest ? String(issue_forest).trim() : null,
+      issue_utility: issue_utility ? String(issue_utility).trim() : null,
+      issue_railways: issue_railways ? String(issue_railways).trim() : null,
+      issue_others: issue_others ? String(issue_others).trim() : null,
 
       updated_at: new Date().toISOString(),
     };
