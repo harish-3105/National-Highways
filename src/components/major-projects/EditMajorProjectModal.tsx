@@ -26,7 +26,7 @@ interface EditMajorProjectModalProps {
   masterSchemes?: string[];
 }
 
-type EditTab = 'general' | 'technical' | 'physical' | 'financial' | 'timeline' | 'issues' | 'personnel_notes';
+type EditTab = 'general' | 'technical' | 'physical' | 'financial' | 'timeline' | 'issues' | 'personnel' | 'column_27_log';
 
 export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
   project,
@@ -327,14 +327,25 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('personnel_notes')}
+            onClick={() => setActiveTab('personnel')}
             className={`px-3 py-2 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'personnel_notes'
+              activeTab === 'personnel'
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-xl'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            👷 Personnel & Notes (Col 27)
+            👷 Key Personnel
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('column_27_log')}
+            className={`px-3 py-2 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'column_27_log'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-xl'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            📝 Engineering Log (Col 27)
           </button>
         </div>
 
@@ -945,8 +956,8 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
             </div>
           )}
 
-          {/* TAB 6: PERSONNEL & NOTES */}
-          {activeTab === 'personnel_notes' && (
+          {/* TAB 7: KEY PERSONNEL */}
+          {activeTab === 'personnel' && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -988,16 +999,25 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                   placeholder="e.g. Vellore Division 03.08.2026"
                 />
               </div>
+            </div>
+          )}
+
+          {/* TAB 8: COLUMN 27 ENGINEERING & LA STAGE LOG */}
+          {activeTab === 'column_27_log' && (
+            <div className="space-y-4">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-xl text-[11px] text-amber-800 dark:text-amber-200">
+                Detailed structural milestones, bridge pier/deck progress, railway GAD, forest clearance, and 3A/3D/3G Land Acquisition awards (Column 27 / Col AC).
+              </div>
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Detailed Structural, Railway, Forest & LA Stage Log (Col AC)
+                  Granular Structural, Railway, Forest &amp; LA Stage Log (Col AC / Column 27)
                 </label>
                 <textarea
                   value={detailedStageStatus}
                   onChange={(e) => setDetailedStageStatus(e.target.value)}
-                  rows={8}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xs text-xs font-mono leading-relaxed min-h-[180px] max-h-[450px]"
+                  rows={10}
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xs text-xs font-mono leading-relaxed min-h-[220px] max-h-[500px]"
                   placeholder="Enter multi-paragraph log of piers, decks, box culverts, railway GAD, forest clearance, 3A/3D/3G gazettes, CALA award disbursement..."
                 />
               </div>

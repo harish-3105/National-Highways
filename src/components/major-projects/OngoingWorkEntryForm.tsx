@@ -810,20 +810,31 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
               />
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Column 27 (Col AC): Detailed Structural, Railway, Forest & LA Stage Log */}
+      {/* MODULE 6: Granular Engineering Milestones & Land Acquisition Log (Col 27 / Col AC) */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+        <div className="bg-gradient-to-r from-amber-900 to-amber-800 px-6 py-4 text-white flex items-center gap-3">
+          <FileText className="w-5 h-5 text-amber-300" />
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Detailed Structural, Engineering &amp; Execution Stage Log (Col 27 / Col AC)
-            </label>
-            <textarea
-              rows={4}
-              value={detailedStageStatus}
-              onChange={(e) => setDetailedStageStatus(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed font-mono"
-              placeholder="Granular site progress log, structural milestones, piers/slabs casted, earthwork/pavement status, or pre-construction tender stage remarks..."
-            />
+            <h3 className="font-bold text-sm uppercase tracking-wider text-white">
+              MODULE 6: Granular Engineering Milestones &amp; Land Acquisition Log (Col 27 / Col AC)
+            </h3>
+            <span className="text-xs text-amber-200">
+              Detailed structural progress, pier/deck casting log, GAD approvals, 3A/3D gazettes, and historical site notes
+            </span>
           </div>
+        </div>
+
+        <div className="p-6">
+          <textarea
+            rows={6}
+            value={detailedStageStatus}
+            onChange={(e) => setDetailedStageStatus(e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed font-mono min-h-[140px]"
+            placeholder="Granular site progress log, structural milestones, piers/slabs casted, earthwork/pavement status, or pre-construction tender stage remarks..."
+          />
         </div>
       </div>
 

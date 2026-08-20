@@ -375,25 +375,25 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
             </div>
 
             {/* Tender Stage Milestone Details (When in Pre-Construction / Tender Stage) */}
-            {isTender && project.stage_remarks && (
+            {isTender && (
               <div className="p-3.5 rounded-xs border space-y-1 bg-amber-50/70 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/60">
                 <span className="text-[10px] uppercase font-bold tracking-wider block text-amber-800 dark:text-amber-300">
                   📋 Pre-Construction &amp; Tender Stage Milestone Details
                 </span>
-                <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed whitespace-pre-line">
-                  {project.stage_remarks}
+                <p className={`text-xs leading-relaxed whitespace-pre-line ${project.stage_remarks ? 'text-slate-800 dark:text-slate-200 font-medium' : 'text-slate-400 italic'}`}>
+                  {project.stage_remarks || '— None / No tender stage remarks recorded'}
                 </p>
               </div>
             )}
 
             {/* Physical Progress Remarks (When in Execution / In-Progress) */}
-            {!isTender && project.progress_remarks && (
+            {!isTender && (
               <div className="p-3.5 rounded-xs border space-y-1 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800">
                 <span className="text-[10px] uppercase font-bold tracking-wider block text-slate-400">
                   Physical Progress Remarks
                 </span>
-                <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed whitespace-pre-line">
-                  {project.progress_remarks}
+                <p className={`text-xs leading-relaxed whitespace-pre-line ${project.progress_remarks ? 'text-slate-800 dark:text-slate-200 font-medium' : 'text-slate-400 italic'}`}>
+                  {project.progress_remarks || '— None / No physical progress remarks recorded'}
                 </p>
               </div>
             )}

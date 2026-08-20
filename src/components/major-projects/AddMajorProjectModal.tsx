@@ -297,20 +297,6 @@ export const AddMajorProjectModal: React.FC<AddMajorProjectModalProps> = ({
             </div>
           )}
 
-          {/* Column 27 (Col AC): Detailed Work Stage Status */}
-          <div>
-            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Detailed Work Stage Status &amp; Physical Execution Remarks (Col 27 / Col AC)
-            </label>
-            <textarea
-              rows={3}
-              value={detailedStageStatus}
-              onChange={(e) => setDetailedStageStatus(e.target.value)}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono leading-relaxed"
-              placeholder="Granular site progress log, structural milestones, piers/slabs casted, earthwork/pavement status..."
-            />
-          </div>
-
           {/* 5 Clearance Bottlenecks & Issues (Optional / Clean Defaults) */}
           <div className="p-4 bg-slate-50 dark:bg-slate-850/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
             <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider block">
@@ -379,9 +365,23 @@ export const AddMajorProjectModal: React.FC<AddMajorProjectModalProps> = ({
                 value={issueOthers}
                 onChange={(e) => setIssueOthers(e.target.value)}
                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
-                placeholder="e.g. Court stays, contractor termination warning..."
+                placeholder="e.g. Court stay, contractor notice..."
               />
             </div>
+          </div>
+
+          {/* DEDICATED SECTION: Column 27 (Col AC) Detailed Engineering & Structural Log */}
+          <div className="p-4 bg-slate-50 dark:bg-slate-850/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
+            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider block">
+              Granular Engineering Milestones &amp; Land Acquisition Log (Col AC / Column 27)
+            </span>
+            <textarea
+              rows={4}
+              value={detailedStageStatus}
+              onChange={(e) => setDetailedStageStatus(e.target.value)}
+              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono leading-relaxed"
+              placeholder="Granular site progress log, structural milestones, piers/slabs casted, earthwork/pavement status, or pre-construction tender stage remarks..."
+            />
           </div>
 
           {/* Footer Actions */}
