@@ -4,21 +4,21 @@ import React, { useState } from 'react';
 import {
   X,
   Plus,
-  Edit3,
   Trash2,
+  Edit3,
   Check,
-  RotateCcw,
+  AlertCircle,
+  AlertTriangle,
   SlidersHorizontal,
   MapPin,
   Building,
   Scale,
-  FileCheck,
+  Activity,
   Building2,
-  Tag,
-  Gavel,
+  FileText,
   UserCheck,
-  AlertCircle,
-  CheckCircle2,
+  Search,
+  FolderTree,
 } from 'lucide-react';
 import { LegalMasterData, LegalCategory } from '@/app/api/legal/master-data/route';
 
@@ -35,248 +35,228 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
   masterData,
   onRefresh,
 }) => {
-  const [activeTab, setActiveTab] = useState<LegalCategory>('case_type');
-  const [newValue, setNewValue] = useState('');
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [activeCategory, setActiveCategory] = useState<LegalCategory>('circle');
+  const [newValue, setNewValue] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Inline editing state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
+
+  // Delete confirmation state
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ id?: string; value: string } | null>(null);
 
   if (!isOpen) return null;
 
-  const getItemsForTab = (): string[] => {
-    switch (activeTab) {
-      case 'circle':
-        return masterData.circles || [];
-      case 'division':
-        return masterData.divisions || [];
-      case 'case_type':
-        return masterData.caseTypes || [];
-      case 'case_status':
-        return masterData.caseStatuses || [];
-      case 'case_pertains_to':
-        return masterData.casePertainsTo || [];
-      case 'nature_of_case':
-        return masterData.natureOfCases || [];
-      case 'court_name':
-        return masterData.courtNames || [];
-      case 'law_officer':
-        return masterData.lawOfficers || [];
-      default:
-        return [];
-    }
-  };
-
-  const getTabLabel = (tab: LegalCategory): string => {
-    switch (tab) {
-      case 'circle':
-        return 'Administrative Circles';
-      case 'division':
-        return 'Field Divisions';
-      case 'case_type':
-        return 'Case Types';
-      case 'case_status':
-        return 'Case Statuses';
-      case 'case_pertains_to':
-        return 'Pertains To Categories';
-      case 'nature_of_case':
-        return 'Nature of Cases';
-      case 'court_name':
-        return 'Court Names / Complexes';
-      case 'law_officer':
-        return 'Law Officers / Advocates';
-    }
-  };
-
-  const currentItems = getItemsForTab();
-  const filteredItems = currentItems.filter((item) =>
-    item.toLowerCase().includes(searchTerm.toLowerCase())
+  const currentCategoryItems = (masterData.rawItems || []).filter(
+    (item) => item.category === activeCategory
   );
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const getFallbackList = (cat: LegalCategory): string[] => {
+    switch (cat) {
+      case 'circle': return masterData.circles || [];
+      case 'division': return masterData.divisions || [];
+      case 'category': return masterData.categories || ['Filed Against Department', 'Filed By Department'];
+      case 'case_type': return masterData.caseTypes || [];
+      case 'case_status': return masterData.caseStatuses || [];
+      case 'case_pertains_to': return masterData.casePertainsTo || [];
+      case 'nature_of_case': return masterData.natureOfCases || [];
+      case 'court_name': return masterData.courtNames || [];
+      case 'law_officer': return masterData.lawOfficers || [];
+      case 'petition_type': return masterData.petitionTypes || ['Review Petition', 'Contempt Petition', 'Execution Petition', 'Special Leave Petition (SLP)', 'Other'];
+      case 'converted_category': return masterData.convertedCategories || ['Appealed by Department', 'Appealed by Other Party', 'Other'];
+      default: return [];
+    }
+  };
+
+  const displayItems = currentCategoryItems.length > 0
+    ? currentCategoryItems
+    : getFallbackList(activeCategory).map((val, idx) => ({
+        id: `default-${idx}`,
+        category: activeCategory,
+        value: val,
+      }));
+
+  const filteredItems = displayItems.filter((item) =>
+    (item.value || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleAddOption = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newValue.trim()) return;
 
-    try {
-      setLoading(true);
-      setErrorMsg('');
-      setSuccessMsg('');
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
 
+    try {
       const res = await fetch('/api/legal/master-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          category: activeTab,
-          value: newValue.trim(),
-        }),
+        body: JSON.stringify({ category: activeCategory, value: newValue.trim() }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to add option');
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to add master option');
 
       setNewValue('');
-      setSuccessMsg(`Added "${newValue.trim()}" to ${getTabLabel(activeTab)}.`);
+      setSuccess(`Added "${json.value}" successfully.`);
       onRefresh();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setErrorMsg(msg);
+      setError(msg || 'Failed to add option');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStartEdit = (index: number, val: string) => {
-    setEditingIndex(index);
-    setEditValue(val);
-    setErrorMsg('');
+  const handleStartEdit = (id?: string, value?: string) => {
+    if (!value) return;
+    setEditingId(id || value);
+    setEditingValue(value);
+    setError(null);
+    setSuccess(null);
   };
 
-  const handleSaveEdit = async (oldVal: string) => {
-    if (!editValue.trim() || editValue.trim() === oldVal) {
-      setEditingIndex(null);
-      return;
-    }
+  const handleSaveEdit = async (id: string) => {
+    if (!editingValue.trim()) return;
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
 
     try {
-      setLoading(true);
-      setErrorMsg('');
-      setSuccessMsg('');
+      if (id.startsWith('default-')) {
+        const res = await fetch('/api/legal/master-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category: activeCategory, value: editingValue.trim() }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to update option');
+      } else {
+        const res = await fetch('/api/legal/master-data', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, value: editingValue.trim() }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to update option');
+      }
 
-      const rawItem = masterData.rawItems?.find(
-        (i) => i.category === activeTab && i.value === oldVal
-      );
-
-      const res = await fetch('/api/legal/master-data', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: rawItem?.id,
-          category: activeTab,
-          oldValue: oldVal,
-          newValue: editValue.trim(),
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to update option');
-
-      setEditingIndex(null);
-      setSuccessMsg(`Renamed "${oldVal}" to "${editValue.trim()}".`);
+      setEditingId(null);
+      setEditingValue('');
+      setSuccess(`Updated option successfully.`);
       onRefresh();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setErrorMsg(msg);
+      setError(msg || 'Failed to update option');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (val: string) => {
-    if (!confirm(`Are you sure you want to remove "${val}" from ${getTabLabel(activeTab)}?`)) {
-      return;
-    }
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmItem) return;
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
 
     try {
-      setLoading(true);
-      setErrorMsg('');
-      setSuccessMsg('');
+      let url = `/api/legal/master-data?`;
+      if (deleteConfirmItem.id && !deleteConfirmItem.id.startsWith('default-')) {
+        url += `id=${encodeURIComponent(deleteConfirmItem.id)}`;
+      } else {
+        url += `category=${activeCategory}&value=${encodeURIComponent(deleteConfirmItem.value)}`;
+      }
 
-      const rawItem = masterData.rawItems?.find(
-        (i) => i.category === activeTab && i.value === val
-      );
+      const res = await fetch(url, { method: 'DELETE' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to delete option');
 
-      const query = rawItem?.id
-        ? `id=${encodeURIComponent(rawItem.id)}`
-        : `category=${encodeURIComponent(activeTab)}&value=${encodeURIComponent(val)}`;
-
-      const res = await fetch(`/api/legal/master-data?${query}`, {
-        method: 'DELETE',
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to delete option');
-
-      setSuccessMsg(`Removed "${val}".`);
+      setSuccess(`Removed "${deleteConfirmItem.value}" successfully.`);
+      setDeleteConfirmItem(null);
       onRefresh();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setErrorMsg(msg);
+      setError(msg || 'Failed to delete option');
     } finally {
       setLoading(false);
     }
   };
+
+  const tabs: { id: LegalCategory; label: string; icon: React.ComponentType<{ className?: string }>; count: number }[] = [
+    { id: 'circle', label: 'Circles', icon: MapPin, count: masterData.circles?.length || 0 },
+    { id: 'division', label: 'Divisions', icon: Building, count: masterData.divisions?.length || 0 },
+    { id: 'category', label: 'Filing Categories', icon: FolderTree, count: masterData.categories?.length || 2 },
+    { id: 'case_type', label: 'Case Types', icon: Scale, count: masterData.caseTypes?.length || 0 },
+    { id: 'case_status', label: 'Case Statuses', icon: Activity, count: masterData.caseStatuses?.length || 0 },
+    { id: 'case_pertains_to', label: 'Pertains To', icon: Building2, count: masterData.casePertainsTo?.length || 0 },
+    { id: 'nature_of_case', label: 'Nature of Case', icon: FileText, count: masterData.natureOfCases?.length || 0 },
+    { id: 'court_name', label: 'Courts & Tribunals', icon: Scale, count: masterData.courtNames?.length || 0 },
+    { id: 'law_officer', label: 'Law Officers', icon: UserCheck, count: masterData.lawOfficers?.length || 0 },
+    { id: 'petition_type', label: 'Petition Types', icon: FileText, count: masterData.petitionTypes?.length || 0 },
+    { id: 'converted_category', label: 'Appeal Categories', icon: FolderTree, count: masterData.convertedCategories?.length || 0 },
+  ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-4xl rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[90vh] flex flex-col">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
+            <div className="p-2.5 bg-blue-100 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400">
               <SlidersHorizontal className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Legal Cases Master Data Configuration
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Add, modify, rename or delete options across all legal case dropdowns
+              <p className="text-xs text-slate-500">
+                Configure dropdown values for Case Types, Courts, Law Officers, Circles, Divisions, etc.
               </p>
             </div>
           </div>
-
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900/50 px-6 pt-2 gap-2 overflow-x-auto">
-          {(
-            [
-              { id: 'case_type' as LegalCategory, label: 'Case Types', icon: Scale, count: masterData.caseTypes?.length || 0 },
-              { id: 'case_status' as LegalCategory, label: 'Case Statuses', icon: FileCheck, count: masterData.caseStatuses?.length || 0 },
-              { id: 'nature_of_case' as LegalCategory, label: 'Nature of Cases', icon: Tag, count: masterData.natureOfCases?.length || 0 },
-              { id: 'court_name' as LegalCategory, label: 'Courts / Complexes', icon: Gavel, count: masterData.courtNames?.length || 0 },
-              { id: 'law_officer' as LegalCategory, label: 'Law Officers', icon: UserCheck, count: masterData.lawOfficers?.length || 0 },
-              { id: 'case_pertains_to' as LegalCategory, label: 'Pertains To', icon: Building2, count: masterData.casePertainsTo?.length || 0 },
-              { id: 'circle' as LegalCategory, label: 'Circles', icon: MapPin, count: masterData.circles?.length || 0 },
-              { id: 'division' as LegalCategory, label: 'Divisions', icon: Building, count: masterData.divisions?.length || 0 },
-            ]
-          ).map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
+        {/* Category Tabs */}
+        <div className="px-4 pt-3 border-b border-slate-200 dark:border-slate-800 flex gap-1.5 bg-slate-50/30 dark:bg-slate-800/20 overflow-x-auto dropdown-scroll">
+          {tabs.map((t) => {
+            const Icon = t.icon;
+            const isActive = activeCategory === t.id;
             return (
               <button
-                key={tab.id}
+                key={t.id}
                 onClick={() => {
-                  setActiveTab(tab.id);
-                  setEditingIndex(null);
-                  setErrorMsg('');
-                  setSuccessMsg('');
+                  setActiveCategory(t.id);
+                  setEditingId(null);
+                  setError(null);
+                  setSuccess(null);
                   setSearchTerm('');
                 }}
-                className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-2 font-bold text-xs rounded-xl transition-all cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-xl shadow-xs'
-                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-t-xl'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-                <span
-                  className={`px-1.5 py-0.2 text-[10px] rounded-full font-extrabold ${
-                    isActive
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300'
-                      : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  {tab.count}
+                <span>{t.label}</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/20 text-inherit font-mono">
+                  {t.count}
                 </span>
               </button>
             );
@@ -284,121 +264,116 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-4 overflow-y-auto flex-1 dropdown-scroll">
+        <div className="p-6 overflow-y-auto space-y-4 flex-1 text-xs">
           {/* Notifications */}
-          {errorMsg && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 rounded-xl text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{errorMsg}</span>
+          {error && (
+            <div className="p-3 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
-          {successMsg && (
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-xl text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{successMsg}</span>
+          {success && (
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-2">
+              <Check className="w-4 h-4 shrink-0 text-emerald-600" />
+              <span>{success}</span>
             </div>
           )}
 
-          {/* Add Form & Search Filter */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <form onSubmit={handleAdd} className="sm:col-span-2 flex items-center gap-2">
-              <input
-                type="text"
-                placeholder={`Add new ${getTabLabel(activeTab).toLowerCase()} option...`}
-                value={newValue}
-                onChange={(e) => setNewValue(e.target.value)}
-                className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="submit"
-                disabled={loading || !newValue.trim()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs disabled:opacity-50 transition-all cursor-pointer"
-              >
-                <Plus className="w-4 h-4" /> Add
-              </button>
-            </form>
+          {/* Add New Option Form */}
+          <form onSubmit={handleAddOption} className="flex gap-2">
+            <input
+              type="text"
+              placeholder={`Add new option to ${tabs.find((t) => t.id === activeCategory)?.label}...`}
+              value={newValue}
+              onChange={(e) => setNewValue(e.target.value)}
+              className="flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="submit"
+              disabled={loading || !newValue.trim()}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer disabled:opacity-50 shadow-xs shrink-0"
+            >
+              <Plus className="w-4 h-4" /> Add Option
+            </button>
+          </form>
 
-            <div>
-              <input
-                type="text"
-                placeholder="Filter listed options..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+          {/* Search Filter */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <input
+              type="text"
+              placeholder="Filter options..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-3.5 py-2 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
 
-          {/* Options List */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900">
+          {/* List of Options Container with Vertical Scroller */}
+          <div className="space-y-2 mt-2 max-h-72 overflow-y-auto dropdown-scroll pr-1">
             {filteredItems.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-400 font-medium">
-                {searchTerm ? 'No options match your filter.' : 'No options configured yet.'}
+              <div className="p-8 text-center text-slate-400">
+                No options found in this category. Add one above!
               </div>
             ) : (
-              filteredItems.map((item, idx) => {
-                const isEditing = editingIndex === idx;
-
-                return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {filteredItems.map((item) => (
                   <div
-                    key={`${item}-${idx}`}
-                    className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                    key={item.id || item.value}
+                    className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between gap-2"
                   >
-                    {isEditing ? (
-                      <div className="flex items-center gap-2 flex-1">
+                    {editingId === (item.id || item.value) ? (
+                      <div className="flex items-center gap-1.5 flex-1">
                         <input
                           type="text"
-                          value={editValue}
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          className="w-full px-2.5 py-1 bg-white dark:bg-slate-800 border border-blue-500 rounded-lg text-xs font-bold text-slate-900 dark:text-slate-100 outline-none"
                           autoFocus
-                          onChange={(e) => setEditValue(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveEdit(item);
-                            if (e.key === 'Escape') setEditingIndex(null);
+                            if (e.key === 'Enter') handleSaveEdit(item.id || item.value);
+                            if (e.key === 'Escape') {
+                              setEditingId(null);
+                              setEditingValue('');
+                            }
                           }}
-                          className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-blue-500 rounded-lg text-xs font-bold text-slate-900 dark:text-slate-100 outline-none ring-2 ring-blue-500/20"
                         />
                         <button
-                          type="button"
-                          onClick={() => handleSaveEdit(item)}
-                          className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors cursor-pointer"
-                          title="Save Changes"
+                          onClick={() => handleSaveEdit(item.id || item.value)}
+                          className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg cursor-pointer"
+                          title="Save"
                         >
                           <Check className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          type="button"
-                          onClick={() => setEditingIndex(null)}
-                          className="p-1.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg transition-colors cursor-pointer"
-                          title="Cancel"
+                          onClick={() => {
+                            setEditingId(null);
+                            setEditingValue('');
+                          }}
+                          className="p-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-300 rounded-lg cursor-pointer"
+                          title="Cancel Edit"
                         >
-                          <RotateCcw className="w-3.5 h-3.5" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ) : (
                       <>
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold text-[10.5px] flex items-center justify-center">
-                            {idx + 1}
-                          </span>
-                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                            {item}
-                          </span>
-                        </div>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                          {item.value}
+                        </span>
 
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 shrink-0">
                           <button
-                            type="button"
-                            onClick={() => handleStartEdit(idx, item)}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors cursor-pointer"
-                            title="Rename Option"
+                            onClick={() => handleStartEdit(item.id, item.value)}
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-lg transition-colors cursor-pointer"
+                            title="Edit Option"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            type="button"
-                            onClick={() => handleDelete(item)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                            onClick={() => setDeleteConfirmItem({ id: item.id, value: item.value })}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/60 rounded-lg transition-colors cursor-pointer"
                             title="Delete Option"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -407,27 +382,61 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
                       </>
                     )}
                   </div>
-                );
-              })
+                ))}
+              </div>
             )}
           </div>
         </div>
 
-        {/* Modal Footer */}
-        <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 flex items-center justify-between">
-          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            Total {currentItems.length} options in {getTabLabel(activeTab)}
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+          <span className="text-[11px] text-slate-400 font-mono">
+            Master Data Sync &bull; Propagates dynamically to Legal Cases Portal
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+            className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors cursor-pointer"
           >
-            Close
+            Done
           </button>
         </div>
+
+        {/* Sub-Modal: Delete Confirmation */}
+        {deleteConfirmItem && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200">
+            <div
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-3 animate-in zoom-in-95 duration-150"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2.5 text-red-600">
+                <AlertTriangle className="w-5 h-5 shrink-0" />
+                <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">Delete Option</h4>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Are you sure you want to remove <strong className="text-slate-900 dark:text-slate-100">&quot;{deleteConfirmItem.value}&quot;</strong> from the master list?
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmItem(null)}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={loading}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold cursor-pointer disabled:opacity-50"
+                >
+                  {loading ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
-
 export default LegalMasterDataModal;

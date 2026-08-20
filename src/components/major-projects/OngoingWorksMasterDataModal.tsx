@@ -12,6 +12,7 @@ import {
   SlidersHorizontal,
   Building2,
   FileSpreadsheet,
+  Activity,
   Search,
 } from 'lucide-react';
 import { OngoingWorksMasterData } from '@/app/api/ongoing-works/master-data/route';
@@ -23,13 +24,15 @@ interface OngoingWorksMasterDataModalProps {
   onRefresh: () => void;
 }
 
+type CategoryType = 'division' | 'scheme' | 'work_stage';
+
 export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalProps> = ({
   isOpen,
   onClose,
   masterData,
   onRefresh,
 }) => {
-  const [activeCategory, setActiveCategory] = useState<'division' | 'scheme'>('division');
+  const [activeCategory, setActiveCategory] = useState<CategoryType>('division');
   const [newValue, setNewValue] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -49,7 +52,17 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
     (item) => item.category === activeCategory
   );
 
-  const filteredItems = currentCategoryItems.filter((item) =>
+  // Fallback to grouped list if rawItems is empty
+  const displayItems = currentCategoryItems.length > 0
+    ? currentCategoryItems
+    : (activeCategory === 'division'
+        ? masterData.divisions || []
+        : activeCategory === 'scheme'
+        ? masterData.schemes || []
+        : masterData.workStages || []
+      ).map((val, idx) => ({ id: `default-${idx}`, category: activeCategory, value: val }));
+
+  const filteredItems = displayItems.filter((item) =>
     (item.value || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -83,8 +96,8 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
   };
 
   const handleStartEdit = (id?: string, value?: string) => {
-    if (!id || !value) return;
-    setEditingId(id);
+    if (!value) return;
+    setEditingId(id || value);
     setEditingValue(value);
     setError(null);
     setSuccess(null);
@@ -98,18 +111,28 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
     setSuccess(null);
 
     try {
-      const res = await fetch('/api/ongoing-works/master-data', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, newValue: editingValue.trim() }),
-      });
+      if (id.startsWith('default-')) {
+        // Create in DB
+        const res = await fetch('/api/ongoing-works/master-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category: activeCategory, value: editingValue.trim() }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to update option');
+      } else {
+        const res = await fetch('/api/ongoing-works/master-data', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, value: editingValue.trim() }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to update option');
+      }
 
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to update master option');
-
-      setSuccess(`Updated option to "${json.value}"`);
       setEditingId(null);
       setEditingValue('');
+      setSuccess(`Updated option successfully.`);
       onRefresh();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -128,7 +151,7 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
 
     try {
       let url = `/api/ongoing-works/master-data?`;
-      if (deleteConfirmItem.id) {
+      if (deleteConfirmItem.id && !deleteConfirmItem.id.startsWith('default-')) {
         url += `id=${encodeURIComponent(deleteConfirmItem.id)}`;
       } else {
         url += `category=${activeCategory}&value=${encodeURIComponent(deleteConfirmItem.value)}`;
@@ -149,6 +172,8 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
     }
   };
 
+  const categoryLabel = activeCategory === 'division' ? 'Division' : activeCategory === 'scheme' ? 'Scheme' : 'Work Stage';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
@@ -163,10 +188,10 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Master Data Configuration
+                Ongoing Works Master Data Configuration
               </h2>
               <p className="text-xs text-slate-500">
-                Manage dynamic dropdown options for Divisions and Schemes
+                Manage dynamic dropdown options for Divisions, Schemes, and Work Stages
               </p>
             </div>
           </div>
@@ -194,7 +219,7 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
             }`}
           >
             <Building2 className="w-4 h-4" />
-            <span>Divisions ({masterData.divisions.length})</span>
+            <span>Divisions ({(masterData.divisions || []).length})</span>
           </button>
 
           <button
@@ -211,7 +236,24 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
             }`}
           >
             <FileSpreadsheet className="w-4 h-4" />
-            <span>Schemes ({masterData.schemes.length})</span>
+            <span>Schemes ({(masterData.schemes || []).length})</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveCategory('work_stage');
+              setEditingId(null);
+              setError(null);
+              setSuccess(null);
+            }}
+            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs border-b-2 transition-all cursor-pointer ${
+              activeCategory === 'work_stage'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-xl'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span>Work Stages ({(masterData.workStages || []).length})</span>
           </button>
         </div>
 
@@ -236,63 +278,65 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
           <form onSubmit={handleAddOption} className="flex gap-2">
             <input
               type="text"
-              placeholder={`Add new ${activeCategory === 'division' ? 'Division (e.g. Salem, Trichy)' : 'Scheme (e.g. Annual Plan 2027-28)'}...`}
+              placeholder={`Add new ${categoryLabel}...`}
               value={newValue}
               onChange={(e) => setNewValue(e.target.value)}
-              className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
+              className="flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               type="submit"
               disabled={loading || !newValue.trim()}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer disabled:opacity-50 shadow-xs shrink-0"
             >
-              <Plus className="w-4 h-4" />
-              <span>Add Option</span>
+              <Plus className="w-4 h-4" /> Add Option
             </button>
           </form>
 
-          {/* Search Filter Box */}
+          {/* Search Filter */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
             <input
               type="text"
-              placeholder={`Search ${activeCategory} options...`}
+              placeholder={`Filter ${categoryLabel} options...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200"
+              className="w-full pl-9 pr-3.5 py-2 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          {/* Existing Options List */}
-          <div className="space-y-1.5">
-            <h4 className="font-bold text-[11px] text-slate-400 uppercase tracking-wider">
-              Configured {activeCategory === 'division' ? 'Divisions' : 'Schemes'} ({filteredItems.length})
-            </h4>
-
+          {/* List of Options Container with Vertical Scroller */}
+          <div className="space-y-2 mt-2 max-h-72 overflow-y-auto dropdown-scroll pr-1">
             {filteredItems.length === 0 ? (
-              <div className="p-6 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-xl text-center text-slate-400">
-                No {activeCategory} options configured yet. Add one above to populate dropdowns.
+              <div className="p-8 text-center text-slate-400">
+                No {categoryLabel.toLowerCase()} options found. Add one above!
               </div>
             ) : (
-              <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {filteredItems.map((item) => (
                   <div
                     key={item.id || item.value}
-                    className="p-3 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                    className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between gap-2"
                   >
-                    {editingId === item.id ? (
-                      <div className="flex items-center gap-2 flex-1">
+                    {editingId === (item.id || item.value) ? (
+                      <div className="flex items-center gap-1.5 flex-1">
                         <input
                           type="text"
                           value={editingValue}
                           onChange={(e) => setEditingValue(e.target.value)}
-                          className="flex-1 px-2.5 py-1 bg-slate-50 dark:bg-slate-800 border border-blue-500 rounded-lg text-xs font-semibold"
+                          className="w-full px-2.5 py-1 bg-white dark:bg-slate-800 border border-blue-500 rounded-lg text-xs font-bold text-slate-900 dark:text-slate-100 outline-none"
                           autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveEdit(item.id || item.value);
+                            if (e.key === 'Escape') {
+                              setEditingId(null);
+                              setEditingValue('');
+                            }
+                          }}
                         />
                         <button
-                          onClick={() => handleSaveEdit(item.id)}
+                          onClick={() => handleSaveEdit(item.id || item.value)}
                           className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg cursor-pointer"
-                          title="Save Changes"
+                          title="Save"
                         >
                           <Check className="w-3.5 h-3.5" />
                         </button>
@@ -309,11 +353,11 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
                       </div>
                     ) : (
                       <>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
                           {item.value}
                         </span>
 
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 shrink-0">
                           <button
                             onClick={() => handleStartEdit(item.id, item.value)}
                             className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-lg transition-colors cursor-pointer"
@@ -389,3 +433,4 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
     </div>
   );
 };
+export default OngoingWorksMasterDataModal;

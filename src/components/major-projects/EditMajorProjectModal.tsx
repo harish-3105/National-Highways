@@ -15,6 +15,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 interface EditMajorProjectModalProps {
   project: MajorProject | null;
@@ -331,48 +332,34 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Division
+                    Division <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    list="division-edit-options"
+                  <SearchableSelect
+                    options={masterDivisions.length > 0 ? masterDivisions : ['Chennai', 'Salem', 'Madurai', 'Coimbatore', 'Tirunelveli']}
                     value={division}
-                    onChange={(e) => setDivision(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-500"
-                    placeholder="Select or type Division..."
+                    onChange={setDivision}
+                    placeholder="Select Division..."
                     required
                   />
-                  <datalist id="division-edit-options">
-                    {masterDivisions.map((d) => (
-                      <option key={d} value={d} />
-                    ))}
-                  </datalist>
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Scheme
+                    Scheme <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    list="scheme-edit-options"
+                  <SearchableSelect
+                    options={masterSchemes.length > 0 ? masterSchemes : ['NH(O)', 'CRIF', 'Annual Plan', 'Special Repairs', 'State Fund']}
                     value={scheme}
-                    onChange={(e) => setScheme(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500"
-                    placeholder="Select or type Scheme..."
+                    onChange={setScheme}
+                    placeholder="Select Scheme..."
                     required
                   />
-                  <datalist id="scheme-edit-options">
-                    {masterSchemes.map((s) => (
-                      <option key={s} value={s} />
-                    ))}
-                  </datalist>
                 </div>
               </div>
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Name of Work / Project Description
+                  Name of Work / Project Description <span className="text-rose-500">*</span>
                 </label>
                 <textarea
                   value={nameOfWork}
@@ -386,7 +373,7 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Total Project Cost (₹ in Cr.)
+                    Total Project Cost (₹ in Cr.) <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -402,14 +389,12 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Work Execution Stage
                   </label>
-                  <select
-                    value={workStage}
-                    onChange={(e) => setWorkStage(e.target.value as 'IN_PROGRESS' | 'TENDER_STAGE')}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="IN_PROGRESS">🚧 In Progress (Execution Stage)</option>
-                    <option value="TENDER_STAGE">📑 Tender / Sanction Stage</option>
-                  </select>
+                  <SearchableSelect
+                    options={['In Progress (Execution Stage)', 'Tender / Sanction Stage']}
+                    value={workStage === 'IN_PROGRESS' ? 'In Progress (Execution Stage)' : 'Tender / Sanction Stage'}
+                    onChange={(val) => setWorkStage(val.includes('Tender') ? 'TENDER_STAGE' : 'IN_PROGRESS')}
+                    placeholder="Select Stage..."
+                  />
                 </div>
               </div>
 

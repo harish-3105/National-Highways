@@ -8,6 +8,7 @@ import {
   getCircleForDivision,
 } from '@/lib/dlp/masterData';
 import { Edit3, X, Save, Plus, Trash2, Layers } from 'lucide-react';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 interface EditDlpContractModalProps {
   contract: DLPContractItem | null;
@@ -303,34 +304,26 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Circle <span className="text-red-500">*</span>
                 </label>
-                <select
+                <SearchableSelect
+                  options={DLP_CIRCLE_OPTIONS}
                   value={circleName}
-                  onChange={(e) => handleCircleChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {DLP_CIRCLE_OPTIONS.map((c) => (
-                    <option key={c} value={c}>
-                      {c} Circle
-                    </option>
-                  ))}
-                </select>
+                  onChange={handleCircleChange}
+                  placeholder="Select Circle..."
+                  required
+                />
               </div>
 
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Division <span className="text-red-500">*</span>
                 </label>
-                <select
+                <SearchableSelect
+                  options={divisionOptions}
                   value={divisionName}
-                  onChange={(e) => setDivisionName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {divisionOptions.map((d) => (
-                    <option key={d} value={d}>
-                      {d} Division
-                    </option>
-                  ))}
-                </select>
+                  onChange={setDivisionName}
+                  placeholder="Select Division..."
+                  required
+                />
               </div>
             </div>
 
@@ -648,17 +641,12 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
                         <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                           Maintenance Type
                         </label>
-                        <select
+                        <SearchableSelect
+                          options={MAINTENANCE_TYPES}
                           value={sub.maintenance_type}
-                          onChange={(e) => handleUpdateSubContract(idx, 'maintenance_type', e.target.value)}
-                          className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-xs"
-                        >
-                          {MAINTENANCE_TYPES.map((t) => (
-                            <option key={t} value={t}>
-                              {t}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(val) => handleUpdateSubContract(idx, 'maintenance_type', val)}
+                          placeholder="Select Type..."
+                        />
                       </div>
 
                       <div>
@@ -738,17 +726,12 @@ export const EditDlpContractModal: React.FC<EditDlpContractModalProps> = ({
 
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Primary Contract Mode</label>
-                <select
+                <SearchableSelect
+                  options={CONTRACT_MODES}
                   value={contractMode}
-                  onChange={(e) => setContractMode(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold"
-                >
-                  {CONTRACT_MODES.map((mode) => (
-                    <option key={mode} value={mode}>
-                      {mode}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setContractMode}
+                  placeholder="Select Mode..."
+                />
               </div>
             </div>
 

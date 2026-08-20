@@ -35,6 +35,7 @@ export const MajorProjectsDashboard: React.FC = () => {
     rawItems: [],
     divisions: [],
     schemes: [],
+    workStages: [],
   });
   const [loading, setLoading] = useState<boolean>(true);
   const [showArchived, setShowArchived] = useState<boolean>(false);

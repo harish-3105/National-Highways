@@ -515,43 +515,36 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
               Payment Settlement Status
             </label>
-            <select
+            <SearchableSelect
+              options={masterData.paymentStatuses || ['Not Settled', 'Settled']}
               value={formData.paymentStatus}
-              onChange={(e) => setFormData((prev) => ({ ...prev, paymentStatus: e.target.value as any }))}
-              className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-blue-900 dark:text-blue-300"
-            >
-              <option value="Not Settled">Not Settled (Pending Approval)</option>
-              <option value="Settled">Settled (Disbursed & Closed)</option>
-            </select>
+              onChange={(val) => setFormData((prev) => ({ ...prev, paymentStatus: val as any }))}
+              placeholder="Select Payment Status..."
+            />
           </div>
 
           <div>
             <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
               G.O. Required Status
             </label>
-            <select
-              value={formData.goStatus}
-              onChange={(e) => setFormData((prev) => ({ ...prev, goStatus: e.target.value as GOStatusType }))}
-              className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold"
-            >
-              <option value="Yes">Yes (G.O. Sanction Required)</option>
-              <option value="No">No (Direct Office Level)</option>
-              <option value="Not Required">Not Required</option>
-            </select>
+            <SearchableSelect
+              options={['Yes', 'No', 'Not Required']}
+              value={formData.goStatus || 'Not Required'}
+              onChange={(val) => setFormData((prev) => ({ ...prev, goStatus: val as GOStatusType }))}
+              placeholder="Select G.O. Status..."
+            />
           </div>
 
           <div>
             <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
               Proposal Submitted to SE/CE
             </label>
-            <select
-              value={formData.proposalSubmitted}
-              onChange={(e) => setFormData((prev) => ({ ...prev, proposalSubmitted: e.target.value as YesNoType }))}
-              className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold"
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
+            <SearchableSelect
+              options={['No', 'Yes']}
+              value={formData.proposalSubmitted || 'No'}
+              onChange={(val) => setFormData((prev) => ({ ...prev, proposalSubmitted: val as YesNoType }))}
+              placeholder="Select..."
+            />
           </div>
         </div>
 
@@ -583,14 +576,12 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               </div>
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Payment Sanction Received?</label>
-                <select
-                  value={formData.paymentSanction}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, paymentSanction: e.target.value as YesNoType }))}
-                  className="w-full py-1.5 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg font-medium"
-                >
-                  <option value="No">No</option>
-                  <option value="Yes">Yes</option>
-                </select>
+                <SearchableSelect
+                  options={['No', 'Yes']}
+                  value={formData.paymentSanction || 'No'}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, paymentSanction: val as YesNoType }))}
+                  placeholder="Select..."
+                />
               </div>
             </div>
 

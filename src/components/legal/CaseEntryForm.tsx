@@ -660,18 +660,14 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </p>
               </div>
 
-              <select
-                value={formData.counterAffidavitFiled}
-                onChange={(e) => updateField('counterAffidavitFiled', e.target.value as 'Yes' | 'No')}
-                className={`px-4 py-2 rounded-xl font-bold text-xs border outline-none cursor-pointer ${
-                  formData.counterAffidavitFiled === 'Yes'
-                    ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
-                    : 'bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-700'
-                }`}
-              >
-                <option value="Yes">Yes - Counter Affidavit Filed</option>
-                <option value="No">No - Counter Affidavit Pending</option>
-              </select>
+              <div className="w-64">
+                <SearchableSelect
+                  options={['Yes', 'No']}
+                  value={formData.counterAffidavitFiled}
+                  onChange={(val) => updateField('counterAffidavitFiled', val as 'Yes' | 'No')}
+                  placeholder="Select..."
+                />
+              </div>
             </div>
 
             {/* Branch 1: Counter Affidavit Filed = YES */}
@@ -814,14 +810,14 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                           Has the Government Pleader recommended filing an appeal?
                         </p>
                       </div>
-                      <select
-                        value={formData.postHearingData?.eligibilityForAppeal || 'No'}
-                        onChange={(e) => updateNestedField('postHearingData', 'eligibilityForAppeal', e.target.value as 'Yes' | 'No')}
-                        className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none"
-                      >
-                        <option value="Yes">Yes - Eligible for Appeal</option>
-                        <option value="No">No - Not Eligible</option>
-                      </select>
+                      <div className="w-56">
+                        <SearchableSelect
+                          options={['Yes', 'No']}
+                          value={formData.postHearingData?.eligibilityForAppeal || 'No'}
+                          onChange={(val) => updateNestedField('postHearingData', 'eligibilityForAppeal', val as 'Yes' | 'No')}
+                          placeholder="Select..."
+                        />
+                      </div>
                     </div>
 
                     {formData.postHearingData?.eligibilityForAppeal === 'Yes' && (
@@ -933,14 +929,13 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   Category <span className="text-rose-500">*</span>
                 </label>
-                <select
+                <SearchableSelect
+                  options={masterData?.convertedCategories || ['Appealed by Department', 'Appealed by Other Party', 'Other']}
                   value={formData.convertedCase?.category || 'Appealed by Department'}
-                  onChange={(e) => updateConvertedField('category', e.target.value as ConvertedCategoryType)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold outline-none"
-                >
-                  <option value="Appealed by Department">Appealed by Department</option>
-                  <option value="Appealed by Other Party">Appealed by Other Party</option>
-                </select>
+                  onChange={(val) => updateConvertedField('category', val as ConvertedCategoryType)}
+                  placeholder="Select Category..."
+                  required
+                />
                 {errors['convertedCase.category'] && <span className="text-[11px] font-semibold text-rose-500">{errors['convertedCase.category']}</span>}
               </div>
 
@@ -948,17 +943,13 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   Type of Petition <span className="text-rose-500">*</span>
                 </label>
-                <select
+                <SearchableSelect
+                  options={masterData?.petitionTypes || ['Review Petition', 'Contempt Petition', 'Execution Petition', 'Special Leave Petition (SLP)', 'Writ Appeal (WA)', 'Other']}
                   value={formData.convertedCase?.typeOfPetition || 'Review Petition'}
-                  onChange={(e) => updateConvertedField('typeOfPetition', e.target.value as PetitionType)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold outline-none"
-                >
-                  <option value="Review Petition">Review Petition</option>
-                  <option value="Contempt Petition">Contempt Petition</option>
-                  <option value="Execution Petition">Execution Petition</option>
-                  <option value="Special Leave Petition (SLP)">Special Leave Petition (SLP)</option>
-                  <option value="Other">Other</option>
-                </select>
+                  onChange={(val) => updateConvertedField('typeOfPetition', val as PetitionType)}
+                  placeholder="Select Petition Type..."
+                  required
+                />
                 {errors['convertedCase.typeOfPetition'] && <span className="text-[11px] font-semibold text-rose-500">{errors['convertedCase.typeOfPetition']}</span>}
               </div>
 
@@ -1157,18 +1148,18 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               </div>
 
               {/* Converted Case Counter Affidavit Dropdown */}
-              <div className="bg-slate-100 dark:bg-slate-800/80 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3">
+              <div className="bg-slate-100 dark:bg-slate-800/80 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
                   Counter Affidavit Filed in Petition?
                 </label>
-                <select
-                  value={formData.convertedCase?.counterAffidavitFiled || 'No'}
-                  onChange={(e) => updateConvertedField('counterAffidavitFiled', e.target.value as 'Yes' | 'No')}
-                  className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none cursor-pointer"
-                >
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
+                <div className="w-40">
+                  <SearchableSelect
+                    options={['Yes', 'No']}
+                    value={formData.convertedCase?.counterAffidavitFiled || 'No'}
+                    onChange={(val) => updateConvertedField('counterAffidavitFiled', val as 'Yes' | 'No')}
+                    placeholder="Select..."
+                  />
+                </div>
               </div>
 
               {formData.convertedCase?.counterAffidavitFiled === 'Yes' && (

@@ -133,12 +133,11 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   };
 
   // Dynamic Height Calculation:
-  // If list <= 10 items: show full list without inner scroll cutoffs.
-  // If list > 10 items: enable smooth scrolling with max-h-72 or max-h-80.
-  const isShortList = filteredOptions.length <= 10;
+  // Show clean vertical scrollbar when options exceed height
+  const isShortList = filteredOptions.length <= 8;
   const listHeightClass = isShortList
-    ? 'max-h-none'
-    : 'max-h-72 sm:max-h-80 overflow-y-auto';
+    ? 'max-h-60 overflow-y-auto'
+    : 'max-h-64 sm:max-h-72 overflow-y-auto';
 
   return (
     <div
@@ -196,7 +195,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
 
       {isOpen && !disabled && (
         <div
-          className="absolute top-[calc(100%+4px)] left-0 right-0 z-[9999] bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+          className="absolute top-[calc(100%+4px)] left-0 right-0 z-[99999] bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
           style={{ minWidth: '100%' }}
         >
           {/* Search Header for lists > 5 options */}

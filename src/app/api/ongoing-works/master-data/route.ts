@@ -12,7 +12,7 @@ function getSupabaseClient() {
 
 export interface MasterConfigItem {
   id: string;
-  category: "division" | "scheme";
+  category: "division" | "scheme" | "work_stage";
   value: string;
   created_at?: string;
 }
@@ -21,16 +21,54 @@ export interface OngoingWorksMasterData {
   rawItems: MasterConfigItem[];
   divisions: string[];
   schemes: string[];
+  workStages: string[];
 }
 
+const DEFAULT_DIVISIONS = [
+  "Chennai",
+  "Salem",
+  "Madurai",
+  "Coimbatore",
+  "Tirunelveli",
+  "Villupuram",
+  "Tiruchirappalli",
+  "Dharapuram",
+  "Thanjavur",
+];
+
+const DEFAULT_SCHEMES = [
+  "NH(O)",
+  "CRIF",
+  "Annual Plan",
+  "Special Repairs",
+  "State Fund",
+  "EPC Work",
+  "HAM Project",
+];
+
+const DEFAULT_WORK_STAGES = [
+  "IN_PROGRESS",
+  "TENDER_STAGE",
+  "COMPLETED",
+  "DELAYED",
+  "SANCTIONED",
+  "PRE_CONSTRUCTION",
+];
+
 function groupMasterData(items: MasterConfigItem[]): OngoingWorksMasterData {
-  const divisions = Array.from(new Set(items.filter((i) => i.category === "division").map((i) => i.value))).sort();
-  const schemes = Array.from(new Set(items.filter((i) => i.category === "scheme").map((i) => i.value))).sort();
+  const dbDivisions = Array.from(new Set(items.filter((i) => i.category === "division").map((i) => i.value)));
+  const dbSchemes = Array.from(new Set(items.filter((i) => i.category === "scheme").map((i) => i.value)));
+  const dbStages = Array.from(new Set(items.filter((i) => i.category === "work_stage").map((i) => i.value)));
+
+  const divisions = Array.from(new Set([...(dbDivisions.length > 0 ? dbDivisions : DEFAULT_DIVISIONS)])).sort();
+  const schemes = Array.from(new Set([...(dbSchemes.length > 0 ? dbSchemes : DEFAULT_SCHEMES)])).sort();
+  const workStages = Array.from(new Set([...(dbStages.length > 0 ? dbStages : DEFAULT_WORK_STAGES)])).sort();
 
   return {
     rawItems: items,
     divisions,
     schemes,
+    workStages,
   };
 }
 
@@ -48,7 +86,7 @@ export async function GET() {
       .order("value", { ascending: true });
 
     if (error) {
-      console.error("Error fetching ongoing_works_master_config:", error);
+      console.warn("Notice: ongoing_works_master_config DB read, using fallbacks:", error.message);
       return NextResponse.json(groupMasterData([]));
     }
 
@@ -74,11 +112,23 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanCategory = category.trim().toLowerCase();
-    if (cleanCategory !== "division" && cleanCategory !== "scheme") {
-      return NextResponse.json({ error: "Category must be 'division' or 'scheme'" }, { status: 400 });
+    if (!["division", "scheme", "work_stage"].includes(cleanCategory)) {
+      return NextResponse.json({ error: "Category must be 'division', 'scheme', or 'work_stage'" }, { status: 400 });
     }
 
     const cleanValue = value.trim();
+
+    // Check duplicate
+    const { data: existing } = await supabase
+      .from("ongoing_works_master_config")
+      .select("id")
+      .eq("category", cleanCategory)
+      .ilike("value", cleanValue)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({ error: `Option "${cleanValue}" already exists in ${cleanCategory}` }, { status: 409 });
+    }
 
     const { data, error } = await supabase
       .from("ongoing_works_master_config")
@@ -87,16 +137,15 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      if (error.code === "23505") {
-        return NextResponse.json({ error: `"${cleanValue}" already exists in ${cleanCategory} options.` }, { status: 400 });
-      }
+      console.error("Error creating master config item:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json(data, { status: 201 });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg || "Failed to add master data option" }, { status: 500 });
+    console.error("POST /api/ongoing-works/master-data error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -107,80 +156,31 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
     }
 
-    const { id, category, oldValue, newValue } = await request.json();
+    const { id, value } = await request.json();
 
-    if (!newValue || typeof newValue !== "string" || newValue.trim() === "") {
-      return NextResponse.json({ error: "New option value is required" }, { status: 400 });
+    if (!id || !value || typeof value !== "string" || value.trim() === "") {
+      return NextResponse.json({ error: "ID and updated value are required" }, { status: 400 });
     }
 
-    const cleanNewValue = newValue.trim();
+    const cleanValue = value.trim();
 
-    if (id) {
-      const { data: existing } = await supabase
-        .from("ongoing_works_master_config")
-        .select("*")
-        .eq("id", id)
-        .single();
+    const { data, error } = await supabase
+      .from("ongoing_works_master_config")
+      .update({ value: cleanValue })
+      .eq("id", id)
+      .select()
+      .single();
 
-      const { data, error } = await supabase
-        .from("ongoing_works_master_config")
-        .update({ value: cleanNewValue })
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) {
-        if (error.code === "23505") {
-          return NextResponse.json({ error: `An option named "${cleanNewValue}" already exists.` }, { status: 400 });
-        }
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-
-      // Sync existing ongoing work records if category matches division or scheme
-      if (existing && existing.category && existing.value) {
-        const catColumn = existing.category === "division" ? "division" : "scheme";
-        try {
-          await supabase
-            .from("major_projects_50cr")
-            .update({ [catColumn]: cleanNewValue })
-            .eq(catColumn, existing.value);
-        } catch (syncErr) {
-          console.warn("Syncing project records warning:", syncErr);
-        }
-      }
-
-      return NextResponse.json(data);
-    } else if (category && oldValue) {
-      const cleanCategory = category.trim().toLowerCase();
-      const cleanOldValue = oldValue.trim();
-
-      const { data, error } = await supabase
-        .from("ongoing_works_master_config")
-        .update({ value: cleanNewValue })
-        .eq("category", cleanCategory)
-        .eq("value", cleanOldValue)
-        .select();
-
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-      // Sync ongoing work records
-      const catColumn = cleanCategory === "division" ? "division" : "scheme";
-      try {
-        await supabase
-          .from("major_projects_50cr")
-          .update({ [catColumn]: cleanNewValue })
-          .eq(catColumn, cleanOldValue);
-      } catch (syncErr) {
-        console.warn("Syncing project records warning:", syncErr);
-      }
-
-      return NextResponse.json(data);
-    } else {
-      return NextResponse.json({ error: "Missing id or category/oldValue parameters" }, { status: 400 });
+    if (error) {
+      console.error("Error updating master config item:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    return NextResponse.json(data);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg || "Failed to update master data option" }, { status: 500 });
+    console.error("PUT /api/ongoing-works/master-data error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -193,26 +193,25 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    const category = searchParams.get("category");
-    const value = searchParams.get("value");
 
-    if (id) {
-      const { error } = await supabase.from("ongoing_works_master_config").delete().eq("id", id);
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    } else if (category && value) {
-      const { error } = await supabase
-        .from("ongoing_works_master_config")
-        .delete()
-        .eq("category", category)
-        .eq("value", value);
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    } else {
-      return NextResponse.json({ error: "Missing id or category/value parameters" }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: "ID query parameter is required" }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, message: "Option deleted successfully" });
+    const { error } = await supabase
+      .from("ongoing_works_master_config")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error deleting master config item:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: "Deleted successfully" });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg || "Failed to delete option" }, { status: 500 });
+    console.error("DELETE /api/ongoing-works/master-data error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

@@ -24,6 +24,7 @@ import {
   RotateCcw,
   AlertTriangle,
 } from 'lucide-react';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 interface ViewHighwayModalProps {
   highway: HighwayCorridor | null;
@@ -340,20 +341,13 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
         </div>
 
         <div>
-          <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Lane Status</label>
-          <select
+          <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Lane Status</label>
+          <SearchableSelect
+            options={['2-Lane', '2L+PS', '4-Lane', '4L+PS', '6-Lane', '<2-Lane', 'Primary']}
             value={subLaneConfig}
-            onChange={(e) => setSubLaneConfig(e.target.value)}
-            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100"
-          >
-            <option value="2-Lane">2-Lane</option>
-            <option value="2L+PS">2L+PS</option>
-            <option value="4-Lane">4-Lane</option>
-            <option value="4L+PS">4L+PS</option>
-            <option value="6-Lane">6-Lane</option>
-            <option value="<2-Lane">&lt;2-Lane</option>
-            <option value="Primary">Primary (Macro Range)</option>
-          </select>
+            onChange={setSubLaneConfig}
+            placeholder="Select Lane Config..."
+          />
         </div>
 
         <div>

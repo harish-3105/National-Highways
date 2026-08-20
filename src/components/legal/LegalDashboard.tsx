@@ -39,12 +39,15 @@ export const LegalDashboard: React.FC = () => {
     rawItems: [],
     circles: ['Chennai', 'Madurai', 'Salem', 'Coimbatore', 'Tirunelveli', 'Villupuram'],
     divisions: ['Chennai City Division', 'Chengalpattu Division', 'Tiruvallur Division', 'Madurai Division', 'Dindigul Division', 'Theni Division', 'Salem Division', 'Namakkal Division', 'Dharmapuri Division'],
+    categories: ['Filed Against Department', 'Filed By Department'],
     caseTypes: ['Writ Petition (WP)', 'Writ Appeal (WA)', 'Civil Revision Petition (CRP)', 'Original Side Appeal (OSA)', 'Special Leave Petition (SLP)', 'Contempt Petition'],
     caseStatuses: ['Pending', 'Disposed', 'Stay Granted', 'Interim Order', 'Dismissed', 'Allowed'],
     casePertainsTo: ['GOTN', 'MoRTH', 'Both', 'NHAI'],
     natureOfCases: ['Work', 'Tender', 'Land Acquisition', 'Encroachment', 'Arbitration', 'Service Matter', 'Other'],
     courtNames: ['High Court of Madras (Principal Seat, Chennai)', 'High Court of Madras (Madurai Bench)', 'Supreme Court of India (New Delhi)', 'District Court Complex'],
     lawOfficers: ['Advocate General of Tamil Nadu', 'Additional Advocate General', 'Special Government Pleader (Highways)', 'Additional Government Pleader', 'Government Advocate (Civil Side)'],
+    petitionTypes: ['Review Petition', 'Contempt Petition', 'Execution Petition', 'Special Leave Petition (SLP)', 'Writ Appeal (WA)', 'Other'],
+    convertedCategories: ['Appealed by Department', 'Appealed by Other Party', 'Other'],
   });
 
   const fetchMasterData = async () => {

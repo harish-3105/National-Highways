@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Edit3, AlertCircle } from "lucide-react";
 import { StaffMember, StaffMasterConfig } from "./StaffTypes";
+import { SearchableSelect } from "@/components/common/SearchableSelect";
 
 interface EditStaffModalProps {
   isOpen: boolean;
@@ -147,18 +148,12 @@ export const EditStaffModal: React.FC<EditStaffModalProps> = ({
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Designation
               </label>
-              <select
+              <SearchableSelect
+                options={masterConfig.designations.length > 0 ? masterConfig.designations : ['Superintending Engineer', 'Divisional Engineer', 'Assistant Divisional Engineer', 'Assistant Engineer']}
                 value={designation}
-                onChange={(e) => setDesignation(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Designation...</option>
-                {masterConfig.designations.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
+                onChange={setDesignation}
+                placeholder="Select Designation..."
+              />
             </div>
           </div>
 
@@ -168,36 +163,24 @@ export const EditStaffModal: React.FC<EditStaffModalProps> = ({
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Office
               </label>
-              <select
+              <SearchableSelect
+                options={masterConfig.offices.length > 0 ? masterConfig.offices : ['Headquarters', 'Circle Office', 'Division Office', 'Sub-Division Office']}
                 value={office}
-                onChange={(e) => setOffice(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Office...</option>
-                {masterConfig.offices.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
+                onChange={setOffice}
+                placeholder="Select Office..."
+              />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Circle
               </label>
-              <select
+              <SearchableSelect
+                options={masterConfig.circles.length > 0 ? masterConfig.circles : ['Chennai', 'Salem', 'Madurai', 'Coimbatore', 'Tirunelveli', 'Villupuram']}
                 value={circle}
-                onChange={(e) => setCircle(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Circle...</option>
-                {masterConfig.circles.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+                onChange={setCircle}
+                placeholder="Select Circle..."
+              />
             </div>
           </div>
 
@@ -207,36 +190,24 @@ export const EditStaffModal: React.FC<EditStaffModalProps> = ({
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Division
               </label>
-              <select
+              <SearchableSelect
+                options={masterConfig.divisions.length > 0 ? masterConfig.divisions : ['Salem', 'Madurai', 'Chennai', 'Dharapuram', 'Tirunelveli', 'Villupuram', 'Thanjavur']}
                 value={division}
-                onChange={(e) => setDivision(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Division...</option>
-                {masterConfig.divisions.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
+                onChange={setDivision}
+                placeholder="Select Division..."
+              />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Sub Division
               </label>
-              <select
+              <SearchableSelect
+                options={masterConfig.sub_divisions}
                 value={subDivision}
-                onChange={(e) => setSubDivision(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Sub Division...</option>
-                {masterConfig.sub_divisions.map((sd) => (
-                  <option key={sd} value={sd}>
-                    {sd}
-                  </option>
-                ))}
-              </select>
+                onChange={setSubDivision}
+                placeholder="Select Sub Division..."
+              />
             </div>
           </div>
 
@@ -246,36 +217,24 @@ export const EditStaffModal: React.FC<EditStaffModalProps> = ({
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Section
               </label>
-              <select
+              <SearchableSelect
+                options={masterConfig.sections}
                 value={section}
-                onChange={(e) => setSection(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Section...</option>
-                {masterConfig.sections.map((sec) => (
-                  <option key={sec} value={sec}>
-                    {sec}
-                  </option>
-                ))}
-              </select>
+                onChange={setSection}
+                placeholder="Select Section..."
+              />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Sub Section
               </label>
-              <select
+              <SearchableSelect
+                options={masterConfig.sub_sections}
                 value={subSection}
-                onChange={(e) => setSubSection(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Sub Section...</option>
-                {masterConfig.sub_sections.map((ss) => (
-                  <option key={ss} value={ss}>
-                    {ss}
-                  </option>
-                ))}
-              </select>
+                onChange={setSubSection}
+                placeholder="Select Sub Section..."
+              />
             </div>
           </div>
 
