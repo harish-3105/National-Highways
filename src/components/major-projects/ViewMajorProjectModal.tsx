@@ -374,13 +374,25 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
               </div>
             </div>
 
-            {/* Physical Progress & Work Stage Remarks */}
+            {/* Physical Progress / Tender Stage Milestone Remarks */}
             {project.stage_remarks && (
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
-                  Physical Progress &amp; Work Stage Remarks
+              <div
+                className={`p-3.5 rounded-xs border space-y-1 ${
+                  isTender
+                    ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/60'
+                    : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800'
+                }`}
+              >
+                <span
+                  className={`text-[10px] uppercase font-bold tracking-wider block ${
+                    isTender ? 'text-amber-800 dark:text-amber-300' : 'text-slate-400'
+                  }`}
+                >
+                  {isTender
+                    ? '📋 Pre-Construction & Tender Stage Milestone Details'
+                    : 'Physical Progress & Work Stage Remarks'}
                 </span>
-                <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
+                <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed whitespace-pre-line">
                   {project.stage_remarks}
                 </p>
               </div>

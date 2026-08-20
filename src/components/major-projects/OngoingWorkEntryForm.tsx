@@ -514,78 +514,99 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
             </div>
           </div>
 
-          {workStage === 'IN_PROGRESS' && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+          {workStage === 'TENDER_STAGE' ? (
+            <div className="p-4 bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-xl space-y-3 animate-in fade-in duration-150">
+              <span className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider block">
+                Pre-Construction &amp; Tender Stage Milestone Details
+              </span>
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Physical Progress (%)
+                  Tender Stage Status &amp; Milestone Details <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="100"
-                  value={progressPercent}
-                  onChange={(e) => {
-                    setProgressPercent(e.target.value);
-                    if (errors.progressPercent) setErrors((prev) => ({ ...prev, progressPercent: '' }));
-                  }}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. 68.5"
-                />
-                {errors.progressPercent && (
-                  <p className="text-[11px] text-rose-500 mt-1">{errors.progressPercent}</p>
-                )}
-              </div>
-
-              <div>
-                <DatePickerInput
-                  label="Probable / Revised Completion Date"
-                  value={probableCompletionDate}
-                  onChange={setProbableCompletionDate}
+                <textarea
+                  rows={3}
+                  value={stageRemarks}
+                  onChange={(e) => setStageRemarks(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500 leading-relaxed"
+                  placeholder="e.g. Tender invited by MoRTH HQ on 30.07.2026. Bid due date: 15.09.2026, technical bids under evaluation, or LOA issued to lowest bidder..."
+                  required
                 />
               </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Physical Progress (%)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={progressPercent}
+                    onChange={(e) => {
+                      setProgressPercent(e.target.value);
+                      if (errors.progressPercent) setErrors((prev) => ({ ...prev, progressPercent: '' }));
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. 68.5"
+                  />
+                  {errors.progressPercent && (
+                    <p className="text-[11px] text-rose-500 mt-1">{errors.progressPercent}</p>
+                  )}
+                </div>
 
-              <div>
-                <DatePickerInput
-                  label="Scheduled Agreement Completion Date"
-                  value={scheduledCompletionDate}
-                  onChange={setScheduledCompletionDate}
+                <div>
+                  <DatePickerInput
+                    label="Probable / Revised Completion Date"
+                    value={probableCompletionDate}
+                    onChange={setProbableCompletionDate}
+                  />
+                </div>
+
+                <div>
+                  <DatePickerInput
+                    label="Scheduled Agreement Completion Date"
+                    value={scheduledCompletionDate}
+                    onChange={setScheduledCompletionDate}
+                  />
+                </div>
+              </div>
+
+              {computedDelay && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center justify-between text-xs">
+                  <span className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                    <Clock className="w-4 h-4" /> Timeline Status:
+                  </span>
+                  <span
+                    className={`font-extrabold ${
+                      computedDelay.isDelayed
+                        ? 'text-rose-700 dark:text-rose-400'
+                        : 'text-emerald-700 dark:text-emerald-400'
+                    }`}
+                  >
+                    {computedDelay.humanText}
+                  </span>
+                </div>
+              )}
+
+              {/* Physical Progress & Work Stage Remarks */}
+              <div className="pt-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Physical Progress &amp; Work Stage Remarks
+                </label>
+                <textarea
+                  rows={3}
+                  value={stageRemarks}
+                  onChange={(e) => setStageRemarks(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. Work in active progress, pier foundation completed, or milestone update..."
                 />
               </div>
             </div>
           )}
-
-          {computedDelay && (
-            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center justify-between text-xs">
-              <span className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-                <Clock className="w-4 h-4" /> Timeline Status:
-              </span>
-              <span
-                className={`font-extrabold ${
-                  computedDelay.isDelayed
-                    ? 'text-rose-700 dark:text-rose-400'
-                    : 'text-emerald-700 dark:text-emerald-400'
-                }`}
-              >
-                {computedDelay.humanText}
-              </span>
-            </div>
-          )}
-
-          {/* Physical Progress & Work Stage Remarks */}
-          <div className="pt-2">
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Physical Progress &amp; Work Stage Remarks
-            </label>
-            <textarea
-              rows={3}
-              value={stageRemarks}
-              onChange={(e) => setStageRemarks(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g. Work in active progress, pier foundation completed, or tender milestone update..."
-            />
-          </div>
         </div>
       </div>
 
