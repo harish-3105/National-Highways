@@ -43,7 +43,7 @@ export const AddHighwayModal: React.FC<AddHighwayModalProps> = ({
   const [length2lPs, setLength2lPs] = useState('0');
   const [length4l, setLength4l] = useState('0');
   const [length6l, setLength6l] = useState('0');
-  const [configuration, setConfiguration] = useState('2-Lane');
+  const [configuration, setConfiguration] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');

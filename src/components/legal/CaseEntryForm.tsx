@@ -1155,7 +1155,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 <div className="w-40">
                   <SearchableSelect
                     options={['Yes', 'No']}
-                    value={formData.convertedCase?.counterAffidavitFiled || 'No'}
+                    value={formData.convertedCase?.counterAffidavitFiled || ''}
                     onChange={(val) => updateConvertedField('counterAffidavitFiled', val as 'Yes' | 'No')}
                     placeholder="Select..."
                   />

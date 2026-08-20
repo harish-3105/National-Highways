@@ -529,7 +529,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             </label>
             <SearchableSelect
               options={['Yes', 'No', 'Not Required']}
-              value={formData.goStatus || 'Not Required'}
+              value={formData.goStatus || ''}
               onChange={(val) => setFormData((prev) => ({ ...prev, goStatus: val as GOStatusType }))}
               placeholder="Select G.O. Status..."
             />
@@ -541,7 +541,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             </label>
             <SearchableSelect
               options={['No', 'Yes']}
-              value={formData.proposalSubmitted || 'No'}
+              value={formData.proposalSubmitted || ''}
               onChange={(val) => setFormData((prev) => ({ ...prev, proposalSubmitted: val as YesNoType }))}
               placeholder="Select..."
             />
@@ -578,7 +578,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Payment Sanction Received?</label>
                 <SearchableSelect
                   options={['No', 'Yes']}
-                  value={formData.paymentSanction || 'No'}
+                  value={formData.paymentSanction || ''}
                   onChange={(val) => setFormData((prev) => ({ ...prev, paymentSanction: val as YesNoType }))}
                   placeholder="Select..."
                 />
