@@ -49,7 +49,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
   const [subFromKm, setSubFromKm] = useState<string>('');
   const [subToKm, setSubToKm] = useState<string>('');
-  const [subLaneConfig, setSubLaneConfig] = useState<string>('2-Lane');
+  const [subLaneConfig, setSubLaneConfig] = useState<string>('');
   const [subPcu, setSubPcu] = useState<string>('0');
   const [subDivision, setSubDivision] = useState<string>('');
   const [subDpr, setSubDpr] = useState<string>('');
@@ -157,7 +157,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
     setEditingSubId(null);
     setSubFromKm('');
     setSubToKm('');
-    setSubLaneConfig(activeTab === 'MICRO_LANE' ? '2-Lane' : 'Primary');
+    setSubLaneConfig('');
     setSubPcu('0');
     setSubDivision('');
     setSubDpr('');
@@ -177,7 +177,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
     setEditingSubId(sub.id);
     setSubFromKm(String(sub.from_km));
     setSubToKm(String(sub.to_km));
-    setSubLaneConfig(sub.lane_configuration || '2-Lane');
+    setSubLaneConfig(sub.lane_configuration || '');
     setSubPcu(String(sub.pcu_count || 0));
     setSubDivision(sub.division_name || '');
     setSubDpr(sub.dpr_status || '');

@@ -25,14 +25,14 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
   onSuccess,
 }) => {
   const [highwayCode, setHighwayCode] = useState('');
-  const [circleName, setCircleName] = useState<string>('Salem');
-  const [divisionName, setDivisionName] = useState<string>('Salem');
+  const [circleName, setCircleName] = useState<string>('');
+  const [divisionName, setDivisionName] = useState<string>('');
   const [stretchName, setStretchName] = useState('');
-  const [fromKm, setFromKm] = useState<number | ''>(0);
-  const [toKm, setToKm] = useState<number | ''>(10);
+  const [fromKm, setFromKm] = useState<number | ''>('');
+  const [toKm, setToKm] = useState<number | ''>('');
 
   const [contractorName, setContractorName] = useState('');
-  const [contractMode, setContractMode] = useState('EPC');
+  const [contractMode, setContractMode] = useState('');
   const [workDescription, setWorkDescription] = useState('');
   const [docDate, setDocDate] = useState('');
   const [dlpExpiryDate, setDlpExpiryDate] = useState('');
@@ -69,12 +69,13 @@ export const AddDlpContractModal: React.FC<AddDlpContractModalProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
 
   // Update available division options when Circle changes
-  const divisionOptions = DLP_CIRCLE_DIVISION_MAP[circleName] || [];
+  const divisionOptions = circleName
+    ? (DLP_CIRCLE_DIVISION_MAP[circleName] || [])
+    : Object.values(DLP_CIRCLE_DIVISION_MAP).flat();
 
   const handleCircleChange = (c: string) => {
     setCircleName(c);
-    const divs = DLP_CIRCLE_DIVISION_MAP[c] || [];
-    if (divs.length > 0) setDivisionName(divs[0]);
+    setDivisionName('');
   };
 
   const handleAddSubContract = () => {

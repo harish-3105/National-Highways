@@ -44,21 +44,21 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
 }) => {
   const initialCircle = (initialData?.division_name
     ? getCircleForDivision(initialData.division_name)
-    : null) || 'Salem';
+    : '') || '';
 
   const [highwayCode, setHighwayCode] = useState<string>(initialData?.highway_code || '');
   const [circleName, setCircleName] = useState<string>(initialCircle);
-  const [divisionName, setDivisionName] = useState<string>(initialData?.division_name || 'Salem');
+  const [divisionName, setDivisionName] = useState<string>(initialData?.division_name || '');
   const [stretchName, setStretchName] = useState<string>(initialData?.stretch_name || '');
   const [fromKm, setFromKm] = useState<string>(
-    initialData?.from_km !== undefined && initialData?.from_km !== null ? String(initialData.from_km) : '0'
+    initialData?.from_km !== undefined && initialData?.from_km !== null ? String(initialData.from_km) : ''
   );
   const [toKm, setToKm] = useState<string>(
-    initialData?.to_km !== undefined && initialData?.to_km !== null ? String(initialData.to_km) : '10'
+    initialData?.to_km !== undefined && initialData?.to_km !== null ? String(initialData.to_km) : ''
   );
 
   const [contractorName, setContractorName] = useState<string>(initialData?.contractor_name || '');
-  const [contractMode, setContractMode] = useState<string>(initialData?.contract_mode || 'EPC');
+  const [contractMode, setContractMode] = useState<string>(initialData?.contract_mode || '');
   const [workDescription, setWorkDescription] = useState<string>(initialData?.work_description || '');
   const [docDate, setDocDate] = useState<string>(initialData?.doc_date || '');
   const [dlpExpiryDate, setDlpExpiryDate] = useState<string>(initialData?.dlp_expiry_date || '');
@@ -124,12 +124,13 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const divisionOptions = DLP_CIRCLE_DIVISION_MAP[circleName] || [];
+  const divisionOptions = circleName
+    ? (DLP_CIRCLE_DIVISION_MAP[circleName] || [])
+    : Object.values(DLP_CIRCLE_DIVISION_MAP).flat();
 
   const handleCircleChange = (c: string) => {
     setCircleName(c);
-    const divs = DLP_CIRCLE_DIVISION_MAP[c] || [];
-    if (divs.length > 0) setDivisionName(divs[0]);
+    setDivisionName('');
   };
 
   const handleAddSubContract = () => {

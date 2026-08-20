@@ -104,7 +104,7 @@ export const HighwayEntryForm: React.FC<HighwayEntryFormProps> = ({
       : '0'
   );
   const [configuration, setConfiguration] = useState<string>(
-    initialData?.configuration || '2-Lane'
+    initialData?.configuration || ''
   );
 
   const [loading, setLoading] = useState<boolean>(false);

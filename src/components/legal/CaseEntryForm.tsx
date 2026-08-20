@@ -43,11 +43,11 @@ const initialFormState: CaseEntryFormData = {
   division: '',
   caseNumber: '',
   caseYear: '',
-  category: 'Filed Against Department',
+  category: '' as any,
   nameOfCourt: '',
   nameOfRespondent: '',
-  casePertainsTo: 'GOTN',
-  natureOfCase: 'Work',
+  casePertainsTo: '' as any,
+  natureOfCase: '' as any,
   specifyNatureOfCase: '',
   briefOfPrayer: '',
   caseDetailsPresentStatus: '',
@@ -71,8 +71,8 @@ const initialFormState: CaseEntryFormData = {
   actionToTakeForCounterAffidavit: '',
   convertedCase: {
     enabled: false,
-    category: 'Appealed by Department',
-    typeOfPetition: 'Review Petition',
+    category: '' as any,
+    typeOfPetition: '' as any,
     specifyPetitionType: '',
     caseNumber: '',
     caseYear: '',
@@ -133,8 +133,8 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       },
       convertedCase: {
         enabled: initialData?.convertedCase?.enabled || false,
-        category: initialData?.convertedCase?.category || 'Appealed by Department',
-        typeOfPetition: initialData?.convertedCase?.typeOfPetition || 'Review Petition',
+        category: initialData?.convertedCase?.category || ('' as any),
+        typeOfPetition: initialData?.convertedCase?.typeOfPetition || ('' as any),
         specifyPetitionType: initialData?.convertedCase?.specifyPetitionType || '',
         caseNumber: initialData?.convertedCase?.caseNumber || '',
         caseYear: initialData?.convertedCase?.caseYear || '',
@@ -931,7 +931,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </label>
                 <SearchableSelect
                   options={masterData?.convertedCategories || ['Appealed by Department', 'Appealed by Other Party', 'Other']}
-                  value={formData.convertedCase?.category || 'Appealed by Department'}
+                  value={formData.convertedCase?.category || ''}
                   onChange={(val) => updateConvertedField('category', val as ConvertedCategoryType)}
                   placeholder="Select Category..."
                   required
@@ -945,7 +945,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </label>
                 <SearchableSelect
                   options={masterData?.petitionTypes || ['Review Petition', 'Contempt Petition', 'Execution Petition', 'Special Leave Petition (SLP)', 'Writ Appeal (WA)', 'Other']}
-                  value={formData.convertedCase?.typeOfPetition || 'Review Petition'}
+                  value={formData.convertedCase?.typeOfPetition || ''}
                   onChange={(val) => updateConvertedField('typeOfPetition', val as PetitionType)}
                   placeholder="Select Petition Type..."
                   required

@@ -69,8 +69,8 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
 
   // Form states
   const [sNo, setSNo] = useState<string>(String(initialData?.s_no || nextSNo));
-  const [division, setDivision] = useState<string>(initialData?.division || masterDivisions[0] || '');
-  const [scheme, setScheme] = useState<string>(initialData?.scheme || masterSchemes[0] || '');
+  const [division, setDivision] = useState<string>(initialData?.division || '');
+  const [scheme, setScheme] = useState<string>(initialData?.scheme || '');
   const [nameOfWork, setNameOfWork] = useState<string>(initialData?.name_of_work || '');
 
   // Financial

@@ -38,14 +38,14 @@ const defaultFormState: FeeBillRecord = {
   id: '',
   feeBillNumber: '',
   feeBillDate: new Date().toISOString().split('T')[0],
-  circle: 'Chennai',
-  division: 'Chennai City Division',
+  circle: '',
+  division: '',
   lawyerName: '',
-  lawyerDesignation: 'Government Advocate',
-  caseType: 'Writ Petition (WP)',
+  lawyerDesignation: '',
+  caseType: '',
   caseNumber: '',
   caseYear: new Date().getFullYear().toString(),
-  casePertainsTo: 'GOTN',
+  casePertainsTo: '' as any,
   appearanceAmount: 0,
   appearanceDate: new Date().toISOString().split('T')[0],
   conferenceAmount: 0,
@@ -56,13 +56,13 @@ const defaultFormState: FeeBillRecord = {
   assistanceDate: new Date().toISOString().split('T')[0],
   totalFeeAmount: 0,
   assistantName: '',
-  assistantDesignation: 'Junior Advocate',
-  paymentStatus: 'Not Settled',
+  assistantDesignation: '',
+  paymentStatus: '' as any,
   settledAmount: 0,
   itCess: 0,
   utrRbiReference: '',
   paymentDate: '',
-  goStatus: 'Yes',
+  goStatus: '' as any,
   goNumber: '',
   goDate: '',
   paymentSanction: 'No',
@@ -107,9 +107,9 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
   const [duplicateWarning, setDuplicateWarning] = useState('');
 
   const activeCircles = masterData.circles.filter((c) => c.active);
-  const availableDivisions = masterData.divisions.filter(
-    (d) => d.circleName === formData.circle && d.active
-  );
+  const availableDivisions = formData.circle
+    ? masterData.divisions.filter((d) => d.circleName === formData.circle && d.active)
+    : masterData.divisions.filter((d) => d.active);
 
   // Auto-calculate Assistance Amount whenever Appearance, Conference, or Verifying Amount changes
   useEffect(() => {
