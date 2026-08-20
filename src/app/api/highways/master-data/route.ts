@@ -16,7 +16,7 @@ function getSupabaseClient() {
 
 export interface HighwayMasterConfigItem {
   id: string;
-  category: "circle" | "division" | "configuration" | "classification";
+  category: "circle" | "division" | "configuration";
   value: string;
   created_at?: string;
 }
@@ -26,7 +26,6 @@ export interface HighwayMasterData {
   circles: string[];
   divisions: string[];
   configurations: string[];
-  classifications: string[];
 }
 
 const DEFAULT_CIRCLES = ["Chennai", "Salem", "Madurai", "Coimbatore", "Tirunelveli", "Villupuram"];
@@ -54,32 +53,21 @@ const DEFAULT_CONFIGURATIONS = [
   "8 Lane",
   "Expressway / Corridor",
 ];
-const DEFAULT_CLASSIFICATIONS = [
-  "National Highway",
-  "State Highway",
-  "Expressway",
-  "Economic Corridor",
-  "Feeder Route",
-  "Inter-Corridor Route",
-];
 
 function groupMasterData(items: HighwayMasterConfigItem[]): HighwayMasterData {
   const circlesFromDb = items.filter((i) => i.category === "circle").map((i) => i.value);
   const divisionsFromDb = items.filter((i) => i.category === "division").map((i) => i.value);
   const configsFromDb = items.filter((i) => i.category === "configuration").map((i) => i.value);
-  const classesFromDb = items.filter((i) => i.category === "classification").map((i) => i.value);
 
   const circles = Array.from(new Set([...DEFAULT_CIRCLES, ...circlesFromDb])).sort();
   const divisions = Array.from(new Set([...DEFAULT_DIVISIONS, ...divisionsFromDb])).sort();
   const configurations = Array.from(new Set([...DEFAULT_CONFIGURATIONS, ...configsFromDb])).sort();
-  const classifications = Array.from(new Set([...DEFAULT_CLASSIFICATIONS, ...classesFromDb])).sort();
 
   return {
     rawItems: items,
     circles,
     divisions,
     configurations,
-    classifications,
   };
 }
 
@@ -123,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanCategory = category.trim().toLowerCase();
-    const allowed = ["circle", "division", "configuration", "classification"];
+    const allowed = ["circle", "division", "configuration"];
     if (!allowed.includes(cleanCategory)) {
       return NextResponse.json(
         { error: `Category must be one of: ${allowed.join(", ")}` },

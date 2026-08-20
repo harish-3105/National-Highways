@@ -25,7 +25,7 @@ interface HighwayMasterDataModalProps {
   onRefresh: () => void;
 }
 
-type TabType = 'circle' | 'division' | 'configuration' | 'classification';
+type TabType = 'circle' | 'division' | 'configuration';
 
 export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
   isOpen,
@@ -52,8 +52,6 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
         return masterData.divisions || [];
       case 'configuration':
         return masterData.configurations || [];
-      case 'classification':
-        return masterData.classifications || [];
       default:
         return [];
     }
@@ -67,8 +65,6 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
         return 'Field Divisions';
       case 'configuration':
         return 'Carriageway Configurations';
-      case 'classification':
-        return 'Highway Classifications';
     }
   };
 
@@ -225,7 +221,6 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
               { id: 'circle', label: 'Circles', icon: MapPin, count: masterData.circles?.length || 0 },
               { id: 'division', label: 'Divisions', icon: Building, count: masterData.divisions?.length || 0 },
               { id: 'configuration', label: 'Configurations', icon: Layers, count: masterData.configurations?.length || 0 },
-              { id: 'classification', label: 'Classifications', icon: Sparkles, count: masterData.classifications?.length || 0 },
             ] as const
           ).map((tab) => {
             const Icon = tab.icon;

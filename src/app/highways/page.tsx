@@ -55,7 +55,6 @@ export default function HighwaysPage() {
     circles: ['Chennai', 'Salem', 'Madurai', 'Coimbatore', 'Tirunelveli', 'Villupuram'],
     divisions: ['Salem', 'Madurai', 'Chennai', 'Dharapuram', 'Tirunelveli', 'Villupuram', 'Thanjavur'],
     configurations: ['2 Lane', '2 Lane with Paved Shoulder', '4 Lane', '4 Lane with Paved Shoulder', '6 Lane', '8 Lane', 'Expressway / Corridor'],
-    classifications: ['National Highway', 'State Highway', 'Expressway', 'Economic Corridor', 'Feeder Route', 'Inter-Corridor Route'],
   });
 
   const fetchMasterData = async () => {
