@@ -18,6 +18,7 @@ import {
 } from '@/lib/legal/masterData';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
+import { LegalMasterData } from '@/app/api/legal/master-data/route';
 import {
   Save,
   ArrowLeft,
@@ -32,6 +33,7 @@ import {
 
 interface CaseEntryFormProps {
   initialData?: Partial<CaseEntryFormData>;
+  masterData?: LegalMasterData;
   onSave: (data: CaseEntryFormData) => void;
   onCancel: () => void;
 }
@@ -105,6 +107,7 @@ const initialFormState: CaseEntryFormData = {
 
 export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   initialData,
+  masterData,
   onSave,
   onCancel,
 }) => {
@@ -171,8 +174,14 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     initialData?.convertedCase?.enabled || false
   );
 
+  const circleOptions = masterData?.circles && masterData.circles.length > 0
+    ? masterData.circles
+    : Array.from(CIRCLE_OPTIONS);
+
   // Dynamic Division options based on Circle
-  const divisionOptions = formData.circle ? CIRCLE_DIVISION_MAP[formData.circle] || [] : [];
+  const divisionOptions = formData.circle
+    ? (CIRCLE_DIVISION_MAP[formData.circle] || masterData?.divisions || [])
+    : (masterData?.divisions || []);
 
   // Dynamic Court Complex options based on District for Module 2
   const courtComplexOptions = formData.convertedCase?.district
@@ -443,7 +452,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <SearchableSelect
                 label="Circle"
-                options={CIRCLE_OPTIONS}
+                options={circleOptions}
                 value={formData.circle}
                 onChange={handleCircleChange}
                 placeholder="Select Circle..."
@@ -509,21 +518,16 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 {errors['caseYear'] && <span className="text-[11px] font-semibold text-rose-500">{errors['caseYear']}</span>}
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Category <span className="text-rose-500">*</span>
-                </label>
-                <select
+              <div>
+                <SearchableSelect
+                  label="Category"
+                  options={['Filed Against Department', 'Filed By Department']}
                   value={formData.category}
-                  onChange={(e) => updateField('category', e.target.value as CategoryType)}
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none bg-white dark:bg-slate-900 transition-all ${
-                    errors['category'] ? 'border-rose-500 bg-rose-50/20' : 'border-slate-200 dark:border-slate-700'
-                  }`}
-                >
-                  <option value="Filed Against Department">Filed Against Department</option>
-                  <option value="Filed By Department">Filed By Department</option>
-                </select>
-                {errors['category'] && <span className="text-[11px] font-semibold text-rose-500">{errors['category']}</span>}
+                  onChange={(val) => updateField('category', val as CategoryType)}
+                  placeholder="Select Category..."
+                  required
+                  error={errors['category']}
+                />
               </div>
             </div>
 
@@ -560,44 +564,38 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 {errors['nameOfRespondent'] && <span className="text-[11px] font-semibold text-rose-500">{errors['nameOfRespondent']}</span>}
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Case Pertains To <span className="text-rose-500">*</span>
-                </label>
-                <select
+              <div>
+                <SearchableSelect
+                  label="Case Pertains To"
+                  options={
+                    masterData?.casePertainsTo && masterData.casePertainsTo.length > 0
+                      ? masterData.casePertainsTo
+                      : ['GOTN', 'MoRTH', 'Both', 'NHAI']
+                  }
                   value={formData.casePertainsTo}
-                  onChange={(e) => updateField('casePertainsTo', e.target.value as CasePertainsToType)}
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none bg-white dark:bg-slate-900 transition-all ${
-                    errors['casePertainsTo'] ? 'border-rose-500 bg-rose-50/20' : 'border-slate-200 dark:border-slate-700'
-                  }`}
-                >
-                  <option value="GOTN">GOTN (Government of Tamil Nadu)</option>
-                  <option value="MoRTH">MoRTH (Ministry of Road Transport & Highways)</option>
-                  <option value="Both">Both</option>
-                </select>
-                {errors['casePertainsTo'] && <span className="text-[11px] font-semibold text-rose-500">{errors['casePertainsTo']}</span>}
+                  onChange={(val) => updateField('casePertainsTo', val as CasePertainsToType)}
+                  placeholder="Select Pertains To..."
+                  required
+                  error={errors['casePertainsTo']}
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Nature of Case <span className="text-rose-500">*</span>
-                </label>
-                <select
+              <div>
+                <SearchableSelect
+                  label="Nature of Case"
+                  options={
+                    masterData?.natureOfCases && masterData.natureOfCases.length > 0
+                      ? masterData.natureOfCases
+                      : ['Work', 'Tender', 'Land Acquisition', 'Encroachment', 'Arbitration', 'Service Matter', 'Other']
+                  }
                   value={formData.natureOfCase}
-                  onChange={(e) => updateField('natureOfCase', e.target.value as NatureOfCaseType)}
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none bg-white dark:bg-slate-900 transition-all ${
-                    errors['natureOfCase'] ? 'border-rose-500 bg-rose-50/20' : 'border-slate-200 dark:border-slate-700'
-                  }`}
-                >
-                  <option value="Work">Work</option>
-                  <option value="Tender">Tender</option>
-                  <option value="Land Acquisition">Land Acquisition</option>
-                  <option value="Encroachment">Encroachment</option>
-                  <option value="Other">Other</option>
-                </select>
-                {errors['natureOfCase'] && <span className="text-[11px] font-semibold text-rose-500">{errors['natureOfCase']}</span>}
+                  onChange={(val) => updateField('natureOfCase', val as NatureOfCaseType)}
+                  placeholder="Select Nature of Case..."
+                  required
+                  error={errors['natureOfCase']}
+                />
               </div>
 
               {formData.natureOfCase === 'Other' && (

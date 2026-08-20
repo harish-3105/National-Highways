@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { DlpCalendarDateFilter, DateRangeFilter } from '@/components/dlp/DlpCalendarDateFilter';
 import { DlpContractEntryForm } from '@/components/dlp/DlpContractEntryForm';
+import { DlpMasterDataModal } from '@/components/dlp/DlpMasterDataModal';
+import { DlpMasterData } from '@/app/api/dlp/master-data/route';
 import DeleteDlpContractModal from '@/components/dlp/DeleteDlpContractModal';
 import ViewDlpContractModal from '@/components/dlp/ViewDlpContractModal';
 import {
@@ -32,6 +34,7 @@ import {
   Layers,
   Upload,
   Archive,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 export interface DLPSubContract {
@@ -118,6 +121,33 @@ export default function DlpPage() {
 
   // Screen state: 'LIST' | 'FORM'
   const [uiMode, setUiMode] = useState<'LIST' | 'FORM'>('LIST');
+
+  // Master Data Configuration State
+  const [isMasterModalOpen, setIsMasterModalOpen] = useState<boolean>(false);
+  const [masterData, setMasterData] = useState<DlpMasterData>({
+    rawItems: [],
+    circles: ['Chennai', 'Salem', 'Madurai', 'Coimbatore', 'Tirunelveli', 'Villupuram'],
+    divisions: ['Salem', 'Madurai', 'Chennai', 'Dharapuram', 'Tirunelveli', 'Villupuram', 'Thanjavur'],
+    contractModes: ['EPC', 'STMC', 'PBMC', 'BOT', 'HAM', 'Annual Plan', 'Special Repairs', 'Departmental'],
+    maintenanceTypes: ['DLP', 'STMC', 'PBMC', 'CONSTRUCTION', 'NO_DLP', 'UNCONTRACTED'],
+    statuses: ['ACTIVE', 'EXPIRING_SOON', 'EXPIRED'],
+  });
+
+  const fetchMasterData = async () => {
+    try {
+      const res = await fetch('/api/dlp/master-data');
+      const data = await res.json();
+      if (data && Array.isArray(data.contractModes)) {
+        setMasterData(data);
+      }
+    } catch (err) {
+      console.warn('DLP master data fetch note:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMasterData();
+  }, []);
 
   // Modal States
   const [selectedContractForView, setSelectedContractForView] = useState<DLPContractItem | null>(null);
@@ -271,6 +301,7 @@ export default function DlpPage() {
         {uiMode === 'FORM' ? (
           <DlpContractEntryForm
             initialData={selectedContractForEdit || undefined}
+            masterData={masterData}
             onSave={handleSaveDlpContract}
             onCancel={() => {
               setUiMode('LIST');
@@ -306,6 +337,15 @@ export default function DlpPage() {
                   title="Refresh Contracts"
                 >
                   <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+
+                <button
+                  onClick={() => setIsMasterModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                  title="Configure DLP Dropdown Options"
+                >
+                  <SlidersHorizontal className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <span>Master Config</span>
                 </button>
 
                 <button
@@ -649,6 +689,17 @@ export default function DlpPage() {
         isOpen={!!selectedContractForDelete}
         onClose={() => setSelectedContractForDelete(null)}
         onSuccess={() => fetchDlpContracts()}
+      />
+
+      {/* Master Data Configuration Modal */}
+      <DlpMasterDataModal
+        isOpen={isMasterModalOpen}
+        onClose={() => setIsMasterModalOpen(false)}
+        masterData={masterData}
+        onRefresh={() => {
+          fetchMasterData();
+          fetchDlpContracts();
+        }}
       />
     </div>
   );

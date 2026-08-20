@@ -7,11 +7,13 @@ import { FilterControls } from '@/components/highways/FilterControls';
 import { HighwaysTable } from '@/components/highways/HighwaysTable';
 import { HighwaysGrid } from '@/components/highways/HighwaysGrid';
 import { HighwayEntryForm } from '@/components/highways/HighwayEntryForm';
+import { HighwayMasterDataModal } from '@/components/highways/HighwayMasterDataModal';
+import { HighwayMasterData } from '@/app/api/highways/master-data/route';
 import { ViewHighwayModal } from '@/components/highways/ViewHighwayModal';
 import { DeleteHighwayModal } from '@/components/highways/DeleteHighwayModal';
 import { ExportHighwayModal } from '@/components/highways/ExportHighwayModal';
 import { NavigationHeader } from '@/components/NavigationHeader';
-import { Route, RefreshCw, Plus, Download } from 'lucide-react';
+import { Route, RefreshCw, Plus, Download, SlidersHorizontal } from 'lucide-react';
 
 export default function HighwaysPage() {
   const [allCorridors, setAllCorridors] = useState<HighwayCorridor[]>([]);
@@ -45,6 +47,32 @@ export default function HighwaysPage() {
   // Selection & Export States
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
+  const [isMasterModalOpen, setIsMasterModalOpen] = useState<boolean>(false);
+
+  // Master Data Configuration State
+  const [masterData, setMasterData] = useState<HighwayMasterData>({
+    rawItems: [],
+    circles: ['Chennai', 'Salem', 'Madurai', 'Coimbatore', 'Tirunelveli', 'Villupuram'],
+    divisions: ['Salem', 'Madurai', 'Chennai', 'Dharapuram', 'Tirunelveli', 'Villupuram', 'Thanjavur'],
+    configurations: ['2 Lane', '2 Lane with Paved Shoulder', '4 Lane', '4 Lane with Paved Shoulder', '6 Lane', '8 Lane', 'Expressway / Corridor'],
+    classifications: ['National Highway', 'State Highway', 'Expressway', 'Economic Corridor', 'Feeder Route', 'Inter-Corridor Route'],
+  });
+
+  const fetchMasterData = async () => {
+    try {
+      const res = await fetch('/api/highways/master-data');
+      const data = await res.json();
+      if (data && Array.isArray(data.configurations)) {
+        setMasterData(data);
+      }
+    } catch (err) {
+      console.warn('Master data fetch note:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMasterData();
+  }, []);
 
   // Archive Toggle
   const [showArchived, setShowArchived] = useState(false);
@@ -166,6 +194,7 @@ export default function HighwaysPage() {
         {uiMode === 'FORM' ? (
           <HighwayEntryForm
             initialData={selectedHighwayForEdit || undefined}
+            masterData={masterData}
             onSave={handleSaveHighway}
             onCancel={() => {
               setUiMode('LIST');
@@ -194,6 +223,15 @@ export default function HighwaysPage() {
                   title="Refresh Catalog"
                 >
                   <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+
+                <button
+                  onClick={() => setIsMasterModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                  title="Configure Corridor Dropdown Options"
+                >
+                  <SlidersHorizontal className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <span>Master Config</span>
                 </button>
 
                 <button
@@ -303,6 +341,16 @@ export default function HighwaysPage() {
         selectedIds={selectedIds}
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
+      />
+
+      <HighwayMasterDataModal
+        isOpen={isMasterModalOpen}
+        onClose={() => setIsMasterModalOpen(false)}
+        masterData={masterData}
+        onRefresh={() => {
+          fetchMasterData();
+          fetchHighways();
+        }}
       />
     </div>
   );

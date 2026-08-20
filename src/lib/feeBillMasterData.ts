@@ -47,6 +47,8 @@ export const DEFAULT_MASTER_DATA: FeeBillMasterDataConfig = {
     'Public Interest Litigation (PIL)',
     'Civil Miscellaneous Appeal (CMA)',
   ],
+  casePertainsTo: ['GOTN', 'MoRTH', 'BOTH'],
+  paymentStatuses: ['Settled', 'Not Settled'],
 };
 
 export const SAMPLE_FEE_BILLS: FeeBillRecord[] = [];

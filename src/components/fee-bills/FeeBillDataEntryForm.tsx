@@ -13,6 +13,7 @@ import {
   derivePendencyStage,
   formatINR,
 } from '@/lib/feeBillMasterData';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 import {
   Save,
   ArrowLeft,
@@ -302,34 +303,26 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
               Circle Jurisdiction <span className="text-red-500">*</span>
             </label>
-            <select
+            <SearchableSelect
+              options={activeCircles.map((c) => c.name)}
               value={formData.circle}
-              onChange={(e) => handleCircleChange(e.target.value)}
-              className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold"
-            >
-              {activeCircles.map((c) => (
-                <option key={c.id} value={c.name}>
-                  {c.name} Circle
-                </option>
-              ))}
-            </select>
+              onChange={handleCircleChange}
+              placeholder="Select Circle..."
+              required
+            />
           </div>
 
           <div>
             <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
               Division Jurisdiction <span className="text-red-500">*</span>
             </label>
-            <select
+            <SearchableSelect
+              options={availableDivisions.map((d) => d.name)}
               value={formData.division}
-              onChange={(e) => setFormData((prev) => ({ ...prev, division: e.target.value }))}
-              className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold"
-            >
-              {availableDivisions.map((d) => (
-                <option key={d.id} value={d.name}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setFormData((prev) => ({ ...prev, division: val }))}
+              placeholder="Select Division..."
+              required
+            />
           </div>
         </div>
       </div>
@@ -362,34 +355,24 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
               Lawyer Designation
             </label>
-            <select
+            <SearchableSelect
+              options={masterData.lawyerDesignations}
               value={formData.lawyerDesignation}
-              onChange={(e) => setFormData((prev) => ({ ...prev, lawyerDesignation: e.target.value }))}
-              className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold"
-            >
-              {masterData.lawyerDesignations.map((desig) => (
-                <option key={desig} value={desig}>
-                  {desig}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setFormData((prev) => ({ ...prev, lawyerDesignation: val }))}
+              placeholder="Select Designation..."
+            />
           </div>
 
           <div>
             <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
               Case Type & Category
             </label>
-            <select
+            <SearchableSelect
+              options={masterData.caseTypes}
               value={formData.caseType}
-              onChange={(e) => setFormData((prev) => ({ ...prev, caseType: e.target.value }))}
-              className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold"
-            >
-              {masterData.caseTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setFormData((prev) => ({ ...prev, caseType: val }))}
+              placeholder="Select Case Type..."
+            />
           </div>
 
           <div>

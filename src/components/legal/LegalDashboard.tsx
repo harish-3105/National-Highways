@@ -5,6 +5,8 @@ import { CaseEntryFormData } from '@/types/legal';
 import CaseEntryForm from './CaseEntryForm';
 import CaseViewModal from './CaseViewModal';
 import DeleteLegalCaseModal from './DeleteLegalCaseModal';
+import LegalMasterDataModal from './LegalMasterDataModal';
+import { LegalMasterData } from '@/app/api/legal/master-data/route';
 import {
   Search,
   Plus,
@@ -17,6 +19,7 @@ import {
   AlertCircle,
   RefreshCw,
   Archive,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { CIRCLE_OPTIONS, CIRCLE_DIVISION_MAP } from '@/lib/legal/masterData';
 
@@ -29,6 +32,36 @@ export const LegalDashboard: React.FC = () => {
   const [selectedCaseForEdit, setSelectedCaseForEdit] = useState<CaseEntryFormData | null>(null);
   const [selectedCaseForView, setSelectedCaseForView] = useState<CaseEntryFormData | null>(null);
   const [selectedCaseForDelete, setSelectedCaseForDelete] = useState<CaseEntryFormData | null>(null);
+
+  // Master Data Configuration State
+  const [isMasterModalOpen, setIsMasterModalOpen] = useState<boolean>(false);
+  const [masterData, setMasterData] = useState<LegalMasterData>({
+    rawItems: [],
+    circles: ['Chennai', 'Madurai', 'Salem', 'Coimbatore', 'Tirunelveli', 'Villupuram'],
+    divisions: ['Chennai City Division', 'Chengalpattu Division', 'Tiruvallur Division', 'Madurai Division', 'Dindigul Division', 'Theni Division', 'Salem Division', 'Namakkal Division', 'Dharmapuri Division'],
+    caseTypes: ['Writ Petition (WP)', 'Writ Appeal (WA)', 'Civil Revision Petition (CRP)', 'Original Side Appeal (OSA)', 'Special Leave Petition (SLP)', 'Contempt Petition'],
+    caseStatuses: ['Pending', 'Disposed', 'Stay Granted', 'Interim Order', 'Dismissed', 'Allowed'],
+    casePertainsTo: ['GOTN', 'MoRTH', 'Both', 'NHAI'],
+    natureOfCases: ['Work', 'Tender', 'Land Acquisition', 'Encroachment', 'Arbitration', 'Service Matter', 'Other'],
+    courtNames: ['High Court of Madras (Principal Seat, Chennai)', 'High Court of Madras (Madurai Bench)', 'Supreme Court of India (New Delhi)', 'District Court Complex'],
+    lawOfficers: ['Advocate General of Tamil Nadu', 'Additional Advocate General', 'Special Government Pleader (Highways)', 'Additional Government Pleader', 'Government Advocate (Civil Side)'],
+  });
+
+  const fetchMasterData = async () => {
+    try {
+      const res = await fetch('/api/legal/master-data');
+      const data = await res.json();
+      if (data && Array.isArray(data.caseTypes)) {
+        setMasterData(data);
+      }
+    } catch (err) {
+      console.warn('Legal master data fetch note:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMasterData();
+  }, []);
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -103,6 +136,7 @@ export const LegalDashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <CaseEntryForm
           initialData={selectedCaseForEdit || undefined}
+          masterData={masterData}
           onSave={handleSaveForm}
           onCancel={() => {
             setUiMode('LIST');
@@ -135,6 +169,15 @@ export const LegalDashboard: React.FC = () => {
             title="Refresh Cases"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+
+          <button
+            onClick={() => setIsMasterModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+            title="Configure Legal Cases Dropdown Options"
+          >
+            <SlidersHorizontal className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span>Master Config</span>
           </button>
 
           <button
@@ -335,6 +378,17 @@ export const LegalDashboard: React.FC = () => {
         isOpen={!!selectedCaseForDelete}
         onClose={() => setSelectedCaseForDelete(null)}
         onSuccess={() => fetchCases()}
+      />
+
+      {/* Master Data Configuration Modal */}
+      <LegalMasterDataModal
+        isOpen={isMasterModalOpen}
+        onClose={() => setIsMasterModalOpen(false)}
+        masterData={masterData}
+        onRefresh={() => {
+          fetchMasterData();
+          fetchCases();
+        }}
       />
     </div>
   );

@@ -120,6 +120,8 @@ export interface FeeBillMasterDataConfig {
   divisions: MasterDivisionItem[];
   lawyerDesignations: string[];
   caseTypes: string[];
+  casePertainsTo: string[];
+  paymentStatuses: string[];
 }
 
 export interface FeeBillFilterCriteria {

@@ -17,15 +17,18 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { DLPContractItem, DLPSubContract } from '@/app/dlp/page';
+import { DlpMasterData } from '@/app/api/dlp/master-data/route';
 import {
   DLP_CIRCLE_OPTIONS,
   DLP_CIRCLE_DIVISION_MAP,
   getCircleForDivision,
 } from '@/lib/dlp/masterData';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 interface DlpContractEntryFormProps {
   initialData?: Partial<DLPContractItem>;
+  masterData?: DlpMasterData;
   onSave: (contractData: Partial<DLPContractItem>) => Promise<void> | void;
   onCancel: () => void;
 }
@@ -35,6 +38,7 @@ const MAINTENANCE_TYPES = ['DLP', 'STMC', 'PBMC', 'CONSTRUCTION', 'NO_DLP', 'UNC
 
 export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
   initialData,
+  masterData,
   onSave,
   onCancel,
 }) => {
@@ -340,37 +344,38 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Administrative Circle <span className="text-rose-500">*</span>
               </label>
-              <select
+              <SearchableSelect
+                options={
+                  masterData?.circles && masterData.circles.length > 0
+                    ? masterData.circles
+                    : DLP_CIRCLE_OPTIONS
+                }
                 value={circleName}
-                onChange={(e) => handleCircleChange(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {DLP_CIRCLE_OPTIONS.map((c) => (
-                  <option key={c} value={c}>
-                    {c} Circle
-                  </option>
-                ))}
-              </select>
+                onChange={handleCircleChange}
+                placeholder="Select Circle..."
+                required
+              />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Division Name <span className="text-rose-500">*</span>
               </label>
-              <select
+              <SearchableSelect
+                options={
+                  masterData?.divisions && masterData.divisions.length > 0
+                    ? masterData.divisions
+                    : divisionOptions
+                }
                 value={divisionName}
-                onChange={(e) => {
-                  setDivisionName(e.target.value);
+                onChange={(val) => {
+                  setDivisionName(val);
                   if (errors.divisionName) setErrors((prev) => ({ ...prev, divisionName: '' }));
                 }}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {divisionOptions.map((d) => (
-                  <option key={d} value={d}>
-                    {d} Division
-                  </option>
-                ))}
-              </select>
+                placeholder="Select Division..."
+                required
+              />
+              {errors.divisionName && <p className="text-[11px] text-rose-500 mt-1">{errors.divisionName}</p>}
             </div>
           </div>
 
@@ -463,17 +468,16 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Contract Mode
               </label>
-              <select
+              <SearchableSelect
+                options={
+                  masterData?.contractModes && masterData.contractModes.length > 0
+                    ? masterData.contractModes
+                    : CONTRACT_MODES
+                }
                 value={contractMode}
-                onChange={(e) => setContractMode(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {CONTRACT_MODES.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
+                onChange={setContractMode}
+                placeholder="Select Mode..."
+              />
             </div>
 
             <div>
@@ -824,17 +828,16 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
                       <label className="text-[10.5px] font-bold text-slate-500">Maintenance Type</label>
-                      <select
+                      <SearchableSelect
+                        options={
+                          masterData?.maintenanceTypes && masterData.maintenanceTypes.length > 0
+                            ? masterData.maintenanceTypes
+                            : MAINTENANCE_TYPES
+                        }
                         value={sub.maintenance_type}
-                        onChange={(e) => handleUpdateSubContract(idx, 'maintenance_type', e.target.value)}
-                        className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border rounded-lg text-xs font-semibold"
-                      >
-                        {MAINTENANCE_TYPES.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(val) => handleUpdateSubContract(idx, 'maintenance_type', val)}
+                        placeholder="Select Type..."
+                      />
                     </div>
 
                     <div>
