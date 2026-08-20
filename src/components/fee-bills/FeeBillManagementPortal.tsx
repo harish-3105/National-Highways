@@ -156,6 +156,21 @@ export function FeeBillManagementPortal() {
     (d) => (!selectedCircle || d.circleName === selectedCircle) && d.active
   );
 
+  if (activeTab === 'create') {
+    return (
+      <FeeBillDataEntryForm
+        initialData={editingBill || undefined}
+        existingBills={bills}
+        masterData={masterData}
+        onSave={handleSaveBill}
+        onCancel={() => {
+          setEditingBill(null);
+          setActiveTab('list');
+        }}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
@@ -338,19 +353,6 @@ export function FeeBillManagementPortal() {
           onAudit={(b) => setAuditingBill(b)}
           onDelete={(b) => setDeletingBill(b)}
           onRestore={(b) => handleRestoreBill(b)}
-        />
-      )}
-
-      {activeTab === 'create' && (
-        <FeeBillDataEntryForm
-          initialData={editingBill || undefined}
-          existingBills={bills}
-          masterData={masterData}
-          onSave={handleSaveBill}
-          onCancel={() => {
-            setEditingBill(null);
-            setActiveTab('list');
-          }}
         />
       )}
 
