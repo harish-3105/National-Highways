@@ -26,7 +26,7 @@ interface EditMajorProjectModalProps {
   masterSchemes?: string[];
 }
 
-type EditTab = 'general' | 'technical' | 'physical' | 'financial' | 'timeline' | 'personnel_notes';
+type EditTab = 'general' | 'technical' | 'physical' | 'financial' | 'timeline' | 'issues' | 'personnel_notes';
 
 export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
   project,
@@ -74,6 +74,13 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
   const [eotProposalAgency, setEotProposalAgency] = useState<string>('');
   const [cosDetails, setCosDetails] = useState<string>('');
 
+  // 5 Clearance Bottlenecks & Issues (Clean Defaults)
+  const [issueLand, setIssueLand] = useState<string>('');
+  const [issueForest, setIssueForest] = useState<string>('');
+  const [issueUtility, setIssueUtility] = useState<string>('');
+  const [issueRailways, setIssueRailways] = useState<string>('');
+  const [issueOthers, setIssueOthers] = useState<string>('');
+
   const [deNamePhone, setDeNamePhone] = useState<string>('');
   const [contractorName, setContractorName] = useState<string>('');
   const [updatedDivisionDate, setUpdatedDivisionDate] = useState<string>('');
@@ -117,6 +124,13 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
       setEotGrantedTill(project.eot_granted_till || '');
       setEotProposalAgency(project.eot_proposal_agency || '');
       setCosDetails(project.cos_details || '');
+
+      // Load issues directly from project fields (empty if unset, never populating from detailed_stage_status)
+      setIssueLand(project.issue_land || '');
+      setIssueForest(project.issue_forest || '');
+      setIssueUtility(project.issue_utility || '');
+      setIssueRailways(project.issue_railways || '');
+      setIssueOthers(project.issue_others || '');
 
       setDeNamePhone(project.de_name_phone || '');
       setContractorName(project.contractor_name || '');
@@ -181,6 +195,12 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
         contractor_name: contractorName.trim() || null,
         updated_division_date: updatedDivisionDate.trim() || null,
         detailed_stage_status: detailedStageStatus.trim() || null,
+
+        issue_land: issueLand.trim() || null,
+        issue_forest: issueForest.trim() || null,
+        issue_utility: issueUtility.trim() || null,
+        issue_railways: issueRailways.trim() || null,
+        issue_others: issueOthers.trim() || null,
       };
 
       const res = await fetch('/api/major-projects', {
@@ -293,6 +313,17 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('issues')}
+            className={`px-3 py-2 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'issues'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-xl'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            ⚠️ Clearance Issues (5 Fields)
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('personnel_notes')}
             className={`px-3 py-2 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'personnel_notes'
@@ -300,7 +331,7 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            👷 Personnel & Notes
+            👷 Personnel & Notes (Col 27)
           </button>
         </div>
 
@@ -775,6 +806,82 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                     placeholder="COS-I / COS-II approval references..."
                   />
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: CLEARANCE BOTTLENECKS & ISSUES (5 FIELDS) */}
+          {activeTab === 'issues' && (
+            <div className="space-y-4">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-xl text-[11px] text-amber-800 dark:text-amber-200">
+                Departmental bottleneck registers across Land Acquisition, Forest, Utility, Railways, and General Remarks. If no issue exists, leave blank.
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    1. Land Acquisition Issues
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={issueLand}
+                    onChange={(e) => setIssueLand(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
+                    placeholder="Status of 3(A), 3(D), 3(G) LA awards, compensation disbursement, or court stays..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    2. Forest &amp; Environmental Clearance
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={issueForest}
+                    onChange={(e) => setIssueForest(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
+                    placeholder="Stage-I / Stage-II forest clearance, wildlife sanctuary eco-sensitive approvals..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    3. Utility Shifting (EB / Water / OFC)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={issueUtility}
+                    onChange={(e) => setIssueUtility(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
+                    placeholder="TANGEDCO pole/line shifting, TWAD water pipeline relocation, payment of demand notices..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    4. Railways (ROB / RUB / GAD Clearances)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={issueRailways}
+                    onChange={(e) => setIssueRailways(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
+                    placeholder="Southern Railway GAD approvals, CRS inspection, traffic block permissions..."
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  5. Other Inter-Departmental &amp; General Remarks
+                </label>
+                <textarea
+                  rows={3}
+                  value={issueOthers}
+                  onChange={(e) => setIssueOthers(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
+                  placeholder="Court litigation, contractor slow progress notice, weather constraints, or other key remarks..."
+                />
               </div>
             </div>
           )}

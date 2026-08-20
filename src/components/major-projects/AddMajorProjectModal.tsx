@@ -31,6 +31,17 @@ export const AddMajorProjectModal: React.FC<AddMajorProjectModalProps> = ({
   const [progressPercent, setProgressPercent] = useState<string>('');
   const [probableCompletionDate, setProbableCompletionDate] = useState<string>('');
   const [stageRemarks, setStageRemarks] = useState<string>('');
+
+  // Column 27 (Col AC): Detailed Stage Status & Technical Execution Remarks
+  const [detailedStageStatus, setDetailedStageStatus] = useState<string>('');
+
+  // 5 Issues Fields (initialized to empty)
+  const [issueLand, setIssueLand] = useState<string>('');
+  const [issueForest, setIssueForest] = useState<string>('');
+  const [issueUtility, setIssueUtility] = useState<string>('');
+  const [issueRailways, setIssueRailways] = useState<string>('');
+  const [issueOthers, setIssueOthers] = useState<string>('');
+
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
@@ -64,6 +75,12 @@ export const AddMajorProjectModal: React.FC<AddMajorProjectModalProps> = ({
           progress_percent: workStage === 'IN_PROGRESS' ? (progressPercent ? Number(progressPercent) : 0) : null,
           probable_completion_date: workStage === 'IN_PROGRESS' ? probableCompletionDate.trim() : null,
           stage_remarks: workStage === 'TENDER_STAGE' ? stageRemarks.trim() : (stageRemarks.trim() || null),
+          detailed_stage_status: detailedStageStatus.trim() || null,
+          issue_land: issueLand.trim() || null,
+          issue_forest: issueForest.trim() || null,
+          issue_utility: issueUtility.trim() || null,
+          issue_railways: issueRailways.trim() || null,
+          issue_others: issueOthers.trim() || null,
         }),
       });
 
@@ -264,6 +281,93 @@ export const AddMajorProjectModal: React.FC<AddMajorProjectModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* Column 27 (Col AC): Detailed Work Stage Status */}
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Detailed Work Stage Status &amp; Physical Execution Remarks (Col 27 / Col AC)
+            </label>
+            <textarea
+              rows={3}
+              value={detailedStageStatus}
+              onChange={(e) => setDetailedStageStatus(e.target.value)}
+              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono leading-relaxed"
+              placeholder="Granular site progress log, structural milestones, piers/slabs casted, earthwork/pavement status..."
+            />
+          </div>
+
+          {/* 5 Clearance Bottlenecks & Issues (Optional / Clean Defaults) */}
+          <div className="p-4 bg-slate-50 dark:bg-slate-850/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
+            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider block">
+              Departmental Clearance Bottlenecks &amp; Issues (5 Categories)
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  1. Land Acquisition Issues
+                </label>
+                <input
+                  type="text"
+                  value={issueLand}
+                  onChange={(e) => setIssueLand(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
+                  placeholder="e.g. 3A gazette published, 3D pending..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  2. Forest &amp; Environmental Clearance
+                </label>
+                <input
+                  type="text"
+                  value={issueForest}
+                  onChange={(e) => setIssueForest(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
+                  placeholder="e.g. Stage-I submitted on Parivesh..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  3. Utility Shifting (EB / Water / OFC)
+                </label>
+                <input
+                  type="text"
+                  value={issueUtility}
+                  onChange={(e) => setIssueUtility(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
+                  placeholder="e.g. TANGEDCO estimate sanctioned..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  4. Railways Clearance (ROB / RUB / GAD)
+                </label>
+                <input
+                  type="text"
+                  value={issueRailways}
+                  onChange={(e) => setIssueRailways(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
+                  placeholder="e.g. GAD approved by Southern Railway..."
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                5. Other Bottlenecks &amp; Key Issues
+              </label>
+              <input
+                type="text"
+                value={issueOthers}
+                onChange={(e) => setIssueOthers(e.target.value)}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
+                placeholder="e.g. Court stays, contractor termination warning..."
+              />
+            </div>
+          </div>
 
           {/* Footer Actions */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">

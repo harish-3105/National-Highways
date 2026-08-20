@@ -506,6 +506,68 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
               </div>
             )}
           </div>
+
+          {/* SECTION 6: CLEARANCE BOTTLENECKS & ISSUES (5 FIELDS) */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-slate-200 dark:border-slate-800">
+              <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+              <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                6. Departmental Clearance Bottlenecks &amp; Issues (5 Fields)
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Issue 1: Land Acquisition */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                  1. Land Acquisition Issues
+                </span>
+                <p className={`text-xs ${project.issue_land ? 'text-slate-800 dark:text-slate-200 font-medium' : 'text-slate-400 italic'}`}>
+                  {project.issue_land || '— None / No Land Acquisition issues recorded'}
+                </p>
+              </div>
+
+              {/* Issue 2: Forest & Environmental */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                  2. Forest &amp; Environmental Clearance
+                </span>
+                <p className={`text-xs ${project.issue_forest ? 'text-slate-800 dark:text-slate-200 font-medium' : 'text-slate-400 italic'}`}>
+                  {project.issue_forest || '— None / No Forest Clearance issues recorded'}
+                </p>
+              </div>
+
+              {/* Issue 3: Utility Shifting */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                  3. Utility Shifting (EB / Water / OFC)
+                </span>
+                <p className={`text-xs ${project.issue_utility ? 'text-slate-800 dark:text-slate-200 font-medium' : 'text-slate-400 italic'}`}>
+                  {project.issue_utility || '— None / No Utility Shifting issues recorded'}
+                </p>
+              </div>
+
+              {/* Issue 4: Railways Clearance */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                  4. Railways Clearance (ROB / RUB / GAD)
+                </span>
+                <p className={`text-xs ${project.issue_railways ? 'text-slate-800 dark:text-slate-200 font-medium' : 'text-slate-400 italic'}`}>
+                  {project.issue_railways || '— None / No Railways issues recorded'}
+                </p>
+              </div>
+            </div>
+
+            {/* Issue 5: Other Issues */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+              <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                5. Other Bottlenecks &amp; General Remarks
+              </span>
+              <p className={`text-xs ${project.issue_others ? 'text-slate-800 dark:text-slate-200 font-medium' : 'text-slate-400 italic'}`}>
+                {project.issue_others || '— None / No other bottlenecks recorded'}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
