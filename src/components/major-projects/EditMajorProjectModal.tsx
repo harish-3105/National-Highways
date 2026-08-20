@@ -636,6 +636,50 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                   />
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Overall Physical Progress (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={progressPercent}
+                    onChange={(e) => setProgressPercent(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-xs"
+                    placeholder="e.g. 68.5"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Probable Date of Completion
+                  </label>
+                  <input
+                    type="text"
+                    value={probableCompletionDate}
+                    onChange={(e) => setProbableCompletionDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
+                    placeholder="e.g. 31.03.2027"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Physical Progress &amp; Work Stage Remarks
+                </label>
+                <textarea
+                  rows={3}
+                  value={stageRemarks}
+                  onChange={(e) => setStageRemarks(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs leading-relaxed"
+                  placeholder="e.g. Bridge substructure 80% complete, carriageway DBM in progress, or tender milestone..."
+                />
+              </div>
             </div>
           )}
 

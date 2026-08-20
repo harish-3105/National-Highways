@@ -260,6 +260,19 @@ export const AddMajorProjectModal: React.FC<AddMajorProjectModalProps> = ({
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Physical Progress Remarks
+                </label>
+                <textarea
+                  rows={2}
+                  value={stageRemarks}
+                  onChange={(e) => setStageRemarks(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-xl text-xs leading-relaxed"
+                  placeholder="e.g. Bridge substructure 80% complete, carriageway DBM in progress..."
+                />
+              </div>
             </div>
           ) : (
             <div className="p-4 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl space-y-3 animate-in fade-in duration-150">

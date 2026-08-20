@@ -373,6 +373,18 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Physical Progress & Work Stage Remarks */}
+            {project.stage_remarks && (
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+                  Physical Progress &amp; Work Stage Remarks
+                </span>
+                <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
+                  {project.stage_remarks}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* SECTION 3: TIMELINES, EOT & DYNAMIC DELAY ANALYSIS */}
