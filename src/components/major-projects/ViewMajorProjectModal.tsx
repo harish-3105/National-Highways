@@ -443,76 +443,12 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
             </div>
           </div>
 
-          {/* SECTION 4: PERSONNEL & EXECUTING CONTRACTOR */}
-          <div className="space-y-2.5">
-            <div className="flex items-center gap-2 pb-1.5 border-b border-slate-200 dark:border-slate-800">
-              <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                4. Key Personnel & Executing Agency
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Divisional Engineer In-Charge</span>
-                <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">
-                  {project.de_name_phone || '—'}
-                </p>
-              </div>
-
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Executing Contractor / Agency</span>
-                <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">
-                  {project.contractor_name || '—'}
-                </p>
-              </div>
-
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Division Updated Stamp</span>
-                <p className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
-                  {project.updated_division_date || '—'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 5: DETAILED CIVIL, RAILWAY, FOREST & LA STAGE NOTES (COL AC) */}
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                  5. Granular Engineering Milestones & Land Acquisition Log (Col AC)
-                </h3>
-              </div>
-              {project.detailed_stage_status && (
-                <button
-                  onClick={handleCopyStageLog}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xs transition-colors cursor-pointer"
-                >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copied ? 'Copied' : 'Copy Log'}</span>
-                </button>
-              )}
-            </div>
-
-            {project.detailed_stage_status ? (
-              <div className="p-4 bg-slate-50 dark:bg-slate-850/80 rounded-xs border border-slate-200 dark:border-slate-800 text-xs leading-relaxed whitespace-pre-line font-mono text-slate-800 dark:text-slate-200 min-h-[160px] max-h-[400px] overflow-y-auto shadow-inner">
-                {project.detailed_stage_status}
-              </div>
-            ) : (
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/30 rounded-xs border border-dashed border-slate-200 dark:border-slate-800 text-center text-slate-400 italic">
-                No granular structural or land acquisition status log recorded yet for this project.
-              </div>
-            )}
-          </div>
-
-          {/* SECTION 6: CLEARANCE BOTTLENECKS & ISSUES (5 FIELDS) */}
+          {/* SECTION 4: CLEARANCE BOTTLENECKS & ISSUES (5 FIELDS) */}
           <div className="space-y-2.5">
             <div className="flex items-center gap-2 pb-1.5 border-b border-slate-200 dark:border-slate-800">
               <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
               <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                6. Departmental Clearance Bottlenecks &amp; Issues (5 Fields)
+                4. Departmental Clearance Bottlenecks &amp; Issues (5 Fields)
               </h3>
             </div>
 
@@ -567,6 +503,70 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                 {project.issue_others || '— None / No other bottlenecks recorded'}
               </p>
             </div>
+          </div>
+
+          {/* SECTION 5: PERSONNEL & EXECUTING CONTRACTOR */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-slate-200 dark:border-slate-800">
+              <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                5. Key Personnel &amp; Executing Agency
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Divisional Engineer In-Charge</span>
+                <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                  {project.de_name_phone || '—'}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Executing Contractor / Agency</span>
+                <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                  {project.contractor_name || '—'}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Division Updated Stamp</span>
+                <p className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
+                  {project.updated_division_date || '—'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 6: DETAILED CIVIL, RAILWAY, FOREST & LA STAGE NOTES (COL AC) */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                  6. Granular Engineering Milestones &amp; Land Acquisition Log (Col AC)
+                </h3>
+              </div>
+              {project.detailed_stage_status && (
+                <button
+                  onClick={handleCopyStageLog}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xs transition-colors cursor-pointer"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? 'Copied' : 'Copy Log'}</span>
+                </button>
+              )}
+            </div>
+
+            {project.detailed_stage_status ? (
+              <div className="p-4 bg-slate-50 dark:bg-slate-850/80 rounded-xs border border-slate-200 dark:border-slate-800 text-xs leading-relaxed whitespace-pre-line font-mono text-slate-800 dark:text-slate-200 min-h-[160px] max-h-[400px] overflow-y-auto shadow-inner">
+                {project.detailed_stage_status}
+              </div>
+            ) : (
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/30 rounded-xs border border-dashed border-slate-200 dark:border-slate-800 text-center text-slate-400 italic">
+                No granular structural or land acquisition status log recorded yet for this project.
+              </div>
+            )}
           </div>
         </div>
 
