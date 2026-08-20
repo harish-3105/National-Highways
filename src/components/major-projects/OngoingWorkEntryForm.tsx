@@ -229,8 +229,8 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-6 pb-12">
-      {/* Sticky Top Header Banner */}
-      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-16 z-30 backdrop-blur-md bg-white/95 dark:bg-slate-900/95">
+      {/* Top Header Banner */}
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
             type="button"
