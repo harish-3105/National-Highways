@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Eye, Edit3, Trash2, Clock, RotateCcw } from 'lucide-react';
+import { Eye, Edit3, Trash2, Clock, RotateCcw, History } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
 import {
   calculateProjectDelay,
@@ -15,6 +15,7 @@ interface MajorProjectsTableProps {
   onEdit: (project: MajorProject) => void;
   onDelete: (project: MajorProject) => void;
   onRestore: (project: MajorProject) => void;
+  onHistory: (project: MajorProject) => void;
 }
 
 const getDivisionBadgeColor = (division: string) => {
@@ -36,6 +37,7 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
   onEdit,
   onDelete,
   onRestore,
+  onHistory,
 }) => {
   if (loading) {
     return (
@@ -242,6 +244,13 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
                         </button>
                       ) : (
                         <>
+                          <button
+                            onClick={() => onHistory(item)}
+                            className="p-1.5 text-slate-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/60 rounded-xs transition-colors cursor-pointer"
+                            title="View Historical Snapshot & Trendline Chart"
+                          >
+                            <History className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             onClick={() => onView(item)}
                             className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-xs transition-colors cursor-pointer"

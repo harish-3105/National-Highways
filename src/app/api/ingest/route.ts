@@ -264,6 +264,7 @@ export async function POST(request: Request) {
             : null,
         probable_completion_date: item.probable_completion_date || null,
         stage_remarks: item.stage_remarks || null,
+        progress_remarks: item.progress_remarks || null,
         delete_status: 'ACTIVE',
 
         pmis_id: item.pmis_id || null,
@@ -271,6 +272,12 @@ export async function POST(request: Request) {
         length_km: item.length_km ? Number(item.length_km) : null,
         job_no: item.job_no || null,
         sanction_date: item.sanction_date || null,
+
+        // 5 Contract & Milestone Fields
+        loa_date: item.loa_date || null,
+        agreement_date: item.agreement_date || null,
+        contract_value_cr: item.contract_value_cr ? Number(item.contract_value_cr) : null,
+        site_handover_date: item.site_handover_date || null,
         appointed_date: item.appointed_date || null,
         scheduled_completion_date: item.scheduled_completion_date || null,
 
@@ -283,6 +290,7 @@ export async function POST(request: Request) {
         expenditure_prior_cr: item.expenditure_prior_cr ? Number(item.expenditure_prior_cr) : 0,
         expenditure_current_fy_cr: item.expenditure_current_fy_cr ? Number(item.expenditure_current_fy_cr) : 0,
         cumm_financial_expenditure_cr: item.cumm_financial_expenditure_cr ? Number(item.cumm_financial_expenditure_cr) : 0,
+        contract_cum_expenditure_cr: item.contract_cum_expenditure_cr ? Number(item.contract_cum_expenditure_cr) : 0,
 
         likely_completion_date: item.likely_completion_date || null,
         time_overrun_years: item.time_overrun_years ? Number(item.time_overrun_years) : null,
@@ -294,12 +302,53 @@ export async function POST(request: Request) {
         contractor_name: item.contractor_name || null,
         detailed_stage_status: item.detailed_stage_status || null,
         updated_division_date: item.updated_division_date || null,
+
+        issue_land: item.issue_land || null,
+        issue_forest: item.issue_forest || null,
+        issue_utility: item.issue_utility || null,
+        issue_railways: item.issue_railways || null,
+        issue_others: item.issue_others || null,
+
         updated_at: new Date().toISOString(),
       }));
 
       const result = await batchInsertOrUpsert(supabase, 'major_projects_50cr', cleanData);
       insertedCount = result.totalInserted;
       dbError = result.error;
+
+      // Historical Snapshot Audit for Bulk Ingestion
+      if (!dbError && result.data && result.data.length > 0) {
+        try {
+          const snapshotsToInsert = result.data.map((proj: any) => {
+            const cost = Number(proj.revised_cost_cr || proj.project_cost_cr || 0);
+            const exp = Number(proj.cumm_financial_expenditure_cr || 0);
+            const finPercent = cost > 0 ? Math.min(100, Math.round((exp / cost) * 100 * 10) / 10) : 0;
+
+            return {
+              project_id: proj.id,
+              action_source: 'EXCEL_UPLOAD',
+              user_identifier: 'bulk_ingestion',
+              progress_percent: proj.progress_percent,
+              financial_progress_percent: finPercent,
+              cumm_financial_expenditure_cr: proj.cumm_financial_expenditure_cr,
+              contract_cum_expenditure_cr: proj.contract_cum_expenditure_cr,
+              progress_remarks: proj.progress_remarks,
+              stage_remarks: proj.stage_remarks,
+              detailed_stage_status: proj.detailed_stage_status,
+              issue_land: proj.issue_land,
+              issue_forest: proj.issue_forest,
+              issue_utility: proj.issue_utility,
+              issue_railways: proj.issue_railways,
+              issue_others: proj.issue_others,
+              full_snapshot: proj,
+            };
+          });
+
+          await batchInsertOrUpsert(supabase, 'major_projects_snapshots', snapshotsToInsert);
+        } catch (snapshotErr) {
+          console.error('Error logging bulk ingestion snapshots:', snapshotErr);
+        }
+      }
     }
 
     if (dbError) {

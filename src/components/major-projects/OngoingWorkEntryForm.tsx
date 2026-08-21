@@ -13,9 +13,11 @@ import {
   ShieldAlert,
   HardHat,
   Clock,
+  Lock,
+  Unlock,
   CheckCircle2,
 } from 'lucide-react';
-import { MajorProject } from '@/app/api/major-projects/route';
+import { MajorProject, FROZEN_PROJECT_COLUMNS } from '@/app/api/major-projects/route';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { calculateProjectDelay } from '@/lib/formatters';
@@ -25,6 +27,7 @@ interface OngoingWorkEntryFormProps {
   nextSNo?: number;
   masterDivisions?: string[];
   masterSchemes?: string[];
+  isAdmin?: boolean;
   onSave: (projectData: Partial<MajorProject>) => Promise<void> | void;
   onCancel: () => void;
 }
@@ -34,6 +37,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   nextSNo = 1,
   masterDivisions = [],
   masterSchemes = [],
+  isAdmin = false,
   onSave,
   onCancel,
 }) => {
@@ -70,12 +74,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   const [scheme, setScheme] = useState<string>(initialData?.scheme || '');
   const [nameOfWork, setNameOfWork] = useState<string>(initialData?.name_of_work || '');
 
-  // Column 27 (Col AC): Detailed Stage Status & Technical Execution Remarks
-  const [detailedStageStatus, setDetailedStageStatus] = useState<string>(
-    initialData?.detailed_stage_status || ''
-  );
-
-  // Financial
+  // Financial (Module 2)
   const [projectCostCr, setProjectCostCr] = useState<string>(
     initialData?.project_cost_cr !== undefined && initialData?.project_cost_cr !== null
       ? String(initialData.project_cost_cr)
@@ -92,8 +91,28 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       ? String(initialData.cumm_financial_expenditure_cr)
       : ''
   );
+  const [contractValueCr, setContractValueCr] = useState<string>(
+    initialData?.contract_value_cr !== undefined && initialData?.contract_value_cr !== null
+      ? String(initialData.contract_value_cr)
+      : ''
+  );
+  const [contractCumExpenditureCr, setContractCumExpenditureCr] = useState<string>(
+    initialData?.contract_cum_expenditure_cr !== undefined &&
+      initialData?.contract_cum_expenditure_cr !== null
+      ? String(initialData.contract_cum_expenditure_cr)
+      : ''
+  );
 
-  // Physical Progress & Stage
+  // Contract & Execution Milestones
+  const [loaDate, setLoaDate] = useState<string>(initialData?.loa_date || '');
+  const [agreementDate, setAgreementDate] = useState<string>(initialData?.agreement_date || '');
+  const [siteHandoverDate, setSiteHandoverDate] = useState<string>(initialData?.site_handover_date || '');
+  const [appointedDate, setAppointedDate] = useState<string>(initialData?.appointed_date || '');
+  const [scheduledCompletionDate, setScheduledCompletionDate] = useState<string>(
+    initialData?.scheduled_completion_date || ''
+  );
+
+  // Physical Progress & Stage (Module 3)
   const [workStage, setWorkStage] = useState<'IN_PROGRESS' | 'TENDER_STAGE'>(
     initialData?.work_stage === 'TENDER_STAGE' ? 'TENDER_STAGE' : 'IN_PROGRESS'
   );
@@ -105,20 +124,17 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   const [probableCompletionDate, setProbableCompletionDate] = useState<string>(
     initialData?.probable_completion_date || ''
   );
-  const [scheduledCompletionDate, setScheduledCompletionDate] = useState<string>(
-    initialData?.scheduled_completion_date || ''
-  );
   const [stageRemarks, setStageRemarks] = useState<string>(initialData?.stage_remarks || '');
   const [progressRemarks, setProgressRemarks] = useState<string>(initialData?.progress_remarks || '');
 
-  // 5 Issues Fields (Client Specification)
+  // 5 Issues Fields (Module 4)
   const [issueLand, setIssueLand] = useState<string>(initialIssues.land);
   const [issueForest, setIssueForest] = useState<string>(initialIssues.forest);
   const [issueUtility, setIssueUtility] = useState<string>(initialIssues.utility);
   const [issueRailways, setIssueRailways] = useState<string>(initialIssues.railways);
   const [issueOthers, setIssueOthers] = useState<string>(initialIssues.others);
 
-  // Execution & Field Details
+  // Execution & Field Details (Module 5)
   const [contractorName, setContractorName] = useState<string>(initialData?.contractor_name || '');
   const [deNamePhone, setDeNamePhone] = useState<string>(initialData?.de_name_phone || '');
   const [oldNewNh, setOldNewNh] = useState<string>(initialData?.old_new_nh || '');
@@ -130,11 +146,24 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   const [jobNo, setJobNo] = useState<string>(initialData?.job_no || '');
   const [pmisId, setPmisId] = useState<string>(initialData?.pmis_id || '');
   const [sanctionDate, setSanctionDate] = useState<string>(initialData?.sanction_date || '');
-  const [appointedDate, setAppointedDate] = useState<string>(initialData?.appointed_date || '');
+
+  // Column 27 (Module 6): Detailed Stage Status & Technical Execution Remarks
+  const [detailedStageStatus, setDetailedStageStatus] = useState<string>(
+    initialData?.detailed_stage_status || ''
+  );
 
   // UI status
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Helper: Write-Once / Freeze-When-Filled check
+  // A field is locked ONLY IF it was already populated in initialData AND user is not an admin
+  const isFieldLocked = (fieldName: keyof MajorProject): boolean => {
+    if (isAdmin) return false;
+    if (!initialData?.id) return false; // New entries are never locked
+    const val = initialData[fieldName];
+    return val !== null && val !== undefined && val !== '';
+  };
 
   // Computed Financial %
   const calculatedFinancialPercent = useMemo(() => {
@@ -159,11 +188,17 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!division.trim()) newErrors.division = 'Administrative Division is required.';
-    if (!scheme.trim()) newErrors.scheme = 'Scheme / Program is required.';
-    if (!nameOfWork.trim()) newErrors.nameOfWork = 'Name of Work is required.';
-    if (!projectCostCr || isNaN(Number(projectCostCr)) || Number(projectCostCr) <= 0) {
-      newErrors.projectCostCr = 'Valid Total Project Cost (Rs. Cr) is required.';
+    // Progressive entry: Only Name of Work is strictly required to save a record
+    if (!nameOfWork.trim()) {
+      newErrors.nameOfWork = 'Name of Work is required to save project.';
+    }
+
+    if (projectCostCr && (isNaN(Number(projectCostCr)) || Number(projectCostCr) < 0)) {
+      newErrors.projectCostCr = 'Project Cost must be a valid non-negative number.';
+    }
+
+    if (contractValueCr && (isNaN(Number(contractValueCr)) || Number(contractValueCr) < 0)) {
+      newErrors.contractValueCr = 'Contract Value must be a valid non-negative number.';
     }
 
     if (workStage === 'IN_PROGRESS') {
@@ -171,6 +206,14 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
         const p = Number(progressPercent);
         if (isNaN(p) || p < 0 || p > 100) {
           newErrors.progressPercent = 'Physical Progress must be between 0% and 100%.';
+        }
+
+        // Monotonic check: Cannot decrease unless Admin
+        if (!isAdmin && initialData?.progress_percent !== null && initialData?.progress_percent !== undefined) {
+          const prevP = Number(initialData.progress_percent);
+          if (p < prevP) {
+            newErrors.progressPercent = `Monotonic progress rule: Physical progress cannot decrease from previously recorded ${prevP}% (entered ${p}%).`;
+          }
         }
       }
     }
@@ -188,24 +231,18 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
 
     setLoading(true);
 
-    // Format consolidated issues remarks string
-    const issueParts: string[] = [];
-    if (issueLand.trim()) issueParts.push(`Land Acquisition: ${issueLand.trim()}`);
-    if (issueForest.trim()) issueParts.push(`Forest: ${issueForest.trim()}`);
-    if (issueUtility.trim()) issueParts.push(`Utility: ${issueUtility.trim()}`);
-    if (issueRailways.trim()) issueParts.push(`Railways: ${issueRailways.trim()}`);
-    if (issueOthers.trim()) issueParts.push(`Others: ${issueOthers.trim()}`);
-    const consolidatedIssues = issueParts.join(' | ');
-
-    const payload: Partial<MajorProject> = {
+    const payload: Partial<MajorProject> & { isAdmin?: boolean } = {
       ...(initialData?.id ? { id: initialData.id } : {}),
       s_no: Number(sNo) || nextSNo,
-      division: division.trim(),
-      scheme: scheme.trim(),
+      division: division.trim() || 'Chennai',
+      scheme: scheme.trim() || 'Annual Plan 2025-26',
       name_of_work: nameOfWork.trim(),
-      project_cost_cr: Number(projectCostCr),
+      project_cost_cr: projectCostCr ? Number(projectCostCr) : 0,
       revised_cost_cr: revisedCostCr ? Number(revisedCostCr) : null,
       cumm_financial_expenditure_cr: expenditureCr ? Number(expenditureCr) : null,
+      contract_value_cr: contractValueCr ? Number(contractValueCr) : null,
+      contract_cum_expenditure_cr: contractCumExpenditureCr ? Number(contractCumExpenditureCr) : null,
+
       work_stage: workStage,
       progress_percent:
         workStage === 'IN_PROGRESS' && progressPercent !== '' ? Number(progressPercent) : null,
@@ -215,11 +252,20 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       stage_remarks: workStage === 'TENDER_STAGE' ? stageRemarks.trim() || null : null,
       progress_remarks: workStage === 'IN_PROGRESS' ? progressRemarks.trim() || null : null,
       detailed_stage_status: detailedStageStatus.trim() || null,
+
+      // 5 Contract & Milestone Fields
+      loa_date: loaDate.trim() || null,
+      agreement_date: agreementDate.trim() || null,
+      site_handover_date: siteHandoverDate.trim() || null,
+      appointed_date: appointedDate.trim() || null,
+
+      // 5 Issues Fields
       issue_land: issueLand.trim() || null,
       issue_forest: issueForest.trim() || null,
       issue_utility: issueUtility.trim() || null,
       issue_railways: issueRailways.trim() || null,
       issue_others: issueOthers.trim() || null,
+
       contractor_name: contractorName.trim() || null,
       de_name_phone: deNamePhone.trim() || null,
       old_new_nh: oldNewNh.trim() || null,
@@ -227,7 +273,8 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       job_no: jobNo.trim() || null,
       pmis_id: pmisId.trim() || null,
       sanction_date: sanctionDate.trim() || null,
-      appointed_date: appointedDate.trim() || null,
+
+      isAdmin,
     };
 
     try {
@@ -250,10 +297,21 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
             <ArrowLeft className="w-4 h-4" /> Back to Works List
           </button>
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-blue-600" />
-              {initialData?.id ? 'Edit Ongoing Highway Work Record' : 'New Capital Highway Work Entry'}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-blue-600" />
+                {initialData?.id ? 'Edit Ongoing Highway Work Record' : 'New Capital Highway Work Entry'}
+              </h2>
+              {isAdmin ? (
+                <span className="flex items-center gap-1 px-2.5 py-1 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-lg text-[11px] font-bold">
+                  <Unlock className="w-3 h-3 text-purple-600" /> Admin Creative Mode (Override Enabled)
+                </span>
+              ) : initialData?.id ? (
+                <span className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[11px] font-medium">
+                  <Lock className="w-3 h-3 text-amber-500" /> Write-Once Protection Active
+                </span>
+              ) : null}
+            </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Highways Department &bull; Ongoing Capital Projects & Stage Monitoring
             </p>
@@ -284,7 +342,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
           <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 mt-0.5 shrink-0" />
           <div className="text-xs">
             <strong className="font-bold text-sm block mb-1">
-              Please resolve the following required fields ({Object.keys(errors).length}):
+              Please review the following input validation issues ({Object.keys(errors).length}):
             </strong>
             <ul className="list-disc pl-5 space-y-0.5 font-medium">
               {Object.entries(errors).map(([key, msg]) => (
@@ -297,81 +355,115 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
 
       {/* MODULE 1: Primary Identity & Classification */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 text-white flex items-center gap-3">
-          <FileText className="w-5 h-5 text-blue-300" />
-          <div>
-            <h3 className="font-bold text-sm uppercase tracking-wider text-white">
-              MODULE 1: Work Identity & Administrative Scope
-            </h3>
-            <span className="text-xs text-blue-200">
-              Sanction serial, administrative division, scheme classification, and work description
-            </span>
+        <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 text-white flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <FileText className="w-5 h-5 text-blue-300" />
+            <div>
+              <h3 className="font-bold text-sm uppercase tracking-wider text-white">
+                MODULE 1: Work Identity & Administrative Scope
+              </h3>
+              <span className="text-xs text-blue-200">
+                Sanction serial, administrative division, scheme classification, and work description
+              </span>
+            </div>
           </div>
+          {isFieldLocked('name_of_work') && (
+            <span className="text-[11px] flex items-center gap-1 bg-blue-950/60 text-blue-200 px-2.5 py-1 rounded-lg border border-blue-700/50">
+              <Lock className="w-3 h-3 text-amber-300" /> Identity Frozen
+            </span>
+          )}
         </div>
 
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                S.No <span className="text-rose-500">*</span>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>S.No</span>
+                {isFieldLocked('s_no') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
               </label>
               <input
                 type="number"
                 value={sNo}
+                disabled={isFieldLocked('s_no')}
                 onChange={(e) => setSNo(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 ${
+                  isFieldLocked('s_no')
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                }`}
                 placeholder="Serial No"
-                required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Administrative Division <span className="text-rose-500">*</span>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>Administrative Division</span>
+                {isFieldLocked('division') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
               </label>
-              <SearchableSelect
-                options={masterDivisions.length > 0 ? masterDivisions : ['Chennai', 'Salem', 'Madurai', 'Coimbatore', 'Tirunelveli']}
-                value={division}
-                onChange={(val) => {
-                  setDivision(val);
-                  if (errors.division) setErrors((prev) => ({ ...prev, division: '' }));
-                }}
-                placeholder="Select Division..."
-                required
-              />
-              {errors.division && <p className="text-[11px] text-rose-500 mt-1">{errors.division}</p>}
+              {isFieldLocked('division') ? (
+                <input
+                  type="text"
+                  value={division}
+                  disabled
+                  className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 cursor-not-allowed"
+                />
+              ) : (
+                <SearchableSelect
+                  options={masterDivisions.length > 0 ? masterDivisions : ['Chennai', 'Salem', 'Madurai', 'Coimbatore', 'Tirunelveli']}
+                  value={division}
+                  onChange={(val) => {
+                    setDivision(val);
+                    if (errors.division) setErrors((prev) => ({ ...prev, division: '' }));
+                  }}
+                  placeholder="Select Division..."
+                />
+              )}
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Scheme / Funding Program <span className="text-rose-500">*</span>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>Scheme / Funding Program</span>
+                {isFieldLocked('scheme') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
               </label>
-              <SearchableSelect
-                options={masterSchemes.length > 0 ? masterSchemes : ['NH(O)', 'CRIF', 'Annual Plan', 'Special Repairs', 'State Fund']}
-                value={scheme}
-                onChange={(val) => {
-                  setScheme(val);
-                  if (errors.scheme) setErrors((prev) => ({ ...prev, scheme: '' }));
-                }}
-                placeholder="Select Scheme..."
-                required
-              />
-              {errors.scheme && <p className="text-[11px] text-rose-500 mt-1">{errors.scheme}</p>}
+              {isFieldLocked('scheme') ? (
+                <input
+                  type="text"
+                  value={scheme}
+                  disabled
+                  className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 cursor-not-allowed"
+                />
+              ) : (
+                <SearchableSelect
+                  options={masterSchemes.length > 0 ? masterSchemes : ['NH(O)', 'CRIF', 'Annual Plan', 'Special Repairs', 'State Fund']}
+                  value={scheme}
+                  onChange={(val) => {
+                    setScheme(val);
+                    if (errors.scheme) setErrors((prev) => ({ ...prev, scheme: '' }));
+                  }}
+                  placeholder="Select Scheme..."
+                />
+              )}
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Official Name of Work <span className="text-rose-500">*</span>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+              <span>Official Name of Work <span className="text-rose-500">*</span></span>
+              {isFieldLocked('name_of_work') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
             </label>
             <textarea
               rows={3}
               value={nameOfWork}
+              disabled={isFieldLocked('name_of_work')}
               onChange={(e) => {
                 setNameOfWork(e.target.value);
                 if (errors.nameOfWork) setErrors((prev) => ({ ...prev, nameOfWork: '' }));
               }}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full px-3 py-2 border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 ${
+                isFieldLocked('name_of_work')
+                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                  : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+              }`}
               placeholder="Enter complete sanctioned title of the highway work..."
               required
             />
@@ -380,40 +472,70 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
         </div>
       </div>
 
-      {/* MODULE 2: Financial Sanction & Cost Matrix */}
+      {/* MODULE 2: Financial Sanctions & Contract Values */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         <div className="bg-gradient-to-r from-emerald-900 to-emerald-800 px-6 py-4 text-white flex items-center gap-3">
           <IndianRupee className="w-5 h-5 text-emerald-300" />
           <div>
             <h3 className="font-bold text-sm uppercase tracking-wider text-white">
-              MODULE 2: Financial Sanctions & Expenditure Incurred
+              MODULE 2: Financial Sanctions, Contract Outlay & Expenditures
             </h3>
             <span className="text-xs text-emerald-200">
-              Sanctioned outlay, revised costs, cumulative expenditure, and financial burn rate
+              Sanctioned cost, contract award value, cumulative expenditure, and contract burn rate
             </span>
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Original Sanction Cost (Rs. Cr) <span className="text-rose-500">*</span>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>Original Sanction Cost (Rs. Cr)</span>
+                {isFieldLocked('project_cost_cr') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
               </label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={projectCostCr}
+                disabled={isFieldLocked('project_cost_cr')}
                 onChange={(e) => {
                   setProjectCostCr(e.target.value);
                   if (errors.projectCostCr) setErrors((prev) => ({ ...prev, projectCostCr: '' }));
                 }}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 ${
+                  isFieldLocked('project_cost_cr')
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                }`}
                 placeholder="e.g. 75.50"
-                required
               />
               {errors.projectCostCr && <p className="text-[11px] text-rose-500 mt-1">{errors.projectCostCr}</p>}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>Contract Value (Rs. Cr)</span>
+                {isFieldLocked('contract_value_cr') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={contractValueCr}
+                disabled={isFieldLocked('contract_value_cr')}
+                onChange={(e) => {
+                  setContractValueCr(e.target.value);
+                  if (errors.contractValueCr) setErrors((prev) => ({ ...prev, contractValueCr: '' }));
+                }}
+                className={`w-full px-3 py-2 border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 ${
+                  isFieldLocked('contract_value_cr')
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                }`}
+                placeholder="e.g. 68.20"
+              />
+              {errors.contractValueCr && <p className="text-[11px] text-rose-500 mt-1">{errors.contractValueCr}</p>}
             </div>
 
             <div>
@@ -430,7 +552,9 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                 placeholder="Leave blank if not revised"
               />
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Cumulative Financial Expenditure (Rs. Cr)
@@ -445,10 +569,25 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                 placeholder="e.g. 42.10"
               />
             </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Cumulative Expenditure of Contract Value (Rs. Cr)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={contractCumExpenditureCr}
+                onChange={(e) => setContractCumExpenditureCr(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. 39.50"
+              />
+            </div>
           </div>
 
           {calculatedFinancialPercent !== null && (
-            <div className="mt-4 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center justify-between">
+            <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center justify-between">
               <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
                 Calculated Financial Progress:
               </span>
@@ -460,7 +599,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
         </div>
       </div>
 
-      {/* MODULE 3: Physical Stage & Milestone Progress */}
+      {/* MODULE 3: Physical Stage, Completion Targets & Progress Remarks */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         <div className="bg-gradient-to-r from-amber-900 to-amber-800 px-6 py-4 text-white flex items-center gap-3">
           <Activity className="w-5 h-5 text-amber-300" />
@@ -469,7 +608,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
               MODULE 3: Physical Stage, Completion Targets & Delay Tracking
             </h3>
             <span className="text-xs text-amber-200">
-              Work stage execution state, physical progress percentage, and targeted finish dates
+              Work stage execution state, physical progress percentage, monotonic progress checks, and finish targets
             </span>
           </div>
         </div>
@@ -477,7 +616,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
         <div className="p-6 space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Work Stage Status <span className="text-rose-500">*</span>
+              Work Stage Status
             </label>
             <div className="grid grid-cols-2 gap-3 max-w-md">
               <label
@@ -529,8 +668,13 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Physical Progress (%)
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Physical Progress (%)</span>
+                    {initialData?.progress_percent !== undefined && initialData?.progress_percent !== null && (
+                      <span className="text-[11px] font-normal text-slate-400">
+                        Prior: {initialData.progress_percent}%
+                      </span>
+                    )}
                   </label>
                   <input
                     type="number"
@@ -559,11 +703,28 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                 </div>
 
                 <div>
-                  <DatePickerInput
-                    label="Scheduled Agreement Completion Date"
-                    value={scheduledCompletionDate}
-                    onChange={setScheduledCompletionDate}
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Scheduled Completion Date (Baseline)
+                    </span>
+                    {isFieldLocked('scheduled_completion_date') && (
+                      <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>
+                    )}
+                  </div>
+                  {isFieldLocked('scheduled_completion_date') ? (
+                    <input
+                      type="text"
+                      value={scheduledCompletionDate}
+                      disabled
+                      className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 cursor-not-allowed"
+                    />
+                  ) : (
+                    <DatePickerInput
+                      label=""
+                      value={scheduledCompletionDate}
+                      onChange={setScheduledCompletionDate}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -584,17 +745,17 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                 </div>
               )}
 
-              {/* Physical Progress Remarks */}
+              {/* Dedicated Physical Progress Remarks */}
               <div className="pt-2">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Physical Progress Remarks
+                  Physical Progress Remarks (Section 2)
                 </label>
                 <textarea
                   rows={3}
                   value={progressRemarks}
                   onChange={(e) => setProgressRemarks(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. Work in active progress, pier foundation completed, or physical milestone update..."
+                  placeholder="e.g. Active pier erection, deck slab casting in progress, or physical milestone update..."
                 />
               </div>
             </div>
@@ -602,13 +763,13 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
         </div>
       </div>
 
-      {/* MODULE 4: Clearance Bottlenecks & Issues (Client Specification) */}
+      {/* MODULE 4: Clearance Bottlenecks & Issues (5 Dedicated Fields) */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         <div className="bg-gradient-to-r from-red-900 to-red-800 px-6 py-4 text-white flex items-center gap-3">
           <ShieldAlert className="w-5 h-5 text-red-300" />
           <div>
             <h3 className="font-bold text-sm uppercase tracking-wider text-white">
-              MODULE 4: Critical Bottlenecks & Clearance Issues
+              MODULE 4: Critical Bottlenecks & Clearance Issues (Section 4)
             </h3>
             <span className="text-xs text-red-200">
               Departmental issue registers across Land Acquisition, Forest, Utility, Railways, and General Remarks
@@ -620,7 +781,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                1. Land Acquisition Issues
+                1. Land Acquisition Issues &amp; Status
               </label>
               <textarea
                 rows={2}
@@ -633,7 +794,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                2. Forest & Environmental Clearance
+                2. Forest &amp; Environmental Clearance
               </label>
               <textarea
                 rows={2}
@@ -673,7 +834,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              5. Other Inter-Departmental & General Remarks
+              5. Other Inter-Departmental &amp; General Remarks
             </label>
             <textarea
               rows={2}
@@ -686,16 +847,16 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
         </div>
       </div>
 
-      {/* MODULE 5: Technical Details & Site Personnel */}
+      {/* MODULE 5: Technical Details, Contract Milestones & Personnel */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         <div className="bg-gradient-to-r from-slate-800 to-slate-750 px-6 py-4 text-white flex items-center gap-3">
           <HardHat className="w-5 h-5 text-slate-300" />
           <div>
             <h3 className="font-bold text-sm uppercase tracking-wider text-white">
-              MODULE 5: Technical Identifiers & Site Management
+              MODULE 5: Contract Milestones, Identifiers &amp; Site Management
             </h3>
             <span className="text-xs text-slate-300">
-              Contractor identity, Divisional Engineer contact, Job No, PMIS ID, and milestone dates
+              Contract milestones (LOA, Agreement, Handover, Appointed Date), contractor details, and identifiers
             </span>
           </div>
         </div>
@@ -717,7 +878,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                DE Name & Contact
+                DE Name &amp; Contact
               </label>
               <input
                 type="text"
@@ -729,75 +890,191 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Old / New NH No
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>Old / New NH No</span>
+                {isFieldLocked('old_new_nh') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
               </label>
               <input
                 type="text"
                 value={oldNewNh}
+                disabled={isFieldLocked('old_new_nh')}
                 onChange={(e) => setOldNewNh(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 ${
+                  isFieldLocked('old_new_nh')
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                }`}
                 placeholder="e.g. NH-44 / NH-7"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Length (Km)
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>Length (Km)</span>
+                {isFieldLocked('length_km') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
               </label>
               <input
                 type="number"
                 step="0.001"
                 min="0"
                 value={lengthKm}
+                disabled={isFieldLocked('length_km')}
                 onChange={(e) => setLengthKm(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 ${
+                  isFieldLocked('length_km')
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                }`}
                 placeholder="e.g. 14.500"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                PMIS Work ID
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>PMIS Work ID</span>
+                {isFieldLocked('pmis_id') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
               </label>
               <input
                 type="text"
                 value={pmisId}
+                disabled={isFieldLocked('pmis_id')}
                 onChange={(e) => setPmisId(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 ${
+                  isFieldLocked('pmis_id')
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                }`}
                 placeholder="e.g. TN2023001"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                MoRTH Job Number
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>MoRTH Job Number</span>
+                {isFieldLocked('job_no') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
               </label>
               <input
                 type="text"
                 value={jobNo}
+                disabled={isFieldLocked('job_no')}
                 onChange={(e) => setJobNo(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 ${
+                  isFieldLocked('job_no')
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                }`}
                 placeholder="e.g. 044-TN-2023-45"
               />
             </div>
 
             <div>
-              <DatePickerInput
-                label="Sanction Date"
-                value={sanctionDate}
-                onChange={setSanctionDate}
-              />
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Sanction Date</span>
+                {isFieldLocked('sanction_date') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
+              </div>
+              {isFieldLocked('sanction_date') ? (
+                <input
+                  type="text"
+                  value={sanctionDate}
+                  disabled
+                  className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 cursor-not-allowed"
+                />
+              ) : (
+                <DatePickerInput
+                  label=""
+                  value={sanctionDate}
+                  onChange={setSanctionDate}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* 4 Contract Execution Milestones (LOA, Agreement, Handover, Appointed Date) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Date of LOA</span>
+                {isFieldLocked('loa_date') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
+              </div>
+              {isFieldLocked('loa_date') ? (
+                <input
+                  type="text"
+                  value={loaDate}
+                  disabled
+                  className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 cursor-not-allowed"
+                />
+              ) : (
+                <DatePickerInput
+                  label=""
+                  value={loaDate}
+                  onChange={setLoaDate}
+                />
+              )}
             </div>
 
             <div>
-              <DatePickerInput
-                label="Appointed / Start Date"
-                value={appointedDate}
-                onChange={setAppointedDate}
-              />
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Date of Agreement</span>
+                {isFieldLocked('agreement_date') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
+              </div>
+              {isFieldLocked('agreement_date') ? (
+                <input
+                  type="text"
+                  value={agreementDate}
+                  disabled
+                  className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 cursor-not-allowed"
+                />
+              ) : (
+                <DatePickerInput
+                  label=""
+                  value={agreementDate}
+                  onChange={setAgreementDate}
+                />
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Date of Site Handover</span>
+                {isFieldLocked('site_handover_date') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
+              </div>
+              {isFieldLocked('site_handover_date') ? (
+                <input
+                  type="text"
+                  value={siteHandoverDate}
+                  disabled
+                  className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 cursor-not-allowed"
+                />
+              ) : (
+                <DatePickerInput
+                  label=""
+                  value={siteHandoverDate}
+                  onChange={setSiteHandoverDate}
+                />
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Appointed / Start Date</span>
+                {isFieldLocked('appointed_date') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
+              </div>
+              {isFieldLocked('appointed_date') ? (
+                <input
+                  type="text"
+                  value={appointedDate}
+                  disabled
+                  className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 cursor-not-allowed"
+                />
+              ) : (
+                <DatePickerInput
+                  label=""
+                  value={appointedDate}
+                  onChange={setAppointedDate}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -835,7 +1112,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
           onClick={onCancel}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" /> Cancel & Return
+          <ArrowLeft className="w-4 h-4" /> Cancel &amp; Return
         </button>
 
         <button

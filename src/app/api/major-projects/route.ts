@@ -47,7 +47,14 @@ export interface MajorProject {
   updated_division_date?: string | null;
   detailed_stage_status?: string | null;
 
-  // 5 Issues Fields
+  // 5 Contract & Milestone Fields (New 35-Column Layout)
+  loa_date?: string | null;
+  agreement_date?: string | null;
+  contract_value_cr?: number | null;
+  site_handover_date?: string | null;
+  contract_cum_expenditure_cr?: number | null;
+
+  // 5 Issues Fields (Section 4 Clearance Bottlenecks)
   issue_land?: string | null;
   issue_forest?: string | null;
   issue_utility?: string | null;
@@ -57,6 +64,47 @@ export interface MajorProject {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface MajorProjectSnapshot {
+  id: string;
+  project_id: string;
+  snapshot_date: string;
+  action_source: 'EXCEL_UPLOAD' | 'MANUAL_ADD' | 'MANUAL_EDIT' | 'INLINE_EDIT';
+  user_identifier?: string | null;
+  progress_percent?: number | null;
+  financial_progress_percent?: number | null;
+  cumm_financial_expenditure_cr?: number | null;
+  contract_cum_expenditure_cr?: number | null;
+  progress_remarks?: string | null;
+  stage_remarks?: string | null;
+  detailed_stage_status?: string | null;
+  issue_land?: string | null;
+  issue_forest?: string | null;
+  issue_utility?: string | null;
+  issue_railways?: string | null;
+  issue_others?: string | null;
+  full_snapshot: Partial<MajorProject>;
+  created_at?: string;
+}
+
+// Frozen columns: Columns A to N & Column Z (Write-Once / Freeze-When-Filled for standard users)
+export const FROZEN_PROJECT_COLUMNS = [
+  's_no',
+  'name_of_work',
+  'pmis_id',
+  'old_new_nh',
+  'scheme',
+  'length_km',
+  'job_no',
+  'sanction_date',
+  'project_cost_cr',
+  'loa_date',
+  'agreement_date',
+  'contract_value_cr',
+  'site_handover_date',
+  'appointed_date',
+  'scheduled_completion_date',
+] as const;
 
 function getSupabaseClient() {
   const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -87,6 +135,7 @@ export async function GET(request: Request) {
     const stageParam = searchParams.get('stage')?.trim();
     const searchParam = searchParams.get('search')?.trim().toLowerCase();
     const includeDeleted = searchParams.get('includeDeleted') === 'true';
+    const completionFilter = searchParams.get('completionFilter')?.trim(); // 'ACTIVE_ONLY', 'COMPLETED_ONLY', 'ALL'
 
     if (!supabase) {
       return NextResponse.json({
@@ -121,7 +170,20 @@ export async function GET(request: Request) {
       });
     }
 
-    let filteredData = data || [];
+    let filteredData = (data || []) as MajorProject[];
+
+    // Completed Works Filtering (100% Physical Progress)
+    if (completionFilter === 'COMPLETED_ONLY') {
+      filteredData = filteredData.filter(
+        (p) => p.work_stage === 'IN_PROGRESS' && p.progress_percent !== null && Number(p.progress_percent) >= 100
+      );
+    } else if (completionFilter === 'ACTIVE_ONLY' || !completionFilter) {
+      // Default: Auto-hide 100% completed works from default active list
+      filteredData = filteredData.filter(
+        (p) => p.work_stage !== 'IN_PROGRESS' || p.progress_percent === null || Number(p.progress_percent) < 100
+      );
+    }
+
     if (searchParam) {
       filteredData = filteredData.filter(
         (p: MajorProject) =>
@@ -133,7 +195,13 @@ export async function GET(request: Request) {
           (p.contractor_name || '').toLowerCase().includes(searchParam) ||
           (p.de_name_phone || '').toLowerCase().includes(searchParam) ||
           (p.detailed_stage_status || '').toLowerCase().includes(searchParam) ||
-          (p.stage_remarks || '').toLowerCase().includes(searchParam)
+          (p.stage_remarks || '').toLowerCase().includes(searchParam) ||
+          (p.progress_remarks || '').toLowerCase().includes(searchParam) ||
+          (p.issue_land || '').toLowerCase().includes(searchParam) ||
+          (p.issue_forest || '').toLowerCase().includes(searchParam) ||
+          (p.issue_utility || '').toLowerCase().includes(searchParam) ||
+          (p.issue_railways || '').toLowerCase().includes(searchParam) ||
+          (p.issue_others || '').toLowerCase().includes(searchParam)
       );
     }
 
@@ -170,7 +238,7 @@ export async function POST(request: Request) {
       progress_remarks,
       delete_status,
 
-      // Level 2 (27-Column fields)
+      // Level 2 fields
       pmis_id,
       old_new_nh,
       length_km,
@@ -200,26 +268,40 @@ export async function POST(request: Request) {
       updated_division_date,
       detailed_stage_status,
 
+      // 5 Contract & Milestone Fields
+      loa_date,
+      agreement_date,
+      contract_value_cr,
+      site_handover_date,
+      contract_cum_expenditure_cr,
+
+      // 5 Issues Fields
       issue_land,
       issue_forest,
       issue_utility,
       issue_railways,
       issue_others,
+
+      // Admin & Audit
+      isAdmin = false,
+      actionSource = 'MANUAL_EDIT',
+      userIdentifier = 'portal_user',
     } = body;
 
-    if (!name_of_work || !division || !scheme) {
+    // Progressive entry: only name_of_work is strictly required to draft/initialize
+    if (!name_of_work || !String(name_of_work).trim()) {
       return NextResponse.json(
-        { success: false, message: 'Division, Scheme, and Name of Work are required.' },
+        { success: false, message: 'Name of Work is required to save project.' },
         { status: 400 }
       );
     }
 
     const payload: Record<string, unknown> = {
       s_no: Number(s_no) || 1,
-      division: division.trim(),
-      scheme: scheme.trim(),
-      name_of_work: name_of_work.trim(),
-      project_cost_cr: Number(project_cost_cr) || 0,
+      division: division ? String(division).trim() : 'Chennai',
+      scheme: scheme ? String(scheme).trim() : 'Annual Plan 2025-26',
+      name_of_work: String(name_of_work).trim(),
+      project_cost_cr: project_cost_cr !== undefined && project_cost_cr !== '' && project_cost_cr !== null ? Number(project_cost_cr) : 0,
       work_stage: work_stage === 'TENDER_STAGE' ? 'TENDER_STAGE' : 'IN_PROGRESS',
       progress_percent:
         work_stage === 'TENDER_STAGE'
@@ -233,7 +315,6 @@ export async function POST(request: Request) {
       progress_remarks: progress_remarks?.trim() || null,
       delete_status: delete_status || 'ACTIVE',
 
-      // Level 2 fields
       pmis_id: pmis_id ? String(pmis_id).trim() : null,
       old_new_nh: old_new_nh ? String(old_new_nh).trim() : null,
       length_km: length_km !== undefined && length_km !== '' && length_km !== null ? Number(length_km) : null,
@@ -298,6 +379,22 @@ export async function POST(request: Request) {
       updated_division_date: updated_division_date ? String(updated_division_date).trim() : null,
       detailed_stage_status: detailed_stage_status ? String(detailed_stage_status).trim() : null,
 
+      // 5 Contract & Milestone Fields
+      loa_date: loa_date ? String(loa_date).trim() : null,
+      agreement_date: agreement_date ? String(agreement_date).trim() : null,
+      contract_value_cr:
+        contract_value_cr !== undefined && contract_value_cr !== '' && contract_value_cr !== null
+          ? Number(contract_value_cr)
+          : null,
+      site_handover_date: site_handover_date ? String(site_handover_date).trim() : null,
+      contract_cum_expenditure_cr:
+        contract_cum_expenditure_cr !== undefined &&
+        contract_cum_expenditure_cr !== '' &&
+        contract_cum_expenditure_cr !== null
+          ? Number(contract_cum_expenditure_cr)
+          : null,
+
+      // 5 Issues Fields
       issue_land: issue_land ? String(issue_land).trim() : null,
       issue_forest: issue_forest ? String(issue_forest).trim() : null,
       issue_utility: issue_utility ? String(issue_utility).trim() : null,
@@ -308,6 +405,43 @@ export async function POST(request: Request) {
     };
 
     if (id && !id.startsWith('proj-')) {
+      // 1. Fetch existing record to verify "Write-Once / Freeze-When-Filled" and monotonic rules
+      const { data: existingRecords } = await supabase
+        .from('major_projects_50cr')
+        .select('*')
+        .eq('id', id)
+        .limit(1);
+
+      const existing = existingRecords?.[0];
+
+      if (existing) {
+        // Enforce Monotonic Progress Increase (unless Admin)
+        if (!isAdmin && payload.work_stage === 'IN_PROGRESS' && payload.progress_percent !== null) {
+          const prevProg = existing.progress_percent !== null ? Number(existing.progress_percent) : 0;
+          const newProg = Number(payload.progress_percent);
+          if (newProg < prevProg) {
+            return NextResponse.json(
+              {
+                success: false,
+                message: `Monotonic constraint: Physical progress cannot decrease from previously recorded ${prevProg}% (received ${newProg}%).`,
+              },
+              { status: 400 }
+            );
+          }
+        }
+
+        // Enforce Write-Once / Freeze-When-Filled for standard users (A-N & Z)
+        if (!isAdmin) {
+          FROZEN_PROJECT_COLUMNS.forEach((col) => {
+            const prevVal = existing[col];
+            // If previous value exists (non-null and non-empty), standard user cannot overwrite it
+            if (prevVal !== null && prevVal !== undefined && prevVal !== '') {
+              payload[col] = prevVal; // Preserve existing frozen value
+            }
+          });
+        }
+      }
+
       // Update existing DB record
       const { data, error } = await supabase
         .from('major_projects_50cr')
@@ -316,7 +450,38 @@ export async function POST(request: Request) {
         .select();
 
       if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
-      return NextResponse.json({ success: true, project: data?.[0] });
+
+      const updatedProject = data?.[0];
+
+      // 2. Automated Historical Snapshot Logging
+      try {
+        const cost = Number(updatedProject?.revised_cost_cr || updatedProject?.project_cost_cr || 0);
+        const exp = Number(updatedProject?.cumm_financial_expenditure_cr || 0);
+        const finPercent = cost > 0 ? Math.min(100, Math.round((exp / cost) * 100 * 10) / 10) : 0;
+
+        await supabase.from('major_projects_snapshots').insert({
+          project_id: updatedProject.id,
+          action_source: actionSource || 'MANUAL_EDIT',
+          user_identifier: userIdentifier || 'portal_user',
+          progress_percent: updatedProject.progress_percent,
+          financial_progress_percent: finPercent,
+          cumm_financial_expenditure_cr: updatedProject.cumm_financial_expenditure_cr,
+          contract_cum_expenditure_cr: updatedProject.contract_cum_expenditure_cr,
+          progress_remarks: updatedProject.progress_remarks,
+          stage_remarks: updatedProject.stage_remarks,
+          detailed_stage_status: updatedProject.detailed_stage_status,
+          issue_land: updatedProject.issue_land,
+          issue_forest: updatedProject.issue_forest,
+          issue_utility: updatedProject.issue_utility,
+          issue_railways: updatedProject.issue_railways,
+          issue_others: updatedProject.issue_others,
+          full_snapshot: updatedProject,
+        });
+      } catch (snapshotErr) {
+        console.error('Snapshot logging error:', snapshotErr);
+      }
+
+      return NextResponse.json({ success: true, project: updatedProject });
     }
 
     // Insert new record
@@ -328,7 +493,40 @@ export async function POST(request: Request) {
     const { data, error } = await supabase.from('major_projects_50cr').insert([insertPayload]).select();
 
     if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
-    return NextResponse.json({ success: true, project: data?.[0] });
+
+    const newProject = data?.[0];
+
+    // Initial snapshot log on creation
+    try {
+      if (newProject) {
+        const cost = Number(newProject.revised_cost_cr || newProject.project_cost_cr || 0);
+        const exp = Number(newProject.cumm_financial_expenditure_cr || 0);
+        const finPercent = cost > 0 ? Math.min(100, Math.round((exp / cost) * 100 * 10) / 10) : 0;
+
+        await supabase.from('major_projects_snapshots').insert({
+          project_id: newProject.id,
+          action_source: 'MANUAL_ADD',
+          user_identifier: userIdentifier || 'portal_user',
+          progress_percent: newProject.progress_percent,
+          financial_progress_percent: finPercent,
+          cumm_financial_expenditure_cr: newProject.cumm_financial_expenditure_cr,
+          contract_cum_expenditure_cr: newProject.contract_cum_expenditure_cr,
+          progress_remarks: newProject.progress_remarks,
+          stage_remarks: newProject.stage_remarks,
+          detailed_stage_status: newProject.detailed_stage_status,
+          issue_land: newProject.issue_land,
+          issue_forest: newProject.issue_forest,
+          issue_utility: newProject.issue_utility,
+          issue_railways: newProject.issue_railways,
+          issue_others: newProject.issue_others,
+          full_snapshot: newProject,
+        });
+      }
+    } catch (snapshotErr) {
+      console.error('Initial snapshot logging error:', snapshotErr);
+    }
+
+    return NextResponse.json({ success: true, project: newProject });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, message: msg }, { status: 500 });

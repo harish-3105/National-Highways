@@ -145,7 +145,32 @@ This document captures and tracks all proposed changes, architectural pivots, an
   7. **Clean Distance Unit Badge Formatting**:
      - Formatted split distance badges in the Chainage Splits track to display **`12.3 km`** (with space and `km`).
 
+### Change 10: Ongoing Works 35-Column Full Architecture, Write-Once Freezing & History Timeline
+- **Module**: Ongoing Works / Major Capital Projects (`/ongoing-works`)
+- **Status**: ✅ **COMPLETED & DEPLOYED TO PRODUCTION** (August 21, 2026)
+- **Delivered Architecture & Features**:
+  1. **35-Column Standardized Excel Mapping (Columns A to AI)**:
+     - Fully supported all 35 columns from the updated departmental spreadsheet (`Update 27 column present status as on 30.07.2026.xlsx`).
+     - Added 5 first-class contract execution & expenditure fields: `loa_date` (Col 10), `agreement_date` (Col 11), `contract_value_cr` (Col 12), `site_handover_date` (Col 13), `contract_cum_expenditure_cr` (Col 24).
+  2. **Dedicated Clearance Issue Bottlenecks & Progress Remarks (6 Fields)**:
+     - Implemented 5 dedicated clearance bottleneck textareas (`issue_land`, `issue_forest`, `issue_utility`, `issue_railways`, `issue_others`) and dedicated `progress_remarks` in Section 2.
+  3. **"Write-Once / Freeze-When-Filled" Rule (Columns A–N & Column Z)**:
+     - Relaxed mandatory field rules to allow progressive drafting of project records (only `name_of_work` required).
+     - When a frozen field (Cols A–N, Z) is blank/null, standard users can enter a value at any time. Once filled, the field permanently freezes for standard users (cannot be altered via manual edit or Excel upload).
+     - Admins ("Creative Mode") retain full manual override authority to correct frozen fields at any time.
+  4. **Monotonic Progress Increase Validation**:
+     - Enforced monotonic progress checks so physical progress % cannot decrease from previously recorded values (unless overridden in Admin Creative Mode).
+  5. **Completed Works Tracking & Auto-Hide**:
+     - Any project reaching 100% physical progress automatically hides from default active views.
+     - Dedicated **Active / Completed / All** toolbar pills and **Completed Works KPI Card** showing total completed projects and value in ₹ Cr.
+  6. **Trading-Style Time Series Chart & Historical Audit Log (`ProjectHistoryModal.tsx`)**:
+     - Automated historical snapshot logging (`major_projects_snapshots` table) on every mutation event.
+     - Dual-trendline SVG line chart (Physical % vs Financial %) with tooltips and chronological snapshot data table with CSV export.
+  7. **Full 35-Column Standardized Excel (.xlsx) Export**:
+     - One-click export downloading the canonical 35-column departmental format.
+
 ---
+
 
 
 

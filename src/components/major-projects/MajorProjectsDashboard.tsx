@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import {
   Building2,
   Plus,
@@ -19,6 +20,11 @@ import {
   RotateCcw,
   Percent,
   X,
+  History,
+  Download,
+  FileSpreadsheet,
+  Unlock,
+  Lock,
 } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
 import { OngoingWorksMasterData } from '@/app/api/ongoing-works/master-data/route';
@@ -28,6 +34,7 @@ import { OngoingWorkEntryForm } from './OngoingWorkEntryForm';
 import { ViewMajorProjectModal } from './ViewMajorProjectModal';
 import { DeleteMajorProjectModal } from './DeleteMajorProjectModal';
 import { OngoingWorksMasterDataModal } from './OngoingWorksMasterDataModal';
+import { ProjectHistoryModal } from './ProjectHistoryModal';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 export const MajorProjectsDashboard: React.FC = () => {
@@ -40,6 +47,7 @@ export const MajorProjectsDashboard: React.FC = () => {
   });
   const [loading, setLoading] = useState<boolean>(true);
   const [showArchived, setShowArchived] = useState<boolean>(false);
+  const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
 
   // Screen state: 'LIST' | 'FORM'
   const [uiMode, setUiMode] = useState<'LIST' | 'FORM'>('LIST');
@@ -49,6 +57,7 @@ export const MajorProjectsDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedDivision, setSelectedDivision] = useState<string>('ALL');
   const [selectedStage, setSelectedStage] = useState<'ALL' | 'IN_PROGRESS' | 'TENDER_STAGE' | 'DELAYED'>('ALL');
+  const [completionFilter, setCompletionFilter] = useState<'ACTIVE_ONLY' | 'COMPLETED_ONLY' | 'ALL'>('ACTIVE_ONLY');
   const [costAbove50CrOnly, setCostAbove50CrOnly] = useState<boolean>(false);
 
   // Range Filters
@@ -61,11 +70,12 @@ export const MajorProjectsDashboard: React.FC = () => {
   const [isMasterModalOpen, setIsMasterModalOpen] = useState<boolean>(false);
   const [viewingProject, setViewingProject] = useState<MajorProject | null>(null);
   const [deletingProject, setDeletingProject] = useState<MajorProject | null>(null);
+  const [historyProject, setHistoryProject] = useState<MajorProject | null>(null);
 
   const fetchProjects = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/major-projects?${showArchived ? 'includeDeleted=true' : ''}`);
+      const res = await fetch(`/api/major-projects?${showArchived ? 'includeDeleted=true' : ''}&completionFilter=ALL`);
       const data = await res.json();
       if (data.success) {
         setProjects(data.projects || []);
@@ -85,6 +95,8 @@ export const MajorProjectsDashboard: React.FC = () => {
         body: JSON.stringify({
           ...project,
           delete_status: 'ACTIVE',
+          isAdmin: true,
+          actionSource: 'MANUAL_EDIT',
         }),
       });
       const data = await res.json();
@@ -101,16 +113,23 @@ export const MajorProjectsDashboard: React.FC = () => {
       const res = await fetch('/api/major-projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(projectData),
+        body: JSON.stringify({
+          ...projectData,
+          isAdmin: isAdminMode,
+          actionSource: projectData.id ? 'MANUAL_EDIT' : 'MANUAL_ADD',
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setUiMode('LIST');
         setSelectedProjectForEdit(null);
         fetchProjects();
+      } else {
+        alert(`Save failed: ${data.message}`);
       }
     } catch (err) {
       console.error('Failed to save project:', err);
+      alert('Network error while saving project.');
     }
   };
 
@@ -143,7 +162,16 @@ export const MajorProjectsDashboard: React.FC = () => {
   // Filtered projects
   const filteredProjects = useMemo(() => {
     return projects.filter((p) => {
-      // 1. Division filter
+      const isCompleted = p.work_stage === 'IN_PROGRESS' && p.progress_percent !== null && Number(p.progress_percent) >= 100;
+
+      // 1. Completion Filter (Auto-hide 100% completed from default active view)
+      if (completionFilter === 'ACTIVE_ONLY') {
+        if (isCompleted) return false;
+      } else if (completionFilter === 'COMPLETED_ONLY') {
+        if (!isCompleted) return false;
+      }
+
+      // 2. Division filter
       const matchesDivision =
         selectedDivision === 'ALL' ||
         (p.division || '').toLowerCase() === selectedDivision.toLowerCase();
@@ -155,7 +183,7 @@ export const MajorProjectsDashboard: React.FC = () => {
         p.progress_percent
       );
 
-      // 2. Stage filter
+      // 3. Stage filter
       let matchesStage = true;
       if (selectedStage === 'IN_PROGRESS') {
         matchesStage = p.work_stage === 'IN_PROGRESS';
@@ -165,7 +193,7 @@ export const MajorProjectsDashboard: React.FC = () => {
         matchesStage = delayInfo.isDelayed;
       }
 
-      // 3. Delay Range Filter (in years)
+      // 4. Delay Range Filter (in years)
       let matchesDelayRange = true;
       const overrun = delayInfo.delayYears;
       if (delayMin !== '') {
@@ -175,7 +203,7 @@ export const MajorProjectsDashboard: React.FC = () => {
         matchesDelayRange = matchesDelayRange && overrun <= Number(delayMax);
       }
 
-      // 4. Progress Range Filter (in %)
+      // 5. Progress Range Filter (in %)
       let matchesProgressRange = true;
       const prog =
         p.progress_percent !== undefined && p.progress_percent !== null ? Number(p.progress_percent) : 0;
@@ -186,7 +214,7 @@ export const MajorProjectsDashboard: React.FC = () => {
         matchesProgressRange = matchesProgressRange && prog <= Number(progressMax);
       }
 
-      // 5. Cost ≥ ₹50 Cr Filter (based on revised_cost if present, else project_cost)
+      // 6. Cost ≥ ₹50 Cr Filter
       let matchesCost50Cr = true;
       if (costAbove50CrOnly) {
         const effectiveCost = Number(
@@ -197,7 +225,7 @@ export const MajorProjectsDashboard: React.FC = () => {
         matchesCost50Cr = effectiveCost >= 50;
       }
 
-      // 6. Search filter
+      // 7. Search filter
       const matchesSearch =
         !searchTerm.trim() ||
         (p.name_of_work || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -208,7 +236,13 @@ export const MajorProjectsDashboard: React.FC = () => {
         (p.contractor_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.de_name_phone || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.detailed_stage_status || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.stage_remarks || '').toLowerCase().includes(searchTerm.toLowerCase());
+        (p.stage_remarks || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.progress_remarks || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.issue_land || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.issue_forest || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.issue_utility || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.issue_railways || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.issue_others || '').toLowerCase().includes(searchTerm.toLowerCase());
 
       return (
         matchesDivision &&
@@ -221,6 +255,7 @@ export const MajorProjectsDashboard: React.FC = () => {
     });
   }, [
     projects,
+    completionFilter,
     selectedDivision,
     selectedStage,
     costAbove50CrOnly,
@@ -233,19 +268,32 @@ export const MajorProjectsDashboard: React.FC = () => {
 
   // Aggregate KPI metrics
   const totalCount = projects.length;
+  const activeCount = useMemo(() => {
+    return projects.filter((p) => p.work_stage !== 'IN_PROGRESS' || p.progress_percent === null || Number(p.progress_percent) < 100).length;
+  }, [projects]);
+
+  const completedCount = useMemo(() => {
+    return projects.filter((p) => p.work_stage === 'IN_PROGRESS' && p.progress_percent !== null && Number(p.progress_percent) >= 100).length;
+  }, [projects]);
+
+  const completedCostCr = useMemo(() => {
+    return projects
+      .filter((p) => p.work_stage === 'IN_PROGRESS' && p.progress_percent !== null && Number(p.progress_percent) >= 100)
+      .reduce((sum, p) => sum + (Number(p.revised_cost_cr || p.project_cost_cr) || 0), 0);
+  }, [projects]);
+
   const totalCostCr = useMemo(() => {
     return projects.reduce((sum, p) => sum + (Number(p.project_cost_cr) || 0), 0);
   }, [projects]);
 
   const inProgressCount = useMemo(() => {
-    return projects.filter((p) => p.work_stage === 'IN_PROGRESS').length;
+    return projects.filter((p) => p.work_stage === 'IN_PROGRESS' && (p.progress_percent === null || Number(p.progress_percent) < 100)).length;
   }, [projects]);
 
   const tenderCount = useMemo(() => {
     return projects.filter((p) => p.work_stage === 'TENDER_STAGE').length;
   }, [projects]);
 
-  // Dynamic live delayed count
   const delayedCount = useMemo(() => {
     return projects.filter((p) => {
       const delay = calculateProjectDelay(
@@ -257,7 +305,6 @@ export const MajorProjectsDashboard: React.FC = () => {
     }).length;
   }, [projects]);
 
-  // Mega project (≥ 50 Cr) count
   const above50CrCount = useMemo(() => {
     return projects.filter((p) => {
       const cost = Number(
@@ -279,6 +326,7 @@ export const MajorProjectsDashboard: React.FC = () => {
       searchTerm !== '' ||
       selectedDivision !== 'ALL' ||
       selectedStage !== 'ALL' ||
+      completionFilter !== 'ACTIVE_ONLY' ||
       costAbove50CrOnly ||
       delayMin !== '' ||
       delayMax !== '' ||
@@ -289,6 +337,7 @@ export const MajorProjectsDashboard: React.FC = () => {
     searchTerm,
     selectedDivision,
     selectedStage,
+    completionFilter,
     costAbove50CrOnly,
     delayMin,
     delayMax,
@@ -300,11 +349,67 @@ export const MajorProjectsDashboard: React.FC = () => {
     setSearchTerm('');
     setSelectedDivision('ALL');
     setSelectedStage('ALL');
+    setCompletionFilter('ACTIVE_ONLY');
     setCostAbove50CrOnly(false);
     setDelayMin('');
     setDelayMax('');
     setProgressMin('');
     setProgressMax('');
+  };
+
+  // 35-Column Full Excel (.xlsx) & CSV Export
+  const handleExportExcel = () => {
+    if (filteredProjects.length === 0) return;
+
+    const dataToExport = filteredProjects.map((p) => ({
+      'Sl. No.': p.s_no,
+      'Name of the project': p.name_of_work,
+      'PMIS/ OCMS/ PMG Id': p.pmis_id || '',
+      'Old NH / New No.': p.old_new_nh || '',
+      'Annual Plan (FY)': p.scheme || '',
+      'Length in km': p.length_km || '',
+      'Job No.': p.job_no || '',
+      'Date of Sanction / Revision': p.sanction_date || '',
+      'TPC Rs.in Crore': p.project_cost_cr || 0,
+      'Date of Loa': p.loa_date || '',
+      'Date of Agreement': p.agreement_date || '',
+      'Contract Value': p.contract_value_cr || '',
+      'Date of Handing over of site': p.site_handover_date || '',
+      'Date of Start/ Appointed Date': p.appointed_date || '',
+      'Completed Length (km) till 31.03.2026': p.completed_length_prior_km || 0,
+      'Completed length (km) in 2026-27': p.completed_length_current_fy_km || 0,
+      'Total Completed Length (km)': p.total_completed_length_km || 0,
+      'Cumm. phy. Prog. (%)':
+        p.progress_percent !== null && p.progress_percent !== undefined ? `${p.progress_percent}%` : '',
+      'Revised cost / Anticipated cost in Cr.': p.revised_cost_cr || '',
+      'Increase in cost due to RCE': p.cost_increase_rce_cr || '',
+      'Expenditure upto 31-03-2026 in Cr.': p.expenditure_prior_cr || 0,
+      'Expenditure in Cr. 2026-27': p.expenditure_current_fy_cr || 0,
+      'Cumm. Fin. Prog. Cr': p.cumm_financial_expenditure_cr || 0,
+      'Cumulative expenditure of Contract value': p.contract_cum_expenditure_cr || '',
+      'likely date of completion': p.likely_completion_date || '',
+      'Scheduled date of completion': p.scheduled_completion_date || '',
+      'Likely/ Actual date of completion': p.probable_completion_date || '',
+      'Time over run in years': p.time_overrun_years || '',
+      'EOT Granted Till': p.eot_granted_till || '',
+      'Further EOT Proposal with the Agency': p.eot_proposal_agency || '',
+      'COS': p.cos_details || '',
+      'Divisional Engineer Name / PH no.': p.de_name_phone || '',
+      'Contractor': p.contractor_name || '',
+      'Detailed Stage': p.detailed_stage_status || '',
+      'Updated Division & Date': p.updated_division_date || '',
+      'Progress Remarks': p.progress_remarks || '',
+      'Land Acquisition Issues': p.issue_land || '',
+      'Forest Clearance': p.issue_forest || '',
+      'Utility Shifting': p.issue_utility || '',
+      'Railways Clearance': p.issue_railways || '',
+      'Other Remarks': p.issue_others || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'ONGOING WORKS');
+    XLSX.writeFile(workbook, `TN_NH_Ongoing_Works_35Col_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   if (uiMode === 'FORM') {
@@ -314,6 +419,7 @@ export const MajorProjectsDashboard: React.FC = () => {
         nextSNo={nextSNo}
         masterDivisions={masterData.divisions}
         masterSchemes={masterData.schemes}
+        isAdmin={isAdminMode}
         onSave={handleSaveProject}
         onCancel={() => {
           setUiMode('LIST');
@@ -335,6 +441,11 @@ export const MajorProjectsDashboard: React.FC = () => {
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
               Ongoing Works
             </h1>
+            {isAdminMode && (
+              <span className="flex items-center gap-1 px-2.5 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold text-xs rounded-md border border-purple-200 dark:border-purple-800">
+                <Unlock className="w-3.5 h-3.5 text-purple-600" /> Admin Creative Mode
+              </span>
+            )}
           </div>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Capital infrastructure works, bypasses, ROBs, flyovers, and four-laning projects across Tamil Nadu divisions.
@@ -348,6 +459,26 @@ export const MajorProjectsDashboard: React.FC = () => {
             title="Refresh Data"
           >
             <RefreshCw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setIsAdminMode(!isAdminMode)}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+              isAdminMode
+                ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+            title="Toggle Admin Creative Mode (Override frozen columns)"
+          >
+            {isAdminMode ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+            <span>{isAdminMode ? 'Creative Mode ON' : 'Standard Mode'}</span>
+          </button>
+          <button
+            onClick={handleExportExcel}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+            title="Export 35-Column Standardized Excel (.xlsx)"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Export 35-Col Excel</span>
           </button>
           <button
             onClick={() => setShowArchived((v) => !v)}
@@ -382,23 +513,26 @@ export const MajorProjectsDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 5 Top KPI Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
-        {/* Card 1: Total Works */}
+      {/* 6 Top KPI Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        {/* Card 1: Active Works */}
         <div
-          onClick={() => setSelectedStage('ALL')}
+          onClick={() => {
+            setCompletionFilter('ACTIVE_ONLY');
+            setSelectedStage('ALL');
+          }}
           className={`p-4 rounded-2xl border shadow-xs flex items-center justify-between cursor-pointer transition-all ${
-            selectedStage === 'ALL' && !hasActiveFilters
-              ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-400'
+            completionFilter === 'ACTIVE_ONLY' && selectedStage === 'ALL'
+              ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-400 ring-2 ring-blue-400/20'
               : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-blue-300'
           }`}
         >
           <div className="space-y-1">
-            <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider block">Total Ongoing Works</span>
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Active Ongoing</span>
             <div className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono">
-              {totalCount}
+              {activeCount}
             </div>
-            <span className="text-[10px] text-slate-500 font-medium">All registered works</span>
+            <span className="text-[10px] text-slate-500 font-medium">Under monitoring</span>
           </div>
           <div className="p-3 bg-blue-50 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400">
             <Building2 className="w-5 h-5" />
@@ -408,32 +542,35 @@ export const MajorProjectsDashboard: React.FC = () => {
         {/* Card 2: Total Project Cost */}
         <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider block">Total Capital Outlay</span>
-            <div className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-              ₹ {totalCostCr.toLocaleString('en-IN', { maximumFractionDigits: 2 })} Cr
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Capital Outlay</span>
+            <div className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
+              ₹ {totalCostCr.toLocaleString('en-IN', { maximumFractionDigits: 1 })} Cr
             </div>
-            <span className="text-[10px] text-slate-500 font-medium">Approved Outlay</span>
+            <span className="text-[10px] text-slate-500 font-medium">Sanctioned Outlay</span>
           </div>
           <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl text-emerald-600 dark:text-emerald-400">
             <IndianRupee className="w-5 h-5" />
           </div>
         </div>
 
-        {/* Card 3: In Progress (Execution) */}
+        {/* Card 3: Under Execution */}
         <div
-          onClick={() => setSelectedStage(selectedStage === 'IN_PROGRESS' ? 'ALL' : 'IN_PROGRESS')}
+          onClick={() => {
+            setCompletionFilter('ACTIVE_ONLY');
+            setSelectedStage(selectedStage === 'IN_PROGRESS' ? 'ALL' : 'IN_PROGRESS');
+          }}
           className={`p-4 rounded-2xl border shadow-xs flex items-center justify-between cursor-pointer transition-all ${
-            selectedStage === 'IN_PROGRESS'
+            selectedStage === 'IN_PROGRESS' && completionFilter === 'ACTIVE_ONLY'
               ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/20'
               : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-emerald-300'
           }`}
         >
           <div className="space-y-1">
-            <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider block">Under Execution</span>
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Under Execution</span>
             <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
               {inProgressCount}
             </div>
-            <span className="text-[10px] text-slate-500 font-medium">Physical works active</span>
+            <span className="text-[10px] text-slate-500 font-medium">Physical active</span>
           </div>
           <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl text-emerald-600 dark:text-emerald-400">
             <Activity className="w-5 h-5" />
@@ -442,7 +579,10 @@ export const MajorProjectsDashboard: React.FC = () => {
 
         {/* Card 4: Tender Stage */}
         <div
-          onClick={() => setSelectedStage(selectedStage === 'TENDER_STAGE' ? 'ALL' : 'TENDER_STAGE')}
+          onClick={() => {
+            setCompletionFilter('ACTIVE_ONLY');
+            setSelectedStage(selectedStage === 'TENDER_STAGE' ? 'ALL' : 'TENDER_STAGE');
+          }}
           className={`p-4 rounded-2xl border shadow-xs flex items-center justify-between cursor-pointer transition-all ${
             selectedStage === 'TENDER_STAGE'
               ? 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-500 ring-2 ring-amber-500/20'
@@ -450,7 +590,7 @@ export const MajorProjectsDashboard: React.FC = () => {
           }`}
         >
           <div className="space-y-1">
-            <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider block">Tender / Pre-Const.</span>
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Tender Stage</span>
             <div className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
               {tenderCount}
             </div>
@@ -461,9 +601,10 @@ export const MajorProjectsDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 5: Delayed Works (Time Overrun) */}
+        {/* Card 5: Delayed Works */}
         <div
           onClick={() => {
+            setCompletionFilter('ACTIVE_ONLY');
             if (selectedStage === 'DELAYED') {
               setSelectedStage('ALL');
               setDelayMin('');
@@ -479,7 +620,7 @@ export const MajorProjectsDashboard: React.FC = () => {
           }`}
         >
           <div className="space-y-1">
-            <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider block">Delayed Works</span>
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Delayed Works</span>
             <div className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono">
               {delayedCount}
             </div>
@@ -489,11 +630,35 @@ export const MajorProjectsDashboard: React.FC = () => {
             <AlertTriangle className="w-5 h-5" />
           </div>
         </div>
+
+        {/* Card 6: Completed Works (100% Physical Progress) */}
+        <div
+          onClick={() => {
+            setCompletionFilter(completionFilter === 'COMPLETED_ONLY' ? 'ACTIVE_ONLY' : 'COMPLETED_ONLY');
+            setSelectedStage('ALL');
+          }}
+          className={`p-4 rounded-2xl border shadow-xs flex items-center justify-between cursor-pointer transition-all ${
+            completionFilter === 'COMPLETED_ONLY'
+              ? 'bg-teal-50/80 dark:bg-teal-950/40 border-teal-500 ring-2 ring-teal-500/20'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-teal-300'
+          }`}
+        >
+          <div className="space-y-1">
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Completed Works</span>
+            <div className="text-2xl font-black text-teal-600 dark:text-teal-400 font-mono">
+              {completedCount}
+            </div>
+            <span className="text-[10px] text-slate-500 font-medium">100% progress done</span>
+          </div>
+          <div className="p-3 bg-teal-50 dark:bg-teal-950/60 rounded-xl text-teal-600 dark:text-teal-400">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+        </div>
       </div>
 
       {/* Comprehensive Filter Panel */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
-        {/* Tier 1: Search, Division & Stage Tabs */}
+        {/* Tier 1: Search, Division, Completion Pill & Stage Tabs */}
         <div className="flex flex-col lg:flex-row items-center justify-between gap-3">
           {/* Search Input */}
           <div className="relative w-full lg:w-80">
@@ -502,13 +667,47 @@ export const MajorProjectsDashboard: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by work, NH, scheme, division..."
+              placeholder="Search by work, NH, scheme, division, contractor..."
               className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
             />
           </div>
 
           {/* Controls Group */}
           <div className="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end flex-wrap">
+            {/* Completion Filter Pill (Active vs Completed vs All) */}
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+              <button
+                onClick={() => setCompletionFilter('ACTIVE_ONLY')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  completionFilter === 'ACTIVE_ONLY'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                Active ({activeCount})
+              </button>
+              <button
+                onClick={() => setCompletionFilter('COMPLETED_ONLY')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  completionFilter === 'COMPLETED_ONLY'
+                    ? 'bg-teal-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                Completed ({completedCount})
+              </button>
+              <button
+                onClick={() => setCompletionFilter('ALL')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  completionFilter === 'ALL'
+                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                All ({totalCount})
+              </button>
+            </div>
+
             {/* Division Filter */}
             <div className="w-48">
               <SearchableSelect
@@ -540,54 +739,10 @@ export const MajorProjectsDashboard: React.FC = () => {
                 {above50CrCount}
               </span>
             </button>
-
-            {/* Stage Selector Pills */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
-              <button
-                onClick={() => setSelectedStage('ALL')}
-                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                  selectedStage === 'ALL'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                All ({totalCount})
-              </button>
-              <button
-                onClick={() => setSelectedStage('IN_PROGRESS')}
-                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                  selectedStage === 'IN_PROGRESS'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                In Progress ({inProgressCount})
-              </button>
-              <button
-                onClick={() => setSelectedStage('TENDER_STAGE')}
-                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                  selectedStage === 'TENDER_STAGE'
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                Tender ({tenderCount})
-              </button>
-              <button
-                onClick={() => setSelectedStage('DELAYED')}
-                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                  selectedStage === 'DELAYED'
-                    ? 'bg-rose-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-rose-600'
-                }`}
-              >
-                Delayed ({delayedCount})
-              </button>
-            </div>
           </div>
         </div>
 
-        {/* Tier 2: From & To Range Filters for Delay & Physical Progress */}
+        {/* Tier 2: Range Filters for Delay & Physical Progress */}
         <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-3 text-xs flex-wrap">
           <div className="flex items-center gap-4 flex-wrap w-full md:w-auto">
             {/* 1. Delay (Years) Range Filter */}
@@ -616,67 +771,6 @@ export const MajorProjectsDashboard: React.FC = () => {
                   onChange={(e) => setDelayMax(e.target.value)}
                   className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-rose-500"
                 />
-              </div>
-
-              {/* Quick delay preset chips */}
-              <div className="hidden sm:flex items-center gap-1 ml-1 text-[10.5px]">
-                <button
-                  onClick={() => {
-                    if (delayMin === '0.01' && delayMax === '0.99') {
-                      setDelayMin('');
-                      setDelayMax('');
-                    } else {
-                      setDelayMin('0.01');
-                      setDelayMax('0.99');
-                    }
-                  }}
-                  className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-semibold ${
-                    delayMin === '0.01' && delayMax === '0.99'
-                      ? 'bg-rose-600 text-white'
-                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200'
-                  }`}
-                  title="Delayed strictly under 1 year (< 1 yr)"
-                >
-                  &lt; 1y
-                </button>
-                <button
-                  onClick={() => {
-                    if (delayMin === '1' && delayMax === '3') {
-                      setDelayMin('');
-                      setDelayMax('');
-                    } else {
-                      setDelayMin('1');
-                      setDelayMax('3');
-                    }
-                  }}
-                  className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-semibold ${
-                    delayMin === '1' && delayMax === '3'
-                      ? 'bg-rose-600 text-white'
-                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200'
-                  }`}
-                  title="Delayed 1 to 3 years inclusive (1 – 3 yrs)"
-                >
-                  1 – 3y
-                </button>
-                <button
-                  onClick={() => {
-                    if (delayMin === '3.01' && delayMax === '') {
-                      setDelayMin('');
-                      setDelayMax('');
-                    } else {
-                      setDelayMin('3.01');
-                      setDelayMax('');
-                    }
-                  }}
-                  className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-semibold ${
-                    delayMin === '3.01' && delayMax === ''
-                      ? 'bg-rose-600 text-white'
-                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200'
-                  }`}
-                  title="Delayed strictly over 3 years (> 3 yrs)"
-                >
-                  &gt; 3y
-                </button>
               </div>
 
               {(delayMin !== '' || delayMax !== '') && (
@@ -721,86 +815,6 @@ export const MajorProjectsDashboard: React.FC = () => {
                 />
               </div>
 
-              {/* Quick progress preset chips */}
-              <div className="hidden sm:flex items-center gap-1 ml-1 text-[10.5px]">
-                <button
-                  onClick={() => {
-                    if (progressMin === '0' && progressMax === '24.9') {
-                      setProgressMin('');
-                      setProgressMax('');
-                    } else {
-                      setProgressMin('0');
-                      setProgressMax('24.9');
-                    }
-                  }}
-                  className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-semibold ${
-                    progressMin === '0' && progressMax === '24.9'
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200'
-                  }`}
-                  title="Progress strictly under 25% (< 25%)"
-                >
-                  &lt; 25%
-                </button>
-                <button
-                  onClick={() => {
-                    if (progressMin === '25' && progressMax === '49.9') {
-                      setProgressMin('');
-                      setProgressMax('');
-                    } else {
-                      setProgressMin('25');
-                      setProgressMax('49.9');
-                    }
-                  }}
-                  className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-semibold ${
-                    progressMin === '25' && progressMax === '49.9'
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200'
-                  }`}
-                  title="Progress 25% to 49.9% (25 – 50%)"
-                >
-                  25 – 50%
-                </button>
-                <button
-                  onClick={() => {
-                    if (progressMin === '50' && progressMax === '74.9') {
-                      setProgressMin('');
-                      setProgressMax('');
-                    } else {
-                      setProgressMin('50');
-                      setProgressMax('74.9');
-                    }
-                  }}
-                  className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-semibold ${
-                    progressMin === '50' && progressMax === '74.9'
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200'
-                  }`}
-                  title="Progress 50% to 74.9% (50 – 75%)"
-                >
-                  50 – 75%
-                </button>
-                <button
-                  onClick={() => {
-                    if (progressMin === '75' && progressMax === '100') {
-                      setProgressMin('');
-                      setProgressMax('');
-                    } else {
-                      setProgressMin('75');
-                      setProgressMax('100');
-                    }
-                  }}
-                  className={`px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer font-semibold ${
-                    progressMin === '75' && progressMax === '100'
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200'
-                  }`}
-                  title="Progress 75% to 100% (75 – 100%)"
-                >
-                  75 – 100%
-                </button>
-              </div>
-
               {(progressMin !== '' || progressMax !== '') && (
                 <button
                   onClick={() => {
@@ -816,57 +830,71 @@ export const MajorProjectsDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Reset Filters Action */}
           {hasActiveFilters && (
             <button
               onClick={handleResetFilters}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition-colors cursor-pointer font-bold text-xs self-end md:self-auto"
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset Filters</span>
+              <span>Reset All Filters</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Main Table */}
+      {/* Main Ongoing Works Table */}
       <MajorProjectsTable
         projects={filteredProjects}
         loading={loading}
-        onView={(p) => setViewingProject(p)}
-        onEdit={(p) => {
-          setSelectedProjectForEdit(p);
+        onView={(project) => setViewingProject(project)}
+        onEdit={(project) => {
+          setSelectedProjectForEdit(project);
           setUiMode('FORM');
         }}
-        onDelete={(p) => setDeletingProject(p)}
+        onDelete={(project) => setDeletingProject(project)}
         onRestore={handleRestoreProject}
+        onHistory={(project) => setHistoryProject(project)}
       />
 
-      {/* Modal Suite */}
+      {/* View Modal */}
       <ViewMajorProjectModal
         project={viewingProject}
         isOpen={!!viewingProject}
         onClose={() => setViewingProject(null)}
-        onEdit={(p) => {
+        onEdit={(project) => {
           setViewingProject(null);
-          setSelectedProjectForEdit(p);
+          setSelectedProjectForEdit(project);
           setUiMode('FORM');
         }}
       />
 
+      {/* Soft Delete Confirmation Modal */}
       <DeleteMajorProjectModal
         project={deletingProject}
         isOpen={!!deletingProject}
         onClose={() => setDeletingProject(null)}
-        onSuccess={fetchProjects}
+        onSuccess={() => {
+          setDeletingProject(null);
+          fetchProjects();
+        }}
       />
 
+      {/* Master Data Config Modal */}
       <OngoingWorksMasterDataModal
         isOpen={isMasterModalOpen}
         onClose={() => setIsMasterModalOpen(false)}
         masterData={masterData}
         onRefresh={fetchMasterData}
       />
+
+      {/* Historical Snapshot Timeline & Trendline Modal */}
+      <ProjectHistoryModal
+        project={historyProject}
+        isOpen={!!historyProject}
+        onClose={() => setHistoryProject(null)}
+      />
     </div>
   );
 };
+
+export default MajorProjectsDashboard;

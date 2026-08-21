@@ -250,6 +250,45 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                 </p>
               </div>
             </div>
+
+            {/* Contract Award & Site Handover Milestones */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
+                  Date of LOA
+                </span>
+                <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
+                  📅 {project.loa_date || '—'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
+                  Date of Agreement
+                </span>
+                <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
+                  📅 {project.agreement_date || '—'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
+                  Contract Value
+                </span>
+                <p className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs">
+                  {project.contract_value_cr ? `₹ ${Number(project.contract_value_cr).toFixed(2)} Cr` : '—'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xs border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
+                  Site Handover Date
+                </span>
+                <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
+                  📅 {project.site_handover_date || '—'}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* SECTION 2: DUAL PHYSICAL & FINANCIAL PROGRESS */}
@@ -340,7 +379,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-200 dark:border-slate-700/60 font-mono">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center pt-2 border-t border-slate-200 dark:border-slate-700/60 font-mono">
                   <div className="p-2 bg-white dark:bg-slate-900 rounded-xs border border-slate-200 dark:border-slate-800">
                     <span className="text-[9.5px] text-slate-400 block uppercase">Prior Exp</span>
                     <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
@@ -357,6 +396,12 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                     <span className="text-[9.5px] text-slate-400 block uppercase">Cumulative Exp</span>
                     <span className="font-extrabold text-blue-600 dark:text-blue-400 text-xs">
                       ₹{Number(project.cumm_financial_expenditure_cr || project.expenditure_prior_cr || 0).toFixed(2)} Cr
+                    </span>
+                  </div>
+                  <div className="p-2 bg-white dark:bg-slate-900 rounded-xs border border-slate-200 dark:border-slate-800">
+                    <span className="text-[9.5px] text-slate-400 block uppercase">Contract Exp</span>
+                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">
+                      ₹{Number(project.contract_cum_expenditure_cr || 0).toFixed(2)} Cr
                     </span>
                   </div>
                 </div>

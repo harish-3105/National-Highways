@@ -1135,6 +1135,7 @@ export interface OngoingWorkRow {
   progress_percent?: number | null;
   probable_completion_date?: string | null;
   stage_remarks?: string | null;
+  progress_remarks?: string | null;
 
   // Level 2 (27-Column fields)
   pmis_id?: string | null;
@@ -1165,6 +1166,20 @@ export interface OngoingWorkRow {
   contractor_name?: string | null;
   updated_division_date?: string | null;
   detailed_stage_status?: string | null;
+
+  // 5 Contract & Milestone Fields (35-Column format)
+  loa_date?: string | null;
+  agreement_date?: string | null;
+  contract_value_cr?: number | null;
+  site_handover_date?: string | null;
+  contract_cum_expenditure_cr?: number | null;
+
+  // 5 Issues Fields
+  issue_land?: string | null;
+  issue_forest?: string | null;
+  issue_utility?: string | null;
+  issue_railways?: string | null;
+  issue_others?: string | null;
 }
 
 function parseOngoingWorks(workbook: XLSX.WorkBook | null, rawRows: any[][], result: ParseResult) {
@@ -1173,7 +1188,7 @@ function parseOngoingWorks(workbook: XLSX.WorkBook | null, rawRows: any[][], res
   let rowsToProcess: any[] = [];
   if (workbook) {
     const targetSheetName =
-      workbook.SheetNames.find((name) => /ongoing/i.test(name)) ||
+      workbook.SheetNames.find((name) => /ongoing|status|project/i.test(name)) ||
       workbook.SheetNames[0];
     const sheet = workbook.Sheets[targetSheetName];
     rowsToProcess = XLSX.utils.sheet_to_json(sheet, { header: 'A', defval: '', raw: false });
@@ -1181,12 +1196,27 @@ function parseOngoingWorks(workbook: XLSX.WorkBook | null, rawRows: any[][], res
     // If CSV
     rowsToProcess = rawRows.map((r) => {
       const obj: Record<string, string> = {};
-      const cols = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','AA','AB','AC','AD'];
+      const cols = [
+        'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+        'AA','AB','AC','AD','AE','AF','AG','AH','AI','AJ'
+      ];
       cols.forEach((col, idx) => {
         obj[col] = r[idx] !== undefined && r[idx] !== null ? String(r[idx]) : '';
       });
       return obj;
     });
+  }
+
+  // Detect format: 35-column (new) vs 30-column (legacy)
+  let is35ColLayout = false;
+  for (let i = 0; i < Math.min(5, rowsToProcess.length); i++) {
+    const r = rowsToProcess[i];
+    if (!r) continue;
+    const rowConcat = Object.values(r).join(' ').toLowerCase();
+    if (rowConcat.includes('loa') || rowConcat.includes('date of agreement') || rowConcat.includes('contract value') || r.AI !== undefined) {
+      is35ColLayout = true;
+      break;
+    }
   }
 
   let currentSection = 'IN_PROGRESS';
@@ -1209,9 +1239,12 @@ function parseOngoingWorks(workbook: XLSX.WorkBook | null, rawRows: any[][], res
 
     // Check if row has numeric S.No and substantial project title
     if (/^\d+$/.test(colA) && colB.length > 5) {
-      // Determine Division from Col AD
+      const sNoNum = parseInt(colA, 10);
+
+      // Determine Division from Division column (AI in 35-col, AD in 30-col)
+      const rawDivisionCol = is35ColLayout ? String(row.AI || '') : String(row.AD || '');
       let division = 'Chennai';
-      const adText = String(row.AD || '').toLowerCase();
+      const adText = rawDivisionCol.toLowerCase();
       if (adText.includes('vellore')) division = 'Vellore';
       else if (adText.includes('madurai')) division = 'Madurai';
       else if (adText.includes('coimbatore')) division = 'Coimbatore';
@@ -1226,31 +1259,170 @@ function parseOngoingWorks(workbook: XLSX.WorkBook | null, rawRows: any[][], res
       else if (adText.includes('krishnagiri')) division = 'Krishnagiri';
       else if (adText.includes('chennai')) division = 'Chennai';
       else {
-        const lines = String(row.AD || '').split(/[\r\n&]+/);
+        const lines = rawDivisionCol.split(/[\r\n&]+/);
         if (lines[0] && lines[0].trim()) {
           division = lines[0].replace(/division/i, '').replace(/[()]/g, '').trim() || 'Chennai';
         }
       }
 
-      // Scheme
+      // Scheme (Col E)
       let scheme = String(row.E || '').trim();
       if (scheme && !scheme.toLowerCase().includes('annual') && !scheme.toLowerCase().includes('crif')) {
         scheme = 'Annual Plan ' + scheme;
       }
       if (!scheme) scheme = 'Annual Plan 2025-26';
 
-      // Progress %
+      // Cost (Col I)
+      const costCr = row.I ? parseFloat(String(row.I).replace(/[^0-9.]/g, '')) || 0 : 0;
+
       let prog: number | null = null;
-      if (row.N !== undefined && row.N !== '' && row.N !== '-') {
-        const pVal = parseFloat(String(row.N).replace('%', ''));
-        if (!isNaN(pVal)) {
-          prog = pVal <= 1.0 && pVal > 0 ? Math.round(pVal * 100) : pVal;
+      let detailedStageStatus = '';
+      let updatedDivisionDate = rawDivisionCol.trim() || null;
+
+      let loaDate: string | null = null;
+      let agreementDate: string | null = null;
+      let contractValCr: number | null = null;
+      let siteHandoverDate: string | null = null;
+      let appointedDate: string | null = null;
+
+      let completedPriorKm = 0;
+      let completedCurrentFyKm = 0;
+      let totalCompletedKm = 0;
+
+      let revisedCostCr: number | null = null;
+      let costIncreaseRceCr: number | null = null;
+      let expPriorCr = 0;
+      let expCurrentFyCr = 0;
+      let cummFinExpCr = 0;
+      let contractCumExpCr: number | null = null;
+
+      let likelyCompletionDate: string | null = null;
+      let scheduledCompletionDate: string | null = null;
+      let probableCompletionDate: string | null = null;
+      let timeOverrunYears: number | null = null;
+
+      let eotGrantedTill: string | null = null;
+      let eotProposalAgency: string | null = null;
+      let cosDetails: string | null = null;
+      let deNamePhone: string | null = null;
+      let contractorName: string | null = null;
+
+      if (is35ColLayout) {
+        // 35-Column Layout
+        // Col J (10): Date of Loa
+        loaDate = formatExcelDate(row.J);
+        // Col K (11): Date of Agreement
+        agreementDate = formatExcelDate(row.K);
+        // Col L (12): Contract Value
+        contractValCr = row.L ? parseFloat(String(row.L).replace(/[^0-9.]/g, '')) || null : null;
+        // Col M (13): Date of Handing over of site
+        siteHandoverDate = formatExcelDate(row.M);
+        // Col N (14): Date of Start/ Appointed Date
+        appointedDate = formatExcelDate(row.N);
+
+        // Col O (15): Completed Length till prior FY
+        completedPriorKm = row.O ? parseFloat(String(row.O)) || 0 : 0;
+        // Col P (16): Completed length current FY
+        completedCurrentFyKm = row.P ? parseFloat(String(row.P)) || 0 : 0;
+        // Col Q (17): Total Completed Length
+        totalCompletedKm = row.Q ? parseFloat(String(row.Q)) || 0 : 0;
+
+        // Col R (18): Cumm. phy. Prog. (%)
+        if (row.R !== undefined && row.R !== '' && row.R !== '-') {
+          const pVal = parseFloat(String(row.R).replace('%', ''));
+          if (!isNaN(pVal)) {
+            prog = pVal <= 1.0 && pVal > 0 ? Math.round(pVal * 100) : pVal;
+          }
         }
+
+        // Col S (19): Revised cost
+        revisedCostCr = row.S ? parseFloat(String(row.S)) || null : null;
+        // Col T (20): Increase in cost due to RCE
+        costIncreaseRceCr = row.T ? parseFloat(String(row.T)) || null : null;
+        // Col U (21): Expenditure prior
+        expPriorCr = row.U ? parseFloat(String(row.U)) || 0 : 0;
+        // Col V (22): Expenditure current FY
+        expCurrentFyCr = row.V && row.V !== '-' ? parseFloat(String(row.V)) || 0 : 0;
+        // Col W (23): Cumm. Fin. Prog. Cr
+        cummFinExpCr = row.W ? parseFloat(String(row.W)) || 0 : 0;
+        // Col X (24): Cumulative expenditure of Contract value
+        contractCumExpCr = row.X && row.X !== '-' ? parseFloat(String(row.X)) || null : null;
+
+        // Col Y (25): Likely date of completion
+        likelyCompletionDate = formatExcelDate(row.Y);
+        // Col Z (26): Scheduled date of completion
+        scheduledCompletionDate = formatExcelDate(row.Z);
+        // Col AA (27): Likely/ Actual date of completion
+        probableCompletionDate = formatExcelDate(row.AA || row.Y);
+        // Col AB (28): Time over run in years
+        timeOverrunYears = row.AB ? parseFloat(String(row.AB)) || null : null;
+
+        // Col AC (29): EOT Granted Till
+        eotGrantedTill = String(row.AC || '').trim() || null;
+        // Col AD (30): Further EOT Proposal with Agency
+        eotProposalAgency = String(row.AD || '').trim() || null;
+        // Col AE (31): COS
+        cosDetails = String(row.AE || '').trim() || null;
+        // Col AF (32): DE Name / Phone
+        deNamePhone = String(row.AF || '').trim() || null;
+        // Col AG (33): Contractor
+        contractorName = String(row.AG || '').trim() || null;
+        // Col AH (34): Detailed Stage
+        detailedStageStatus = String(row.AH || '').trim();
+      } else {
+        // Legacy 30-Column Layout
+        appointedDate = formatExcelDate(row.J);
+        completedPriorKm = row.K ? parseFloat(String(row.K)) || 0 : 0;
+        completedCurrentFyKm = row.L ? parseFloat(String(row.L)) || 0 : 0;
+        totalCompletedKm = row.M ? parseFloat(String(row.M)) || 0 : 0;
+
+        if (row.N !== undefined && row.N !== '' && row.N !== '-') {
+          const pVal = parseFloat(String(row.N).replace('%', ''));
+          if (!isNaN(pVal)) {
+            prog = pVal <= 1.0 && pVal > 0 ? Math.round(pVal * 100) : pVal;
+          }
+        }
+
+        revisedCostCr = row.O ? parseFloat(String(row.O)) || null : null;
+        costIncreaseRceCr = row.P ? parseFloat(String(row.P)) || null : null;
+        expPriorCr = row.Q ? parseFloat(String(row.Q)) || 0 : 0;
+        expCurrentFyCr = row.R && row.R !== '-' ? parseFloat(String(row.R)) || 0 : 0;
+        cummFinExpCr = row.S ? parseFloat(String(row.S)) || 0 : 0;
+
+        likelyCompletionDate = formatExcelDate(row.T);
+        scheduledCompletionDate = formatExcelDate(row.U);
+        probableCompletionDate = formatExcelDate(row.V || row.T);
+        timeOverrunYears = row.W ? parseFloat(String(row.W)) || null : null;
+
+        eotGrantedTill = String(row.X || '').trim() || null;
+        eotProposalAgency = String(row.Y || '').trim() || null;
+        cosDetails = String(row.Z || '').trim() || null;
+        deNamePhone = String(row.AA || '').trim() || null;
+        contractorName = String(row.AB || '').trim() || null;
+        detailedStageStatus = String(row.AC || '').trim();
       }
 
-      // Cost
-      const costCr = row.I ? parseFloat(String(row.I).replace(/[^0-9.]/g, '')) || 0 : 0;
-      const sNoNum = parseInt(colA, 10);
+      // Extract individual clearance bottlenecks from detailedStageStatus if present
+      let issueLand: string | null = null;
+      let issueForest: string | null = null;
+      let issueUtility: string | null = null;
+      let issueRailways: string | null = null;
+      let issueOthers: string | null = null;
+
+      if (detailedStageStatus) {
+        const text = detailedStageStatus;
+        const laMatch = text.match(/LA:?\s*([\s\S]*?)(?=(?:Railway|Forest|Utility|Others?:|$))/i);
+        const forestMatch = text.match(/Forest:?\s*([\s\S]*?)(?=(?:Railway|LA|Utility|Others?:|$))/i);
+        const railMatch = text.match(/Railway:?\s*([\s\S]*?)(?=(?:Forest|LA|Utility|Others?:|$))/i);
+        const utilMatch = text.match(/Utility:?\s*([\s\S]*?)(?=(?:Forest|LA|Railway|Others?:|$))/i);
+        const othersMatch = text.match(/Others:?\s*([\s\S]*?)(?=(?:Forest|LA|Railway|Utility:|$))/i);
+
+        if (laMatch && laMatch[1].trim()) issueLand = laMatch[1].trim();
+        if (forestMatch && forestMatch[1].trim()) issueForest = forestMatch[1].trim();
+        if (railMatch && railMatch[1].trim()) issueRailways = railMatch[1].trim();
+        if (utilMatch && utilMatch[1].trim()) issueUtility = utilMatch[1].trim();
+        if (othersMatch && othersMatch[1].trim()) issueOthers = othersMatch[1].trim();
+      }
 
       parsedData.push({
         s_no: sNoNum,
@@ -1260,38 +1432,50 @@ function parseOngoingWorks(workbook: XLSX.WorkBook | null, rawRows: any[][], res
         project_cost_cr: costCr,
         work_stage: currentSection === 'TENDER_STAGE' ? 'TENDER_STAGE' : 'IN_PROGRESS',
         progress_percent: prog,
-        probable_completion_date: formatExcelDate(row.V || row.T),
-        stage_remarks: currentSection === 'TENDER_STAGE' ? String(row.AC || '').trim() || 'Tender / Sanction process ongoing.' : null,
+        probable_completion_date: probableCompletionDate,
+        stage_remarks: currentSection === 'TENDER_STAGE' ? detailedStageStatus || 'Tender / Sanction process ongoing.' : null,
 
-        // 27-Column parameters
+        // 35-Column parameters
         pmis_id: String(row.C || '').trim() || null,
         old_new_nh: String(row.D || '').trim() || null,
         length_km: row.F ? parseFloat(String(row.F)) || null : null,
         job_no: String(row.G || '').trim() || null,
         sanction_date: formatExcelDate(row.H),
-        appointed_date: formatExcelDate(row.J),
-        scheduled_completion_date: formatExcelDate(row.U),
 
-        completed_length_prior_km: row.K ? parseFloat(String(row.K)) || 0 : 0,
-        completed_length_current_fy_km: row.L ? parseFloat(String(row.L)) || 0 : 0,
-        total_completed_length_km: row.M ? parseFloat(String(row.M)) || 0 : 0,
+        loa_date: loaDate,
+        agreement_date: agreementDate,
+        contract_value_cr: contractValCr,
+        site_handover_date: siteHandoverDate,
+        appointed_date: appointedDate,
+        scheduled_completion_date: scheduledCompletionDate,
 
-        revised_cost_cr: row.O ? parseFloat(String(row.O)) || null : null,
-        cost_increase_rce_cr: row.P ? parseFloat(String(row.P)) || null : null,
-        expenditure_prior_cr: row.Q ? parseFloat(String(row.Q)) || 0 : 0,
-        expenditure_current_fy_cr: row.R && row.R !== '-' ? parseFloat(String(row.R)) || 0 : 0,
-        cumm_financial_expenditure_cr: row.S ? parseFloat(String(row.S)) || 0 : 0,
+        completed_length_prior_km: completedPriorKm,
+        completed_length_current_fy_km: completedCurrentFyKm,
+        total_completed_length_km: totalCompletedKm,
 
-        likely_completion_date: formatExcelDate(row.V || row.T),
-        time_overrun_years: row.W ? parseFloat(String(row.W)) || null : null,
-        eot_granted_till: String(row.X || '').trim() || null,
-        eot_proposal_agency: String(row.Y || '').trim() || null,
-        cos_details: String(row.Z || '').trim() || null,
+        revised_cost_cr: revisedCostCr,
+        cost_increase_rce_cr: costIncreaseRceCr,
+        expenditure_prior_cr: expPriorCr,
+        expenditure_current_fy_cr: expCurrentFyCr,
+        cumm_financial_expenditure_cr: cummFinExpCr,
+        contract_cum_expenditure_cr: contractCumExpCr,
 
-        de_name_phone: String(row.AA || '').trim() || null,
-        contractor_name: String(row.AB || '').trim() || null,
-        detailed_stage_status: String(row.AC || '').trim() || null,
-        updated_division_date: String(row.AD || '').trim() || null,
+        likely_completion_date: likelyCompletionDate,
+        time_overrun_years: timeOverrunYears,
+        eot_granted_till: eotGrantedTill,
+        eot_proposal_agency: eotProposalAgency,
+        cos_details: cosDetails,
+
+        de_name_phone: deNamePhone,
+        contractor_name: contractorName,
+        detailed_stage_status: detailedStageStatus || null,
+        updated_division_date: updatedDivisionDate,
+
+        issue_land: issueLand,
+        issue_forest: issueForest,
+        issue_utility: issueUtility,
+        issue_railways: issueRailways,
+        issue_others: issueOthers,
       });
     }
   }
@@ -1301,4 +1485,5 @@ function parseOngoingWorks(workbook: XLSX.WorkBook | null, rawRows: any[][], res
   result.data = parsedData;
   return result;
 }
+
 
