@@ -637,58 +637,24 @@ export const MajorProjectsDashboard: React.FC = () => {
 
       {/* Comprehensive Filter Panel */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
-        {/* Tier 1: Search, Division, Completion Pill & Stage Tabs */}
+        {/* Tier 1: Search Bar, Division Filter & 50Cr Button */}
         <div className="flex flex-col lg:flex-row items-center justify-between gap-3">
           {/* Search Input */}
-          <div className="relative w-full lg:w-80">
+          <div className="relative w-full lg:flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by work, NH, scheme, division, contractor..."
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
+              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
             />
           </div>
 
-          {/* Controls Group */}
-          <div className="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end flex-wrap">
-            {/* Completion Filter Pill (Active vs Completed vs All) */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
-              <button
-                onClick={() => setCompletionFilter('ACTIVE_ONLY')}
-                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                  completionFilter === 'ACTIVE_ONLY'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                Active ({activeCount})
-              </button>
-              <button
-                onClick={() => setCompletionFilter('COMPLETED_ONLY')}
-                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                  completionFilter === 'COMPLETED_ONLY'
-                    ? 'bg-teal-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                Completed ({completedCount})
-              </button>
-              <button
-                onClick={() => setCompletionFilter('ALL')}
-                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                  completionFilter === 'ALL'
-                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                All ({totalCount})
-              </button>
-            </div>
-
+          {/* Division Filter & 50Cr Button */}
+          <div className="flex items-center gap-2.5 w-full lg:w-auto flex-wrap sm:flex-nowrap">
             {/* Division Filter */}
-            <div className="w-48">
+            <div className="w-full sm:w-56">
               <SearchableSelect
                 options={['All Divisions', ...divisionsList]}
                 value={selectedDivision === 'ALL' || !selectedDivision ? 'All Divisions' : selectedDivision}
@@ -700,7 +666,7 @@ export const MajorProjectsDashboard: React.FC = () => {
             {/* ≥ ₹50 Cr Filter Toggle */}
             <button
               onClick={() => setCostAbove50CrOnly(!costAbove50CrOnly)}
-              className={`px-3 py-2 rounded-xl transition-all cursor-pointer font-bold text-xs flex items-center gap-1.5 border ${
+              className={`px-3.5 py-2.5 rounded-xl transition-all cursor-pointer font-bold text-xs flex items-center gap-1.5 border shrink-0 ${
                 costAbove50CrOnly
                   ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                   : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-500'
@@ -723,7 +689,7 @@ export const MajorProjectsDashboard: React.FC = () => {
 
         {/* Tier 2: Range Filters for Delay & Physical Progress */}
         <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-3 text-xs flex-wrap">
-          <div className="flex items-center gap-4 flex-wrap w-full md:w-auto">
+          <div className="flex items-center gap-3 flex-wrap w-full md:w-auto">
             {/* 1. Delay (Years) Range Filter */}
             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
               <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
@@ -738,9 +704,9 @@ export const MajorProjectsDashboard: React.FC = () => {
                   placeholder="From"
                   value={delayMin}
                   onChange={(e) => setDelayMin(e.target.value)}
-                  className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-rose-500"
+                  className="w-16 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-rose-500"
                 />
-                <span className="text-slate-400">to</span>
+                <span className="text-slate-400 font-normal">to</span>
                 <input
                   type="number"
                   step="0.1"
@@ -748,7 +714,7 @@ export const MajorProjectsDashboard: React.FC = () => {
                   placeholder="To"
                   value={delayMax}
                   onChange={(e) => setDelayMax(e.target.value)}
-                  className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-rose-500"
+                  className="w-16 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-rose-500"
                 />
               </div>
 
@@ -780,9 +746,9 @@ export const MajorProjectsDashboard: React.FC = () => {
                   placeholder="Min"
                   value={progressMin}
                   onChange={(e) => setProgressMin(e.target.value)}
-                  className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-emerald-500"
+                  className="w-16 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-emerald-500"
                 />
-                <span className="text-slate-400">to</span>
+                <span className="text-slate-400 font-normal">to</span>
                 <input
                   type="number"
                   min="0"
@@ -790,7 +756,7 @@ export const MajorProjectsDashboard: React.FC = () => {
                   placeholder="Max"
                   value={progressMax}
                   onChange={(e) => setProgressMax(e.target.value)}
-                  className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-emerald-500"
+                  className="w-16 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
 
