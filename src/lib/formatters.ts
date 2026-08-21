@@ -124,6 +124,22 @@ export function calculateFinancialProgress(
 }
 
 /**
+ * Dynamically computes Contract Value Progress (%)
+ * Formula:
+ *   Cumulative Expenditure of Contract Value / Contract Value * 100
+ */
+export function calculateContractProgress(
+  contractCumExpenditureCr: number | null | undefined,
+  contractValueCr: number | null | undefined
+): number | null {
+  const exp = Number(contractCumExpenditureCr || 0);
+  const val = Number(contractValueCr || 0);
+  if (val <= 0 || exp <= 0) return null;
+  const pct = (exp / val) * 100;
+  return Math.min(100, Math.round(pct * 10) / 10);
+}
+
+/**
  * Formats a decimal year duration into human-readable "X Years & Y Months (Z.ZZ Yrs)" string.
  */
 export function formatDelayHumanReadable(yearsVal: number | string | null | undefined): string {

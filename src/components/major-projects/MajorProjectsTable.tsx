@@ -6,6 +6,7 @@ import { MajorProject } from '@/app/api/major-projects/route';
 import {
   calculateProjectDelay,
   calculateFinancialProgress,
+  calculateContractProgress,
 } from '@/lib/formatters';
 
 interface MajorProjectsTableProps {
@@ -90,7 +91,7 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
               <th className="py-3.5 px-3 w-36">Scheme</th>
               <th className="py-3.5 px-4 min-w-[280px]">Name of Work</th>
               <th className="py-3.5 px-3 text-right w-32">Budget (₹ Cr)</th>
-              <th className="py-3.5 px-3 text-center w-40">Progress (Phy / Fin)</th>
+              <th className="py-3.5 px-3 text-center w-44">Progress (Phy / Fin / Cont)</th>
               <th className="py-3.5 px-3 w-44">Likely Completion / Delay</th>
               <th className="py-3.5 px-3 text-center w-24">Actions</th>
             </tr>
@@ -110,11 +111,17 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
                 item.progress_percent
               );
 
-              // Dynamic Financial Progress Calculation
+              // Dynamic Financial Progress Calculation (TPC / RCE)
               const finPct = calculateFinancialProgress(
                 item.cumm_financial_expenditure_cr,
                 item.revised_cost_cr,
                 item.project_cost_cr
+              );
+
+              // Dynamic Contract Value Progress Calculation
+              const contractPct = calculateContractProgress(
+                item.contract_cum_expenditure_cr,
+                item.contract_value_cr
               );
 
               const effectiveCost = Number(
@@ -238,7 +245,7 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
                     </td>
                   ) : (
                     <>
-                      {/* Dual Progress: Physical & Financial */}
+                      {/* Triple Progress: Physical, Financial & Contract */}
                       <td className="py-3.5 px-3">
                         <div className="flex flex-col gap-1.5 min-w-[130px]">
                           {/* Physical */}
@@ -257,7 +264,7 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
                             </div>
                           </div>
 
-                          {/* Financial */}
+                          {/* Financial (TPC) */}
                           <div>
                             <div className="flex items-center justify-between text-[10px] font-mono leading-none mb-1">
                               <span className="text-slate-500 dark:text-slate-400 font-semibold">Fin</span>
@@ -272,6 +279,24 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
                               />
                             </div>
                           </div>
+
+                          {/* Contract Progress */}
+                          {item.contract_value_cr && (
+                            <div>
+                              <div className="flex items-center justify-between text-[10px] font-mono leading-none mb-1">
+                                <span className="text-slate-500 dark:text-slate-400 font-semibold">Cont</span>
+                                <span className="font-extrabold text-purple-700 dark:text-purple-400">
+                                  {contractPct !== null ? `${contractPct}%` : '—'}
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-xs overflow-hidden shadow-inner">
+                                <div
+                                  className="bg-purple-600 dark:bg-purple-500 h-full rounded-xs transition-all duration-300"
+                                  style={{ width: `${Math.min(100, Math.max(0, contractPct || 0))}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </td>
 

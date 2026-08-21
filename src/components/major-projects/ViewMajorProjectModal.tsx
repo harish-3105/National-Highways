@@ -26,6 +26,7 @@ import { MajorProject } from '@/app/api/major-projects/route';
 import {
   calculateProjectDelay,
   calculateFinancialProgress,
+  calculateContractProgress,
 } from '@/lib/formatters';
 
 interface ViewMajorProjectModalProps {
@@ -54,11 +55,17 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
     project.progress_percent
   );
 
-  // Dynamic financial progress calculation
+  // Dynamic financial progress calculation (TPC / RCE)
   const finProgress = calculateFinancialProgress(
     project.cumm_financial_expenditure_cr,
     project.revised_cost_cr,
     project.project_cost_cr
+  );
+
+  // Dynamic contract value progress calculation
+  const contractProgress = calculateContractProgress(
+    project.contract_cum_expenditure_cr,
+    project.contract_value_cr
   );
 
   const effectiveCost = Number(
@@ -148,8 +155,8 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
           </div>
         </div>
 
-        {/* 4-Metric Quick Header Ribbon */}
-        <div className="px-6 py-3 bg-slate-100/80 dark:bg-slate-850/60 border-b border-slate-200 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs shrink-0">
+        {/* 5-Metric Quick Header Ribbon */}
+        <div className="px-6 py-3 bg-slate-100/80 dark:bg-slate-850/60 border-b border-slate-200 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs shrink-0">
           <div>
             <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
               Sanctioned Cost (TPC)
@@ -180,13 +187,27 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
 
           <div>
             <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
-              Financial Progress
+              Financial Progress (TPC)
             </span>
             <div className="font-mono font-extrabold text-blue-700 dark:text-blue-400 text-sm flex items-center gap-1.5">
               <span>{finProgress !== null ? `${finProgress}%` : '—'}</span>
               <span className="text-[11px] font-normal text-slate-500">
                 (₹{Number(project.cumm_financial_expenditure_cr || project.expenditure_prior_cr || 0).toFixed(2)} Cr)
               </span>
+            </div>
+          </div>
+
+          <div>
+            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
+              Contract Progress
+            </span>
+            <div className="font-mono font-extrabold text-purple-700 dark:text-purple-400 text-sm flex items-center gap-1.5">
+              <span>{contractProgress !== null ? `${contractProgress}%` : '—'}</span>
+              {project.contract_value_cr && (
+                <span className="text-[11px] font-normal text-slate-500">
+                  (₹{Number(project.contract_cum_expenditure_cr || 0).toFixed(2)} / ₹{Number(project.contract_value_cr).toFixed(2)} Cr)
+                </span>
+              )}
             </div>
           </div>
 
@@ -420,6 +441,36 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Card C: Contract Value Progress */}
+              {project.contract_value_cr && (
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xs border border-purple-200 dark:border-purple-900/50 space-y-4 lg:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-purple-600" />
+                      <span className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">
+                        Contract Value Progress
+                      </span>
+                    </div>
+                    <span className="font-mono font-black text-purple-600 dark:text-purple-400 text-base">
+                      {contractProgress !== null ? `${contractProgress}%` : '0%'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-xs overflow-hidden shadow-inner">
+                      <div
+                        className="bg-purple-600 dark:bg-purple-500 h-full rounded-xs transition-all duration-300"
+                        style={{ width: `${Math.min(100, Math.max(0, contractProgress || 0))}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                      <span>Exp: ₹{Number(project.contract_cum_expenditure_cr || 0).toFixed(2)} Cr</span>
+                      <span>Contract Value: ₹{Number(project.contract_value_cr || 0).toFixed(2)} Cr</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Physical Progress Remarks (When in Execution / In-Progress) */}

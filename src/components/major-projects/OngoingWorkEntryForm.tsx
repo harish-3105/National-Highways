@@ -178,6 +178,16 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
     return null;
   }, [projectCostCr, revisedCostCr, expenditureCr]);
 
+  // Computed Contract Value %
+  const calculatedContractPercent = useMemo(() => {
+    const val = parseFloat(contractValueCr);
+    const exp = parseFloat(contractCumExpenditureCr);
+    if (val > 0 && exp >= 0) {
+      return Math.min(100, Math.round((exp / val) * 100 * 10) / 10);
+    }
+    return null;
+  }, [contractValueCr, contractCumExpenditureCr]);
+
   // Computed Delay
   const computedDelay = useMemo(() => {
     if (workStage === 'TENDER_STAGE' || !scheduledCompletionDate) return null;
@@ -591,16 +601,29 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
             </div>
           </div>
 
-          {calculatedFinancialPercent !== null && (
-            <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center justify-between">
-              <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                Calculated Financial Progress:
-              </span>
-              <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400 font-mono">
-                {calculatedFinancialPercent}% ({expenditureCr || 0} / {revisedCostCr || projectCostCr} Cr)
-              </span>
-            </div>
-          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+            {calculatedFinancialPercent !== null && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center justify-between">
+                <span className="text-xs font-bold text-blue-800 dark:text-blue-300">
+                  Financial Progress (TPC):
+                </span>
+                <span className="text-xs font-extrabold text-blue-700 dark:text-blue-400 font-mono">
+                  {calculatedFinancialPercent}% ({expenditureCr || 0} / {revisedCostCr || projectCostCr} Cr)
+                </span>
+              </div>
+            )}
+
+            {calculatedContractPercent !== null && (
+              <div className="p-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl flex items-center justify-between">
+                <span className="text-xs font-bold text-purple-800 dark:text-purple-300">
+                  Contract Value Progress:
+                </span>
+                <span className="text-xs font-extrabold text-purple-700 dark:text-purple-400 font-mono">
+                  {calculatedContractPercent}% ({contractCumExpenditureCr || 0} / {contractValueCr} Cr)
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
