@@ -14,7 +14,6 @@ import {
   HardHat,
   Clock,
   Lock,
-  Unlock,
   CheckCircle2,
 } from 'lucide-react';
 import { MajorProject, FROZEN_PROJECT_COLUMNS } from '@/app/api/major-projects/route';
@@ -312,15 +311,11 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                 <Building2 className="w-5 h-5 text-blue-600" />
                 {initialData?.id ? 'Edit Ongoing Highway Work Record' : 'New Capital Highway Work Entry'}
               </h2>
-              {isAdmin ? (
-                <span className="flex items-center gap-1 px-2.5 py-1 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-lg text-[11px] font-bold">
-                  <Unlock className="w-3 h-3 text-purple-600" /> Admin Creative Mode (Override Enabled)
-                </span>
-              ) : initialData?.id ? (
+              {initialData?.id && (
                 <span className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[11px] font-medium">
                   <Lock className="w-3 h-3 text-amber-500" /> Write-Once Protection Active
                 </span>
-              ) : null}
+              )}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Highways Department &bull; Ongoing Capital Projects & Stage Monitoring

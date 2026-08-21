@@ -23,8 +23,6 @@ import {
   History,
   Download,
   FileSpreadsheet,
-  Unlock,
-  Lock,
 } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
 import { OngoingWorksMasterData } from '@/app/api/ongoing-works/master-data/route';
@@ -47,7 +45,6 @@ export const MajorProjectsDashboard: React.FC = () => {
   });
   const [loading, setLoading] = useState<boolean>(true);
   const [showArchived, setShowArchived] = useState<boolean>(false);
-  const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
 
   // Screen state: 'LIST' | 'FORM'
   const [uiMode, setUiMode] = useState<'LIST' | 'FORM'>('LIST');
@@ -95,7 +92,6 @@ export const MajorProjectsDashboard: React.FC = () => {
         body: JSON.stringify({
           ...project,
           delete_status: 'ACTIVE',
-          isAdmin: true,
           actionSource: 'MANUAL_EDIT',
         }),
       });
@@ -115,7 +111,6 @@ export const MajorProjectsDashboard: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...projectData,
-          isAdmin: isAdminMode,
           actionSource: projectData.id ? 'MANUAL_EDIT' : 'MANUAL_ADD',
         }),
       });
@@ -421,7 +416,6 @@ export const MajorProjectsDashboard: React.FC = () => {
         nextSNo={nextSNo}
         masterDivisions={masterData.divisions}
         masterSchemes={masterData.schemes}
-        isAdmin={isAdminMode}
         onSave={handleSaveProject}
         onCancel={() => {
           setUiMode('LIST');
@@ -443,11 +437,6 @@ export const MajorProjectsDashboard: React.FC = () => {
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
               Ongoing Works
             </h1>
-            {isAdminMode && (
-              <span className="flex items-center gap-1 px-2.5 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold text-xs rounded-md border border-purple-200 dark:border-purple-800">
-                <Unlock className="w-3.5 h-3.5 text-purple-600" /> Admin Creative Mode
-              </span>
-            )}
           </div>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Capital infrastructure works, bypasses, ROBs, flyovers, and four-laning projects across Tamil Nadu divisions.
@@ -461,18 +450,6 @@ export const MajorProjectsDashboard: React.FC = () => {
             title="Refresh Data"
           >
             <RefreshCw className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setIsAdminMode(!isAdminMode)}
-            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-              isAdminMode
-                ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
-            }`}
-            title="Toggle Admin Creative Mode (Override frozen columns)"
-          >
-            {isAdminMode ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-            <span>{isAdminMode ? 'Creative Mode ON' : 'Standard Mode'}</span>
           </button>
           <button
             onClick={handleExportExcel}
