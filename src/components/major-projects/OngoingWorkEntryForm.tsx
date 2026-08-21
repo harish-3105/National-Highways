@@ -84,6 +84,21 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       ? String(initialData.revised_cost_cr)
       : ''
   );
+  const [costIncreaseRceCr, setCostIncreaseRceCr] = useState<string>(
+    initialData?.cost_increase_rce_cr !== undefined && initialData?.cost_increase_rce_cr !== null
+      ? String(initialData.cost_increase_rce_cr)
+      : ''
+  );
+  const [expenditurePriorCr, setExpenditurePriorCr] = useState<string>(
+    initialData?.expenditure_prior_cr !== undefined && initialData?.expenditure_prior_cr !== null
+      ? String(initialData.expenditure_prior_cr)
+      : ''
+  );
+  const [expenditureCurrentFyCr, setExpenditureCurrentFyCr] = useState<string>(
+    initialData?.expenditure_current_fy_cr !== undefined && initialData?.expenditure_current_fy_cr !== null
+      ? String(initialData.expenditure_current_fy_cr)
+      : ''
+  );
   const [expenditureCr, setExpenditureCr] = useState<string>(
     initialData?.cumm_financial_expenditure_cr !== undefined &&
       initialData?.cumm_financial_expenditure_cr !== null
@@ -111,7 +126,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
     initialData?.scheduled_completion_date || ''
   );
 
-  // Physical Progress & Stage (Module 3)
+  // Physical Progress, Lengths & Stage (Module 3)
   const [workStage, setWorkStage] = useState<'IN_PROGRESS' | 'TENDER_STAGE' | 'COMPLETED'>(
     initialData?.work_stage === 'TENDER_STAGE'
       ? 'TENDER_STAGE'
@@ -124,9 +139,37 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       ? String(initialData.progress_percent)
       : ''
   );
+  const [completedLengthPriorKm, setCompletedLengthPriorKm] = useState<string>(
+    initialData?.completed_length_prior_km !== undefined && initialData?.completed_length_prior_km !== null
+      ? String(initialData.completed_length_prior_km)
+      : ''
+  );
+  const [completedLengthCurrentFyKm, setCompletedLengthCurrentFyKm] = useState<string>(
+    initialData?.completed_length_current_fy_km !== undefined && initialData?.completed_length_current_fy_km !== null
+      ? String(initialData.completed_length_current_fy_km)
+      : ''
+  );
+  const [totalCompletedLengthKm, setTotalCompletedLengthKm] = useState<string>(
+    initialData?.total_completed_length_km !== undefined && initialData?.total_completed_length_km !== null
+      ? String(initialData.total_completed_length_km)
+      : ''
+  );
+
+  const [likelyCompletionDate, setLikelyCompletionDate] = useState<string>(
+    initialData?.likely_completion_date || ''
+  );
   const [probableCompletionDate, setProbableCompletionDate] = useState<string>(
     initialData?.probable_completion_date || ''
   );
+  const [timeOverrunYears, setTimeOverrunYears] = useState<string>(
+    initialData?.time_overrun_years !== undefined && initialData?.time_overrun_years !== null
+      ? String(initialData.time_overrun_years)
+      : ''
+  );
+  const [eotGrantedTill, setEotGrantedTill] = useState<string>(initialData?.eot_granted_till || '');
+  const [eotProposalAgency, setEotProposalAgency] = useState<string>(initialData?.eot_proposal_agency || '');
+  const [cosDetails, setCosDetails] = useState<string>(initialData?.cos_details || '');
+
   const [stageRemarks, setStageRemarks] = useState<string>(initialData?.stage_remarks || '');
   const [progressRemarks, setProgressRemarks] = useState<string>(initialData?.progress_remarks || '');
 
@@ -149,6 +192,9 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   const [jobNo, setJobNo] = useState<string>(initialData?.job_no || '');
   const [pmisId, setPmisId] = useState<string>(initialData?.pmis_id || '');
   const [sanctionDate, setSanctionDate] = useState<string>(initialData?.sanction_date || '');
+  const [updatedDivisionDate, setUpdatedDivisionDate] = useState<string>(
+    initialData?.updated_division_date || ''
+  );
 
   // Column 27 (Module 6): Detailed Stage Status & Technical Execution Remarks
   const [detailedStageStatus, setDetailedStageStatus] = useState<string>(
@@ -252,6 +298,9 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       name_of_work: nameOfWork.trim(),
       project_cost_cr: projectCostCr ? Number(projectCostCr) : 0,
       revised_cost_cr: revisedCostCr ? Number(revisedCostCr) : null,
+      cost_increase_rce_cr: costIncreaseRceCr ? Number(costIncreaseRceCr) : null,
+      expenditure_prior_cr: expenditurePriorCr ? Number(expenditurePriorCr) : null,
+      expenditure_current_fy_cr: expenditureCurrentFyCr ? Number(expenditureCurrentFyCr) : null,
       cumm_financial_expenditure_cr: expenditureCr ? Number(expenditureCr) : null,
       contract_value_cr: contractValueCr ? Number(contractValueCr) : null,
       contract_cum_expenditure_cr: contractCumExpenditureCr ? Number(contractCumExpenditureCr) : null,
@@ -265,9 +314,19 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
           : progressPercent !== ''
           ? Number(progressPercent)
           : null,
+      completed_length_prior_km: completedLengthPriorKm ? Number(completedLengthPriorKm) : null,
+      completed_length_current_fy_km: completedLengthCurrentFyKm ? Number(completedLengthCurrentFyKm) : null,
+      total_completed_length_km: totalCompletedLengthKm ? Number(totalCompletedLengthKm) : null,
+
+      likely_completion_date: likelyCompletionDate.trim() || null,
       probable_completion_date:
         workStage === 'TENDER_STAGE' ? null : probableCompletionDate ? probableCompletionDate.trim() : null,
       scheduled_completion_date: scheduledCompletionDate ? scheduledCompletionDate.trim() : null,
+      time_overrun_years: timeOverrunYears ? Number(timeOverrunYears) : null,
+      eot_granted_till: eotGrantedTill.trim() || null,
+      eot_proposal_agency: eotProposalAgency.trim() || null,
+      cos_details: cosDetails.trim() || null,
+
       stage_remarks: workStage === 'TENDER_STAGE' ? stageRemarks.trim() || null : null,
       progress_remarks: workStage !== 'TENDER_STAGE' ? progressRemarks.trim() || null : null,
       detailed_stage_status: detailedStageStatus.trim() || null,
@@ -292,6 +351,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       job_no: jobNo.trim() || null,
       pmis_id: pmisId.trim() || null,
       sanction_date: sanctionDate.trim() || null,
+      updated_division_date: updatedDivisionDate.trim() || null,
 
       isAdmin,
     };
@@ -502,7 +562,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
         </div>
 
         <div className="p-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
                 <span>Original Sanction Cost (Rs. Cr)</span>
@@ -562,14 +622,76 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                 step="0.01"
                 min="0"
                 value={revisedCostCr}
-                onChange={(e) => setRevisedCostCr(e.target.value)}
+                onChange={(e) => {
+                  setRevisedCostCr(e.target.value);
+                  const rev = parseFloat(e.target.value) || 0;
+                  const tpc = parseFloat(projectCostCr) || 0;
+                  if (rev > tpc) {
+                    setCostIncreaseRceCr((rev - tpc).toFixed(2));
+                  }
+                }}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Leave blank if not revised"
               />
             </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Increase in Cost due to RCE (Rs. Cr)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={costIncreaseRceCr}
+                onChange={(e) => setCostIncreaseRceCr(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. 12.50"
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Expenditure upto Prior FY (Rs. Cr)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={expenditurePriorCr}
+                onChange={(e) => {
+                  setExpenditurePriorCr(e.target.value);
+                  const prior = parseFloat(e.target.value) || 0;
+                  const cur = parseFloat(expenditureCurrentFyCr) || 0;
+                  setExpenditureCr((prior + cur).toFixed(2));
+                }}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. 30.00"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Expenditure Current FY (Rs. Cr)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={expenditureCurrentFyCr}
+                onChange={(e) => {
+                  setExpenditureCurrentFyCr(e.target.value);
+                  const prior = parseFloat(expenditurePriorCr) || 0;
+                  const cur = parseFloat(e.target.value) || 0;
+                  setExpenditureCr((prior + cur).toFixed(2));
+                }}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. 12.10"
+              />
+            </div>
+
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Cumulative Financial Expenditure (Rs. Cr)
@@ -728,7 +850,66 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              {/* Physical Completed Lengths (Km) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Completed Length Prior FY (km)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    value={completedLengthPriorKm}
+                    onChange={(e) => {
+                      setCompletedLengthPriorKm(e.target.value);
+                      const prior = parseFloat(e.target.value) || 0;
+                      const cur = parseFloat(completedLengthCurrentFyKm) || 0;
+                      setTotalCompletedLengthKm((prior + cur).toFixed(3));
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    placeholder="0.000"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Completed Length Current FY (km)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    value={completedLengthCurrentFyKm}
+                    onChange={(e) => {
+                      setCompletedLengthCurrentFyKm(e.target.value);
+                      const prior = parseFloat(completedLengthPriorKm) || 0;
+                      const cur = parseFloat(e.target.value) || 0;
+                      setTotalCompletedLengthKm((prior + cur).toFixed(3));
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    placeholder="0.000"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Total Completed Length (km)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    value={totalCompletedLengthKm}
+                    onChange={(e) => setTotalCompletedLengthKm(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    placeholder="0.000"
+                  />
+                </div>
+              </div>
+
+              {/* Progress & Target Completion Dates */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
                     <span>Physical Progress (%)</span>
@@ -748,7 +929,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                       setProgressPercent(e.target.value);
                       if (errors.progressPercent) setErrors((prev) => ({ ...prev, progressPercent: '' }));
                     }}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                     placeholder="e.g. 68.5"
                   />
                   {errors.progressPercent && (
@@ -758,7 +939,15 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
 
                 <div>
                   <DatePickerInput
-                    label="Probable / Revised Completion Date"
+                    label="Likely Date of Completion"
+                    value={likelyCompletionDate}
+                    onChange={setLikelyCompletionDate}
+                  />
+                </div>
+
+                <div>
+                  <DatePickerInput
+                    label="Probable / Actual Completion Date"
                     value={probableCompletionDate}
                     onChange={setProbableCompletionDate}
                   />
@@ -767,7 +956,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Scheduled Completion Date (Baseline)
+                      Scheduled Completion (Baseline)
                     </span>
                     {isFieldLocked('scheduled_completion_date') && (
                       <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>
@@ -778,7 +967,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                       type="text"
                       value={scheduledCompletionDate}
                       disabled
-                      className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 cursor-not-allowed"
+                      className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 cursor-not-allowed font-mono"
                     />
                   ) : (
                     <DatePickerInput
@@ -787,6 +976,48 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                       onChange={setScheduledCompletionDate}
                     />
                   )}
+                </div>
+              </div>
+
+              {/* EOT & Scope Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    EOT Granted Till
+                  </label>
+                  <input
+                    type="text"
+                    value={eotGrantedTill}
+                    onChange={(e) => setEotGrantedTill(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. 31.12.2026 or Under Review"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Further EOT Proposal with Agency
+                  </label>
+                  <input
+                    type="text"
+                    value={eotProposalAgency}
+                    onChange={(e) => setEotProposalAgency(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. Recommended for 6 months by CE"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    COS (Change of Scope) Details
+                  </label>
+                  <input
+                    type="text"
+                    value={cosDetails}
+                    onChange={(e) => setCosDetails(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. Additional 2-lane service road approved"
+                  />
                 </div>
               </div>
 
@@ -808,9 +1039,9 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
               )}
 
               {/* Dedicated Physical Progress Remarks */}
-              <div className="pt-2">
+              <div className="pt-1">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Physical Progress Remarks (Section 2)
+                  Physical Progress Remarks
                 </label>
                 <textarea
                   rows={3}
@@ -1138,6 +1369,19 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                 />
               )}
             </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Updated Division &amp; Date Reference
+            </label>
+            <input
+              type="text"
+              value={updatedDivisionDate}
+              onChange={(e) => setUpdatedDivisionDate(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g. Vellore / 15.03.2026"
+            />
           </div>
         </div>
       </div>

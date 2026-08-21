@@ -13,6 +13,7 @@ import {
   User,
   HardHat,
   FileText,
+  Lock,
 } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
@@ -44,6 +45,8 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
   const [scheme, setScheme] = useState<string>('');
   const [nameOfWork, setNameOfWork] = useState<string>('');
   const [projectCostCr, setProjectCostCr] = useState<string>('');
+  const [contractValueCr, setContractValueCr] = useState<string>('');
+  const [contractCumExpenditureCr, setContractCumExpenditureCr] = useState<string>('');
   const [workStage, setWorkStage] = useState<'IN_PROGRESS' | 'TENDER_STAGE' | 'COMPLETED'>('IN_PROGRESS');
   const [progressPercent, setProgressPercent] = useState<string>('');
   const [probableCompletionDate, setProbableCompletionDate] = useState<string>('');
@@ -56,6 +59,9 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
   const [lengthKm, setLengthKm] = useState<string>('');
   const [jobNo, setJobNo] = useState<string>('');
   const [sanctionDate, setSanctionDate] = useState<string>('');
+  const [loaDate, setLoaDate] = useState<string>('');
+  const [agreementDate, setAgreementDate] = useState<string>('');
+  const [siteHandoverDate, setSiteHandoverDate] = useState<string>('');
   const [appointedDate, setAppointedDate] = useState<string>('');
   const [scheduledCompletionDate, setScheduledCompletionDate] = useState<string>('');
 
@@ -90,6 +96,12 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
+  const isFieldLocked = (fieldName: keyof MajorProject): boolean => {
+    if (!project) return false;
+    const val = project[fieldName];
+    return val !== null && val !== undefined && val !== '';
+  };
+
   useEffect(() => {
     if (project) {
       setSNo(String(project.s_no || '1'));
@@ -97,6 +109,8 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
       setScheme(project.scheme || '');
       setNameOfWork(project.name_of_work || '');
       setProjectCostCr(project.project_cost_cr !== undefined && project.project_cost_cr !== null ? String(project.project_cost_cr) : '');
+      setContractValueCr(project.contract_value_cr !== undefined && project.contract_value_cr !== null ? String(project.contract_value_cr) : '');
+      setContractCumExpenditureCr(project.contract_cum_expenditure_cr !== undefined && project.contract_cum_expenditure_cr !== null ? String(project.contract_cum_expenditure_cr) : '');
       setWorkStage(project.work_stage || 'IN_PROGRESS');
       setProgressPercent(project.progress_percent !== undefined && project.progress_percent !== null ? String(project.progress_percent) : '');
       setProbableCompletionDate(project.probable_completion_date || '');
@@ -108,6 +122,9 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
       setLengthKm(project.length_km !== undefined && project.length_km !== null ? String(project.length_km) : '');
       setJobNo(project.job_no || '');
       setSanctionDate(project.sanction_date || '');
+      setLoaDate(project.loa_date || '');
+      setAgreementDate(project.agreement_date || '');
+      setSiteHandoverDate(project.site_handover_date || '');
       setAppointedDate(project.appointed_date || '');
       setScheduledCompletionDate(project.scheduled_completion_date || '');
 
@@ -162,7 +179,9 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
         division: division.trim(),
         scheme: scheme.trim(),
         name_of_work: nameOfWork.trim(),
-        project_cost_cr: Number(projectCostCr) || 0,
+        project_cost_cr: projectCostCr !== '' ? Number(projectCostCr) : 0,
+        contract_value_cr: contractValueCr !== '' ? Number(contractValueCr) : null,
+        contract_cum_expenditure_cr: contractCumExpenditureCr !== '' ? Number(contractCumExpenditureCr) : null,
         work_stage: workStage,
         progress_percent: workStage === 'TENDER_STAGE' ? null : workStage === 'COMPLETED' && progressPercent === '' ? 100 : progressPercent !== '' ? Number(progressPercent) : null,
         probable_completion_date: workStage === 'TENDER_STAGE' ? null : probableCompletionDate.trim() || null,
@@ -175,6 +194,9 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
         length_km: lengthKm !== '' ? Number(lengthKm) : null,
         job_no: jobNo.trim() || null,
         sanction_date: sanctionDate.trim() || null,
+        loa_date: loaDate.trim() || null,
+        agreement_date: agreementDate.trim() || null,
+        site_handover_date: siteHandoverDate.trim() || null,
         appointed_date: appointedDate.trim() || null,
         scheduled_completion_date: scheduledCompletionDate.trim() || null,
 
@@ -376,56 +398,88 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Division <span className="text-rose-500">*</span>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Division <span className="text-rose-500">*</span></span>
+                    {isFieldLocked('division') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
                   </label>
-                  <SearchableSelect
-                    options={masterDivisions.length > 0 ? masterDivisions : ['Chennai', 'Salem', 'Madurai', 'Coimbatore', 'Tirunelveli']}
-                    value={division}
-                    onChange={setDivision}
-                    placeholder="Select Division..."
-                    required
-                  />
+                  {isFieldLocked('division') ? (
+                    <input
+                      type="text"
+                      value={division}
+                      disabled
+                      className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 cursor-not-allowed"
+                    />
+                  ) : (
+                    <SearchableSelect
+                      options={masterDivisions.length > 0 ? masterDivisions : ['Chennai', 'Salem', 'Madurai', 'Coimbatore', 'Tirunelveli']}
+                      value={division}
+                      onChange={setDivision}
+                      placeholder="Select Division..."
+                      required
+                    />
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Scheme <span className="text-rose-500">*</span>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Scheme <span className="text-rose-500">*</span></span>
+                    {isFieldLocked('scheme') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
                   </label>
-                  <SearchableSelect
-                    options={masterSchemes.length > 0 ? masterSchemes : ['NH(O)', 'CRIF', 'Annual Plan', 'Special Repairs', 'State Fund']}
-                    value={scheme}
-                    onChange={setScheme}
-                    placeholder="Select Scheme..."
-                    required
-                  />
+                  {isFieldLocked('scheme') ? (
+                    <input
+                      type="text"
+                      value={scheme}
+                      disabled
+                      className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 cursor-not-allowed"
+                    />
+                  ) : (
+                    <SearchableSelect
+                      options={masterSchemes.length > 0 ? masterSchemes : ['NH(O)', 'CRIF', 'Annual Plan', 'Special Repairs', 'State Fund']}
+                      value={scheme}
+                      onChange={setScheme}
+                      placeholder="Select Scheme..."
+                      required
+                    />
+                  )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Name of Work / Project Description <span className="text-rose-500">*</span>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                  <span>Name of Work / Project Description <span className="text-rose-500">*</span></span>
+                  {isFieldLocked('name_of_work') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
                 </label>
                 <textarea
                   value={nameOfWork}
+                  disabled={isFieldLocked('name_of_work')}
                   onChange={(e) => setNameOfWork(e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border rounded-xl text-xs ${
+                    isFieldLocked('name_of_work')
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                      : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500'
+                  }`}
                   required
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Total Project Cost (₹ in Cr.) <span className="text-rose-500">*</span>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Total Project Cost (₹ in Cr.) <span className="text-rose-500">*</span></span>
+                    {isFieldLocked('project_cost_cr') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
                   </label>
                   <input
                     type="number"
                     step="0.01"
                     value={projectCostCr}
+                    disabled={isFieldLocked('project_cost_cr')}
                     onChange={(e) => setProjectCostCr(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 border rounded-xl font-mono text-xs ${
+                      isFieldLocked('project_cost_cr')
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500'
+                    }`}
                     required
                   />
                 </div>
@@ -507,41 +561,59 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    PMIS / OCMS / PMG ID
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>PMIS / OCMS / PMG ID</span>
+                    {isFieldLocked('pmis_id') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
                   </label>
                   <input
                     type="text"
                     value={pmisId}
+                    disabled={isFieldLocked('pmis_id')}
                     onChange={(e) => setPmisId(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs"
+                    className={`w-full px-3 py-2 border rounded-xl font-mono text-xs ${
+                      isFieldLocked('pmis_id')
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                    }`}
                     placeholder="e.g. 151517"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Old NH / New NH No.
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Old NH / New NH No.</span>
+                    {isFieldLocked('old_new_nh') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
                   </label>
                   <input
                     type="text"
                     value={oldNewNh}
+                    disabled={isFieldLocked('old_new_nh')}
                     onChange={(e) => setOldNewNh(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
+                    className={`w-full px-3 py-2 border rounded-xl text-xs ${
+                      isFieldLocked('old_new_nh')
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                    }`}
                     placeholder="e.g. 234/75"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Length in Km
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Length in Km</span>
+                    {isFieldLocked('length_km') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
                   </label>
                   <input
                     type="number"
                     step="0.001"
                     value={lengthKm}
+                    disabled={isFieldLocked('length_km')}
                     onChange={(e) => setLengthKm(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs"
+                    className={`w-full px-3 py-2 border rounded-xl font-mono text-xs ${
+                      isFieldLocked('length_km')
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                    }`}
                     placeholder="e.g. 1.104"
                   />
                 </div>
@@ -549,58 +621,140 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Job Number
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Job Number</span>
+                    {isFieldLocked('job_no') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
                   </label>
                   <input
                     type="text"
                     value={jobNo}
+                    disabled={isFieldLocked('job_no')}
                     onChange={(e) => setJobNo(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs"
+                    className={`w-full px-3 py-2 border rounded-xl font-mono text-xs ${
+                      isFieldLocked('job_no')
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                    }`}
                     placeholder="e.g. NH-234-NH-2020-21-944"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Date of Sanction / Revision
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Date of Sanction / Revision</span>
+                    {isFieldLocked('sanction_date') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
                   </label>
                   <input
                     type="text"
                     value={sanctionDate}
+                    disabled={isFieldLocked('sanction_date')}
                     onChange={(e) => setSanctionDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs"
+                    className={`w-full px-3 py-2 border rounded-xl font-mono text-xs ${
+                      isFieldLocked('sanction_date')
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                    }`}
                     placeholder="e.g. 17-09-2020"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* 4 Contract Execution Milestones */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Date of Start / Appointed Date
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Date of LOA</span>
+                    {isFieldLocked('loa_date') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
                   </label>
                   <input
                     type="text"
-                    value={appointedDate}
-                    onChange={(e) => setAppointedDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs"
-                    placeholder="e.g. 29-10-2021"
+                    value={loaDate}
+                    disabled={isFieldLocked('loa_date')}
+                    onChange={(e) => setLoaDate(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl font-mono text-xs ${
+                      isFieldLocked('loa_date')
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                    }`}
+                    placeholder="e.g. 15-08-2021"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Scheduled Date of Completion
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Date of Agreement</span>
+                    {isFieldLocked('agreement_date') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
                   </label>
                   <input
                     type="text"
-                    value={scheduledCompletionDate}
-                    onChange={(e) => setScheduledCompletionDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs"
-                    placeholder="e.g. 19-02-2025"
+                    value={agreementDate}
+                    disabled={isFieldLocked('agreement_date')}
+                    onChange={(e) => setAgreementDate(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl font-mono text-xs ${
+                      isFieldLocked('agreement_date')
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                    }`}
+                    placeholder="e.g. 01-09-2021"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Site Handover Date</span>
+                    {isFieldLocked('site_handover_date') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
+                  </label>
+                  <input
+                    type="text"
+                    value={siteHandoverDate}
+                    disabled={isFieldLocked('site_handover_date')}
+                    onChange={(e) => setSiteHandoverDate(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl font-mono text-xs ${
+                      isFieldLocked('site_handover_date')
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                    }`}
+                    placeholder="e.g. 15-10-2021"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Appointed Date</span>
+                    {isFieldLocked('appointed_date') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
+                  </label>
+                  <input
+                    type="text"
+                    value={appointedDate}
+                    disabled={isFieldLocked('appointed_date')}
+                    onChange={(e) => setAppointedDate(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl font-mono text-xs ${
+                      isFieldLocked('appointed_date')
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                    }`}
+                    placeholder="e.g. 29-10-2021"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                  <span>Scheduled Date of Completion (Baseline)</span>
+                  {isFieldLocked('scheduled_completion_date') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
+                </label>
+                <input
+                  type="text"
+                  value={scheduledCompletionDate}
+                  disabled={isFieldLocked('scheduled_completion_date')}
+                  onChange={(e) => setScheduledCompletionDate(e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-xl font-mono text-xs ${
+                    isFieldLocked('scheduled_completion_date')
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                      : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                  }`}
+                  placeholder="e.g. 19-02-2025"
+                />
               </div>
             </div>
           )}
@@ -722,10 +876,50 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
           {/* TAB 4: FINANCIALS & RCE */}
           {activeTab === 'financial' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Original Sanction Cost (₹ Cr.)</span>
+                    {isFieldLocked('project_cost_cr') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={projectCostCr}
+                    disabled={isFieldLocked('project_cost_cr')}
+                    onChange={(e) => setProjectCostCr(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl font-mono text-xs ${
+                      isFieldLocked('project_cost_cr')
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                    }`}
+                    placeholder="e.g. 75.50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Contract Value (₹ in Cr.)</span>
+                    {isFieldLocked('contract_value_cr') && <span title="Frozen field"><Lock className="w-3 h-3 text-amber-500" /></span>}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={contractValueCr}
+                    disabled={isFieldLocked('contract_value_cr')}
+                    onChange={(e) => setContractValueCr(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl font-mono text-xs ${
+                      isFieldLocked('contract_value_cr')
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                    }`}
+                    placeholder="e.g. 68.20"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Revised Cost / Anticipated Cost (₹ in Cr.)
+                    Revised Cost (₹ in Cr.)
                   </label>
                   <input
                     type="number"
@@ -746,7 +940,7 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Increase in Cost due to RCE (₹ in Cr.)
+                    Increase in Cost due to RCE (₹ Cr.)
                   </label>
                   <input
                     type="number"
@@ -759,7 +953,7 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Expenditure upto 31.03.2026 (₹ Cr.)
@@ -800,7 +994,7 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Cumulative Financial Progress (₹ Cr.)
+                    Cumulative Financial Expenditure (₹ Cr.)
                   </label>
                   <input
                     type="number"
@@ -809,6 +1003,20 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                     onChange={(e) => setCummFinancialExpenditureCr(e.target.value)}
                     className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs font-bold"
                     placeholder="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Cumulative Contract Exp (₹ Cr.)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={contractCumExpenditureCr}
+                    onChange={(e) => setContractCumExpenditureCr(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs"
+                    placeholder="e.g. 45.20"
                   />
                 </div>
               </div>
