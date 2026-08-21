@@ -11,6 +11,9 @@ import {
 interface MajorProjectsTableProps {
   projects: MajorProject[];
   loading: boolean;
+  selectedIds?: string[];
+  onToggleSelect?: (id: string) => void;
+  onToggleSelectAll?: () => void;
   onView: (project: MajorProject) => void;
   onEdit: (project: MajorProject) => void;
   onDelete: (project: MajorProject) => void;
@@ -33,6 +36,9 @@ const getDivisionBadgeColor = (division: string) => {
 export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
   projects,
   loading,
+  selectedIds = [],
+  onToggleSelect,
+  onToggleSelectAll,
   onView,
   onEdit,
   onDelete,
@@ -57,12 +63,28 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
     );
   }
 
+  const allVisibleSelected = projects.length > 0 && projects.every((p) => selectedIds.includes(p.id));
+  const someVisibleSelected = projects.some((p) => selectedIds.includes(p.id));
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xs border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-850/60 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+              {onToggleSelect && (
+                <th className="py-3.5 px-3 text-center w-10">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected;
+                    }}
+                    onChange={() => onToggleSelectAll && onToggleSelectAll()}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 cursor-pointer"
+                  />
+                </th>
+              )}
               <th className="py-3.5 px-3 text-center w-12">S.No.</th>
               <th className="py-3.5 px-3 w-28">Division</th>
               <th className="py-3.5 px-3 w-36">Scheme</th>
@@ -78,6 +100,7 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
               const isTender = item.work_stage === 'TENDER_STAGE';
               const isCompleted = item.work_stage === 'COMPLETED';
               const isDeleted = item.delete_status === 'DELETED' || item.delete_status === 'SOFT_DELETE';
+              const isRowSelected = selectedIds.includes(item.id);
               const divBadge = getDivisionBadgeColor(item.division);
 
               // Dynamic Delay Calculation
@@ -104,11 +127,25 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
                 <tr
                   key={item.id}
                   className={`transition-colors group ${
-                    isDeleted
+                    isRowSelected
+                      ? 'bg-blue-50/60 dark:bg-blue-950/30'
+                      : isDeleted
                       ? 'bg-red-50/40 dark:bg-red-950/20 opacity-80'
                       : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
                   }`}
                 >
+                  {/* Row Checkbox */}
+                  {onToggleSelect && (
+                    <td className="py-3.5 px-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isRowSelected}
+                        onChange={() => onToggleSelect(item.id)}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 cursor-pointer"
+                      />
+                    </td>
+                  )}
+
                   {/* S.No */}
                   <td className="py-3.5 px-3 text-center font-mono font-bold text-slate-700 dark:text-slate-300">
                     <div className="flex flex-col items-center">

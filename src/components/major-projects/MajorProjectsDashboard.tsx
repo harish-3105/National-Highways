@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import * as XLSX from 'xlsx';
 import {
   Building2,
   Plus,
@@ -33,6 +32,7 @@ import { ViewMajorProjectModal } from './ViewMajorProjectModal';
 import { DeleteMajorProjectModal } from './DeleteMajorProjectModal';
 import { OngoingWorksMasterDataModal } from './OngoingWorksMasterDataModal';
 import { ProjectHistoryModal } from './ProjectHistoryModal';
+import { ExportMajorProjectsModal } from './ExportMajorProjectsModal';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 export const MajorProjectsDashboard: React.FC = () => {
@@ -65,9 +65,11 @@ export const MajorProjectsDashboard: React.FC = () => {
 
   // Modals state
   const [isMasterModalOpen, setIsMasterModalOpen] = useState<boolean>(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
   const [viewingProject, setViewingProject] = useState<MajorProject | null>(null);
   const [deletingProject, setDeletingProject] = useState<MajorProject | null>(null);
   const [historyProject, setHistoryProject] = useState<MajorProject | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -354,59 +356,20 @@ export const MajorProjectsDashboard: React.FC = () => {
     setProgressMax('');
   };
 
-  // 35-Column Full Excel (.xlsx) & CSV Export
-  const handleExportExcel = () => {
-    if (filteredProjects.length === 0) return;
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
 
-    const dataToExport = filteredProjects.map((p) => ({
-      'Sl. No.': p.s_no,
-      'Name of the project': p.name_of_work,
-      'PMIS/ OCMS/ PMG Id': p.pmis_id || '',
-      'Old NH / New No.': p.old_new_nh || '',
-      'Annual Plan (FY)': p.scheme || '',
-      'Length in km': p.length_km || '',
-      'Job No.': p.job_no || '',
-      'Date of Sanction / Revision': p.sanction_date || '',
-      'TPC Rs.in Crore': p.project_cost_cr || 0,
-      'Date of Loa': p.loa_date || '',
-      'Date of Agreement': p.agreement_date || '',
-      'Contract Value': p.contract_value_cr || '',
-      'Date of Handing over of site': p.site_handover_date || '',
-      'Date of Start/ Appointed Date': p.appointed_date || '',
-      'Completed Length (km) till 31.03.2026': p.completed_length_prior_km || 0,
-      'Completed length (km) in 2026-27': p.completed_length_current_fy_km || 0,
-      'Total Completed Length (km)': p.total_completed_length_km || 0,
-      'Cumm. phy. Prog. (%)':
-        p.progress_percent !== null && p.progress_percent !== undefined ? `${p.progress_percent}%` : '',
-      'Revised cost / Anticipated cost in Cr.': p.revised_cost_cr || '',
-      'Increase in cost due to RCE': p.cost_increase_rce_cr || '',
-      'Expenditure upto 31-03-2026 in Cr.': p.expenditure_prior_cr || 0,
-      'Expenditure in Cr. 2026-27': p.expenditure_current_fy_cr || 0,
-      'Cumm. Fin. Prog. Cr': p.cumm_financial_expenditure_cr || 0,
-      'Cumulative expenditure of Contract value': p.contract_cum_expenditure_cr || '',
-      'likely date of completion': p.likely_completion_date || '',
-      'Scheduled date of completion': p.scheduled_completion_date || '',
-      'Likely/ Actual date of completion': p.probable_completion_date || '',
-      'Time over run in years': p.time_overrun_years || '',
-      'EOT Granted Till': p.eot_granted_till || '',
-      'Further EOT Proposal with the Agency': p.eot_proposal_agency || '',
-      'COS': p.cos_details || '',
-      'Divisional Engineer Name / PH no.': p.de_name_phone || '',
-      'Contractor': p.contractor_name || '',
-      'Detailed Stage': p.detailed_stage_status || '',
-      'Updated Division & Date': p.updated_division_date || '',
-      'Progress Remarks': p.progress_remarks || '',
-      'Land Acquisition Issues': p.issue_land || '',
-      'Forest Clearance': p.issue_forest || '',
-      'Utility Shifting': p.issue_utility || '',
-      'Railways Clearance': p.issue_railways || '',
-      'Other Remarks': p.issue_others || '',
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'ONGOING WORKS');
-    XLSX.writeFile(workbook, `TN_NH_Ongoing_Works_35Col_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  const handleToggleSelectAll = () => {
+    const visibleIds = filteredProjects.map((p) => p.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+    if (allSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
   };
 
   if (uiMode === 'FORM') {
@@ -452,12 +415,12 @@ export const MajorProjectsDashboard: React.FC = () => {
             <RefreshCw className="w-4 h-4" />
           </button>
           <button
-            onClick={handleExportExcel}
+            onClick={() => setIsExportModalOpen(true)}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
-            title="Export 35-Column Standardized Excel (.xlsx)"
+            title="Custom Export Ongoing Works (Select rows, columns & format)"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Export 35-Col Excel</span>
+            <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Custom Export</span>
           </button>
           <button
             onClick={() => setShowArchived((v) => !v)}
@@ -787,10 +750,41 @@ export const MajorProjectsDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Floating / Inline Selected Row Action Bar */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center justify-between p-3.5 bg-blue-50/90 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 rounded-2xl text-xs animate-in fade-in duration-150 shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 bg-blue-600 text-white font-mono font-bold text-xs rounded-md">
+              {selectedIds.length}
+            </span>
+            <span className="font-bold text-blue-950 dark:text-blue-200">
+              {selectedIds.length === 1 ? 'project row selected' : 'project rows selected'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsExportModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-xs cursor-pointer transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" /> Export Selected ({selectedIds.length})
+            </button>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="px-3 py-1.5 bg-white dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold cursor-pointer transition-colors"
+            >
+              Clear Selection
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Ongoing Works Table */}
       <MajorProjectsTable
         projects={filteredProjects}
         loading={loading}
+        selectedIds={selectedIds}
+        onToggleSelect={handleToggleSelect}
+        onToggleSelectAll={handleToggleSelectAll}
         onView={(project) => setViewingProject(project)}
         onEdit={(project) => {
           setSelectedProjectForEdit(project);
@@ -799,6 +793,15 @@ export const MajorProjectsDashboard: React.FC = () => {
         onDelete={(project) => setDeletingProject(project)}
         onRestore={handleRestoreProject}
         onHistory={(project) => setHistoryProject(project)}
+      />
+
+      {/* Custom Export Modal (Corridors Style with Row/Col/Format picker) */}
+      <ExportMajorProjectsModal
+        allProjects={projects}
+        filteredProjects={filteredProjects}
+        selectedIds={selectedIds}
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
       />
 
       {/* View Modal */}
