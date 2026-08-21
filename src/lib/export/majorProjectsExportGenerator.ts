@@ -89,12 +89,14 @@ export function generateMajorProjectsExportFile(
     throw new Error('Please select at least one column to export.');
   }
 
-  const formattedData = data.map((project) => {
+  const formattedData = data.map((project, idx) => {
     const rowObj: Record<string, unknown> = {};
     activeColumns.forEach((col) => {
       let val: unknown = (project as unknown as Record<string, unknown>)[col.key];
 
-      if (col.key === 'work_stage') {
+      if (col.key === 's_no') {
+        val = idx + 1;
+      } else if (col.key === 'work_stage') {
         val =
           project.work_stage === 'COMPLETED'
             ? 'Completed'

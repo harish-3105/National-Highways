@@ -383,20 +383,7 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
           {/* TAB 1: GENERAL OVERVIEW */}
           {activeTab === 'general' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    S. No.
-                  </label>
-                  <input
-                    type="number"
-                    value={sNo}
-                    onChange={(e) => setSNo(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
                     <span>Division <span className="text-rose-500">*</span></span>

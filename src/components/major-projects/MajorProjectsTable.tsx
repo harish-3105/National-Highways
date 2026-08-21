@@ -97,7 +97,7 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-            {projects.map((item) => {
+            {projects.map((item, idx) => {
               const isTender = item.work_stage === 'TENDER_STAGE';
               const isCompleted = item.work_stage === 'COMPLETED';
               const isDeleted = item.delete_status === 'DELETED' || item.delete_status === 'SOFT_DELETE';
@@ -153,10 +153,10 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
                     </td>
                   )}
 
-                  {/* S.No */}
+                  {/* S.No - Dynamically rendered based on work sequence */}
                   <td className="py-3.5 px-3 text-center font-mono font-bold text-slate-700 dark:text-slate-300">
                     <div className="flex flex-col items-center">
-                      <span className={isDeleted ? 'line-through text-red-600' : ''}>{item.s_no}</span>
+                      <span className={isDeleted ? 'line-through text-red-600' : ''}>{idx + 1}</span>
                       {isDeleted && (
                         <span className="px-1 py-0.2 text-[8.5px] font-extrabold uppercase rounded bg-red-600 text-white mt-0.5">
                           Archived
