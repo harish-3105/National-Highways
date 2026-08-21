@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Eye, Edit3, Trash2, Clock, RotateCcw, History } from 'lucide-react';
+import { Eye, Edit3, Trash2, Clock, RotateCcw, History, CheckCircle2 } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
 import {
   calculateProjectDelay,
@@ -76,6 +76,7 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
             {projects.map((item) => {
               const isTender = item.work_stage === 'TENDER_STAGE';
+              const isCompleted = item.work_stage === 'COMPLETED';
               const isDeleted = item.delete_status === 'DELETED' || item.delete_status === 'SOFT_DELETE';
               const divBadge = getDivisionBadgeColor(item.division);
 
@@ -172,6 +173,29 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
                         </div>
                         <p className="text-[11px] leading-snug font-medium line-clamp-2">
                           {item.stage_remarks || 'Tender / Sanction process ongoing.'}
+                        </p>
+                      </div>
+                    </td>
+                  ) : isCompleted ? (
+                    <td colSpan={2} className="py-3.5 px-3">
+                      <div className={`p-2 rounded-xs border space-y-1 ${
+                        isDeleted
+                          ? 'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                          : 'bg-teal-50/80 dark:bg-teal-950/30 border-teal-200 dark:border-teal-900/60 text-teal-900 dark:text-teal-200'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 font-bold text-[10.5px] uppercase tracking-wider text-teal-800 dark:text-teal-300">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+                            <span>Work Completed (100%)</span>
+                          </div>
+                          {item.likely_completion_date || item.probable_completion_date ? (
+                            <span className="font-mono text-[10.5px] font-bold text-teal-700 dark:text-teal-300">
+                              📅 {item.likely_completion_date || item.probable_completion_date}
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="text-[11px] leading-snug font-medium line-clamp-1 text-teal-800/80 dark:text-teal-200/80">
+                          {item.progress_remarks || item.detailed_stage_status || 'Execution completed & delivered.'}
                         </p>
                       </div>
                     </td>

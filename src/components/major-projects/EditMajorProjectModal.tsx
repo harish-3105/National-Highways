@@ -44,7 +44,7 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
   const [scheme, setScheme] = useState<string>('');
   const [nameOfWork, setNameOfWork] = useState<string>('');
   const [projectCostCr, setProjectCostCr] = useState<string>('');
-  const [workStage, setWorkStage] = useState<'IN_PROGRESS' | 'TENDER_STAGE'>('IN_PROGRESS');
+  const [workStage, setWorkStage] = useState<'IN_PROGRESS' | 'TENDER_STAGE' | 'COMPLETED'>('IN_PROGRESS');
   const [progressPercent, setProgressPercent] = useState<string>('');
   const [probableCompletionDate, setProbableCompletionDate] = useState<string>('');
   const [stageRemarks, setStageRemarks] = useState<string>('');
@@ -164,10 +164,10 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
         name_of_work: nameOfWork.trim(),
         project_cost_cr: Number(projectCostCr) || 0,
         work_stage: workStage,
-        progress_percent: workStage === 'TENDER_STAGE' ? null : progressPercent !== '' ? Number(progressPercent) : null,
+        progress_percent: workStage === 'TENDER_STAGE' ? null : workStage === 'COMPLETED' && progressPercent === '' ? 100 : progressPercent !== '' ? Number(progressPercent) : null,
         probable_completion_date: workStage === 'TENDER_STAGE' ? null : probableCompletionDate.trim() || null,
         stage_remarks: workStage === 'TENDER_STAGE' ? stageRemarks.trim() || null : null,
-        progress_remarks: workStage === 'IN_PROGRESS' ? progressRemarks.trim() || null : null,
+        progress_remarks: workStage !== 'TENDER_STAGE' ? progressRemarks.trim() || null : null,
 
         // 27-Column parameters
         pmis_id: pmisId.trim() || null,
@@ -435,15 +435,30 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                     Work Execution Stage
                   </label>
                   <SearchableSelect
-                    options={['In Progress (Execution Stage)', 'Tender / Sanction Stage']}
-                    value={workStage === 'IN_PROGRESS' ? 'In Progress (Execution Stage)' : 'Tender / Sanction Stage'}
-                    onChange={(val) => setWorkStage(val.includes('Tender') ? 'TENDER_STAGE' : 'IN_PROGRESS')}
+                    options={['In Progress (Execution Stage)', 'Tender / Sanction Stage', 'Completed Work']}
+                    value={
+                      workStage === 'COMPLETED'
+                        ? 'Completed Work'
+                        : workStage === 'TENDER_STAGE'
+                        ? 'Tender / Sanction Stage'
+                        : 'In Progress (Execution Stage)'
+                    }
+                    onChange={(val) => {
+                      if (val.includes('Completed')) {
+                        setWorkStage('COMPLETED');
+                        if (progressPercent === '') setProgressPercent('100');
+                      } else if (val.includes('Tender')) {
+                        setWorkStage('TENDER_STAGE');
+                      } else {
+                        setWorkStage('IN_PROGRESS');
+                      }
+                    }}
                     placeholder="Select Stage..."
                   />
                 </div>
               </div>
 
-              {workStage === 'IN_PROGRESS' ? (
+              {workStage !== 'TENDER_STAGE' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -678,7 +693,7 @@ export const EditMajorProjectModal: React.FC<EditMajorProjectModalProps> = ({
                 </div>
               </div>
 
-              {workStage === 'IN_PROGRESS' ? (
+              {workStage !== 'TENDER_STAGE' ? (
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Physical Progress Remarks

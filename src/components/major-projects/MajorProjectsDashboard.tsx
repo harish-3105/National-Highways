@@ -56,7 +56,7 @@ export const MajorProjectsDashboard: React.FC = () => {
   // Filters State
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedDivision, setSelectedDivision] = useState<string>('ALL');
-  const [selectedStage, setSelectedStage] = useState<'ALL' | 'IN_PROGRESS' | 'TENDER_STAGE' | 'DELAYED'>('ALL');
+  const [selectedStage, setSelectedStage] = useState<'ALL' | 'IN_PROGRESS' | 'TENDER_STAGE' | 'COMPLETED' | 'DELAYED'>('ALL');
   const [completionFilter, setCompletionFilter] = useState<'ACTIVE_ONLY' | 'COMPLETED_ONLY' | 'ALL'>('ACTIVE_ONLY');
   const [costAbove50CrOnly, setCostAbove50CrOnly] = useState<boolean>(false);
 
@@ -162,9 +162,9 @@ export const MajorProjectsDashboard: React.FC = () => {
   // Filtered projects
   const filteredProjects = useMemo(() => {
     return projects.filter((p) => {
-      const isCompleted = p.work_stage === 'IN_PROGRESS' && p.progress_percent !== null && Number(p.progress_percent) >= 100;
+      const isCompleted = p.work_stage === 'COMPLETED';
 
-      // 1. Completion Filter (Auto-hide 100% completed from default active view)
+      // 1. Completion Filter (Auto-hide completed from default active view)
       if (completionFilter === 'ACTIVE_ONLY') {
         if (isCompleted) return false;
       } else if (completionFilter === 'COMPLETED_ONLY') {
@@ -189,6 +189,8 @@ export const MajorProjectsDashboard: React.FC = () => {
         matchesStage = p.work_stage === 'IN_PROGRESS';
       } else if (selectedStage === 'TENDER_STAGE') {
         matchesStage = p.work_stage === 'TENDER_STAGE';
+      } else if (selectedStage === 'COMPLETED') {
+        matchesStage = p.work_stage === 'COMPLETED';
       } else if (selectedStage === 'DELAYED') {
         matchesStage = delayInfo.isDelayed;
       }
@@ -269,16 +271,16 @@ export const MajorProjectsDashboard: React.FC = () => {
   // Aggregate KPI metrics
   const totalCount = projects.length;
   const activeCount = useMemo(() => {
-    return projects.filter((p) => p.work_stage !== 'IN_PROGRESS' || p.progress_percent === null || Number(p.progress_percent) < 100).length;
+    return projects.filter((p) => p.work_stage !== 'COMPLETED').length;
   }, [projects]);
 
   const completedCount = useMemo(() => {
-    return projects.filter((p) => p.work_stage === 'IN_PROGRESS' && p.progress_percent !== null && Number(p.progress_percent) >= 100).length;
+    return projects.filter((p) => p.work_stage === 'COMPLETED').length;
   }, [projects]);
 
   const completedCostCr = useMemo(() => {
     return projects
-      .filter((p) => p.work_stage === 'IN_PROGRESS' && p.progress_percent !== null && Number(p.progress_percent) >= 100)
+      .filter((p) => p.work_stage === 'COMPLETED')
       .reduce((sum, p) => sum + (Number(p.revised_cost_cr || p.project_cost_cr) || 0), 0);
   }, [projects]);
 
@@ -287,7 +289,7 @@ export const MajorProjectsDashboard: React.FC = () => {
   }, [projects]);
 
   const inProgressCount = useMemo(() => {
-    return projects.filter((p) => p.work_stage === 'IN_PROGRESS' && (p.progress_percent === null || Number(p.progress_percent) < 100)).length;
+    return projects.filter((p) => p.work_stage === 'IN_PROGRESS').length;
   }, [projects]);
 
   const tenderCount = useMemo(() => {

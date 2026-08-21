@@ -113,8 +113,12 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   );
 
   // Physical Progress & Stage (Module 3)
-  const [workStage, setWorkStage] = useState<'IN_PROGRESS' | 'TENDER_STAGE'>(
-    initialData?.work_stage === 'TENDER_STAGE' ? 'TENDER_STAGE' : 'IN_PROGRESS'
+  const [workStage, setWorkStage] = useState<'IN_PROGRESS' | 'TENDER_STAGE' | 'COMPLETED'>(
+    initialData?.work_stage === 'TENDER_STAGE'
+      ? 'TENDER_STAGE'
+      : initialData?.work_stage === 'COMPLETED'
+      ? 'COMPLETED'
+      : 'IN_PROGRESS'
   );
   const [progressPercent, setProgressPercent] = useState<string>(
     initialData?.progress_percent !== undefined && initialData?.progress_percent !== null
@@ -177,7 +181,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
 
   // Computed Delay
   const computedDelay = useMemo(() => {
-    if (workStage !== 'IN_PROGRESS' || !scheduledCompletionDate) return null;
+    if (workStage === 'TENDER_STAGE' || !scheduledCompletionDate) return null;
     return calculateProjectDelay(
       scheduledCompletionDate,
       probableCompletionDate,
@@ -201,7 +205,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       newErrors.contractValueCr = 'Contract Value must be a valid non-negative number.';
     }
 
-    if (workStage === 'IN_PROGRESS') {
+    if (workStage === 'IN_PROGRESS' || workStage === 'COMPLETED') {
       if (progressPercent !== '') {
         const p = Number(progressPercent);
         if (isNaN(p) || p < 0 || p > 100) {
@@ -245,12 +249,18 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
 
       work_stage: workStage,
       progress_percent:
-        workStage === 'IN_PROGRESS' && progressPercent !== '' ? Number(progressPercent) : null,
+        workStage === 'TENDER_STAGE'
+          ? null
+          : workStage === 'COMPLETED' && progressPercent === ''
+          ? 100
+          : progressPercent !== ''
+          ? Number(progressPercent)
+          : null,
       probable_completion_date:
-        workStage === 'IN_PROGRESS' && probableCompletionDate ? probableCompletionDate.trim() : null,
+        workStage === 'TENDER_STAGE' ? null : probableCompletionDate ? probableCompletionDate.trim() : null,
       scheduled_completion_date: scheduledCompletionDate ? scheduledCompletionDate.trim() : null,
       stage_remarks: workStage === 'TENDER_STAGE' ? stageRemarks.trim() || null : null,
-      progress_remarks: workStage === 'IN_PROGRESS' ? progressRemarks.trim() || null : null,
+      progress_remarks: workStage !== 'TENDER_STAGE' ? progressRemarks.trim() || null : null,
       detailed_stage_status: detailedStageStatus.trim() || null,
 
       // 5 Contract & Milestone Fields
@@ -618,11 +628,11 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
               Work Stage Status
             </label>
-            <div className="grid grid-cols-2 gap-3 max-w-md">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <label
                 className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
                   workStage === 'IN_PROGRESS'
-                    ? 'border-blue-600 bg-blue-50/80 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200 font-bold'
+                    ? 'border-blue-600 bg-blue-50/80 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200 font-bold shadow-xs'
                     : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
@@ -639,7 +649,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
               <label
                 className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
                   workStage === 'TENDER_STAGE'
-                    ? 'border-amber-600 bg-amber-50/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 font-bold'
+                    ? 'border-amber-600 bg-amber-50/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 font-bold shadow-xs'
                     : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
@@ -651,6 +661,28 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                   className="w-4 h-4 text-amber-600"
                 />
                 <span className="text-xs">Tender / Pre-Work Stage</span>
+              </label>
+
+              <label
+                className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                  workStage === 'COMPLETED'
+                    ? 'border-teal-600 bg-teal-50/80 dark:bg-teal-950/60 text-teal-900 dark:text-teal-200 font-bold shadow-xs'
+                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="work_stage"
+                  checked={workStage === 'COMPLETED'}
+                  onChange={() => {
+                    setWorkStage('COMPLETED');
+                    if (progressPercent === '') setProgressPercent('100');
+                  }}
+                  className="w-4 h-4 text-teal-600"
+                />
+                <span className="text-xs flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" /> Completed Work
+                </span>
               </label>
             </div>
           </div>
@@ -666,6 +698,18 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
+              {workStage === 'COMPLETED' && (
+                <div className="p-4 bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 rounded-xl text-xs space-y-1">
+                  <span className="font-bold text-teal-800 dark:text-teal-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    Work Completed Stage Selected
+                  </span>
+                  <p className="text-teal-700 dark:text-teal-400">
+                    This project will be archived under the <strong>Completed Works</strong> register and hidden from default active views.
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">

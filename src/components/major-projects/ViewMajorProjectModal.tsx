@@ -45,6 +45,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
   if (!isOpen || !project) return null;
 
   const isTender = project.work_stage === 'TENDER_STAGE';
+  const isCompleted = project.work_stage === 'COMPLETED';
 
   // Dynamic delay calculation based on scheduled vs likely/current date
   const delayInfo = calculateProjectDelay(
@@ -109,12 +110,14 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
               )}
               <span
                 className={`px-2.5 py-0.5 rounded-xs font-bold text-xs border ${
-                  isTender
+                  isCompleted
+                    ? 'bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800'
+                    : isTender
                     ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                     : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                 }`}
               >
-                {isTender ? 'Tender / Sanction Stage' : 'In Execution'}
+                {isCompleted ? '✓ Work Completed' : isTender ? 'Tender / Sanction Stage' : 'In Execution'}
               </span>
               {effectiveCost >= 50 && (
                 <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold text-[10.5px] rounded-xs border border-amber-200 dark:border-amber-800">

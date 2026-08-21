@@ -10,7 +10,7 @@ export interface MajorProject {
   scheme: string;
   name_of_work: string;
   project_cost_cr: number;
-  work_stage: 'IN_PROGRESS' | 'TENDER_STAGE';
+  work_stage: 'IN_PROGRESS' | 'TENDER_STAGE' | 'COMPLETED';
   progress_percent?: number | null;
   probable_completion_date?: string | null;
   stage_remarks?: string | null;
@@ -172,16 +172,12 @@ export async function GET(request: Request) {
 
     let filteredData = (data || []) as MajorProject[];
 
-    // Completed Works Filtering (100% Physical Progress)
+    // Completed Works Filtering (based on work_stage === 'COMPLETED')
     if (completionFilter === 'COMPLETED_ONLY') {
-      filteredData = filteredData.filter(
-        (p) => p.work_stage === 'IN_PROGRESS' && p.progress_percent !== null && Number(p.progress_percent) >= 100
-      );
+      filteredData = filteredData.filter((p) => p.work_stage === 'COMPLETED');
     } else if (completionFilter === 'ACTIVE_ONLY' || !completionFilter) {
-      // Default: Auto-hide 100% completed works from default active list
-      filteredData = filteredData.filter(
-        (p) => p.work_stage !== 'IN_PROGRESS' || p.progress_percent === null || Number(p.progress_percent) < 100
-      );
+      // Default: Auto-hide completed works from default active list
+      filteredData = filteredData.filter((p) => p.work_stage !== 'COMPLETED');
     }
 
     if (searchParam) {
@@ -302,10 +298,12 @@ export async function POST(request: Request) {
       scheme: scheme ? String(scheme).trim() : 'Annual Plan 2025-26',
       name_of_work: String(name_of_work).trim(),
       project_cost_cr: project_cost_cr !== undefined && project_cost_cr !== '' && project_cost_cr !== null ? Number(project_cost_cr) : 0,
-      work_stage: work_stage === 'TENDER_STAGE' ? 'TENDER_STAGE' : 'IN_PROGRESS',
+      work_stage: work_stage === 'TENDER_STAGE' ? 'TENDER_STAGE' : work_stage === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS',
       progress_percent:
         work_stage === 'TENDER_STAGE'
           ? null
+          : work_stage === 'COMPLETED' && (progress_percent === undefined || progress_percent === '' || progress_percent === null)
+          ? 100
           : progress_percent !== undefined && progress_percent !== '' && progress_percent !== null
           ? Number(progress_percent)
           : null,
