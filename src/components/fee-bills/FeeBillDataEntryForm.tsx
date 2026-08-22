@@ -129,21 +129,23 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [duplicateWarning, setDuplicateWarning] = useState('');
 
-  const activeCircles = (masterData.circles || DEFAULT_MASTER_DATA.circles).filter((c) => c.active);
+  const activeCircles = (masterData.circles ?? DEFAULT_MASTER_DATA.circles).filter((c) => c.active);
   const availableDivisions = formData.circle
-    ? (masterData.divisions || DEFAULT_MASTER_DATA.divisions).filter(
+    ? (masterData.divisions ?? DEFAULT_MASTER_DATA.divisions).filter(
         (d) => d.circleName === formData.circle && d.active
       )
-    : (masterData.divisions || DEFAULT_MASTER_DATA.divisions).filter((d) => d.active);
+    : (masterData.divisions ?? DEFAULT_MASTER_DATA.divisions).filter((d) => d.active);
 
-  const lawyerDesignations = masterData.lawyerDesignations || DEFAULT_MASTER_DATA.lawyerDesignations;
-  const caseTypes = masterData.caseTypes || DEFAULT_MASTER_DATA.caseTypes;
-  const casePertainsToOptions = masterData.casePertainsTo || DEFAULT_MASTER_DATA.casePertainsTo;
-  const paymentStatuses = masterData.paymentStatuses || DEFAULT_MASTER_DATA.paymentStatuses;
+  const lawyerDesignations = masterData.lawyerDesignations ?? DEFAULT_MASTER_DATA.lawyerDesignations;
+  const caseTypes = masterData.caseTypes ?? DEFAULT_MASTER_DATA.caseTypes;
+  const casePertainsToOptions = masterData.casePertainsTo ?? DEFAULT_MASTER_DATA.casePertainsTo;
+  const paymentStatuses = masterData.paymentStatuses ?? DEFAULT_MASTER_DATA.paymentStatuses;
   const statusOfObtainingGoOptions =
-    masterData.statusOfObtainingGoOptions || DEFAULT_MASTER_DATA.statusOfObtainingGoOptions || [];
+    masterData.statusOfObtainingGoOptions ?? DEFAULT_MASTER_DATA.statusOfObtainingGoOptions ?? [];
   const statusOfPaymentProposalOptions =
-    masterData.statusOfPaymentProposalOptions || DEFAULT_MASTER_DATA.statusOfPaymentProposalOptions || [];
+    masterData.statusOfPaymentProposalOptions ?? DEFAULT_MASTER_DATA.statusOfPaymentProposalOptions ?? [];
+  const goStatusOptions = masterData.goStatusOptions ?? DEFAULT_MASTER_DATA.goStatusOptions ?? [];
+  const yesNoOptions = masterData.yesNoOptions ?? DEFAULT_MASTER_DATA.yesNoOptions ?? [];
 
   // Auto-calculate Assistance Amount (1/3 of Appearance Fee only) and Total Fee
   useEffect(() => {
@@ -754,14 +756,14 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 G.O. Required Status <span className="text-red-500">*</span>
               </label>
               <SearchableSelect
-                options={['Yes', 'No', 'Not Required']}
-                value={formData.goStatus || 'Not Required'}
+                options={goStatusOptions}
+                value={formData.goStatus || (goStatusOptions[0] || 'Not Required')}
                 onChange={(val) => setFormData((prev) => ({ ...prev, goStatus: val as GOStatusType }))}
                 placeholder=""
               />
             </div>
 
-            {formData.goStatus === 'Yes' && (
+            {(formData.goStatus === 'Yes' || formData.goStatus?.toLowerCase() === 'yes') && (
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   Status of Obtaining G.O. <span className="text-red-500">*</span>
@@ -777,7 +779,8 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
           </div>
 
           {/* Conditional Branch: If G.O. Required == YES and Status == G.O. Obtained */}
-          {formData.goStatus === 'Yes' && formData.statusOfObtainingGo === 'G.O. Obtained' && (
+          {(formData.goStatus === 'Yes' || formData.goStatus?.toLowerCase() === 'yes') &&
+            (formData.statusOfObtainingGo === 'G.O. Obtained' || formData.statusOfObtainingGo?.toLowerCase().includes('obtained')) && (
             <div className="p-5 bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl space-y-3 text-xs animate-in fade-in">
               <div className="font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Official G.O. Reference Particulars
@@ -920,8 +923,8 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                     Sanctioned? (Yes / No)
                   </label>
                   <SearchableSelect
-                    options={['Yes', 'No']}
-                    value={formData.isSanctioned || 'No'}
+                    options={yesNoOptions}
+                    value={formData.isSanctioned || (yesNoOptions[1] || 'No')}
                     onChange={(val) => setFormData((prev) => ({ ...prev, isSanctioned: val as YesNoType }))}
                     placeholder=""
                   />
@@ -931,7 +934,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
           )}
 
           {/* Conditional Branch 2: If Sanctioned == YES (Settlement & Disbursement Banking Fields) */}
-          {(formData.isSanctioned === 'Yes' || formData.paymentStatus === 'Settled') && (
+          {(formData.isSanctioned === 'Yes' || formData.isSanctioned?.toLowerCase() === 'yes' || formData.paymentStatus === 'Settled') && (
             <div className="p-5 bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl space-y-4 text-xs animate-in fade-in">
               <div className="flex items-center justify-between">
                 <div className="font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">

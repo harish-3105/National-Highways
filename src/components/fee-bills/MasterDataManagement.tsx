@@ -32,9 +32,11 @@ type TabType =
   | 'lawyerDesignations'
   | 'caseTypes'
   | 'casePertainsTo'
+  | 'goStatusOptions'
   | 'statusOfObtainingGo'
   | 'statusOfPaymentProposal'
-  | 'paymentStatuses';
+  | 'paymentStatuses'
+  | 'yesNoOptions';
 
 export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
   masterData,
@@ -50,14 +52,16 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
 
   // Normalize fallback arrays from DEFAULT_MASTER_DATA
-  const lawyerDesignations = masterData.lawyerDesignations || DEFAULT_MASTER_DATA.lawyerDesignations;
-  const caseTypes = masterData.caseTypes || DEFAULT_MASTER_DATA.caseTypes;
-  const casePertainsTo = masterData.casePertainsTo || DEFAULT_MASTER_DATA.casePertainsTo;
-  const paymentStatuses = masterData.paymentStatuses || DEFAULT_MASTER_DATA.paymentStatuses;
+  const lawyerDesignations = masterData.lawyerDesignations ?? DEFAULT_MASTER_DATA.lawyerDesignations;
+  const caseTypes = masterData.caseTypes ?? DEFAULT_MASTER_DATA.caseTypes;
+  const casePertainsTo = masterData.casePertainsTo ?? DEFAULT_MASTER_DATA.casePertainsTo;
+  const paymentStatuses = masterData.paymentStatuses ?? DEFAULT_MASTER_DATA.paymentStatuses;
   const statusOfObtainingGoOptions =
-    masterData.statusOfObtainingGoOptions || DEFAULT_MASTER_DATA.statusOfObtainingGoOptions || [];
+    masterData.statusOfObtainingGoOptions ?? DEFAULT_MASTER_DATA.statusOfObtainingGoOptions ?? [];
   const statusOfPaymentProposalOptions =
-    masterData.statusOfPaymentProposalOptions || DEFAULT_MASTER_DATA.statusOfPaymentProposalOptions || [];
+    masterData.statusOfPaymentProposalOptions ?? DEFAULT_MASTER_DATA.statusOfPaymentProposalOptions ?? [];
+  const goStatusOptions = masterData.goStatusOptions ?? DEFAULT_MASTER_DATA.goStatusOptions ?? [];
+  const yesNoOptions = masterData.yesNoOptions ?? DEFAULT_MASTER_DATA.yesNoOptions ?? [];
 
   const handleAdd = () => {
     if (!newTextValue.trim()) return;
@@ -105,6 +109,13 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
           casePertainsTo: [...casePertainsTo, clean],
         });
       }
+    } else if (activeTab === 'goStatusOptions') {
+      if (!goStatusOptions.includes(clean)) {
+        onUpdateMasterData({
+          ...masterData,
+          goStatusOptions: [...goStatusOptions, clean],
+        });
+      }
     } else if (activeTab === 'statusOfObtainingGo') {
       if (!statusOfObtainingGoOptions.includes(clean)) {
         onUpdateMasterData({
@@ -126,6 +137,13 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
           paymentStatuses: [...paymentStatuses, clean],
         });
       }
+    } else if (activeTab === 'yesNoOptions') {
+      if (!yesNoOptions.includes(clean)) {
+        onUpdateMasterData({
+          ...masterData,
+          yesNoOptions: [...yesNoOptions, clean],
+        });
+      }
     }
 
     setNewTextValue('');
@@ -138,14 +156,16 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
       | 'casePertainsTo'
       | 'paymentStatuses'
       | 'statusOfObtainingGoOptions'
-      | 'statusOfPaymentProposalOptions',
+      | 'statusOfPaymentProposalOptions'
+      | 'goStatusOptions'
+      | 'yesNoOptions',
     idx: number
   ) => {
     if (!editValue.trim()) {
       setEditingKey(null);
       return;
     }
-    const currentList = [...(masterData[arrKey] || [])];
+    const currentList = [...((masterData[arrKey] ?? DEFAULT_MASTER_DATA[arrKey]) || [])];
     currentList[idx] = editValue.trim();
     onUpdateMasterData({
       ...masterData,
@@ -161,10 +181,12 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
       | 'casePertainsTo'
       | 'paymentStatuses'
       | 'statusOfObtainingGoOptions'
-      | 'statusOfPaymentProposalOptions',
+      | 'statusOfPaymentProposalOptions'
+      | 'goStatusOptions'
+      | 'yesNoOptions',
     idx: number
   ) => {
-    const currentList = [...(masterData[arrKey] || [])];
+    const currentList = [...((masterData[arrKey] ?? DEFAULT_MASTER_DATA[arrKey]) || [])];
     currentList.splice(idx, 1);
     onUpdateMasterData({
       ...masterData,
@@ -177,7 +199,7 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
       setEditingKey(null);
       return;
     }
-    const updated = masterData.circles.map((c) =>
+    const updated = (masterData.circles ?? DEFAULT_MASTER_DATA.circles).map((c) =>
       c.id === id ? { ...c, name: editValue.trim() } : c
     );
     onUpdateMasterData({ ...masterData, circles: updated });
@@ -185,7 +207,7 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
   };
 
   const handleDeleteCircle = (id: string) => {
-    const updated = masterData.circles.filter((c) => c.id !== id);
+    const updated = (masterData.circles ?? DEFAULT_MASTER_DATA.circles).filter((c) => c.id !== id);
     onUpdateMasterData({ ...masterData, circles: updated });
   };
 
@@ -194,7 +216,7 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
       setEditingKey(null);
       return;
     }
-    const updated = masterData.divisions.map((d) =>
+    const updated = (masterData.divisions ?? DEFAULT_MASTER_DATA.divisions).map((d) =>
       d.id === id ? { ...d, name: editValue.trim() } : d
     );
     onUpdateMasterData({ ...masterData, divisions: updated });
@@ -202,19 +224,21 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
   };
 
   const handleDeleteDivision = (id: string) => {
-    const updated = masterData.divisions.filter((d) => d.id !== id);
+    const updated = (masterData.divisions ?? DEFAULT_MASTER_DATA.divisions).filter((d) => d.id !== id);
     onUpdateMasterData({ ...masterData, divisions: updated });
   };
 
   const tabsConfig = [
-    { id: 'circles' as TabType, label: 'Circles', icon: MapPin, count: masterData.circles?.length || 0 },
-    { id: 'divisions' as TabType, label: 'Divisions', icon: Building, count: masterData.divisions?.length || 0 },
+    { id: 'circles' as TabType, label: 'Circles', icon: MapPin, count: (masterData.circles ?? DEFAULT_MASTER_DATA.circles)?.length || 0 },
+    { id: 'divisions' as TabType, label: 'Divisions', icon: Building, count: (masterData.divisions ?? DEFAULT_MASTER_DATA.divisions)?.length || 0 },
     { id: 'lawyerDesignations' as TabType, label: 'Lawyer Designations', icon: Briefcase, count: lawyerDesignations.length },
     { id: 'caseTypes' as TabType, label: 'Case Types', icon: Scale, count: caseTypes.length },
-    { id: 'statusOfObtainingGo' as TabType, label: 'G.O. Statuses', icon: CheckCircle2, count: statusOfObtainingGoOptions.length },
-    { id: 'statusOfPaymentProposal' as TabType, label: 'Payment Proposals', icon: CreditCard, count: statusOfPaymentProposalOptions.length },
     { id: 'casePertainsTo' as TabType, label: 'Pertains To', icon: Building2, count: casePertainsTo.length },
+    { id: 'goStatusOptions' as TabType, label: 'G.O. Required Statuses', icon: CheckCircle2, count: goStatusOptions.length },
+    { id: 'statusOfObtainingGo' as TabType, label: 'G.O. Stages', icon: CheckCircle2, count: statusOfObtainingGoOptions.length },
+    { id: 'statusOfPaymentProposal' as TabType, label: 'Payment Proposals', icon: CreditCard, count: statusOfPaymentProposalOptions.length },
     { id: 'paymentStatuses' as TabType, label: 'Payment Statuses', icon: CreditCard, count: paymentStatuses.length },
+    { id: 'yesNoOptions' as TabType, label: 'Sanction Choices', icon: Check, count: yesNoOptions.length },
   ];
 
   return (
@@ -271,7 +295,7 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
         {activeTab === 'divisions' && (
           <div className="w-full sm:w-56">
             <SearchableSelect
-              options={masterData.circles.map((c) => c.name)}
+              options={(masterData.circles || []).map((c) => c.name)}
               value={selectedCircleForDiv}
               onChange={(val) => setSelectedCircleForDiv(val)}
               placeholder="Select Circle..."
@@ -453,20 +477,26 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
         </div>
       )}
 
-      {/* 3, 4, 5, 6, 7, 8: String Array Tabs */}
+      {/* 3..10: String Array Tabs */}
       {[
         'lawyerDesignations',
         'caseTypes',
         'casePertainsTo',
+        'goStatusOptions',
         'statusOfObtainingGo',
         'statusOfPaymentProposal',
         'paymentStatuses',
+        'yesNoOptions',
       ].includes(activeTab) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {((activeTab === 'statusOfObtainingGo'
             ? statusOfObtainingGoOptions
             : activeTab === 'statusOfPaymentProposal'
             ? statusOfPaymentProposalOptions
+            : activeTab === 'goStatusOptions'
+            ? goStatusOptions
+            : activeTab === 'yesNoOptions'
+            ? yesNoOptions
             : (masterData[activeTab as keyof FeeBillMasterDataConfig] as string[])) || [])
             .filter((item) => item.toLowerCase().includes(searchTerm.toLowerCase()))
             .map((item, idx) => {
@@ -476,6 +506,10 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
                   ? 'statusOfObtainingGoOptions'
                   : activeTab === 'statusOfPaymentProposal'
                   ? 'statusOfPaymentProposalOptions'
+                  : activeTab === 'goStatusOptions'
+                  ? 'goStatusOptions'
+                  : activeTab === 'yesNoOptions'
+                  ? 'yesNoOptions'
                   : (activeTab as
                       | 'lawyerDesignations'
                       | 'caseTypes'

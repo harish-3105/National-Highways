@@ -63,6 +63,8 @@ export const DEFAULT_MASTER_DATA: FeeBillMasterDataConfig = {
     'Sanction Order Awaited',
     'Payment Sanction',
   ],
+  goStatusOptions: ['Yes', 'No', 'Not Required'],
+  yesNoOptions: ['Yes', 'No'],
 };
 
 export const SAMPLE_FEE_BILLS: FeeBillRecord[] = [];

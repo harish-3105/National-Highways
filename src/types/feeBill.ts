@@ -133,6 +133,8 @@ export interface FeeBillMasterDataConfig {
   paymentStatuses: string[];
   statusOfObtainingGoOptions?: string[];
   statusOfPaymentProposalOptions?: string[];
+  goStatusOptions?: string[];
+  yesNoOptions?: string[];
 }
 
 export interface FeeBillFilterCriteria {
