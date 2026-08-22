@@ -20,7 +20,6 @@ import {
   FileText,
   Calculator,
   User,
-  Clock,
   AlertCircle,
   Building,
   CheckCircle2,
@@ -30,7 +29,6 @@ import {
   UserPlus,
   Trash2,
   Receipt,
-  Scale,
 } from 'lucide-react';
 
 interface FeeBillDataEntryFormProps {
@@ -428,7 +426,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="e.g. FB-CHN-2024-001"
                 value={formData.feeBillNumber}
                 onChange={(e) => handleFeeBillNoChange(e.target.value)}
                 className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-bold uppercase outline-none focus:ring-2 focus:ring-blue-500"
@@ -457,7 +454,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={activeCircles.map((c) => c.name)}
                 value={formData.circle}
                 onChange={handleCircleChange}
-                placeholder="Select Circle..."
+                placeholder=""
                 required
               />
             </div>
@@ -470,7 +467,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={availableDivisions.map((d) => d.name)}
                 value={formData.division}
                 onChange={(val) => setFormData((prev) => ({ ...prev, division: val }))}
-                placeholder="Select Division..."
+                placeholder=""
                 required
               />
             </div>
@@ -504,7 +501,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="e.g. Thiru. R. Shunmugasundaram"
                 value={formData.lawyerName}
                 onChange={(e) => setFormData((prev) => ({ ...prev, lawyerName: e.target.value }))}
                 className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold outline-none focus:ring-2 focus:ring-indigo-500"
@@ -520,7 +516,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={masterData.lawyerDesignations}
                 value={formData.lawyerDesignation}
                 onChange={(val) => setFormData((prev) => ({ ...prev, lawyerDesignation: val }))}
-                placeholder="Select Designation..."
+                placeholder=""
               />
             </div>
 
@@ -532,7 +528,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={masterData.caseTypes}
                 value={formData.caseType}
                 onChange={(val) => setFormData((prev) => ({ ...prev, caseType: val }))}
-                placeholder="Select Case Type..."
+                placeholder=""
               />
             </div>
 
@@ -543,14 +539,12 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="e.g. WP 18452"
                   value={formData.caseNumber}
                   onChange={(e) => setFormData((prev) => ({ ...prev, caseNumber: e.target.value }))}
                   className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
                 />
                 <input
                   type="text"
-                  placeholder="2024"
                   value={formData.caseYear}
                   onChange={(e) => setFormData((prev) => ({ ...prev, caseYear: e.target.value }))}
                   className="w-24 h-10 px-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-center"
@@ -595,7 +589,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Thiru. M. Venkatesh"
                       value={formData.assistantName || ''}
                       onChange={(e) => setFormData((prev) => ({ ...prev, assistantName: e.target.value }))}
                       className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium"
@@ -609,7 +602,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                       options={masterData.lawyerDesignations}
                       value={formData.assistantDesignation || ''}
                       onChange={(val) => setFormData((prev) => ({ ...prev, assistantDesignation: val }))}
-                      placeholder="Select Assistant Designation..."
+                      placeholder=""
                     />
                   </div>
                 </div>
@@ -649,7 +642,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               </label>
               <input
                 type="number"
-                placeholder="0"
                 value={formData.appearanceAmount || ''}
                 onChange={(e) => setFormData((prev) => ({ ...prev, appearanceAmount: Number(e.target.value) }))}
                 className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
@@ -670,7 +662,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               </label>
               <input
                 type="number"
-                placeholder="0"
                 value={formData.conferenceAmount || ''}
                 onChange={(e) => setFormData((prev) => ({ ...prev, conferenceAmount: Number(e.target.value) }))}
                 className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
@@ -691,7 +682,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               </label>
               <input
                 type="number"
-                placeholder="0"
                 value={formData.verifyingAmount || ''}
                 onChange={(e) => setFormData((prev) => ({ ...prev, verifyingAmount: Number(e.target.value) }))}
                 className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
@@ -762,7 +752,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={['Yes', 'No', 'Not Required']}
                 value={formData.goStatus || 'Not Required'}
                 onChange={(val) => setFormData((prev) => ({ ...prev, goStatus: val as GOStatusType }))}
-                placeholder="Select G.O. Status..."
+                placeholder=""
               />
             </div>
 
@@ -775,7 +765,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   options={statusOfObtainingGoOptions}
                   value={formData.statusOfObtainingGo || ''}
                   onChange={(val) => setFormData((prev) => ({ ...prev, statusOfObtainingGo: val }))}
-                  placeholder="Select G.O. Stage..."
+                  placeholder=""
                 />
               </div>
             )}
@@ -794,7 +784,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. G.O. (Ms) No. 142/HW/2024"
                     value={formData.goNumber || ''}
                     onChange={(e) => setFormData((prev) => ({ ...prev, goNumber: e.target.value }))}
                     className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
@@ -863,7 +852,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={statusOfPaymentProposalOptions}
                 value={formData.statusOfPaymentProposal || ''}
                 onChange={(val) => setFormData((prev) => ({ ...prev, statusOfPaymentProposal: val }))}
-                placeholder="Select Proposal Status..."
+                placeholder=""
               />
             </div>
           </div>
@@ -882,7 +871,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Proc. No. 1294/Accts/2024"
                     value={formData.proceedingLetterNo || ''}
                     onChange={(e) => setFormData((prev) => ({ ...prev, proceedingLetterNo: e.target.value }))}
                     className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
@@ -905,7 +893,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   </label>
                   <input
                     type="number"
-                    placeholder="0"
                     value={formData.sanctionedAmount || ''}
                     onChange={(e) => setFormData((prev) => ({ ...prev, sanctionedAmount: Number(e.target.value) }))}
                     className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
@@ -919,7 +906,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                     options={['Yes', 'No']}
                     value={formData.isSanctioned || 'No'}
                     onChange={(val) => setFormData((prev) => ({ ...prev, isSanctioned: val as YesNoType }))}
-                    placeholder="Select..."
+                    placeholder=""
                   />
                 </div>
               </div>
@@ -969,7 +956,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   </label>
                   <input
                     type="number"
-                    placeholder="0"
                     value={formData.settledAmount || ''}
                     onChange={(e) => handleSettledAmountChange(Number(e.target.value))}
                     className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-xl font-black text-emerald-700 dark:text-emerald-300"
@@ -982,7 +968,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   </label>
                   <input
                     type="number"
-                    placeholder="0"
                     value={formData.itCess || ''}
                     onChange={(e) => handleItCessChange(Number(e.target.value))}
                     className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
@@ -995,7 +980,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   </label>
                   <input
                     type="number"
-                    placeholder="0"
                     value={formData.amountDeposited || ''}
                     onChange={(e) => handleAmountDepositedChange(Number(e.target.value))}
                     className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-xl font-black text-emerald-700 dark:text-emerald-300"
@@ -1008,7 +992,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. UTR-2024-0987214"
                     value={formData.utrRbiReference || ''}
                     onChange={(e) => setFormData((prev) => ({ ...prev, utrRbiReference: e.target.value }))}
                     className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold uppercase"
@@ -1075,4 +1058,3 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
     </form>
   );
 };
-

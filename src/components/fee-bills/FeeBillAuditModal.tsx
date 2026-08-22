@@ -190,7 +190,6 @@ export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. RBI-UTR-2024041009823"
                       value={utrRbiReference}
                       onChange={(e) => setUtrRbiReference(e.target.value)}
                       className="w-full py-1.5 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
