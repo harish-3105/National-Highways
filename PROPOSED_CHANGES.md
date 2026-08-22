@@ -170,17 +170,18 @@ This document captures and tracks all proposed changes, architectural pivots, an
      - One-click export downloading the canonical 35-column departmental format.
 
 ### Change 11: Lifecycle Sub-Navigation & Progressive Partial Saving (All Entry/Edit Forms)
-- **Modules**: All Modules (`/ongoing-works`, `/highways`, `/dlp`, `/staff`, `/legal`, `/fee-bills`)
-- **Status**: 📋 **Active Requirement / Next Implementation Target**
+- **Modules**: All Modules (`/fee-bills` [COMPLETED], `/ongoing-works` [NEXT], `/highways`, `/dlp`, `/staff`, `/legal`)
+- **Status**: 🚀 **IN PROGRESS — Fee Bills Module Completed & Deployed; Ongoing Works Next**
 - **Core Philosophy**:
   - **Viewing Experience**: Remains unified and comprehensive in dashboards, tables, and passport modals.
   - **Adding & Editing Experience**: Replaces long continuous 30+ column vertical scrolling pages with a **sub-navigation tab bar / lifecycle stepper** inside entry/edit forms.
   - **Real-Life Chronological Lifecycle Splitting**: Forms are divided into intuitive stages matching how data is acquired over time (e.g. Sanction & Approvals $\rightarrow$ Contract Award $\rightarrow$ Physical Works $\rightarrow$ Financial Outlays $\rightarrow$ Time Extensions $\rightarrow$ Clearances $\rightarrow$ Granular Field Logs).
   - **Progressive / Partial Saving**: Only the primary identifier is mandatory. Users can fill any individual stage, click Save immediately, and return weeks or months later to fill subsequent lifecycle tabs as the project advances in the field.
+  - **Delivered Reference Implementation**: Completed in [`FeeBillDataEntryForm.tsx`](file:///home/mathir14/nh_proj/src/components/fee-bills/FeeBillDataEntryForm.tsx) with 5 lifecycle stages, branching G.O. and Payment cards, assistant toggle, and non-blocking saving.
 
 ### Change 12: Standardized Departmental Excel (.xlsx) Export Formatting Engine
-- **Modules**: All Modules (`/ongoing-works`, `/highways`, `/dlp`, `/staff`, `/legal`, `/fee-bills`)
-- **Status**: 📋 **Active Requirement / Standard Across All Exporters**
+- **Modules**: All Modules (`/ongoing-works` [COMPLETED], `/fee-bills` [COMPLETED], `/dlp` [NEXT], `/highways`, `/staff`, `/legal`)
+- **Status**: 🚀 **IN PROGRESS — Completed for Major Projects & Fee Bills; DLP Next**
 - **Formatting Standards**:
   - **Auto-Fit Column Widths**: Automatically calculates character spans (`!cols`) to eliminate cell truncation or `###` overflow.
   - **Cell Alignment Hierarchy**: Right-align numerical metrics (₹ Cr, Lengths, Counts), Center-align dates and codes, Left-align text descriptions and logs with auto-wrapping.
