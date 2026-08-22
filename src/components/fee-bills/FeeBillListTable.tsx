@@ -101,6 +101,11 @@ export const FeeBillListTable: React.FC<FeeBillListTableProps> = ({
                   <td className="py-3.5 px-4">
                     <div className="font-bold text-slate-900 dark:text-slate-100">{item.lawyerName}</div>
                     <div className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold">{item.lawyerDesignation}</div>
+                    {item.assistantName && (
+                      <div className="mt-1 text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded w-fit font-semibold border border-indigo-200 dark:border-indigo-800">
+                        Asst: {item.assistantName} {item.assistantDesignation ? `(${item.assistantDesignation})` : ''}
+                      </div>
+                    )}
                   </td>
 
                   <td className="py-3.5 px-4">
