@@ -12,7 +12,6 @@ import {
   calculateTotalFeeAmount,
   derivePendencyStage,
   formatINR,
-  DEFAULT_MASTER_DATA,
 } from '@/lib/feeBillMasterData';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import {
@@ -51,7 +50,7 @@ const defaultFormState: FeeBillRecord = {
   caseType: '',
   caseNumber: '',
   caseYear: new Date().getFullYear().toString(),
-  casePertainsTo: 'GOTN',
+  casePertainsTo: '' as any,
   appearanceAmount: 0,
   appearanceDate: new Date().toISOString().split('T')[0],
   conferenceAmount: 0,
@@ -63,13 +62,13 @@ const defaultFormState: FeeBillRecord = {
   totalFeeAmount: 0,
   assistantName: '',
   assistantDesignation: '',
-  paymentStatus: 'Not Settled',
+  paymentStatus: '' as any,
   settledAmount: 0,
   itCess: 0,
   amountDeposited: 0,
   utrRbiReference: '',
   paymentDate: '',
-  goStatus: 'Not Required',
+  goStatus: '' as any,
   statusOfObtainingGo: '',
   goNumber: '',
   goDate: '',
@@ -77,9 +76,9 @@ const defaultFormState: FeeBillRecord = {
   proceedingLetterNo: '',
   proceedingLetterDate: '',
   sanctionedAmount: 0,
-  isSanctioned: 'No',
-  paymentSanction: 'No',
-  proposalSubmitted: 'No',
+  isSanctioned: '' as any,
+  paymentSanction: '' as any,
+  proposalSubmitted: '' as any,
   proposalMovement: {
     deToCe: false,
     seToCe: false,
@@ -91,7 +90,7 @@ const defaultFormState: FeeBillRecord = {
   },
   letterNumber: '',
   letterDate: '',
-  currentPendency: 'Pending with DE',
+  currentPendency: '',
 };
 
 type FormTabType = 'voucher' | 'lawyer' | 'breakdown' | 'go' | 'payment';
@@ -129,23 +128,21 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [duplicateWarning, setDuplicateWarning] = useState('');
 
-  const activeCircles = (masterData.circles ?? DEFAULT_MASTER_DATA.circles).filter((c) => c.active);
+  const activeCircles = (masterData.circles || []).filter((c) => c.active);
   const availableDivisions = formData.circle
-    ? (masterData.divisions ?? DEFAULT_MASTER_DATA.divisions).filter(
+    ? (masterData.divisions || []).filter(
         (d) => d.circleName === formData.circle && d.active
       )
-    : (masterData.divisions ?? DEFAULT_MASTER_DATA.divisions).filter((d) => d.active);
+    : (masterData.divisions || []).filter((d) => d.active);
 
-  const lawyerDesignations = masterData.lawyerDesignations ?? DEFAULT_MASTER_DATA.lawyerDesignations;
-  const caseTypes = masterData.caseTypes ?? DEFAULT_MASTER_DATA.caseTypes;
-  const casePertainsToOptions = masterData.casePertainsTo ?? DEFAULT_MASTER_DATA.casePertainsTo;
-  const paymentStatuses = masterData.paymentStatuses ?? DEFAULT_MASTER_DATA.paymentStatuses;
-  const statusOfObtainingGoOptions =
-    masterData.statusOfObtainingGoOptions ?? DEFAULT_MASTER_DATA.statusOfObtainingGoOptions ?? [];
-  const statusOfPaymentProposalOptions =
-    masterData.statusOfPaymentProposalOptions ?? DEFAULT_MASTER_DATA.statusOfPaymentProposalOptions ?? [];
-  const goStatusOptions = masterData.goStatusOptions ?? DEFAULT_MASTER_DATA.goStatusOptions ?? [];
-  const yesNoOptions = masterData.yesNoOptions ?? DEFAULT_MASTER_DATA.yesNoOptions ?? [];
+  const lawyerDesignations = masterData.lawyerDesignations || [];
+  const caseTypes = masterData.caseTypes || [];
+  const casePertainsToOptions = masterData.casePertainsTo || [];
+  const paymentStatuses = masterData.paymentStatuses || [];
+  const statusOfObtainingGoOptions = masterData.statusOfObtainingGoOptions || [];
+  const statusOfPaymentProposalOptions = masterData.statusOfPaymentProposalOptions || [];
+  const goStatusOptions = masterData.goStatusOptions || [];
+  const yesNoOptions = masterData.yesNoOptions || [];
 
   // Auto-calculate Assistance Amount (1/3 of Appearance Fee only) and Total Fee
   useEffect(() => {
@@ -757,9 +754,9 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               </label>
               <SearchableSelect
                 options={goStatusOptions}
-                value={formData.goStatus || (goStatusOptions[0] || 'Not Required')}
+                value={formData.goStatus || ''}
                 onChange={(val) => setFormData((prev) => ({ ...prev, goStatus: val as GOStatusType }))}
-                placeholder=""
+                placeholder="Select G.O. Status..."
               />
             </div>
 
@@ -870,9 +867,9 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               </label>
               <SearchableSelect
                 options={paymentStatuses}
-                value={formData.paymentStatus || 'Not Settled'}
+                value={formData.paymentStatus || ''}
                 onChange={(val) => setFormData((prev) => ({ ...prev, paymentStatus: val as any }))}
-                placeholder=""
+                placeholder="Select Payment Status..."
               />
             </div>
           </div>
@@ -924,9 +921,9 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   </label>
                   <SearchableSelect
                     options={yesNoOptions}
-                    value={formData.isSanctioned || (yesNoOptions[1] || 'No')}
+                    value={formData.isSanctioned || ''}
                     onChange={(val) => setFormData((prev) => ({ ...prev, isSanctioned: val as YesNoType }))}
-                    placeholder=""
+                    placeholder="Select Option..."
                   />
                 </div>
               </div>

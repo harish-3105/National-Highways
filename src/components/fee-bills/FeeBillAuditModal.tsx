@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FeeBillRecord, AuditLogEntry, PaymentStatusType } from '@/types/feeBill';
-import { formatINR, DEFAULT_MASTER_DATA } from '@/lib/feeBillMasterData';
+import { formatINR } from '@/lib/feeBillMasterData';
 import {
   X,
   ShieldCheck,
@@ -25,13 +25,13 @@ interface FeeBillAuditModalProps {
 export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
   contract,
   isOpen,
-  paymentStatuses = DEFAULT_MASTER_DATA.paymentStatuses,
+  paymentStatuses = [],
   onClose,
   onSuccess,
 }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('Settled');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [settledAmount, setSettledAmount] = useState<number>(0);
   const [itCess, setItCess] = useState<number>(0);
   const [utrRbiReference, setUtrRbiReference] = useState('');
@@ -39,7 +39,7 @@ export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
 
   useEffect(() => {
     if (contract) {
-      setSelectedStatus(contract.paymentStatus || 'Settled');
+      setSelectedStatus(contract.paymentStatus || paymentStatuses[0] || '');
       setSettledAmount(contract.settledAmount || contract.totalFeeAmount || 0);
       setItCess(contract.itCess || Math.round((contract.totalFeeAmount || 0) * 0.1));
       setUtrRbiReference(contract.utrRbiReference || '');

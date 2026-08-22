@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { FeeBillMasterDataConfig } from '@/types/feeBill';
-import { DEFAULT_MASTER_DATA } from '@/lib/feeBillMasterData';
 import {
   Settings,
   Plus,
@@ -51,17 +50,16 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
   const [editValue, setEditValue] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Normalize fallback arrays from DEFAULT_MASTER_DATA
-  const lawyerDesignations = masterData.lawyerDesignations ?? DEFAULT_MASTER_DATA.lawyerDesignations;
-  const caseTypes = masterData.caseTypes ?? DEFAULT_MASTER_DATA.caseTypes;
-  const casePertainsTo = masterData.casePertainsTo ?? DEFAULT_MASTER_DATA.casePertainsTo;
-  const paymentStatuses = masterData.paymentStatuses ?? DEFAULT_MASTER_DATA.paymentStatuses;
-  const statusOfObtainingGoOptions =
-    masterData.statusOfObtainingGoOptions ?? DEFAULT_MASTER_DATA.statusOfObtainingGoOptions ?? [];
-  const statusOfPaymentProposalOptions =
-    masterData.statusOfPaymentProposalOptions ?? DEFAULT_MASTER_DATA.statusOfPaymentProposalOptions ?? [];
-  const goStatusOptions = masterData.goStatusOptions ?? DEFAULT_MASTER_DATA.goStatusOptions ?? [];
-  const yesNoOptions = masterData.yesNoOptions ?? DEFAULT_MASTER_DATA.yesNoOptions ?? [];
+  const circles = masterData.circles || [];
+  const divisions = masterData.divisions || [];
+  const lawyerDesignations = masterData.lawyerDesignations || [];
+  const caseTypes = masterData.caseTypes || [];
+  const casePertainsTo = masterData.casePertainsTo || [];
+  const paymentStatuses = masterData.paymentStatuses || [];
+  const statusOfObtainingGoOptions = masterData.statusOfObtainingGoOptions || [];
+  const statusOfPaymentProposalOptions = masterData.statusOfPaymentProposalOptions || [];
+  const goStatusOptions = masterData.goStatusOptions || [];
+  const yesNoOptions = masterData.yesNoOptions || [];
 
   const handleAdd = () => {
     if (!newTextValue.trim()) return;
@@ -75,18 +73,18 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
       };
       onUpdateMasterData({
         ...masterData,
-        circles: [...masterData.circles, newCircle],
+        circles: [...circles, newCircle],
       });
     } else if (activeTab === 'divisions') {
       const newDiv = {
         id: `d-${Date.now()}`,
-        circleName: selectedCircleForDiv || (masterData.circles[0]?.name || 'Chennai'),
+        circleName: selectedCircleForDiv || (circles[0]?.name || ''),
         name: clean,
         active: true,
       };
       onUpdateMasterData({
         ...masterData,
-        divisions: [...masterData.divisions, newDiv],
+        divisions: [...divisions, newDiv],
       });
     } else if (activeTab === 'lawyerDesignations') {
       if (!lawyerDesignations.includes(clean)) {
@@ -165,7 +163,7 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
       setEditingKey(null);
       return;
     }
-    const currentList = [...((masterData[arrKey] ?? DEFAULT_MASTER_DATA[arrKey]) || [])];
+    const currentList = [...(masterData[arrKey] || [])];
     currentList[idx] = editValue.trim();
     onUpdateMasterData({
       ...masterData,
@@ -186,7 +184,7 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
       | 'yesNoOptions',
     idx: number
   ) => {
-    const currentList = [...((masterData[arrKey] ?? DEFAULT_MASTER_DATA[arrKey]) || [])];
+    const currentList = [...(masterData[arrKey] || [])];
     currentList.splice(idx, 1);
     onUpdateMasterData({
       ...masterData,
@@ -199,7 +197,7 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
       setEditingKey(null);
       return;
     }
-    const updated = (masterData.circles ?? DEFAULT_MASTER_DATA.circles).map((c) =>
+    const updated = (masterData.circles || []).map((c) =>
       c.id === id ? { ...c, name: editValue.trim() } : c
     );
     onUpdateMasterData({ ...masterData, circles: updated });
@@ -207,7 +205,7 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
   };
 
   const handleDeleteCircle = (id: string) => {
-    const updated = (masterData.circles ?? DEFAULT_MASTER_DATA.circles).filter((c) => c.id !== id);
+    const updated = (masterData.circles || []).filter((c) => c.id !== id);
     onUpdateMasterData({ ...masterData, circles: updated });
   };
 
@@ -216,7 +214,7 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
       setEditingKey(null);
       return;
     }
-    const updated = (masterData.divisions ?? DEFAULT_MASTER_DATA.divisions).map((d) =>
+    const updated = (masterData.divisions || []).map((d) =>
       d.id === id ? { ...d, name: editValue.trim() } : d
     );
     onUpdateMasterData({ ...masterData, divisions: updated });
@@ -224,13 +222,13 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
   };
 
   const handleDeleteDivision = (id: string) => {
-    const updated = (masterData.divisions ?? DEFAULT_MASTER_DATA.divisions).filter((d) => d.id !== id);
+    const updated = (masterData.divisions || []).filter((d) => d.id !== id);
     onUpdateMasterData({ ...masterData, divisions: updated });
   };
 
   const tabsConfig = [
-    { id: 'circles' as TabType, label: 'Circles', icon: MapPin, count: (masterData.circles ?? DEFAULT_MASTER_DATA.circles)?.length || 0 },
-    { id: 'divisions' as TabType, label: 'Divisions', icon: Building, count: (masterData.divisions ?? DEFAULT_MASTER_DATA.divisions)?.length || 0 },
+    { id: 'circles' as TabType, label: 'Circles', icon: MapPin, count: circles.length },
+    { id: 'divisions' as TabType, label: 'Divisions', icon: Building, count: divisions.length },
     { id: 'lawyerDesignations' as TabType, label: 'Lawyer Designations', icon: Briefcase, count: lawyerDesignations.length },
     { id: 'caseTypes' as TabType, label: 'Case Types', icon: Scale, count: caseTypes.length },
     { id: 'casePertainsTo' as TabType, label: 'Pertains To', icon: Building2, count: casePertainsTo.length },

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { FeeBillRecord, FeeBillMasterDataConfig } from '@/types/feeBill';
-import { formatINR, DEFAULT_MASTER_DATA } from '@/lib/feeBillMasterData';
+import { formatINR } from '@/lib/feeBillMasterData';
 import { Clock, Building, ArrowRight, ShieldAlert, CheckCircle2 } from 'lucide-react';
 
 interface FeeBillPendencyTrackerProps {
@@ -18,23 +18,14 @@ export const FeeBillPendencyTracker: React.FC<FeeBillPendencyTrackerProps> = ({
 }) => {
   const pendingBills = bills.filter((b) => b.paymentStatus !== 'Settled');
 
-  // Derive unique pendency stages dynamically from bills and master defaults
+  // Derive unique pendency stages dynamically from masterData and bills
   const pendencyStages = React.useMemo(() => {
-    const defaultStages = Array.from(
-      new Set([
-        'Pending with DE',
-        ...(masterData?.statusOfObtainingGoOptions || DEFAULT_MASTER_DATA.statusOfObtainingGoOptions || []),
-        ...(masterData?.statusOfPaymentProposalOptions || DEFAULT_MASTER_DATA.statusOfPaymentProposalOptions || []),
-        'Payment Sanctioned',
-      ])
-    );
+    const configuredStages = [
+      ...(masterData?.statusOfObtainingGoOptions || []),
+      ...(masterData?.statusOfPaymentProposalOptions || []),
+    ];
     const billStages = pendingBills.map((b) => b.currentPendency).filter(Boolean);
-    const combined = Array.from(new Set([...defaultStages, ...billStages]));
-    // Order: keep stages with active bills or defaults
-    return combined.filter((stage) => {
-      const hasBills = pendingBills.some((b) => b.currentPendency === stage);
-      return hasBills || defaultStages.slice(0, 4).includes(stage);
-    });
+    return Array.from(new Set([...configuredStages, ...billStages]));
   }, [pendingBills, masterData]);
 
   return (
