@@ -31,7 +31,7 @@ import {
 import { generateFeeBillsExcel } from '@/lib/export/feeBillsExportGenerator';
 
 type PortalTab = 'workspace' | 'create' | 'settings';
-type WorkspaceViewMode = 'ledger' | 'pivot' | 'pendency' | 'analytics';
+type WorkspaceViewMode = 'ledger' | 'analytics' | 'pendency';
 type KpiCardType = 'all' | 'settled' | 'pending' | 'cases';
 
 export function FeeBillManagementPortal() {
@@ -440,7 +440,7 @@ export function FeeBillManagementPortal() {
               type="button"
               onClick={() => {
                 setActiveKpiCard('cases');
-                setViewMode('pivot');
+                setViewMode('analytics');
               }}
               className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
                 activeKpiCard === 'cases'
@@ -468,7 +468,7 @@ export function FeeBillManagementPortal() {
                 </div>
               </div>
               <div className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-                Empaneled Law Officers &bull; Click to Open Pivot Matrix
+                Empaneled Law Officers &bull; Click to Open Analytics Matrix
               </div>
             </button>
           </div>
@@ -542,7 +542,7 @@ export function FeeBillManagementPortal() {
                   <button
                     type="button"
                     onClick={() => setViewMode('ledger')}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       viewMode === 'ledger'
                         ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -554,34 +554,8 @@ export function FeeBillManagementPortal() {
 
                   <button
                     type="button"
-                    onClick={() => setViewMode('pivot')}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      viewMode === 'pivot'
-                        ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                    }`}
-                  >
-                    <Layers className="w-3.5 h-3.5" />
-                    <span>Pivot</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('pendency')}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      viewMode === 'pendency'
-                        ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                    }`}
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Pendency</span>
-                  </button>
-
-                  <button
-                    type="button"
                     onClick={() => setViewMode('analytics')}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       viewMode === 'analytics'
                         ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -589,6 +563,19 @@ export function FeeBillManagementPortal() {
                   >
                     <PieChart className="w-3.5 h-3.5" />
                     <span>Analytics</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('pendency')}
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      viewMode === 'pendency'
+                        ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Pendency</span>
                   </button>
                 </div>
 
@@ -627,12 +614,11 @@ export function FeeBillManagementPortal() {
             />
           )}
 
-          {viewMode === 'pivot' && (
+          {viewMode === 'analytics' && (
             <FeeBillAnalysisDashboard
               bills={bills}
               masterData={masterData}
               hideHeaderKpis={true}
-              initialPivotMode="case"
               onViewBill={(b) => setViewingBill(b)}
               onEditBill={(b) => {
                 setEditingBill(b);
@@ -646,20 +632,6 @@ export function FeeBillManagementPortal() {
               bills={bills}
               masterData={masterData}
               onViewBill={(b) => setViewingBill(b)}
-            />
-          )}
-
-          {viewMode === 'analytics' && (
-            <FeeBillAnalysisDashboard
-              bills={bills}
-              masterData={masterData}
-              hideHeaderKpis={true}
-              initialPivotMode="circle"
-              onViewBill={(b) => setViewingBill(b)}
-              onEditBill={(b) => {
-                setEditingBill(b);
-                setActiveTab('create');
-              }}
             />
           )}
         </div>

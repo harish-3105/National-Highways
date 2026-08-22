@@ -422,10 +422,10 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
             </div>
             <div>
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
-                Dynamic Pivot Matrix Engine
+                Multi-Dimensional Fee Analytics
               </h2>
               <p className="text-[11px] text-slate-500 font-medium">
-                Excel-grade multi-dimensional cross-tabulation &bull; Click any cell to view underlying vouchers
+                Interactive cross-tabulated matrix analytics &bull; Click any cell to inspect underlying vouchers
               </p>
             </div>
           </div>
@@ -435,10 +435,10 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
             <button
               onClick={handleExportPivotExcel}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
-              title="Export dynamic 2D cross-tab matrix to Excel"
+              title="Export dynamic cross-tab matrix to Excel"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Export Pivot (.xlsx)</span>
+              <span>Export Analytics (.xlsx)</span>
             </button>
 
             <button
