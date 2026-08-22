@@ -110,3 +110,101 @@ export function generateFeeBillsCSV(options: FeeBillsExportOptions): Blob {
   const csvContent = XLSX.utils.sheet_to_csv(worksheet);
   return new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
 }
+
+export interface PivotMatrixExportOptions {
+  rowTitle: string;
+  colTitle: string;
+  metricTitle: string;
+  columnHeaders: string[];
+  rows: {
+    rowLabel: string;
+    values: (number | string)[];
+    rowTotal: number | string;
+    voucherCount: number;
+  }[];
+  columnTotals: (number | string)[];
+  grandTotal: number | string;
+  totalVouchers: number;
+}
+
+export function generatePivotMatrixExcel(options: PivotMatrixExportOptions): Blob {
+  const { rowTitle, columnHeaders, rows, columnTotals, grandTotal, totalVouchers } = options;
+
+  const dataRows: Record<string, unknown>[] = rows.map((r, idx) => {
+    const obj: Record<string, unknown> = {
+      'S.No': idx + 1,
+      [rowTitle]: r.rowLabel,
+    };
+    columnHeaders.forEach((col, cIdx) => {
+      obj[col] = r.values[cIdx] ?? 0;
+    });
+    obj['Grand Total'] = r.rowTotal;
+    obj['Total Vouchers'] = r.voucherCount;
+    return obj;
+  });
+
+  // Add Summary Total Row
+  const totalRowObj: Record<string, unknown> = {
+    'S.No': '',
+    [rowTitle]: 'TOTAL',
+  };
+  columnHeaders.forEach((col, cIdx) => {
+    totalRowObj[col] = columnTotals[cIdx] ?? 0;
+  });
+  totalRowObj['Grand Total'] = grandTotal;
+  totalRowObj['Total Vouchers'] = totalVouchers;
+  dataRows.push(totalRowObj);
+
+  const worksheet = XLSX.utils.json_to_sheet(dataRows);
+
+  const allCols = ['S.No', rowTitle, ...columnHeaders, 'Grand Total', 'Total Vouchers'];
+  const colWidths = allCols.map((k) => {
+    const maxContentLen = Math.max(
+      k.length,
+      ...dataRows.map((r) => String(r[k] || '').length)
+    );
+    return { wch: Math.min(Math.max(maxContentLen + 4, 14), 50) };
+  });
+  worksheet['!cols'] = colWidths;
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Pivot Matrix');
+
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  return new Blob([excelBuffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+}
+
+export function generatePivotMatrixCSV(options: PivotMatrixExportOptions): Blob {
+  const { rowTitle, columnHeaders, rows, columnTotals, grandTotal, totalVouchers } = options;
+
+  const dataRows: Record<string, unknown>[] = rows.map((r, idx) => {
+    const obj: Record<string, unknown> = {
+      'S.No': idx + 1,
+      [rowTitle]: r.rowLabel,
+    };
+    columnHeaders.forEach((col, cIdx) => {
+      obj[col] = r.values[cIdx] ?? 0;
+    });
+    obj['Grand Total'] = r.rowTotal;
+    obj['Total Vouchers'] = r.voucherCount;
+    return obj;
+  });
+
+  const totalRowObj: Record<string, unknown> = {
+    'S.No': '',
+    [rowTitle]: 'TOTAL',
+  };
+  columnHeaders.forEach((col, cIdx) => {
+    totalRowObj[col] = columnTotals[cIdx] ?? 0;
+  });
+  totalRowObj['Grand Total'] = grandTotal;
+  totalRowObj['Total Vouchers'] = totalVouchers;
+  dataRows.push(totalRowObj);
+
+  const worksheet = XLSX.utils.json_to_sheet(dataRows);
+  const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+  return new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+}
+
