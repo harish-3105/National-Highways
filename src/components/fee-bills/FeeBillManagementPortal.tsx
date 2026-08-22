@@ -318,141 +318,153 @@ export function FeeBillManagementPortal() {
       {/* WORKSPACE AREA */}
       {activeTab === 'workspace' && (
         <div className="space-y-6">
-          {/* Mutually Exclusive Interactive KPI Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Card 1: All Claims */}
+          {/* 4 Quadrants Interactive KPI Dashboard (Corridors Style) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+            {/* Quadrant 1: Total Fee Claims */}
             <button
               type="button"
               onClick={() => {
                 setActiveKpiCard('all');
                 setPaymentStatusFilter('ALL');
               }}
-              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+              className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
                 activeKpiCard === 'all'
-                  ? 'bg-blue-50/80 dark:bg-blue-950/50 border-blue-500 dark:border-blue-500 ring-2 ring-blue-500/20 shadow-md'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 opacity-90 hover:opacity-100 shadow-xs'
+                  ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/40 dark:bg-blue-950/30'
+                  : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
-                  Total Claims
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  Total Fee Claims
+                  {activeKpiCard === 'all' && (
+                    <span className="normal-case text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">
+                      Active
+                    </span>
+                  )}
                 </span>
-                <div className="p-2 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-xl">
-                  <DollarSign className="w-4 h-4" />
+                <div className="p-2.5 bg-blue-50 dark:bg-blue-950/50 rounded-lg text-blue-600 dark:text-blue-400">
+                  <DollarSign className="w-5 h-5" />
                 </div>
               </div>
-              <div className="mt-2 text-2xl font-black text-slate-900 dark:text-slate-100">
-                {formatINR(totalClaimsAmount)}
+              <div className="mt-3">
+                <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {formatINR(totalClaimsAmount)}{' '}
+                  <span className="text-sm font-normal text-slate-500">({totalClaimsCount} Vouchers)</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between text-xs text-slate-500 font-semibold mt-1">
-                <span>{totalClaimsCount} Vouchers</span>
-                {activeKpiCard === 'all' && (
-                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950 px-2 py-0.5 rounded-full">
-                    Active
-                  </span>
-                )}
+              <div className="mt-2 flex items-center text-xs text-blue-600 dark:text-blue-400 font-medium">
+                Master Fee Bill Ledger &bull; All Claims
               </div>
             </button>
 
-            {/* Card 2: Settled Claims */}
+            {/* Quadrant 2: Settled & Disbursed */}
             <button
               type="button"
               onClick={() => {
                 setActiveKpiCard('settled');
                 setPaymentStatusFilter('Settled');
               }}
-              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+              className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
                 activeKpiCard === 'settled'
-                  ? 'bg-emerald-50/80 dark:bg-emerald-950/50 border-emerald-500 dark:border-emerald-500 ring-2 ring-emerald-500/20 shadow-md'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 opacity-90 hover:opacity-100 shadow-xs'
+                  ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/30'
+                  : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                   Settled & Paid
+                  {activeKpiCard === 'settled' && (
+                    <span className="normal-case text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                      Active
+                    </span>
+                  )}
                 </span>
-                <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
-                  <CheckCircle2 className="w-4 h-4" />
+                <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/50 rounded-lg text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="w-5 h-5" />
                 </div>
               </div>
-              <div className="mt-2 text-2xl font-black text-emerald-700 dark:text-emerald-300">
-                {formatINR(settledAmount)}
+              <div className="mt-3">
+                <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
+                  {formatINR(settledAmount)}{' '}
+                  <span className="text-sm font-normal text-slate-500">({settledBills.length} Disbursed)</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between text-xs text-emerald-600 font-semibold mt-1">
-                <span>{settledBills.length} Disbursed</span>
-                {activeKpiCard === 'settled' && (
-                  <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full">
-                    Active
-                  </span>
-                )}
+              <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                {totalClaimsCount > 0 ? Math.round((settledBills.length / totalClaimsCount) * 100) : 0}% Clearance Rate &bull; Disbursed & Settled
               </div>
             </button>
 
-            {/* Card 3: Pending Settlement */}
+            {/* Quadrant 3: Outstanding & Pending Settlement */}
             <button
               type="button"
               onClick={() => {
                 setActiveKpiCard('pending');
                 setPaymentStatusFilter('Not Settled');
               }}
-              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+              className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
                 activeKpiCard === 'pending'
-                  ? 'bg-amber-50/80 dark:bg-amber-950/50 border-amber-500 dark:border-amber-500 ring-2 ring-amber-500/20 shadow-md'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 opacity-90 hover:opacity-100 shadow-xs'
+                  ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/40 dark:bg-amber-950/30'
+                  : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-                  Pending Settlement
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  Outstanding & Pipeline
+                  {activeKpiCard === 'pending' && (
+                    <span className="normal-case text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
+                      Active
+                    </span>
+                  )}
                 </span>
-                <div className="p-2 bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 rounded-xl">
-                  <Clock className="w-4 h-4" />
+                <div className="p-2.5 bg-amber-50 dark:bg-amber-950/50 rounded-lg text-amber-600 dark:text-amber-400">
+                  <Clock className="w-5 h-5" />
                 </div>
               </div>
-              <div className="mt-2 text-2xl font-black text-amber-700 dark:text-amber-300">
-                {formatINR(unsettledAmount)}
+              <div className="mt-3">
+                <div className="text-2xl font-bold text-amber-700 dark:text-amber-300">
+                  {formatINR(unsettledAmount)}{' '}
+                  <span className="text-sm font-normal text-slate-500">({unsettledBills.length} In Pipeline)</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between text-xs text-amber-600 font-semibold mt-1">
-                <span>{unsettledBills.length} In Scrutiny</span>
-                {activeKpiCard === 'pending' && (
-                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full">
-                    Active
-                  </span>
-                )}
+              <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                Under Scrutiny &bull; Awaiting G.O. / Payment Sanction
               </div>
             </button>
 
-            {/* Card 4: Cases & Advocates Represented */}
+            {/* Quadrant 4: Cases & Advocates Overview */}
             <button
               type="button"
               onClick={() => {
                 setActiveKpiCard('cases');
                 setViewMode('pivot');
               }}
-              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+              className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
                 activeKpiCard === 'cases'
-                  ? 'bg-indigo-50/80 dark:bg-indigo-950/50 border-indigo-500 dark:border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 opacity-90 hover:opacity-100 shadow-xs'
+                  ? 'border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/40 dark:bg-indigo-950/30'
+                  : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-                  Cases & Counsel
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  Cases & Counsel Overview
+                  {activeKpiCard === 'cases' && (
+                    <span className="normal-case text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
+                      Active
+                    </span>
+                  )}
                 </span>
-                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-xl">
-                  <Scale className="w-4 h-4" />
+                <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg text-indigo-600 dark:text-indigo-400">
+                  <Scale className="w-5 h-5" />
                 </div>
               </div>
-              <div className="mt-2 text-2xl font-black text-indigo-900 dark:text-indigo-200">
-                {distinctCases} <span className="text-sm font-semibold text-slate-500">Cases</span>
+              <div className="mt-3">
+                <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-200">
+                  {distinctCases} <span className="text-sm font-normal text-slate-500">Cases</span> &bull; {distinctLawyers}{' '}
+                  <span className="text-sm font-normal text-slate-500">Advocates</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between text-xs text-indigo-600 font-semibold mt-1">
-                <span>{distinctLawyers} Advocates</span>
-                {activeKpiCard === 'cases' && (
-                  <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950 px-2 py-0.5 rounded-full">
-                    Active
-                  </span>
-                )}
+              <div className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+                Empaneled Law Officers &bull; Click to Open Pivot Matrix
               </div>
             </button>
           </div>
