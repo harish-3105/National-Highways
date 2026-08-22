@@ -31,10 +31,12 @@ import { generateFeeBillsExcel } from '@/lib/export/feeBillsExportGenerator';
 
 type PortalTab = 'workspace' | 'create' | 'settings';
 type WorkspaceViewMode = 'ledger' | 'pivot' | 'pendency' | 'analytics';
+type KpiCardType = 'all' | 'settled' | 'pending' | 'cases';
 
 export function FeeBillManagementPortal() {
   const [activeTab, setActiveTab] = useState<PortalTab>('workspace');
   const [viewMode, setViewMode] = useState<WorkspaceViewMode>('ledger');
+  const [activeKpiCard, setActiveKpiCard] = useState<KpiCardType>('all');
   const [bills, setBills] = useState<FeeBillRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [masterData, setMasterData] = useState<FeeBillMasterDataConfig>(DEFAULT_MASTER_DATA);
@@ -117,6 +119,19 @@ export function FeeBillManagementPortal() {
   const distinctLawyers = useMemo(() => {
     return new Set(activeBills.map((b) => (b.lawyerName || '').trim().toUpperCase()).filter(Boolean)).size;
   }, [activeBills]);
+
+  const hasActiveFilters = Boolean(
+    searchTerm || selectedCircle || selectedDivision || paymentStatusFilter !== 'ALL' || showArchived
+  );
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setSelectedCircle('');
+    setSelectedDivision('');
+    setPaymentStatusFilter('ALL');
+    setActiveKpiCard('all');
+    setShowArchived(false);
+  };
 
   // Export handlers
   const handleExportExcel = async () => {
@@ -303,16 +318,19 @@ export function FeeBillManagementPortal() {
       {/* WORKSPACE AREA */}
       {activeTab === 'workspace' && (
         <div className="space-y-6">
-          {/* Interactive KPI Summary Cards */}
+          {/* Mutually Exclusive Interactive KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Card 1: All Claims */}
             <button
               type="button"
-              onClick={() => setPaymentStatusFilter('ALL')}
-              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer shadow-xs ${
-                paymentStatusFilter === 'ALL'
-                  ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-400 dark:border-blue-600 ring-2 ring-blue-500/20'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+              onClick={() => {
+                setActiveKpiCard('all');
+                setPaymentStatusFilter('ALL');
+              }}
+              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                activeKpiCard === 'all'
+                  ? 'bg-blue-50/80 dark:bg-blue-950/50 border-blue-500 dark:border-blue-500 ring-2 ring-blue-500/20 shadow-md'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 opacity-90 hover:opacity-100 shadow-xs'
               }`}
             >
               <div className="flex items-center justify-between">
@@ -327,10 +345,10 @@ export function FeeBillManagementPortal() {
                 {formatINR(totalClaimsAmount)}
               </div>
               <div className="flex items-center justify-between text-xs text-slate-500 font-semibold mt-1">
-                <span>{totalClaimsCount} Vouchers Total</span>
-                {paymentStatusFilter === 'ALL' && (
+                <span>{totalClaimsCount} Vouchers</span>
+                {activeKpiCard === 'all' && (
                   <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950 px-2 py-0.5 rounded-full">
-                    Active Filter
+                    Active
                   </span>
                 )}
               </div>
@@ -339,11 +357,14 @@ export function FeeBillManagementPortal() {
             {/* Card 2: Settled Claims */}
             <button
               type="button"
-              onClick={() => setPaymentStatusFilter('Settled')}
-              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer shadow-xs ${
-                paymentStatusFilter === 'Settled'
-                  ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-600 ring-2 ring-emerald-500/20'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+              onClick={() => {
+                setActiveKpiCard('settled');
+                setPaymentStatusFilter('Settled');
+              }}
+              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                activeKpiCard === 'settled'
+                  ? 'bg-emerald-50/80 dark:bg-emerald-950/50 border-emerald-500 dark:border-emerald-500 ring-2 ring-emerald-500/20 shadow-md'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 opacity-90 hover:opacity-100 shadow-xs'
               }`}
             >
               <div className="flex items-center justify-between">
@@ -359,9 +380,9 @@ export function FeeBillManagementPortal() {
               </div>
               <div className="flex items-center justify-between text-xs text-emerald-600 font-semibold mt-1">
                 <span>{settledBills.length} Disbursed</span>
-                {paymentStatusFilter === 'Settled' && (
+                {activeKpiCard === 'settled' && (
                   <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full">
-                    Active Filter
+                    Active
                   </span>
                 )}
               </div>
@@ -370,11 +391,14 @@ export function FeeBillManagementPortal() {
             {/* Card 3: Pending Settlement */}
             <button
               type="button"
-              onClick={() => setPaymentStatusFilter('Not Settled')}
-              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer shadow-xs ${
-                paymentStatusFilter === 'Not Settled'
-                  ? 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-400 dark:border-amber-600 ring-2 ring-amber-500/20'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+              onClick={() => {
+                setActiveKpiCard('pending');
+                setPaymentStatusFilter('Not Settled');
+              }}
+              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                activeKpiCard === 'pending'
+                  ? 'bg-amber-50/80 dark:bg-amber-950/50 border-amber-500 dark:border-amber-500 ring-2 ring-amber-500/20 shadow-md'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 opacity-90 hover:opacity-100 shadow-xs'
               }`}
             >
               <div className="flex items-center justify-between">
@@ -390,9 +414,9 @@ export function FeeBillManagementPortal() {
               </div>
               <div className="flex items-center justify-between text-xs text-amber-600 font-semibold mt-1">
                 <span>{unsettledBills.length} In Scrutiny</span>
-                {paymentStatusFilter === 'Not Settled' && (
+                {activeKpiCard === 'pending' && (
                   <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full">
-                    Active Filter
+                    Active
                   </span>
                 )}
               </div>
@@ -401,11 +425,14 @@ export function FeeBillManagementPortal() {
             {/* Card 4: Cases & Advocates Represented */}
             <button
               type="button"
-              onClick={() => setViewMode('pivot')}
-              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer shadow-xs ${
-                viewMode === 'pivot'
-                  ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-600 ring-2 ring-indigo-500/20'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+              onClick={() => {
+                setActiveKpiCard('cases');
+                setViewMode('pivot');
+              }}
+              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                activeKpiCard === 'cases'
+                  ? 'bg-indigo-50/80 dark:bg-indigo-950/50 border-indigo-500 dark:border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 opacity-90 hover:opacity-100 shadow-xs'
               }`}
             >
               <div className="flex items-center justify-between">
@@ -420,31 +447,44 @@ export function FeeBillManagementPortal() {
                 {distinctCases} <span className="text-sm font-semibold text-slate-500">Cases</span>
               </div>
               <div className="flex items-center justify-between text-xs text-indigo-600 font-semibold mt-1">
-                <span>{distinctLawyers} Advocates Empaneled</span>
-                <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950 px-2 py-0.5 rounded-full">
-                  Open Pivot
-                </span>
+                <span>{distinctLawyers} Advocates</span>
+                {activeKpiCard === 'cases' && (
+                  <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950 px-2 py-0.5 rounded-full">
+                    Active
+                  </span>
+                )}
               </div>
             </button>
           </div>
 
-          {/* Unified Workspace Toolbar: Search, Filters & View Mode Switcher */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3">
+          {/* Streamlined Single-Bar Toolbar (Layout A) */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-xs">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-              {/* Search & Geography Filters */}
-              <div className="flex flex-1 flex-wrap items-center gap-3">
-                <div className="relative flex-1 min-w-[200px] max-w-md">
+              {/* Left Side: Compact Search + Circle + Division Filters */}
+              <div className="flex flex-1 flex-wrap items-center gap-2.5">
+                {/* Search Bar with Quick Clear */}
+                <div className="relative flex-1 min-w-[200px] max-w-sm">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <input
                     type="text"
-                    placeholder="Search Voucher No, Case, Advocate..."
+                    placeholder="Search Voucher, Case, Advocate..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
 
-                <div className="w-full sm:w-44">
+                {/* Circle Select */}
+                <div className="w-40">
                   <SearchableSelect
                     options={['All Circles', ...(masterData.circles || []).filter((c) => c.active).map((c) => c.name)]}
                     value={selectedCircle ? `${selectedCircle}` : 'All Circles'}
@@ -452,85 +492,103 @@ export function FeeBillManagementPortal() {
                       setSelectedCircle(val === 'All Circles' ? '' : val);
                       setSelectedDivision('');
                     }}
-                    placeholder="Filter Circle..."
+                    placeholder="Circle..."
                   />
                 </div>
 
-                <div className="w-full sm:w-48">
+                {/* Division Select */}
+                <div className="w-44">
                   <SearchableSelect
                     options={['All Divisions', ...availableDivisions.map((d) => d.name)]}
                     value={selectedDivision ? `${selectedDivision}` : 'All Divisions'}
                     onChange={(val) => setSelectedDivision(val === 'All Divisions' ? '' : val)}
-                    placeholder="Filter Division..."
+                    placeholder="Division..."
                   />
                 </div>
 
+                {/* Clear Filters Button (Shows only when active filters exist) */}
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all cursor-pointer"
+                    title="Reset all filters and search"
+                  >
+                    <span>Reset Filters</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Right Side: View Switcher + Show Archived */}
+              <div className="flex items-center gap-2 flex-wrap self-start lg:self-auto">
+                {/* Segmented View Switcher */}
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('ledger')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      viewMode === 'ledger'
+                        ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Ledger</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('pivot')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      viewMode === 'pivot'
+                        ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Pivot</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('pendency')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      viewMode === 'pendency'
+                        ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Pendency</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('analytics')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      viewMode === 'analytics'
+                        ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <PieChart className="w-3.5 h-3.5" />
+                    <span>Analytics</span>
+                  </button>
+                </div>
+
+                {/* Show Archived Toggle */}
                 <button
+                  type="button"
                   onClick={() => setShowArchived(!showArchived)}
                   className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                     showArchived
-                      ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
-                      : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                      ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800 shadow-xs'
+                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                   title="Toggle soft deleted vouchers"
                 >
                   <Archive className="w-3.5 h-3.5" />
-                  <span>{showArchived ? 'Hide Archived' : 'Show Archived'}</span>
-                </button>
-              </div>
-
-              {/* View Mode Switcher */}
-              <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl gap-1 self-start lg:self-auto overflow-x-auto">
-                <button
-                  type="button"
-                  onClick={() => setViewMode('ledger')}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    viewMode === 'ledger'
-                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Ledger</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setViewMode('pivot')}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    viewMode === 'pivot'
-                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>Case & Lawyer Pivot</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setViewMode('pendency')}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    viewMode === 'pendency'
-                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>Pendency Pipeline</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setViewMode('analytics')}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    viewMode === 'analytics'
-                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <PieChart className="w-3.5 h-3.5" />
-                  <span>Analytics</span>
+                  <span>{showArchived ? 'Archived' : 'Show Archived'}</span>
                 </button>
               </div>
             </div>
