@@ -1,5 +1,5 @@
--- Migration 0023: Legal Cases Workflow V2 Complete Table Schema
--- Clean table definition for fresh creation (or upgrade) matching the final entry form specification
+-- Migration 0023: Legal Cases Workflow V2 Complete Table Schema & Master Data Seed
+-- Clean table definition for fresh creation matching the final entry form specification
 
 -- 1. Lawyers Table (if not exists)
 CREATE TABLE IF NOT EXISTS public.lawyers (
@@ -14,8 +14,11 @@ CREATE TABLE IF NOT EXISTS public.lawyers (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Legal Cases Table (Fresh Complete Definition)
-CREATE TABLE IF NOT EXISTS public.legal_cases (
+-- 2. Drop existing table if recreating from scratch
+DROP TABLE IF EXISTS public.legal_cases CASCADE;
+
+-- 3. Clean Legal Cases Table Definition
+CREATE TABLE public.legal_cases (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
   -- Top Level Classification (Normal Case vs Appeal Case)
@@ -94,18 +97,18 @@ CREATE TABLE IF NOT EXISTS public.legal_cases (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 3. Indexes for Filtering & Search
-CREATE INDEX IF NOT EXISTS idx_legal_cases_circle_div ON public.legal_cases USING btree (circle, division);
-CREATE INDEX IF NOT EXISTS idx_legal_cases_case_num ON public.legal_cases USING btree (case_number);
-CREATE INDEX IF NOT EXISTS idx_legal_cases_classification ON public.legal_cases USING btree (case_classification);
-CREATE INDEX IF NOT EXISTS idx_legal_cases_present_stage ON public.legal_cases USING btree (present_stage);
-CREATE INDEX IF NOT EXISTS idx_legal_cases_current_status ON public.legal_cases USING btree (current_status);
-CREATE INDEX IF NOT EXISTS idx_legal_cases_ca_filed ON public.legal_cases USING btree (ca_filed);
-CREATE INDEX IF NOT EXISTS idx_legal_cases_appeal_filed ON public.legal_cases USING btree (appeal_filed);
-CREATE INDEX IF NOT EXISTS idx_legal_cases_next_hearing ON public.legal_cases USING btree (next_hearing_date);
-CREATE INDEX IF NOT EXISTS idx_legal_cases_delete_status ON public.legal_cases USING btree (delete_status);
+-- 4. High Performance Indexes
+CREATE INDEX idx_legal_cases_circle_div ON public.legal_cases (circle, division);
+CREATE INDEX idx_legal_cases_case_num ON public.legal_cases (case_number);
+CREATE INDEX idx_legal_cases_classification ON public.legal_cases (case_classification);
+CREATE INDEX idx_legal_cases_present_stage ON public.legal_cases (present_stage);
+CREATE INDEX idx_legal_cases_current_status ON public.legal_cases (current_status);
+CREATE INDEX idx_legal_cases_ca_filed ON public.legal_cases (ca_filed);
+CREATE INDEX idx_legal_cases_appeal_filed ON public.legal_cases (appeal_filed);
+CREATE INDEX idx_legal_cases_next_hearing ON public.legal_cases (next_hearing_date);
+CREATE INDEX idx_legal_cases_delete_status ON public.legal_cases (delete_status);
 
--- 4. Master Data Configuration Table
+-- 5. Master Data Config Table
 CREATE TABLE IF NOT EXISTS public.legal_master_config (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   category VARCHAR(100) NOT NULL,
@@ -114,7 +117,7 @@ CREATE TABLE IF NOT EXISTS public.legal_master_config (
   CONSTRAINT uq_legal_master_config UNIQUE (category, value)
 );
 
--- 5. Row Level Security Policies
+-- 6. Row Level Security Policies
 ALTER TABLE public.legal_cases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.lawyers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.legal_master_config ENABLE ROW LEVEL SECURITY;
@@ -145,3 +148,149 @@ BEGIN
     CREATE POLICY "Allow public write legal_master_config" ON public.legal_master_config FOR ALL USING (true) WITH CHECK (true);
   END IF;
 END $$;
+
+-- 7. Seed Complete Initial Master Data into legal_master_config
+INSERT INTO public.legal_master_config (category, value) VALUES
+  -- Circles
+  ('circle', 'Chennai'),
+  ('circle', 'Madurai'),
+  ('circle', 'Salem'),
+  ('circle', 'Coimbatore'),
+  ('circle', 'Tirunelveli'),
+  ('circle', 'Villupuram'),
+
+  -- Divisions
+  ('division', 'Chennai City Division'),
+  ('division', 'Chengalpattu Division'),
+  ('division', 'Tiruvallur Division'),
+  ('division', 'Madurai Division'),
+  ('division', 'Dindigul Division'),
+  ('division', 'Theni Division'),
+  ('division', 'Salem Division'),
+  ('division', 'Namakkal Division'),
+  ('division', 'Dharmapuri Division'),
+  ('division', 'Coimbatore Division'),
+  ('division', 'Tirunelveli Division'),
+  ('division', 'Villupuram Division'),
+
+  -- Categories
+  ('category', 'Filed Against Department'),
+  ('category', 'Filed By Department'),
+
+  -- Case Types
+  ('case_type', 'Writ Petition (WP)'),
+  ('case_type', 'Writ Appeal (WA)'),
+  ('case_type', 'Civil Revision Petition (CRP)'),
+  ('case_type', 'Original Side Appeal (OSA)'),
+  ('case_type', 'Special Leave Petition (SLP)'),
+  ('case_type', 'Contempt Petition'),
+  ('case_type', 'Civil Miscellaneous Petition (CMP)'),
+  ('case_type', 'Review Application'),
+  ('case_type', 'Original Petition (OP)'),
+  ('case_type', 'Original Suit (OS)'),
+  ('case_type', 'Appeal Suit (AS)'),
+  ('case_type', 'Civil Miscellaneous Appeal (CMA)'),
+  ('case_type', 'Arbitration Original Petition (Arb. OP)'),
+  ('case_type', 'Other'),
+
+  -- Case Statuses
+  ('case_status', 'Pending'),
+  ('case_status', 'Disposed'),
+  ('case_status', 'Stay Granted'),
+  ('case_status', 'Interim Order Issued'),
+  ('case_status', 'Dismissed'),
+  ('case_status', 'Allowed in Favour'),
+  ('case_status', 'Allowed Adverse to Dept'),
+  ('case_status', 'Remanded'),
+
+  -- Case Pertains To
+  ('case_pertains_to', 'GOTN'),
+  ('case_pertains_to', 'MoRTH'),
+  ('case_pertains_to', 'Both'),
+  ('case_pertains_to', 'NHAI'),
+
+  -- Nature of Cases
+  ('nature_of_case', 'Work'),
+  ('nature_of_case', 'Tender'),
+  ('nature_of_case', 'Land Acquisition'),
+  ('nature_of_case', 'Encroachment'),
+  ('nature_of_case', 'Arbitration / Dispute'),
+  ('nature_of_case', 'Service Matter / Service Rights'),
+  ('nature_of_case', 'Toll Plaza / User Fee'),
+  ('nature_of_case', 'Road Safety & Maintenance'),
+  ('nature_of_case', 'Other'),
+
+  -- Courts
+  ('court_name', 'High Court of Madras (Principal Seat, Chennai)'),
+  ('court_name', 'High Court of Madras (Madurai Bench)'),
+  ('court_name', 'Supreme Court of India (New Delhi)'),
+  ('court_name', 'City Civil Court Complex, Chennai'),
+  ('court_name', 'District & Sessions Court'),
+  ('court_name', 'Subordinate Judge Court (Sub Court)'),
+  ('court_name', 'District Munsif Court'),
+  ('court_name', 'National Green Tribunal (NGT), Southern Zone'),
+  ('court_name', 'Labour Court / Industrial Tribunal'),
+  ('court_name', 'Arbitral Tribunal'),
+  ('court_name', 'Other Court'),
+
+  -- Law Officers
+  ('law_officer', 'Advocate General of Tamil Nadu'),
+  ('law_officer', 'Additional Advocate General'),
+  ('law_officer', 'Special Government Pleader (Highways)'),
+  ('law_officer', 'Additional Government Pleader'),
+  ('law_officer', 'Government Advocate (Civil Side)'),
+  ('law_officer', 'Standing Counsel (Highways)'),
+
+  -- Appeal Levels
+  ('appeal_level', 'Single Bench to Division Bench (High Court)'),
+  ('appeal_level', 'District / Sub Court to High Court'),
+  ('appeal_level', 'High Court to Supreme Court of India'),
+  ('appeal_level', 'Tribunal to High Court'),
+  ('appeal_level', 'Other Appellate Forum'),
+
+  -- Appeal Case Types
+  ('appeal_case_type', 'Writ Appeal (WA)'),
+  ('appeal_case_type', 'Civil Miscellaneous Appeal (CMA)'),
+  ('appeal_case_type', 'Appeal Suit (AS)'),
+  ('appeal_case_type', 'Special Leave Petition (SLP)'),
+  ('appeal_case_type', 'Civil Revision Petition (CRP)'),
+  ('appeal_case_type', 'Review Petition'),
+  ('appeal_case_type', 'Letters Patent Appeal (LPA)'),
+  ('appeal_case_type', 'Other'),
+
+  -- Appellate Courts
+  ('appellate_court', 'High Court of Madras (Division Bench, Principal Seat, Chennai)'),
+  ('appellate_court', 'High Court of Madras (Madurai Bench)'),
+  ('appellate_court', 'Supreme Court of India (New Delhi)'),
+  ('appellate_court', 'Principal District & Sessions Court'),
+  ('appellate_court', 'National Green Tribunal (NGT) - Southern Zone'),
+  ('appellate_court', 'Other Appellate Forum'),
+
+  -- Condonation of Delay
+  ('condonation_of_delay', 'Pending'),
+  ('condonation_of_delay', 'Allowed / Condoned'),
+  ('condonation_of_delay', 'Dismissed / Rejected'),
+  ('condonation_of_delay', 'Not Applicable / Filed In Time'),
+
+  -- Present Stages
+  ('present_stage', 'Notice / Admission'),
+  ('present_stage', 'Counter Affidavit Pending'),
+  ('present_stage', 'Interim Stay / Direction in Operation'),
+  ('present_stage', 'Counter Filed / Awaiting Hearing'),
+  ('present_stage', 'Arguments in Progress'),
+  ('present_stage', 'Orders Reserved'),
+  ('present_stage', 'Disposed / Final Order Issued'),
+  ('present_stage', 'Compliance Pending'),
+  ('present_stage', 'Contempt Proceedings Initiated'),
+  ('present_stage', 'Appeal Filed in Higher Forum'),
+
+  -- GP Opinions
+  ('gp_opinion', 'Pending'),
+  ('gp_opinion', 'Not Recommended'),
+  ('gp_opinion', 'Recommended'),
+  ('gp_opinion', 'Not Required'),
+
+  -- Compliance Statuses
+  ('compliance_status', 'Complied'),
+  ('compliance_status', 'Pending')
+ON CONFLICT (category, value) DO NOTHING;

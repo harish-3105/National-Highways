@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { LegalCaseData, CaseEntryFormData } from '@/types/legal';
+import { LegalCaseData } from '@/types/legal';
 import CaseEntryForm from './CaseEntryForm';
 import CaseViewModal from './CaseViewModal';
 import DeleteLegalCaseModal from './DeleteLegalCaseModal';
@@ -26,7 +26,7 @@ import {
   AlertTriangle,
   Sparkles,
 } from 'lucide-react';
-import { CIRCLE_OPTIONS, CIRCLE_DIVISION_MAP } from '@/lib/legal/masterData';
+import { CIRCLE_DIVISION_MAP } from '@/lib/legal/masterData';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 export const LegalDashboard: React.FC = () => {
@@ -111,6 +111,8 @@ export const LegalDashboard: React.FC = () => {
   const [filterClassification, setFilterClassification] = useState('');
   const [filterCounterStatus, setFilterCounterStatus] = useState('');
   const [filterCurrentStatus, setFilterCurrentStatus] = useState('');
+  const [filterComplianceDueOnly, setFilterComplianceDueOnly] = useState(false);
+  const [filterDisposedOnly, setFilterDisposedOnly] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
   const fetchCases = useCallback(async () => {
@@ -231,22 +233,47 @@ export const LegalDashboard: React.FC = () => {
   const filteredCases = useMemo(() => {
     return cases.filter((c) => {
       if (filterCounterStatus && c.caFiled !== filterCounterStatus) return false;
+      if (filterComplianceDueOnly && !(c.complianceRequired === 'Yes' && c.complianceStatus === 'Pending')) return false;
+      if (filterDisposedOnly && !(c.currentStatus === 'Disposed' || c.finalResult === 'Yes')) return false;
       return true;
     });
-  }, [cases, filterCounterStatus]);
+  }, [cases, filterCounterStatus, filterComplianceDueOnly, filterDisposedOnly]);
 
   // Executive KPI summary calculations
   const kpiStats = useMemo(() => {
     const total = cases.length;
     const normalCount = cases.filter((c) => c.caseClassification === 'Normal Case').length;
     const appealCount = cases.filter((c) => c.caseClassification === 'Appeal Case').length;
+    const delayedAppealCount = cases.filter((c) => c.caseClassification === 'Appeal Case' && c.appealInfo?.delayInFilingAppeal === 'Yes').length;
     const counterPending = cases.filter((c) => c.caFiled === 'No' && c.caRequired === 'Yes').length;
+    const counterFiledCount = cases.filter((c) => c.caFiled === 'Yes').length;
     const compliancePending = cases.filter((c) => c.complianceRequired === 'Yes' && c.complianceStatus === 'Pending').length;
+    const complianceCompletedCount = cases.filter((c) => c.complianceRequired === 'Yes' && c.complianceStatus === 'Complied').length;
     const adverseCount = cases.filter((c) => c.adverseToDepartment === 'Yes').length;
     const disposedCount = cases.filter((c) => c.currentStatus === 'Disposed' || c.finalResult === 'Yes').length;
+    const inFavourCount = cases.filter((c) => (c.currentStatus === 'Disposed' || c.finalResult === 'Yes') && c.adverseToDepartment === 'No').length;
 
-    return { total, normalCount, appealCount, counterPending, compliancePending, adverseCount, disposedCount };
+    return {
+      total,
+      normalCount,
+      appealCount,
+      delayedAppealCount,
+      counterPending,
+      counterFiledCount,
+      compliancePending,
+      complianceCompletedCount,
+      adverseCount,
+      disposedCount,
+      inFavourCount,
+    };
   }, [cases]);
+
+  const resetAllKpiFilters = () => {
+    setFilterClassification('');
+    setFilterCounterStatus('');
+    setFilterComplianceDueOnly(false);
+    setFilterDisposedOnly(false);
+  };
 
   const divisionOptions = filterCircle ? (CIRCLE_DIVISION_MAP[filterCircle] || masterData?.divisions || []) : [];
 
@@ -266,6 +293,8 @@ export const LegalDashboard: React.FC = () => {
       </div>
     );
   }
+
+  const isAllSelected = !filterClassification && !filterCounterStatus && !filterComplianceDueOnly && !filterDisposedOnly;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -323,49 +352,223 @@ export const LegalDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* EXECUTIVE KPI QUADRANT CARDS */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {/* Total Cases */}
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs">
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 block">Total Dockets</span>
-          <div className="text-xl font-black text-slate-900 dark:text-slate-100 mt-1">{kpiStats.total}</div>
-          <span className="text-[10px] text-slate-500 font-semibold">{kpiStats.normalCount} Normal &bull; {kpiStats.appealCount} Appeals</span>
-        </div>
+      {/* 6 EXECUTIVE KPI QUADRANT CARDS (3 Rows × 2 Columns with interactive filtering) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* ROW 1 - QUADRANT 1: Total Litigation Dockets */}
+        <button
+          type="button"
+          onClick={resetAllKpiFilters}
+          className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+            isAllSelected
+              ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/40 dark:bg-blue-950/30'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <span>Total Litigation Dockets</span>
+              {isAllSelected && (
+                <span className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950 px-2 py-0.5 rounded-full">
+                  Active Filter
+                </span>
+              )}
+            </span>
+            <div className="p-2.5 bg-blue-100 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400">
+              <Scale className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono">
+              {kpiStats.total} <span className="text-sm font-semibold text-slate-500 font-sans">Active Dockets</span>
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
+            {kpiStats.normalCount} Normal Cases &bull; {kpiStats.appealCount} Appeal Proceedings
+          </div>
+        </button>
 
-        {/* Normal Cases */}
-        <div className="p-4 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-900/60 rounded-2xl shadow-xs">
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">Normal Cases</span>
-          <div className="text-xl font-black text-blue-700 dark:text-blue-300 mt-1">{kpiStats.normalCount}</div>
-          <span className="text-[10px] text-blue-600/80 dark:text-blue-400/80 font-semibold">Original Petitions / Suits</span>
-        </div>
+        {/* ROW 1 - QUADRANT 2: Normal Cases (Original Jurisdiction) */}
+        <button
+          type="button"
+          onClick={() => {
+            setFilterClassification((prev) => (prev === 'Normal Case' ? '' : 'Normal Case'));
+            setFilterComplianceDueOnly(false);
+            setFilterDisposedOnly(false);
+          }}
+          className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+            filterClassification === 'Normal Case'
+              ? 'border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/40 dark:bg-blue-950/30'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <span>Original Petitions & Suits</span>
+              {filterClassification === 'Normal Case' && (
+                <span className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950 px-2 py-0.5 rounded-full">
+                  Active Filter
+                </span>
+              )}
+            </span>
+            <div className="p-2.5 bg-blue-100 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400">
+              <FileText className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black text-blue-700 dark:text-blue-300 font-mono">
+              {kpiStats.normalCount} <span className="text-sm font-semibold text-slate-500 font-sans">Normal Cases</span>
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
+            High Court, District Courts & Tribunals Original Track
+          </div>
+        </button>
 
-        {/* Appeal Cases */}
-        <div className="p-4 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/60 rounded-2xl shadow-xs">
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 block">Appeal Cases</span>
-          <div className="text-xl font-black text-amber-700 dark:text-amber-300 mt-1">{kpiStats.appealCount}</div>
-          <span className="text-[10px] text-amber-600/80 dark:text-amber-400/80 font-semibold">WA / CMA / SLP</span>
-        </div>
+        {/* ROW 2 - QUADRANT 3: Appellate Proceedings (WA / CMA / SLP) */}
+        <button
+          type="button"
+          onClick={() => {
+            setFilterClassification((prev) => (prev === 'Appeal Case' ? '' : 'Appeal Case'));
+            setFilterComplianceDueOnly(false);
+            setFilterDisposedOnly(false);
+          }}
+          className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+            filterClassification === 'Appeal Case'
+              ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/40 dark:bg-amber-950/30'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <span>Appellate Proceedings</span>
+              {filterClassification === 'Appeal Case' && (
+                <span className="text-[10px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full">
+                  Active Filter
+                </span>
+              )}
+            </span>
+            <div className="p-2.5 bg-amber-100 dark:bg-amber-950/60 rounded-xl text-amber-700 dark:text-amber-300">
+              <Gavel className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black text-amber-700 dark:text-amber-300 font-mono">
+              {kpiStats.appealCount} <span className="text-sm font-semibold text-slate-500 font-sans">Appeals Filed</span>
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-amber-700 dark:text-amber-400 font-medium">
+            {kpiStats.delayedAppealCount > 0 ? `⚠️ ${kpiStats.delayedAppealCount} With Limitation Overrun` : 'WA / CMA / SLP Forum Appeals'}
+          </div>
+        </button>
 
-        {/* Counter Pending */}
-        <div className="p-4 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/60 rounded-2xl shadow-xs">
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 block">Counter Pending</span>
-          <div className="text-xl font-black text-amber-600 mt-1">{kpiStats.counterPending}</div>
-          <span className="text-[10px] text-amber-500 font-semibold">Action Required</span>
-        </div>
+        {/* ROW 2 - QUADRANT 4: Counter Affidavit Pending */}
+        <button
+          type="button"
+          onClick={() => {
+            setFilterCounterStatus((prev) => (prev === 'No' ? '' : 'No'));
+            setFilterComplianceDueOnly(false);
+            setFilterDisposedOnly(false);
+          }}
+          className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+            filterCounterStatus === 'No'
+              ? 'border-orange-500 ring-2 ring-orange-500/20 bg-orange-50/40 dark:bg-orange-950/30'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <span>Counter Affidavit Pending</span>
+              {filterCounterStatus === 'No' && (
+                <span className="text-[10px] font-extrabold text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-950 px-2 py-0.5 rounded-full">
+                  Active Filter
+                </span>
+              )}
+            </span>
+            <div className="p-2.5 bg-orange-100 dark:bg-orange-950/60 rounded-xl text-orange-700 dark:text-orange-300">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black text-orange-700 dark:text-orange-300 font-mono">
+              {kpiStats.counterPending} <span className="text-sm font-semibold text-slate-500 font-sans">Pending CA</span>
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-orange-700 dark:text-orange-400 font-medium">
+            {kpiStats.counterFiledCount} Counter Affidavits Filed & Up-to-date
+          </div>
+        </button>
 
-        {/* Compliance Pending */}
-        <div className="p-4 bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-900/60 rounded-2xl shadow-xs">
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-purple-600 dark:text-purple-400 block">Compliance Due</span>
-          <div className="text-xl font-black text-purple-600 mt-1">{kpiStats.compliancePending}</div>
-          <span className="text-[10px] text-purple-500 font-semibold">Interim / Final</span>
-        </div>
+        {/* ROW 3 - QUADRANT 5: Compliance Action Due */}
+        <button
+          type="button"
+          onClick={() => {
+            setFilterComplianceDueOnly((prev) => !prev);
+            setFilterDisposedOnly(false);
+          }}
+          className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+            filterComplianceDueOnly
+              ? 'border-purple-500 ring-2 ring-purple-500/20 bg-purple-50/40 dark:bg-purple-950/30'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <span>Compliance Action Due</span>
+              {filterComplianceDueOnly && (
+                <span className="text-[10px] font-extrabold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950 px-2 py-0.5 rounded-full">
+                  Active Filter
+                </span>
+              )}
+            </span>
+            <div className="p-2.5 bg-purple-100 dark:bg-purple-950/60 rounded-xl text-purple-700 dark:text-purple-300">
+              <Clock className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black text-purple-700 dark:text-purple-300 font-mono">
+              {kpiStats.compliancePending} <span className="text-sm font-semibold text-slate-500 font-sans">Pending Orders</span>
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-purple-700 dark:text-purple-400 font-medium">
+            {kpiStats.complianceCompletedCount} Actions Complied &bull; Interim & Final Mandates
+          </div>
+        </button>
 
-        {/* Disposed / Concluded */}
-        <div className="p-4 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/60 rounded-2xl shadow-xs">
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Disposed</span>
-          <div className="text-xl font-black text-emerald-600 mt-1">{kpiStats.disposedCount}</div>
-          <span className="text-[10px] text-emerald-500 font-semibold">{kpiStats.adverseCount} Adverse Orders</span>
-        </div>
+        {/* ROW 3 - QUADRANT 6: Disposed Cases & Adverse Outcomes */}
+        <button
+          type="button"
+          onClick={() => {
+            setFilterDisposedOnly((prev) => !prev);
+            setFilterComplianceDueOnly(false);
+          }}
+          className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+            filterDisposedOnly
+              ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/30'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <span>Disposed & Final Orders</span>
+              {filterDisposedOnly && (
+                <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full">
+                  Active Filter
+                </span>
+              )}
+            </span>
+            <div className="p-2.5 bg-emerald-100 dark:bg-emerald-950/60 rounded-xl text-emerald-700 dark:text-emerald-300">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black text-emerald-700 dark:text-emerald-300 font-mono">
+              {kpiStats.disposedCount} <span className="text-sm font-semibold text-slate-500 font-sans">Concluded</span>
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+            {kpiStats.inFavourCount} In Favour &bull; {kpiStats.adverseCount} Adverse to Dept
+          </div>
+        </button>
       </div>
 
       {/* FILTER CONTROLS */}

@@ -212,6 +212,32 @@ const DEFAULT_COMPLIANCE_STATUSES = [
   "Pending",
 ];
 
+function getAllDefaultSeedItems(): { category: LegalCategory; value: string }[] {
+  const seeds: { category: LegalCategory; value: string }[] = [];
+  const add = (cat: LegalCategory, vals: string[]) => {
+    vals.forEach((v) => seeds.push({ category: cat, value: v }));
+  };
+  add("circle", DEFAULT_CIRCLES);
+  add("division", DEFAULT_DIVISIONS);
+  add("category", DEFAULT_CATEGORIES);
+  add("case_type", DEFAULT_CASE_TYPES);
+  add("case_status", DEFAULT_CASE_STATUSES);
+  add("case_pertains_to", DEFAULT_CASE_PERTAINS_TO);
+  add("nature_of_case", DEFAULT_NATURE_OF_CASES);
+  add("court_name", DEFAULT_COURT_NAMES);
+  add("law_officer", DEFAULT_LAW_OFFICERS);
+  add("petition_type", DEFAULT_PETITION_TYPES);
+  add("converted_category", DEFAULT_CONVERTED_CATEGORIES);
+  add("appeal_level", DEFAULT_APPEAL_LEVELS);
+  add("appeal_case_type", DEFAULT_APPEAL_CASE_TYPES);
+  add("appellate_court", DEFAULT_APPELLATE_COURTS);
+  add("condonation_of_delay", DEFAULT_CONDONATION_OF_DELAYS);
+  add("present_stage", DEFAULT_PRESENT_STAGES);
+  add("gp_opinion", DEFAULT_GP_OPINIONS);
+  add("compliance_status", DEFAULT_COMPLIANCE_STATUSES);
+  return seeds;
+}
+
 function groupLegalMasterData(items: LegalMasterConfigItem[]): LegalMasterData {
   const getVals = (cat: LegalCategory, defs: string[]) => {
     const dbVals = items.filter((i) => i.category === cat).map((i) => i.value);
@@ -257,6 +283,23 @@ export async function GET() {
     if (error) {
       console.warn("Notice: legal_master_config DB read, using fallbacks:", error.message);
       return NextResponse.json(groupLegalMasterData([]));
+    }
+
+    // Auto-seed into DB if table is currently empty
+    if (!data || data.length === 0) {
+      try {
+        const seedItems = getAllDefaultSeedItems();
+        const { data: inserted, error: insertErr } = await supabase
+          .from("legal_master_config")
+          .upsert(seedItems, { onConflict: "category,value" })
+          .select();
+
+        if (!insertErr && inserted && inserted.length > 0) {
+          return NextResponse.json(groupLegalMasterData(inserted));
+        }
+      } catch (seedErr) {
+        console.warn("Auto-seed legal_master_config notice:", seedErr);
+      }
     }
 
     return NextResponse.json(groupLegalMasterData(data || []));
