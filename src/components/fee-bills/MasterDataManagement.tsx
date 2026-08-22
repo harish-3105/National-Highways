@@ -31,6 +31,8 @@ type TabType =
   | 'lawyerDesignations'
   | 'caseTypes'
   | 'casePertainsTo'
+  | 'statusOfObtainingGo'
+  | 'statusOfPaymentProposal'
   | 'paymentStatuses';
 
 export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
@@ -51,6 +53,20 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
   const caseTypes = masterData.caseTypes || [];
   const casePertainsTo = masterData.casePertainsTo || ['GOTN', 'MoRTH', 'BOTH'];
   const paymentStatuses = masterData.paymentStatuses || ['Settled', 'Not Settled'];
+  const statusOfObtainingGoOptions = masterData.statusOfObtainingGoOptions || [
+    'Proposal Submitted to CE',
+    'Proposal Submitted to Government',
+    'Draft G.O. Under Scrutiny',
+    'Clarification Sought',
+    'G.O. Obtained',
+  ];
+  const statusOfPaymentProposalOptions = masterData.statusOfPaymentProposalOptions || [
+    'Proposal Under Preparation',
+    'Pending with DE',
+    'Proposal Submitted to CE',
+    'Sanction Order Awaited',
+    'Payment Sanction',
+  ];
 
   const handleAdd = () => {
     if (!newTextValue.trim()) return;
@@ -98,6 +114,20 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
           casePertainsTo: [...casePertainsTo, clean],
         });
       }
+    } else if (activeTab === 'statusOfObtainingGo') {
+      if (!statusOfObtainingGoOptions.includes(clean)) {
+        onUpdateMasterData({
+          ...masterData,
+          statusOfObtainingGoOptions: [...statusOfObtainingGoOptions, clean],
+        });
+      }
+    } else if (activeTab === 'statusOfPaymentProposal') {
+      if (!statusOfPaymentProposalOptions.includes(clean)) {
+        onUpdateMasterData({
+          ...masterData,
+          statusOfPaymentProposalOptions: [...statusOfPaymentProposalOptions, clean],
+        });
+      }
     } else if (activeTab === 'paymentStatuses') {
       if (!paymentStatuses.includes(clean)) {
         onUpdateMasterData({
@@ -110,7 +140,16 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
     setNewTextValue('');
   };
 
-  const handleSaveStringEdit = (arrKey: 'lawyerDesignations' | 'caseTypes' | 'casePertainsTo' | 'paymentStatuses', idx: number) => {
+  const handleSaveStringEdit = (
+    arrKey:
+      | 'lawyerDesignations'
+      | 'caseTypes'
+      | 'casePertainsTo'
+      | 'paymentStatuses'
+      | 'statusOfObtainingGoOptions'
+      | 'statusOfPaymentProposalOptions',
+    idx: number
+  ) => {
     if (!editValue.trim()) {
       setEditingKey(null);
       return;
@@ -124,7 +163,16 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
     setEditingKey(null);
   };
 
-  const handleDeleteStringItem = (arrKey: 'lawyerDesignations' | 'caseTypes' | 'casePertainsTo' | 'paymentStatuses', idx: number) => {
+  const handleDeleteStringItem = (
+    arrKey:
+      | 'lawyerDesignations'
+      | 'caseTypes'
+      | 'casePertainsTo'
+      | 'paymentStatuses'
+      | 'statusOfObtainingGoOptions'
+      | 'statusOfPaymentProposalOptions',
+    idx: number
+  ) => {
     const currentList = [...(masterData[arrKey] || [])];
     currentList.splice(idx, 1);
     onUpdateMasterData({
@@ -172,6 +220,8 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
     { id: 'divisions' as TabType, label: 'Divisions', icon: Building, count: masterData.divisions?.length || 0 },
     { id: 'lawyerDesignations' as TabType, label: 'Lawyer Designations', icon: Briefcase, count: lawyerDesignations.length },
     { id: 'caseTypes' as TabType, label: 'Case Types', icon: Scale, count: caseTypes.length },
+    { id: 'statusOfObtainingGo' as TabType, label: 'G.O. Statuses', icon: CheckCircle2, count: statusOfObtainingGoOptions.length },
+    { id: 'statusOfPaymentProposal' as TabType, label: 'Payment Proposals', icon: CreditCard, count: statusOfPaymentProposalOptions.length },
     { id: 'casePertainsTo' as TabType, label: 'Pertains To', icon: Building2, count: casePertainsTo.length },
     { id: 'paymentStatuses' as TabType, label: 'Payment Statuses', icon: CreditCard, count: paymentStatuses.length },
   ];
@@ -412,13 +462,35 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
         </div>
       )}
 
-      {/* 3, 4, 5, 6: String Array Tabs */}
-      {['lawyerDesignations', 'caseTypes', 'casePertainsTo', 'paymentStatuses'].includes(activeTab) && (
+      {/* 3, 4, 5, 6, 7, 8: String Array Tabs */}
+      {[
+        'lawyerDesignations',
+        'caseTypes',
+        'casePertainsTo',
+        'statusOfObtainingGo',
+        'statusOfPaymentProposal',
+        'paymentStatuses',
+      ].includes(activeTab) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          {((masterData[activeTab as keyof FeeBillMasterDataConfig] as string[]) || [])
+          {((activeTab === 'statusOfObtainingGo'
+            ? statusOfObtainingGoOptions
+            : activeTab === 'statusOfPaymentProposal'
+            ? statusOfPaymentProposalOptions
+            : (masterData[activeTab as keyof FeeBillMasterDataConfig] as string[])) || [])
             .filter((item) => item.toLowerCase().includes(searchTerm.toLowerCase()))
             .map((item, idx) => {
               const isEditing = editingKey === `${activeTab}-${idx}`;
+              const targetKey =
+                activeTab === 'statusOfObtainingGo'
+                  ? 'statusOfObtainingGoOptions'
+                  : activeTab === 'statusOfPaymentProposal'
+                  ? 'statusOfPaymentProposalOptions'
+                  : (activeTab as
+                      | 'lawyerDesignations'
+                      | 'caseTypes'
+                      | 'casePertainsTo'
+                      | 'paymentStatuses');
+
               return (
                 <div
                   key={`${item}-${idx}`}
@@ -432,22 +504,13 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
                         autoFocus
                         onChange={(e) => setEditValue(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter')
-                            handleSaveStringEdit(
-                              activeTab as 'lawyerDesignations' | 'caseTypes' | 'casePertainsTo' | 'paymentStatuses',
-                              idx
-                            );
+                          if (e.key === 'Enter') handleSaveStringEdit(targetKey, idx);
                           if (e.key === 'Escape') setEditingKey(null);
                         }}
                         className="w-full px-2.5 py-1 bg-white dark:bg-slate-800 border border-blue-500 rounded-lg text-xs font-bold outline-none"
                       />
                       <button
-                        onClick={() =>
-                          handleSaveStringEdit(
-                            activeTab as 'lawyerDesignations' | 'caseTypes' | 'casePertainsTo' | 'paymentStatuses',
-                            idx
-                          )
-                        }
+                        onClick={() => handleSaveStringEdit(targetKey, idx)}
                         className="p-1 bg-emerald-600 text-white rounded-md cursor-pointer"
                       >
                         <Check className="w-3.5 h-3.5" />
@@ -474,12 +537,7 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() =>
-                            handleDeleteStringItem(
-                              activeTab as 'lawyerDesignations' | 'caseTypes' | 'casePertainsTo' | 'paymentStatuses',
-                              idx
-                            )
-                          }
+                          onClick={() => handleDeleteStringItem(targetKey, idx)}
                           className="p-1 text-slate-400 hover:text-rose-600 rounded-md cursor-pointer"
                           title="Delete Option"
                         >

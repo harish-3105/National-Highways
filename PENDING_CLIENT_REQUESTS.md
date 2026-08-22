@@ -14,6 +14,47 @@
 
 ---
 
+## 1.1 Global Data Entry Philosophy: Lifecycle Sub-Navigation & Progressive Saving (All Modules)
+
+* **Viewing vs. Adding/Editing Philosophy**:
+  * **Viewing**: Tables, dashboards, passports, and charts remain comprehensive and unified.
+  * **Adding & Editing**: Replace overwhelming single-page continuous 30+ column vertical scrolling with a **dedicated sub-navigation tab bar / stage stepper** inside the entry/edit interface (similar to multi-stage government portals).
+* **Real-Life Chronological Lifecycle Splitting**:
+  * Form stages directly mirror how project information is actually obtained *in real life* over time:
+    1. **Stage 1 (Sanction & Identity)**: Initial work approval, scheme, job number, sanctioned TPC.
+    2. **Stage 2 (Bidding & Contract Award)**: LOA date, agreement date, contract award value, appointed date, site handover, contractor.
+    3. **Stage 3 (Physical Execution & Lengths)**: Lengths completed prior & current FY, physical progress %, target completion date, progress remarks.
+    4. **Stage 4 (Financial Outlays & Expenditures)**: Prior/current FY expenditures, cumulative contract & project expenditures, revised cost / RCE.
+    5. **Stage 5 (Time Extensions & Overruns)**: EOT granted/proposed, COS, time overrun.
+    6. **Stage 6 (Statutory Clearance Bottlenecks)**: Land acquisition, forest, utility, railways, other issues.
+    7. **Stage 7 (Engineering Log & Site Administration)**: Granular structural log (Column 27), DE contact info, updated division.
+* **Progressive / Partial Saving (Zero Blocking by Future Fields)**:
+  * **Non-Blocking Partial Saves**: Engineers can fill any single stage (e.g. Stage 1 at sanction time), click Save immediately, and exit.
+  * **No Future Field Validation Traps**: Unobtained future fields (e.g. agreement dates or clearance notes) do not block saving earlier stages.
+  * **Iterative Lifecycle Updates**: Engineers return to the project record weeks/months later as new milestones occur, click into the relevant tab, update the new parameters, and re-save.
+  * **Freeze-When-Filled Preservation**: Fields left blank remain unlocked for standard users until populated.
+
+---
+
+## 1.2 Departmental Excel (.xlsx) Export Formatting Standards & Ingestion
+
+* **Departmental Excel Export Formatting (All Modules)**:
+  * **Auto-Fit Column Widths**: Automatically compute character lengths (`!cols` / character width calculation) so no cell content is clipped or obscured with `###`.
+  * **Precision Text & Numeric Alignment**:
+    * Numerical values (₹ Cr, Length km, Counts): Right-aligned.
+    * Dates, Highway Codes, S.No, and IDs: Center-aligned.
+    * Text descriptions, Remarks, and Column 27 Logs: Left-aligned with automatic text-wrapping.
+  * **Header & View Styling**:
+    * Bold departmental header rows with subtle background fill and distinct borders.
+    * Frozen top header pane (`freezePanes`) so headers stay locked in view when scrolling large spreadsheets.
+  * **Customizable Scope**:
+    * Support exporting `All Records`, `Filtered View`, or `Checked Checkbox Rows`.
+    * Column picker to toggle specific attribute categories or export canonical standard departmental layouts.
+* **Excel Data Migration / Bulk Import**:
+  * Retained for initial migration and bulk departmental data onboarding with canonical column alignment, merged cell forward-filling, and snapshot audit logs.
+
+---
+
 ## 2. Ongoing Works Module Specifications
 
 ### A. Completed Works Tracking & Filtering

@@ -16,14 +16,25 @@ export const FeeBillPendencyTracker: React.FC<FeeBillPendencyTrackerProps> = ({
 }) => {
   const pendingBills = bills.filter((b) => b.paymentStatus !== 'Settled');
 
-  const pendencyStages = [
-    'Pending with DE',
-    'Proposal Sent (DE to SE)',
-    'Pending at SE',
-    'Pending at CE',
-    'Pending at MoRTH',
-    'Sanction Pending',
-  ];
+  // Derive unique pendency stages dynamically from bills and master defaults
+  const pendencyStages = React.useMemo(() => {
+    const defaultStages = [
+      'Pending with DE',
+      'Proposal Submitted to CE',
+      'Proposal Submitted to Government',
+      'G.O. Obtained',
+      'Payment Sanction',
+      'Payment Sanctioned',
+      'Sanction Pending',
+    ];
+    const billStages = pendingBills.map((b) => b.currentPendency).filter(Boolean);
+    const combined = Array.from(new Set([...defaultStages, ...billStages]));
+    // Order: keep stages with active bills or defaults
+    return combined.filter((stage) => {
+      const hasBills = pendingBills.some((b) => b.currentPendency === stage);
+      return hasBills || defaultStages.slice(0, 4).includes(stage);
+    });
+  }, [pendingBills]);
 
   return (
     <div className="space-y-6">

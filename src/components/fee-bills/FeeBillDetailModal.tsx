@@ -176,7 +176,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                   </tr>
                   <tr className="bg-slate-50 dark:bg-slate-800/40">
                     <td className="py-2 px-4 font-bold text-blue-900 dark:text-blue-300">
-                      4. Assistance Fee <span className="text-[10px] text-slate-400 font-normal">(1/3 of items 1+2+3)</span>
+                      4. Assistance Fee <span className="text-[10px] text-slate-400 font-normal">(1/3 of Appearance Fee only)</span>
                     </td>
                     <td className="py-2 px-4 text-slate-500">{contract.assistanceDate || '-'}</td>
                     <td className="py-2 px-4 text-right font-extrabold text-blue-700 dark:text-blue-300">{formatINR(contract.assistanceAmount)}</td>
@@ -194,23 +194,52 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Payment Settlement or G.O. Workflow Details */}
-          {contract.paymentStatus === 'Settled' ? (
+          {/* G.O. Workflow Details */}
+          {contract.goStatus === 'Yes' && (
+            <div className="p-4 bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl space-y-2">
+              <h4 className="font-bold text-xs text-blue-900 dark:text-blue-300 uppercase tracking-wider flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-blue-600" /> Government Order (G.O.) Particulars
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                <div>
+                  <span className="text-slate-500 block">Status of Obtaining G.O.:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{contract.statusOfObtainingGo || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block">G.O. Number:</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{contract.goNumber || 'Pending'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block">G.O. Date:</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{contract.goDate || 'Pending'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Payment Settlement or Proposal Details */}
+          {contract.paymentStatus === 'Settled' || (contract.settledAmount && contract.settledAmount > 0) ? (
             <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl space-y-2">
               <h4 className="font-bold text-xs text-emerald-900 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Disbursement & UTR Settlement Record
               </h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
                 <div>
                   <span className="text-slate-500 block">Settled Amount:</span>
                   <span className="font-extrabold text-emerald-800 dark:text-emerald-200">{formatINR(contract.settledAmount)}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">IT Cess Deduction:</span>
+                  <span className="text-slate-500 block">IT Cess:</span>
                   <span className="font-bold text-slate-700 dark:text-slate-300">{formatINR(contract.itCess)}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">UTR / RBI Reference:</span>
+                  <span className="text-slate-500 block">Net Deposited:</span>
+                  <span className="font-extrabold text-emerald-700 dark:text-emerald-300">
+                    {formatINR(contract.amountDeposited || ((contract.settledAmount || 0) - (contract.itCess || 0)))}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block">UTR Reference:</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-[11px]">{contract.utrRbiReference || 'N/A'}</span>
                 </div>
                 <div>
@@ -222,24 +251,24 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
           ) : (
             <div className="p-4 bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl space-y-2">
               <h4 className="font-bold text-xs text-amber-900 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-amber-600" /> Government Order (G.O.) & Inter-Office Sanction Status
+                <Clock className="w-4 h-4 text-amber-600" /> Payment Proposal & Sanction Status
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                 <div>
-                  <span className="text-slate-500 block">G.O. Required:</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">{contract.goStatus || 'Yes'}</span>
+                  <span className="text-slate-500 block">Proposal Status:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{contract.statusOfPaymentProposal || contract.currentPendency}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">G.O. Number & Date:</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">{contract.goNumber || 'N/A'} ({contract.goDate || '-'})</span>
+                  <span className="text-slate-500 block">Sanction Order / Proc No:</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">{contract.proceedingLetterNo || 'Pending'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Payment Sanction:</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">{contract.paymentSanction || 'No'}</span>
+                  <span className="text-slate-500 block">Sanctioned Amount:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{contract.sanctionedAmount ? formatINR(contract.sanctionedAmount) : 'Pending'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Despatch Letter No:</span>
-                  <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{contract.letterNumber || 'N/A'}</span>
+                  <span className="text-slate-500 block">Sanction Date:</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{contract.proceedingLetterDate || '-'}</span>
                 </div>
               </div>
             </div>

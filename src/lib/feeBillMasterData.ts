@@ -48,22 +48,34 @@ export const DEFAULT_MASTER_DATA: FeeBillMasterDataConfig = {
     'Civil Miscellaneous Appeal (CMA)',
   ],
   casePertainsTo: ['GOTN', 'MoRTH', 'BOTH'],
-  paymentStatuses: ['Settled', 'Not Settled'],
+  paymentStatuses: ['Not Settled', 'Settled'],
+  statusOfObtainingGoOptions: [
+    'Proposal Submitted to CE',
+    'Proposal Submitted to Government',
+    'Draft G.O. Under Scrutiny',
+    'Clarification Sought',
+    'G.O. Obtained',
+  ],
+  statusOfPaymentProposalOptions: [
+    'Proposal Under Preparation',
+    'Pending with DE',
+    'Proposal Submitted to CE',
+    'Sanction Order Awaited',
+    'Payment Sanction',
+  ],
 };
 
 export const SAMPLE_FEE_BILLS: FeeBillRecord[] = [];
 
-// Helper function to calculate assistance fee
+// Helper function to calculate assistance fee (1/3 of appearance fee only)
 export function calculateAssistanceAmount(
   appearance: number,
-  conference: number,
-  verifying: number
+  _conference?: number,
+  _verifying?: number
 ): number {
   const app = Number(appearance) || 0;
-  const conf = Number(conference) || 0;
-  const ver = Number(verifying) || 0;
-  if (app < 0 || conf < 0 || ver < 0) return 0;
-  return Math.round(((app + conf + ver) / 3) * 100) / 100;
+  if (app < 0) return 0;
+  return Math.round((app / 3) * 100) / 100;
 }
 
 // Helper function to calculate total fee
@@ -82,55 +94,34 @@ export function calculateTotalFeeAmount(
 
 // Helper function to derive automatic pendency stage
 export function derivePendencyStage(bill: Partial<FeeBillRecord>): string {
-  if (bill.paymentStatus === 'Settled') {
+  if (bill.paymentStatus === 'Settled' || (bill.settledAmount && bill.settledAmount > 0 && bill.utrRbiReference)) {
     return 'Settled';
   }
 
-  // Not Settled
+  if (bill.isSanctioned === 'Yes') {
+    return 'Payment Sanctioned';
+  }
+
+  if (bill.statusOfPaymentProposal) {
+    return bill.statusOfPaymentProposal;
+  }
+
   if (bill.goStatus === 'Yes') {
-    if (bill.proposalSubmitted === 'No') {
-      return 'Pending with DE';
+    if (bill.statusOfObtainingGo === 'G.O. Obtained') {
+      return 'G.O. Obtained';
     }
-    if (bill.proposalSubmitted === 'Yes') {
-      const pm = bill.proposalMovement;
-      if (pm?.seToRorMorth) {
-        return 'Pending at MoRTH';
-      }
-      if (pm?.seToCe) {
-        return 'Pending at CE';
-      }
-      if (pm?.deToCe) {
-        return 'Pending at SE';
-      }
-      return 'Proposal Sent (DE to SE)';
+    if (bill.statusOfObtainingGo) {
+      return bill.statusOfObtainingGo;
     }
-    return 'Pending with DE';
+    if (bill.goNumber) {
+      return 'G.O. Obtained';
+    }
   }
 
-  if (bill.goStatus === 'No') {
-    const dm = bill.directMovement;
-    if (dm?.seToCe) {
-      return 'Pending at CE';
-    }
-    if (dm?.deToCe) {
-      return 'Proposal Sent (DE to SE)';
-    }
-    return 'Pending with DE';
-  }
-
-  if (bill.goStatus === 'Not Required') {
-    if (bill.proposalSubmitted === 'Yes') {
-      const pm = bill.proposalMovement;
-      if (pm?.seToRorMorth) return 'Pending at MoRTH';
-      if (pm?.seToCe) return 'Pending at CE';
-      if (pm?.deToCe) return 'Pending at SE';
-      return 'Proposal Sent (DE to SE)';
-    }
-    if (bill.paymentSanction === 'Yes') {
-      return 'Sanction Pending';
-    }
-    return 'Pending with DE';
-  }
+  // Legacy fallback support
+  if (bill.proposalMovement?.seToRorMorth) return 'Pending at MoRTH';
+  if (bill.proposalMovement?.seToCe || bill.directMovement?.seToCe) return 'Pending at CE';
+  if (bill.proposalMovement?.deToCe || bill.directMovement?.deToCe) return 'Pending at SE';
 
   return 'Pending with DE';
 }

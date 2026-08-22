@@ -60,24 +60,33 @@ export interface FeeBillRecord {
   // 9. If Payment Status = SETTLED
   settledAmount?: number;
   itCess?: number;
+  amountDeposited?: number; // amountDeposited = settledAmount - itCess
   utrRbiReference?: string;
   paymentDate?: string;
 
-  // 10. If Payment Status = NOT SETTLED -> G.O. Workflow
+  // 10. G.O. Workflow
   goStatus?: GOStatusType;
+  statusOfObtainingGo?: string; // e.g., 'G.O. Obtained', 'Proposal Under Process', 'Submitted to Government'
   goNumber?: string;
   goDate?: string;
   paymentSanction?: YesNoType;
   proposalSubmitted?: YesNoType;
 
-  // Proposal / Direct Movement Details
+  // 11. Payment Proposal Workflow
+  statusOfPaymentProposal?: string; // e.g., 'Payment Sanction', 'Proposal Under Process', 'Pending with DE'
+  proceedingLetterNo?: string;
+  proceedingLetterDate?: string;
+  sanctionedAmount?: number;
+  isSanctioned?: YesNoType; // 'Yes' | 'No'
+
+  // Proposal / Direct Movement Details (Legacy support)
   proposalMovement?: ProposalMovementStatus;
   directMovement?: DirectMovementStatus;
   letterNumber?: string;
   letterDate?: string;
 
-  // 11. System Computed Pendency
-  currentPendency: string; // e.g., 'Settled', 'Pending with DE', 'Proposal Sent (DE to SE)', 'Pending at SE', 'Pending at CE', 'Pending at MoRTH', 'Sanction Pending'
+  // 12. System Computed Pendency
+  currentPendency: string; // e.g., 'Settled', 'Payment Sanctioned', 'G.O. Obtained', 'Pending with DE'
 
   // Audit & Soft Delete
   delete_status?: string;
@@ -122,6 +131,8 @@ export interface FeeBillMasterDataConfig {
   caseTypes: string[];
   casePertainsTo: string[];
   paymentStatuses: string[];
+  statusOfObtainingGoOptions?: string[];
+  statusOfPaymentProposalOptions?: string[];
 }
 
 export interface FeeBillFilterCriteria {

@@ -21,7 +21,10 @@ import {
   AlertTriangle,
   Archive,
   RefreshCw,
+  Download,
+  Layers,
 } from 'lucide-react';
+import { generateFeeBillsExcel } from '@/lib/export/feeBillsExportGenerator';
 
 export function FeeBillManagementPortal() {
 
@@ -83,6 +86,20 @@ export function FeeBillManagementPortal() {
     fetchMasterData();
     fetchFeeBills();
   }, [fetchMasterData, fetchFeeBills]);
+
+  // Export handlers
+  const handleExportExcel = async () => {
+    const active = bills.filter((b) => !b.isDeleted && b.delete_status !== 'DELETED');
+    const blob = await generateFeeBillsExcel({ bills: active });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Legal_Fee_Bills_Ledger_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   // Persist updated master data centrally to database
   const handleUpdateMasterData = async (newData: FeeBillMasterDataConfig) => {
@@ -203,6 +220,14 @@ export function FeeBillManagementPortal() {
           </button>
 
           <button
+            onClick={handleExportExcel}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
+          >
+            <Download className="w-4 h-4" />
+            <span>Export Excel</span>
+          </button>
+
+          <button
             onClick={() => {
               setEditingBill(null);
               setActiveTab('create');
@@ -214,7 +239,6 @@ export function FeeBillManagementPortal() {
           </button>
         </div>
       </div>
-
 
       {/* Main Tab Navigation */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto">
@@ -251,8 +275,8 @@ export function FeeBillManagementPortal() {
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
-            <PieChart className="w-4 h-4" />
-            <span>Financial Analytics</span>
+            <Layers className="w-4 h-4" />
+            <span>Analytics & Pivot Matrix</span>
           </button>
 
           <button
