@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, ChevronDown, Check, X } from 'lucide-react';
 
+export type SelectOption = string | { label: string; value: string };
+
 interface SearchableSelectProps {
   label?: string;
-  options: readonly string[] | string[];
+  options: readonly SelectOption[] | SelectOption[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -15,6 +17,7 @@ interface SearchableSelectProps {
   disabled?: boolean;
   helpText?: string;
   className?: string;
+  compact?: boolean;
 }
 
 export const SearchableSelect: React.FC<SearchableSelectProps> = ({
@@ -28,6 +31,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   disabled = false,
   helpText,
   className = '',
+  compact = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,9 +45,29 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredOptions = options.filter((opt) =>
-    opt.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Normalize options to { label, value } format
+  const normalizedOptions = useMemo(() => {
+    return options.map((opt) => {
+      if (typeof opt === 'string') {
+        return { label: opt, value: opt };
+      }
+      return opt;
+    });
+  }, [options]);
+
+  const filteredOptions = useMemo(() => {
+    if (!searchTerm.trim()) return normalizedOptions;
+    const q = searchTerm.toLowerCase();
+    return normalizedOptions.filter(
+      (opt) => opt.label.toLowerCase().includes(q) || opt.value.toLowerCase().includes(q)
+    );
+  }, [normalizedOptions, searchTerm]);
+
+  // Current selected option label
+  const selectedLabel = useMemo(() => {
+    const found = normalizedOptions.find((opt) => opt.value === value);
+    return found ? found.label : value;
+  }, [normalizedOptions, value]);
 
   useEffect(() => {
     setMounted(true);
@@ -128,7 +152,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   useEffect(() => {
     if (isOpen) {
       setHighlightedIndex(
-        value ? filteredOptions.findIndex((opt) => opt === value) : 0
+        value ? filteredOptions.findIndex((opt) => opt.value === value) : 0
       );
 
       const timer = setTimeout(() => {
@@ -171,8 +195,8 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   };
 
   const handleSelect = useCallback(
-    (option: string) => {
-      onChange(option);
+    (optionValue: string) => {
+      onChange(optionValue);
       setIsOpen(false);
       setSearchTerm('');
     },
@@ -212,7 +236,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
       case 'Enter':
         e.preventDefault();
         if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
-          handleSelect(filteredOptions[highlightedIndex]);
+          handleSelect(filteredOptions[highlightedIndex].value);
         }
         break;
       case 'Escape':
@@ -229,11 +253,11 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
 
   return (
     <div
-      className={`relative flex flex-col gap-1.5 w-full ${className}`}
+      className={`relative flex flex-col gap-1 w-full ${className}`}
       onKeyDown={handleKeyDown}
     >
       {label && (
-        <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+        <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
           {label} {required && <span className="text-rose-500">*</span>}
         </label>
       )}
@@ -246,7 +270,11 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             setIsOpen((prev) => !prev);
           }
         }}
-        className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border min-h-[42px] transition-all cursor-pointer select-none outline-none ${
+        className={`flex items-center justify-between rounded-xl border transition-all cursor-pointer select-none outline-none ${
+          compact
+            ? 'px-3 py-1.5 min-h-[36px] text-xs'
+            : 'px-3.5 py-2.5 min-h-[42px] text-xs'
+        } ${
           disabled
             ? 'bg-slate-100 dark:bg-slate-800/50 cursor-not-allowed border-slate-200 dark:border-slate-800 opacity-60'
             : error
@@ -257,13 +285,13 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
         }`}
       >
         <span
-          className={`text-xs font-semibold truncate flex-1 ${
+          className={`font-semibold truncate flex-1 ${
             value
               ? 'text-slate-900 dark:text-slate-100'
               : 'text-slate-400 dark:text-slate-500 font-normal'
           }`}
         >
-          {value || placeholder}
+          {selectedLabel || placeholder}
         </span>
 
         <div className="flex items-center gap-1.5 ml-2 shrink-0">
@@ -271,14 +299,14 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             <button
               type="button"
               onClick={handleClear}
-              className="p-1 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-0.5 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               title="Clear selection"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           )}
           <ChevronDown
-            className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${
+            className={`w-3.5 h-3.5 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${
               isOpen ? 'rotate-180 text-blue-600 dark:text-blue-400' : ''
             }`}
           />
@@ -301,9 +329,9 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             }}
           >
             {/* Search Filter Header - Included for EVERY dropdown across all modules */}
-            <div className="p-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between gap-2 shrink-0">
+            <div className="p-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between gap-2 shrink-0">
               <div className="flex items-center gap-2 flex-1">
-                <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -336,19 +364,19 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             >
               {filteredOptions.length > 0 ? (
                 filteredOptions.map((opt, idx) => {
-                  const isSelected = opt === value;
+                  const isSelected = opt.value === value;
                   const isHighlighted = idx === highlightedIndex;
 
                   return (
                     <div
-                      key={opt}
+                      key={opt.value}
                       data-dropdown-item
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleSelect(opt);
+                        handleSelect(opt.value);
                       }}
                       onMouseEnter={() => setHighlightedIndex(idx)}
-                      className={`px-3.5 py-2.5 text-xs font-semibold cursor-pointer flex items-center justify-between transition-colors ${
+                      className={`px-3 py-2 text-xs font-semibold cursor-pointer flex items-center justify-between transition-colors ${
                         isSelected
                           ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold'
                           : isHighlighted
@@ -356,9 +384,9 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                           : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                       }`}
                     >
-                      <span className="truncate pr-2">{opt}</span>
+                      <span className="truncate pr-2">{opt.label}</span>
                       {isSelected && (
-                        <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                       )}
                     </div>
                   );
@@ -382,3 +410,4 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
 };
 
 export default SearchableSelect;
+

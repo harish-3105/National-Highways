@@ -28,6 +28,8 @@ import {
   generatePivotMatrixExcel,
   generatePivotMatrixCSV,
 } from '@/lib/export/feeBillsExportGenerator';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { ExportFeeBillsModal } from './ExportFeeBillsModal';
 
 export type PivotDimensionKey =
   | 'lawyerName'
@@ -101,6 +103,7 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
   const [metric, setMetric] = useState<PivotMetricKey>('totalFeeAmount');
   const [sortOrder, setSortOrder] = useState<PivotSortOrder>('total_desc');
   const [pivotSearchQuery, setPivotSearchQuery] = useState('');
+  const [isRawExportOpen, setIsRawExportOpen] = useState(false);
 
   // Drill-down Drawer State
   const [drillDownSlice, setDrillDownSlice] = useState<{
@@ -448,9 +451,9 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
             </button>
 
             <button
-              onClick={handleExportRawExcel}
+              onClick={() => setIsRawExportOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
-              title="Export all raw vouchers to Excel"
+              title="Custom Export raw vouchers to Excel/CSV"
             >
               <FileText className="w-3.5 h-3.5" />
               <span>Raw Data (.xlsx)</span>
@@ -465,17 +468,12 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
             <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
               <span>🏷️ Group Rows By</span>
             </label>
-            <select
+            <SearchableSelect
+              options={ROW_DIMENSIONS.map((d) => ({ label: d.label, value: d.key }))}
               value={rowDimension}
-              onChange={(e) => setRowDimension(e.target.value as PivotDimensionKey)}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-            >
-              {ROW_DIMENSIONS.map((d) => (
-                <option key={d.key} value={d.key}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setRowDimension(val as PivotDimensionKey)}
+              compact={true}
+            />
           </div>
 
           {/* Column Dimension */}
@@ -483,17 +481,12 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
             <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
               <span>📊 Pivot Columns By</span>
             </label>
-            <select
+            <SearchableSelect
+              options={COL_DIMENSIONS.map((d) => ({ label: d.label, value: d.key }))}
               value={colDimension}
-              onChange={(e) => setColDimension(e.target.value as PivotDimensionKey)}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-            >
-              {COL_DIMENSIONS.map((d) => (
-                <option key={d.key} value={d.key}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setColDimension(val as PivotDimensionKey)}
+              compact={true}
+            />
           </div>
 
           {/* Value Metric */}
@@ -501,17 +494,12 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
             <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
               <span>💰 Summarize Metric</span>
             </label>
-            <select
+            <SearchableSelect
+              options={METRIC_OPTIONS.map((m) => ({ label: m.label, value: m.key }))}
               value={metric}
-              onChange={(e) => setMetric(e.target.value as PivotMetricKey)}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-            >
-              {METRIC_OPTIONS.map((m) => (
-                <option key={m.key} value={m.key}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setMetric(val as PivotMetricKey)}
+              compact={true}
+            />
           </div>
 
           {/* Sort Order */}
@@ -520,16 +508,17 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
               <ArrowUpDown className="w-3 h-3 text-slate-400" />
               <span>Sort Rows By</span>
             </label>
-            <select
+            <SearchableSelect
+              options={[
+                { label: 'Grand Total (Highest First)', value: 'total_desc' },
+                { label: 'Grand Total (Lowest First)', value: 'total_asc' },
+                { label: 'Row Name (A → Z)', value: 'alpha_asc' },
+                { label: 'Voucher Count (Most First)', value: 'count_desc' },
+              ]}
               value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as PivotSortOrder)}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-            >
-              <option value="total_desc">Grand Total (Highest First)</option>
-              <option value="total_asc">Grand Total (Lowest First)</option>
-              <option value="alpha_asc">Row Name (A &rarr; Z)</option>
-              <option value="count_desc">Voucher Count (Most First)</option>
-            </select>
+              onChange={(val) => setSortOrder(val as PivotSortOrder)}
+              compact={true}
+            />
           </div>
         </div>
 
@@ -996,6 +985,13 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
           </div>
         </div>
       )}
+      {/* Custom Scope & Field Selection Export Modal */}
+      <ExportFeeBillsModal
+        allBills={activeBills}
+        filteredBills={activeBills}
+        isOpen={isRawExportOpen}
+        onClose={() => setIsRawExportOpen(false)}
+      />
     </div>
   );
 };

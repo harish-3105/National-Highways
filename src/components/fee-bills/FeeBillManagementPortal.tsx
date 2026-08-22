@@ -10,6 +10,7 @@ import { FeeBillAnalysisDashboard } from './FeeBillAnalysisDashboard';
 import { MasterDataManagement } from './MasterDataManagement';
 import { FeeBillDetailModal } from './FeeBillDetailModal';
 import { FeeBillAuditModal } from './FeeBillAuditModal';
+import { ExportFeeBillsModal } from './ExportFeeBillsModal';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import {
   FileText,
@@ -38,6 +39,8 @@ export function FeeBillManagementPortal() {
   const [viewMode, setViewMode] = useState<WorkspaceViewMode>('ledger');
   const [activeKpiCard, setActiveKpiCard] = useState<KpiCardType>('all');
   const [bills, setBills] = useState<FeeBillRecord[]>([]);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [masterData, setMasterData] = useState<FeeBillMasterDataConfig>(DEFAULT_MASTER_DATA);
 
@@ -266,8 +269,9 @@ export function FeeBillManagementPortal() {
           </button>
 
           <button
-            onClick={handleExportExcel}
+            onClick={() => setIsExportModalOpen(true)}
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
+            title="Custom Export Legal Fee Bills"
           >
             <Download className="w-4 h-4" />
             <span>Export Excel</span>
@@ -678,6 +682,14 @@ export function FeeBillManagementPortal() {
         paymentStatuses={masterData.paymentStatuses}
         onClose={() => setAuditingBill(null)}
         onSuccess={() => fetchFeeBills()}
+      />
+
+      {/* Custom Scope & Field Selection Export Modal */}
+      <ExportFeeBillsModal
+        allBills={bills}
+        filteredBills={activeBills}
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
       />
 
       {/* Delete Confirmation Overlay Modal */}
