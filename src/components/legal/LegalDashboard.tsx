@@ -39,53 +39,28 @@ export const LegalDashboard: React.FC = () => {
   const [selectedCaseForView, setSelectedCaseForView] = useState<LegalCaseData | null>(null);
   const [selectedCaseForDelete, setSelectedCaseForDelete] = useState<LegalCaseData | null>(null);
 
-  // Master Data Configuration State
+  // Master Data Configuration State (100% loaded from database)
   const [isMasterModalOpen, setIsMasterModalOpen] = useState<boolean>(false);
   const [masterData, setMasterData] = useState<LegalMasterData>({
     rawItems: [],
-    circles: ['Chennai', 'Madurai', 'Salem', 'Coimbatore', 'Tirunelveli', 'Villupuram'],
-    divisions: [
-      'Chennai City Division',
-      'Chengalpattu Division',
-      'Tiruvallur Division',
-      'Madurai Division',
-      'Dindigul Division',
-      'Theni Division',
-      'Salem Division',
-      'Namakkal Division',
-      'Dharmapuri Division',
-    ],
-    categories: ['Filed Against Department', 'Filed By Department'],
-    caseTypes: [
-      'Writ Petition (WP)',
-      'Writ Appeal (WA)',
-      'Civil Revision Petition (CRP)',
-      'Original Side Appeal (OSA)',
-      'Special Leave Petition (SLP)',
-      'Contempt Petition',
-      'Civil Miscellaneous Petition (CMP)',
-      'Original Suit (OS)',
-    ],
-    caseStatuses: ['Pending', 'Disposed', 'Stay Granted', 'Interim Order Issued', 'Dismissed', 'Allowed in Favour', 'Allowed Adverse to Dept'],
-    casePertainsTo: ['GOTN', 'MoRTH', 'Both', 'NHAI'],
-    natureOfCases: ['Work', 'Tender', 'Land Acquisition', 'Encroachment', 'Arbitration / Dispute', 'Service Matter / Service Rights', 'Other'],
-    courtNames: [
-      'High Court of Madras (Principal Seat, Chennai)',
-      'High Court of Madras (Madurai Bench)',
-      'Supreme Court of India (New Delhi)',
-      'City Civil Court Complex, Chennai',
-      'District & Sessions Court',
-    ],
-    lawOfficers: ['Advocate General of Tamil Nadu', 'Additional Advocate General', 'Special Government Pleader (Highways)'],
-    petitionTypes: ['Review Petition', 'Contempt Petition', 'Execution Petition', 'Special Leave Petition (SLP)', 'Writ Appeal (WA)'],
-    convertedCategories: ['Appealed by Department', 'Appealed by Other Party'],
-    appealLevels: ['Single Bench to Division Bench (High Court)', 'District / Sub Court to High Court', 'High Court to Supreme Court of India'],
-    appealCaseTypes: ['Writ Appeal (WA)', 'Civil Miscellaneous Appeal (CMA)', 'Appeal Suit (AS)', 'Special Leave Petition (SLP)'],
-    appellateCourts: ['High Court of Madras (Division Bench, Principal Seat, Chennai)', 'High Court of Madras (Madurai Bench)', 'Supreme Court of India (New Delhi)'],
-    condonationOfDelays: ['Pending', 'Allowed / Condoned', 'Dismissed / Rejected', 'Not Applicable / Filed In Time'],
-    presentStages: ['Notice / Admission', 'Counter Affidavit Pending', 'Interim Stay / Direction in Operation', 'Arguments in Progress', 'Disposed / Final Order Issued'],
-    gpOpinions: ['Pending', 'Not Recommended', 'Recommended', 'Not Required'],
-    complianceStatuses: ['Complied', 'Pending'],
+    circles: [],
+    divisions: [],
+    categories: [],
+    caseTypes: [],
+    caseStatuses: [],
+    casePertainsTo: [],
+    natureOfCases: [],
+    courtNames: [],
+    lawOfficers: [],
+    petitionTypes: [],
+    convertedCategories: [],
+    appealLevels: [],
+    appealCaseTypes: [],
+    appellateCourts: [],
+    condonationOfDelays: [],
+    presentStages: [],
+    gpOpinions: [],
+    complianceStatuses: [],
   });
 
   const fetchMasterData = async () => {

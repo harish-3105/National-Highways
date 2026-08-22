@@ -63,207 +63,32 @@ export interface LegalMasterData {
   complianceStatuses: string[];
 }
 
-const DEFAULT_CIRCLES = ["Chennai", "Madurai", "Salem", "Coimbatore", "Tirunelveli", "Villupuram"];
-const DEFAULT_DIVISIONS = [
-  "Chennai City Division",
-  "Chengalpattu Division",
-  "Tiruvallur Division",
-  "Madurai Division",
-  "Dindigul Division",
-  "Theni Division",
-  "Salem Division",
-  "Namakkal Division",
-  "Dharmapuri Division",
-  "Coimbatore Division",
-  "Tirunelveli Division",
-  "Villupuram Division",
-];
-const DEFAULT_CATEGORIES = ["Filed Against Department", "Filed By Department"];
-const DEFAULT_CASE_TYPES = [
-  "Writ Petition (WP)",
-  "Writ Appeal (WA)",
-  "Civil Revision Petition (CRP)",
-  "Original Side Appeal (OSA)",
-  "Special Leave Petition (SLP)",
-  "Contempt Petition",
-  "Civil Miscellaneous Petition (CMP)",
-  "Review Application",
-  "Original Petition (OP)",
-  "Original Suit (OS)",
-  "Appeal Suit (AS)",
-  "Civil Miscellaneous Appeal (CMA)",
-  "Arbitration Original Petition (Arb. OP)",
-  "Other",
-];
-const DEFAULT_CASE_STATUSES = [
-  "Pending",
-  "Disposed",
-  "Stay Granted",
-  "Interim Order Issued",
-  "Dismissed",
-  "Allowed in Favour",
-  "Allowed Adverse to Dept",
-  "Remanded",
-];
-const DEFAULT_CASE_PERTAINS_TO = ["GOTN", "MoRTH", "Both", "NHAI"];
-const DEFAULT_NATURE_OF_CASES = [
-  "Work",
-  "Tender",
-  "Land Acquisition",
-  "Encroachment",
-  "Arbitration / Dispute",
-  "Service Matter / Service Rights",
-  "Toll Plaza / User Fee",
-  "Road Safety & Maintenance",
-  "Other",
-];
-const DEFAULT_COURT_NAMES = [
-  "High Court of Madras (Principal Seat, Chennai)",
-  "High Court of Madras (Madurai Bench)",
-  "Supreme Court of India (New Delhi)",
-  "City Civil Court Complex, Chennai",
-  "District & Sessions Court",
-  "Subordinate Judge Court (Sub Court)",
-  "District Munsif Court",
-  "National Green Tribunal (NGT), Southern Zone",
-  "Labour Court / Industrial Tribunal",
-  "Arbitral Tribunal",
-  "Other Court",
-];
-const DEFAULT_LAW_OFFICERS = [
-  "Advocate General of Tamil Nadu",
-  "Additional Advocate General",
-  "Special Government Pleader (Highways)",
-  "Additional Government Pleader",
-  "Government Advocate (Civil Side)",
-  "Standing Counsel (Highways)",
-];
-const DEFAULT_PETITION_TYPES = [
-  "Review Petition",
-  "Contempt Petition",
-  "Execution Petition",
-  "Special Leave Petition (SLP)",
-  "Writ Appeal (WA)",
-  "Other",
-];
-const DEFAULT_CONVERTED_CATEGORIES = [
-  "Appealed by Department",
-  "Appealed by Other Party",
-  "Other",
-];
-
-const DEFAULT_APPEAL_LEVELS = [
-  "Single Bench to Division Bench (High Court)",
-  "District / Sub Court to High Court",
-  "High Court to Supreme Court of India",
-  "Tribunal to High Court",
-  "Other Appellate Forum",
-];
-
-const DEFAULT_APPEAL_CASE_TYPES = [
-  "Writ Appeal (WA)",
-  "Civil Miscellaneous Appeal (CMA)",
-  "Appeal Suit (AS)",
-  "Special Leave Petition (SLP)",
-  "Civil Revision Petition (CRP)",
-  "Review Petition",
-  "Letters Patent Appeal (LPA)",
-  "Other",
-];
-
-const DEFAULT_APPELLATE_COURTS = [
-  "High Court of Madras (Division Bench, Principal Seat, Chennai)",
-  "High Court of Madras (Madurai Bench)",
-  "Supreme Court of India (New Delhi)",
-  "Principal District & Sessions Court",
-  "National Green Tribunal (NGT) - Southern Zone",
-  "Other Appellate Forum",
-];
-
-const DEFAULT_CONDONATION_OF_DELAYS = [
-  "Pending",
-  "Allowed / Condoned",
-  "Dismissed / Rejected",
-  "Not Applicable / Filed In Time",
-];
-
-const DEFAULT_PRESENT_STAGES = [
-  "Notice / Admission",
-  "Counter Affidavit Pending",
-  "Interim Stay / Direction in Operation",
-  "Counter Filed / Awaiting Hearing",
-  "Arguments in Progress",
-  "Orders Reserved",
-  "Disposed / Final Order Issued",
-  "Compliance Pending",
-  "Contempt Proceedings Initiated",
-  "Appeal Filed in Higher Forum",
-];
-
-const DEFAULT_GP_OPINIONS = [
-  "Pending",
-  "Not Recommended",
-  "Recommended",
-  "Not Required",
-];
-
-const DEFAULT_COMPLIANCE_STATUSES = [
-  "Complied",
-  "Pending",
-];
-
-function getAllDefaultSeedItems(): { category: LegalCategory; value: string }[] {
-  const seeds: { category: LegalCategory; value: string }[] = [];
-  const add = (cat: LegalCategory, vals: string[]) => {
-    vals.forEach((v) => seeds.push({ category: cat, value: v }));
-  };
-  add("circle", DEFAULT_CIRCLES);
-  add("division", DEFAULT_DIVISIONS);
-  add("category", DEFAULT_CATEGORIES);
-  add("case_type", DEFAULT_CASE_TYPES);
-  add("case_status", DEFAULT_CASE_STATUSES);
-  add("case_pertains_to", DEFAULT_CASE_PERTAINS_TO);
-  add("nature_of_case", DEFAULT_NATURE_OF_CASES);
-  add("court_name", DEFAULT_COURT_NAMES);
-  add("law_officer", DEFAULT_LAW_OFFICERS);
-  add("petition_type", DEFAULT_PETITION_TYPES);
-  add("converted_category", DEFAULT_CONVERTED_CATEGORIES);
-  add("appeal_level", DEFAULT_APPEAL_LEVELS);
-  add("appeal_case_type", DEFAULT_APPEAL_CASE_TYPES);
-  add("appellate_court", DEFAULT_APPELLATE_COURTS);
-  add("condonation_of_delay", DEFAULT_CONDONATION_OF_DELAYS);
-  add("present_stage", DEFAULT_PRESENT_STAGES);
-  add("gp_opinion", DEFAULT_GP_OPINIONS);
-  add("compliance_status", DEFAULT_COMPLIANCE_STATUSES);
-  return seeds;
-}
-
 function groupLegalMasterData(items: LegalMasterConfigItem[]): LegalMasterData {
-  const getVals = (cat: LegalCategory, defs: string[]) => {
+  const getVals = (cat: LegalCategory) => {
     const dbVals = items.filter((i) => i.category === cat).map((i) => i.value);
-    return Array.from(new Set(dbVals.length > 0 ? dbVals : defs)).sort();
+    return Array.from(new Set(dbVals)).sort();
   };
 
   return {
     rawItems: items,
-    circles: getVals("circle", DEFAULT_CIRCLES),
-    divisions: getVals("division", DEFAULT_DIVISIONS),
-    categories: getVals("category", DEFAULT_CATEGORIES),
-    caseTypes: getVals("case_type", DEFAULT_CASE_TYPES),
-    caseStatuses: getVals("case_status", DEFAULT_CASE_STATUSES),
-    casePertainsTo: getVals("case_pertains_to", DEFAULT_CASE_PERTAINS_TO),
-    natureOfCases: getVals("nature_of_case", DEFAULT_NATURE_OF_CASES),
-    courtNames: getVals("court_name", DEFAULT_COURT_NAMES),
-    lawOfficers: getVals("law_officer", DEFAULT_LAW_OFFICERS),
-    petitionTypes: getVals("petition_type", DEFAULT_PETITION_TYPES),
-    convertedCategories: getVals("converted_category", DEFAULT_CONVERTED_CATEGORIES),
-    appealLevels: getVals("appeal_level", DEFAULT_APPEAL_LEVELS),
-    appealCaseTypes: getVals("appeal_case_type", DEFAULT_APPEAL_CASE_TYPES),
-    appellateCourts: getVals("appellate_court", DEFAULT_APPELLATE_COURTS),
-    condonationOfDelays: getVals("condonation_of_delay", DEFAULT_CONDONATION_OF_DELAYS),
-    presentStages: getVals("present_stage", DEFAULT_PRESENT_STAGES),
-    gpOpinions: getVals("gp_opinion", DEFAULT_GP_OPINIONS),
-    complianceStatuses: getVals("compliance_status", DEFAULT_COMPLIANCE_STATUSES),
+    circles: getVals("circle"),
+    divisions: getVals("division"),
+    categories: getVals("category"),
+    caseTypes: getVals("case_type"),
+    caseStatuses: getVals("case_status"),
+    casePertainsTo: getVals("case_pertains_to"),
+    natureOfCases: getVals("nature_of_case"),
+    courtNames: getVals("court_name"),
+    lawOfficers: getVals("law_officer"),
+    petitionTypes: getVals("petition_type"),
+    convertedCategories: getVals("converted_category"),
+    appealLevels: getVals("appeal_level"),
+    appealCaseTypes: getVals("appeal_case_type"),
+    appellateCourts: getVals("appellate_court"),
+    condonationOfDelays: getVals("condonation_of_delay"),
+    presentStages: getVals("present_stage"),
+    gpOpinions: getVals("gp_opinion"),
+    complianceStatuses: getVals("compliance_status"),
   };
 }
 
@@ -281,25 +106,8 @@ export async function GET() {
       .order("value", { ascending: true });
 
     if (error) {
-      console.warn("Notice: legal_master_config DB read, using fallbacks:", error.message);
+      console.warn("Notice: legal_master_config DB read:", error.message);
       return NextResponse.json(groupLegalMasterData([]));
-    }
-
-    // Auto-seed into DB if table is currently empty
-    if (!data || data.length === 0) {
-      try {
-        const seedItems = getAllDefaultSeedItems();
-        const { data: inserted, error: insertErr } = await supabase
-          .from("legal_master_config")
-          .upsert(seedItems, { onConflict: "category,value" })
-          .select();
-
-        if (!insertErr && inserted && inserted.length > 0) {
-          return NextResponse.json(groupLegalMasterData(inserted));
-        }
-      } catch (seedErr) {
-        console.warn("Auto-seed legal_master_config notice:", seedErr);
-      }
     }
 
     return NextResponse.json(groupLegalMasterData(data || []));
