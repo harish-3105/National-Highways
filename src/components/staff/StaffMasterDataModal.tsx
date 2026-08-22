@@ -1,8 +1,25 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { X, Plus, Trash2, Edit3, Settings, Check, AlertCircle, AlertTriangle } from "lucide-react";
-import { StaffMasterConfig } from "./StaffTypes";
+import React, { useState } from 'react';
+import {
+  X,
+  Plus,
+  Trash2,
+  Edit2,
+  Settings,
+  Check,
+  AlertCircle,
+  AlertTriangle,
+  Building,
+  MapPin,
+  Building2,
+  Layers,
+  Briefcase,
+  Users,
+  Search,
+  CheckCircle2,
+} from 'lucide-react';
+import { StaffMasterConfig } from './StaffTypes';
 
 interface StaffMasterDataModalProps {
   isOpen: boolean;
@@ -11,15 +28,57 @@ interface StaffMasterDataModalProps {
   onRefresh: () => void;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  office: "Offices",
-  circle: "Circles",
-  division: "Divisions",
-  sub_division: "Sub-Divisions",
-  section: "Sections",
-  sub_section: "Sub-Sections",
-  designation: "Designations",
-};
+interface CategoryMeta {
+  id: string;
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const CATEGORY_TABS: CategoryMeta[] = [
+  {
+    id: 'office',
+    label: 'Offices',
+    description: 'Headquarters, Regional & Field Offices',
+    icon: Building2,
+  },
+  {
+    id: 'circle',
+    label: 'Circles',
+    description: 'Administrative Circles across Tamil Nadu',
+    icon: MapPin,
+  },
+  {
+    id: 'division',
+    label: 'Divisions',
+    description: 'Operational territorial highway divisions',
+    icon: Building,
+  },
+  {
+    id: 'sub_division',
+    label: 'Sub-Divisions',
+    description: 'Sub-divisional engineer jurisdictions',
+    icon: Layers,
+  },
+  {
+    id: 'section',
+    label: 'Sections',
+    description: 'Engineering & Section Office units',
+    icon: Layers,
+  },
+  {
+    id: 'sub_section',
+    label: 'Sub-Sections',
+    description: 'Sub-section field maintenance units',
+    icon: Layers,
+  },
+  {
+    id: 'designation',
+    label: 'Designations',
+    description: 'CE, SE, DE, AEE, AE, JDO, Assistant...',
+    icon: Briefcase,
+  },
+];
 
 export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
   isOpen,
@@ -27,24 +86,55 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
   masterConfig,
   onRefresh,
 }) => {
-  const [activeCategory, setActiveCategory] = useState<string>("office");
-  const [newValue, setNewValue] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string>('office');
+  const [newValue, setNewValue] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   // Edit Option State
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingValue, setEditingValue] = useState<string>("");
+  const [editingValue, setEditingValue] = useState<string>('');
 
   // Delete Confirm Popup State
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ id?: string; value: string } | null>(null);
 
   if (!isOpen) return null;
 
-  const currentCategoryItems = masterConfig.rawItems?.filter(
+  const currentCategoryItems = (masterConfig.rawItems || []).filter(
     (item) => item.category === activeCategory
-  ) || [];
+  );
+
+  const fallbackArray: string[] =
+    activeCategory === 'office'
+      ? masterConfig.offices || []
+      : activeCategory === 'circle'
+      ? masterConfig.circles || []
+      : activeCategory === 'division'
+      ? masterConfig.divisions || []
+      : activeCategory === 'sub_division'
+      ? masterConfig.sub_divisions || []
+      : activeCategory === 'section'
+      ? masterConfig.sections || []
+      : activeCategory === 'sub_section'
+      ? masterConfig.sub_sections || []
+      : masterConfig.designations || [];
+
+  const displayItems: { id: string; category: string; value: string }[] =
+    currentCategoryItems.length > 0
+      ? currentCategoryItems.map((item) => ({ id: item.id || `raw-${item.value}`, category: item.category, value: item.value }))
+      : fallbackArray.map((val, idx) => ({
+          id: `db-${idx}`,
+          category: activeCategory,
+          value: val,
+        }));
+
+  const filteredItems = displayItems.filter((item) =>
+    (item.value || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const activeTabMeta = CATEGORY_TABS.find((t) => t.id === activeCategory);
 
   const handleAddOption = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,56 +145,69 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
     setSuccess(null);
 
     try {
-      const res = await fetch("/api/staff/master-data", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/staff/master-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category: activeCategory, value: newValue.trim() }),
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to add option");
+      if (!res.ok) throw new Error(json.error || 'Failed to add option');
 
-      setNewValue("");
-      setSuccess(`Added "${json.value}" successfully`);
+      setNewValue('');
+      setSuccess(`Added "${json.value}" successfully to ${activeTabMeta?.label}.`);
       onRefresh();
-    } catch (err: any) {
-      setError(err.message || "Failed to add option");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg || 'Failed to add option');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStartEdit = (id?: string, value?: string) => {
-    if (!id || !value) return;
-    setEditingId(id);
-    setEditingValue(value);
-    setError(null);
-    setSuccess(null);
-  };
-
-  const handleSaveEdit = async (id: string) => {
-    if (!editingValue.trim()) return;
+  const handleSaveEdit = async (id: string, oldValue: string) => {
+    if (!editingValue.trim() || editingValue.trim() === oldValue) {
+      setEditingId(null);
+      return;
+    }
 
     setLoading(true);
     setError(null);
     setSuccess(null);
 
     try {
-      const res = await fetch("/api/staff/master-data", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, newValue: editingValue.trim() }),
-      });
+      if (id.startsWith('db-')) {
+        const res = await fetch('/api/staff/master-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            category: activeCategory,
+            value: editingValue.trim(),
+          }),
+        });
+        if (!res.ok) {
+          const json = await res.json();
+          throw new Error(json.error || 'Failed to save updated option');
+        }
+      } else {
+        const res = await fetch('/api/staff/master-data', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, newValue: editingValue.trim() }),
+        });
+        if (!res.ok) {
+          const json = await res.json();
+          throw new Error(json.error || 'Failed to update option');
+        }
+      }
 
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to update option");
-
-      setSuccess(`Updated option to "${json.value}"`);
+      setSuccess(`Updated option to "${editingValue.trim()}".`);
       setEditingId(null);
-      setEditingValue("");
+      setEditingValue('');
       onRefresh();
-    } catch (err: any) {
-      setError(err.message || "Failed to update option");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg || 'Failed to update option');
     } finally {
       setLoading(false);
     }
@@ -118,80 +221,120 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
     setSuccess(null);
 
     try {
-      const url = deleteConfirmItem.id
+      const url = deleteConfirmItem.id && !deleteConfirmItem.id.startsWith('db-')
         ? `/api/staff/master-data?id=${deleteConfirmItem.id}`
         : `/api/staff/master-data?category=${activeCategory}&value=${encodeURIComponent(deleteConfirmItem.value)}`;
 
-      const res = await fetch(url, { method: "DELETE" });
+      const res = await fetch(url, { method: 'DELETE' });
       const json = await res.json();
 
-      if (!res.ok) throw new Error(json.error || "Failed to delete option");
+      if (!res.ok) throw new Error(json.error || 'Failed to delete option');
 
-      setSuccess(`Removed "${deleteConfirmItem.value}" successfully`);
+      setSuccess(`Removed "${deleteConfirmItem.value}" successfully.`);
       setDeleteConfirmItem(null);
       onRefresh();
-    } catch (err: any) {
-      setError(err.message || "Failed to delete option");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg || 'Failed to delete option');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-3xl rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh] relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
+            <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-md">
               <Settings className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+              <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
                 Staff Master Data Configuration
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Manage dynamic dropdown choices for staff entry forms
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Customize office names, circles, divisions, sub-divisions, sections, and staff designations
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-          {/* Category Sidebar */}
-          <div className="w-full md:w-56 p-3 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex md:flex-col gap-1 overflow-x-auto md:overflow-y-auto">
-            {Object.entries(CATEGORY_LABELS).map(([catKey, catLabel]) => {
-              const count =
-                masterConfig.rawItems?.filter((i) => i.category === catKey).length || 0;
-              const isActive = activeCategory === catKey;
+        {/* Chat App Two-Column Layout */}
+        <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12">
+          {/* Left Sidebar (Categories) */}
+          <div className="md:col-span-4 border-r border-slate-100 dark:border-slate-800 overflow-y-auto p-4 space-y-1.5 bg-slate-50/30 dark:bg-slate-900/40">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1 block">
+              Categories ({CATEGORY_TABS.length})
+            </span>
+            {CATEGORY_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const count = (
+                masterConfig.rawItems?.filter((i) => i.category === tab.id) ||
+                (tab.id === 'office'
+                  ? masterConfig.offices
+                  : tab.id === 'circle'
+                  ? masterConfig.circles
+                  : tab.id === 'division'
+                  ? masterConfig.divisions
+                  : tab.id === 'sub_division'
+                  ? masterConfig.sub_divisions
+                  : tab.id === 'section'
+                  ? masterConfig.sections
+                  : tab.id === 'sub_section'
+                  ? masterConfig.sub_sections
+                  : masterConfig.designations) ||
+                []
+              ).length;
+
+              const isActive = activeCategory === tab.id;
               return (
                 <button
-                  key={catKey}
+                  key={tab.id}
                   onClick={() => {
-                    setActiveCategory(catKey);
+                    setActiveCategory(tab.id);
+                    setSearchTerm('');
                     setError(null);
                     setSuccess(null);
                     setEditingId(null);
                   }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition whitespace-nowrap ${
+                  className={`w-full text-left p-3 rounded-2xl transition-all flex items-center justify-between cursor-pointer ${
                     isActive
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800"
+                      ? 'bg-blue-600 text-white shadow-md font-bold'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium'
                   }`}
                 >
-                  <span>{catLabel}</span>
+                  <div className="flex items-center gap-3 truncate pr-2">
+                    <div
+                      className={`p-2 rounded-xl shrink-0 ${
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : 'bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="truncate">
+                      <div className="text-xs font-bold truncate">{tab.label}</div>
+                      <div
+                        className={`text-[10px] truncate ${
+                          isActive ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'
+                        }`}
+                      >
+                        {tab.description}
+                      </div>
+                    </div>
+                  </div>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      isActive
-                        ? "bg-white/20 text-white"
-                        : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                    className={`text-[11px] font-mono px-2 py-0.5 rounded-full shrink-0 ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'
                     }`}
                   >
                     {count}
@@ -201,154 +344,169 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
             })}
           </div>
 
-          {/* Options Panel */}
-          <div className="flex-1 p-6 overflow-y-auto flex flex-col">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
-              <span>{CATEGORY_LABELS[activeCategory]} Dropdown Options</span>
-            </h3>
+          {/* Right Content Panel */}
+          <div className="md:col-span-8 flex flex-col overflow-hidden p-6 space-y-4">
+            {/* Active Category Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100">
+                  {activeTabMeta?.label}
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">{activeTabMeta?.description}</p>
+              </div>
+              <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-2.5 py-1 rounded-lg self-start sm:self-auto">
+                {filteredItems.length} option{filteredItems.length === 1 ? '' : 's'} available
+              </span>
+            </div>
 
-            {/* Notifications */}
+            {/* Notification Messages */}
             {error && (
-              <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/50 flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             {success && (
-              <div className="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
-                <Check className="w-4 h-4 shrink-0" />
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>{success}</span>
               </div>
             )}
 
-            {/* Add Form */}
-            <form onSubmit={handleAddOption} className="flex gap-2 mb-4">
+            {/* Add New Option Form */}
+            <form onSubmit={handleAddOption} className="flex gap-2">
               <input
                 type="text"
-                placeholder={`Add new ${CATEGORY_LABELS[activeCategory]} option...`}
+                placeholder={`Add new ${activeTabMeta?.label.toLowerCase()} option...`}
                 value={newValue}
                 onChange={(e) => setNewValue(e.target.value)}
-                disabled={loading}
-                className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3.5 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 type="submit"
                 disabled={loading || !newValue.trim()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>Add</span>
+                <span>Add Option</span>
               </button>
             </form>
 
+            {/* Search Filter */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search options..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
             {/* Options List */}
-            <div className="flex-1 overflow-y-auto max-h-[60vh] dropdown-scroll overscroll-contain border border-slate-200 dark:border-slate-800 rounded-xl divide-y divide-slate-100 dark:divide-slate-800/60">
-              {currentCategoryItems.length === 0 ? (
-                <div className="p-8 text-center text-xs text-slate-400">
-                  No custom options added for {CATEGORY_LABELS[activeCategory]} yet. Click "Add" above to create options.
+            <div className="flex-1 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 p-1">
+              {filteredItems.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-xs font-medium">
+                  No options found. Add one above.
                 </div>
               ) : (
-                currentCategoryItems.map((item, idx) => {
-                  const isEditingThis = editingId === item.id;
-                  return (
-                    <div
-                      key={item.id || idx}
-                      className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition group gap-2"
-                    >
-                      {isEditingThis ? (
-                        <div className="flex items-center gap-2 flex-1">
-                          <input
-                            type="text"
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            className="flex-1 px-2.5 py-1 text-xs rounded-lg border border-blue-500 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none"
-                            autoFocus
-                          />
-                          <button
-                            onClick={() => handleSaveEdit(item.id!)}
-                            disabled={loading || !editingValue.trim()}
-                            className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => setEditingId(null)}
-                            className="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold hover:bg-slate-300 dark:hover:bg-slate-700 transition"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <span className="text-xs font-medium text-slate-700 dark:text-slate-300 flex-1">
+                filteredItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl flex items-center justify-between gap-3 group transition-colors"
+                  >
+                    {editingId === item.id ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <input
+                          type="text"
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveEdit(item.id, item.value);
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-blue-500 rounded-lg text-xs font-semibold outline-none"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleSaveEdit(item.id, item.value)}
+                          className="p-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 cursor-pointer"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="p-1.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-300 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                             {item.value}
                           </span>
-                          <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition">
-                            <button
-                              onClick={() => handleStartEdit(item.id, item.value)}
-                              disabled={loading}
-                              title="Edit option name"
-                              className="p-1 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 rounded transition"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirmItem({ id: item.id, value: item.value })}
-                              disabled={loading}
-                              title="Delete option"
-                              className="p-1 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded transition"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })
+                        </div>
+
+                        <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => {
+                              setEditingId(item.id);
+                              setEditingValue(item.value);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors cursor-pointer"
+                            title="Edit Option"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmItem(item)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors cursor-pointer"
+                            title="Delete Option"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))
               )}
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition"
-          >
-            Done
-          </button>
-        </div>
-
-        {/* Custom Delete Confirmation Modal Overlay */}
+        {/* Delete Confirmation Modal */}
         {deleteConfirmItem && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-            <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl border border-slate-200 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
-              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 mx-auto mb-3 flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6" />
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+              <div className="flex items-center gap-3 text-rose-600">
+                <AlertTriangle className="w-6 h-6 shrink-0" />
+                <h4 className="text-sm font-extrabold">Confirm Removal</h4>
               </div>
-              <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">
-                Delete Dropdown Option
-              </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
-                Are you sure you want to remove <span className="font-semibold text-slate-800 dark:text-slate-200">"{deleteConfirmItem.value}"</span> from {CATEGORY_LABELS[activeCategory]}?
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Are you sure you want to remove <strong>"{deleteConfirmItem.value}"</strong> from{' '}
+                {activeTabMeta?.label}?
               </p>
-              <div className="flex gap-2 justify-center">
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
+                  type="button"
                   onClick={() => setDeleteConfirmItem(null)}
-                  disabled={loading}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition"
+                  className="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleConfirmDelete}
                   disabled={loading}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold shadow-md transition"
+                  className="px-3.5 py-1.5 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-xs cursor-pointer"
                 >
-                  {loading ? "Removing..." : "Confirm Remove"}
+                  Delete Option
                 </button>
               </div>
             </div>
@@ -358,3 +516,5 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
     </div>
   );
 };
+
+export default StaffMasterDataModal;
