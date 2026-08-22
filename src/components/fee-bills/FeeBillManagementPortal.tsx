@@ -325,7 +325,7 @@ export function FeeBillManagementPortal() {
 
             <div className="w-full sm:w-44">
               <SearchableSelect
-                options={['All Circles', ...masterData.circles.map((c) => c.name)]}
+                options={['All Circles', ...(masterData.circles || []).filter((c) => c.active).map((c) => c.name)]}
                 value={selectedCircle ? `${selectedCircle}` : 'All Circles'}
                 onChange={(val) => {
                   setSelectedCircle(val === 'All Circles' ? '' : val);
@@ -345,7 +345,7 @@ export function FeeBillManagementPortal() {
             </div>
 
             <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-1">
-              {(['ALL', 'Not Settled', 'Settled'] as const).map((st) => (
+              {(['ALL', ...(masterData.paymentStatuses || ['Not Settled', 'Settled'])]).map((st) => (
                 <button
                   key={st}
                   onClick={() => setPaymentStatusFilter(st)}
@@ -381,7 +381,7 @@ export function FeeBillManagementPortal() {
       )}
 
       {activeTab === 'pendency' && (
-        <FeeBillPendencyTracker bills={bills} onViewBill={(b) => setViewingBill(b)} />
+        <FeeBillPendencyTracker bills={bills} masterData={masterData} onViewBill={(b) => setViewingBill(b)} />
       )}
 
       {activeTab === 'analytics' && (
@@ -398,6 +398,7 @@ export function FeeBillManagementPortal() {
       <FeeBillAuditModal
         contract={auditingBill}
         isOpen={!!auditingBill}
+        paymentStatuses={masterData.paymentStatuses}
         onClose={() => setAuditingBill(null)}
         onSuccess={() => fetchFeeBills()}
       />

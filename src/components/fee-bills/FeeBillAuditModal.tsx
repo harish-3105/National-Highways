@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FeeBillRecord, AuditLogEntry } from '@/types/feeBill';
-import { formatINR } from '@/lib/feeBillMasterData';
+import { FeeBillRecord, AuditLogEntry, PaymentStatusType } from '@/types/feeBill';
+import { formatINR, DEFAULT_MASTER_DATA } from '@/lib/feeBillMasterData';
 import {
   X,
   ShieldCheck,
@@ -17,6 +17,7 @@ import {
 interface FeeBillAuditModalProps {
   contract: FeeBillRecord | null;
   isOpen: boolean;
+  paymentStatuses?: string[];
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -24,12 +25,13 @@ interface FeeBillAuditModalProps {
 export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
   contract,
   isOpen,
+  paymentStatuses = DEFAULT_MASTER_DATA.paymentStatuses,
   onClose,
   onSuccess,
 }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<'Settled' | 'Not Settled'>('Settled');
+  const [selectedStatus, setSelectedStatus] = useState<string>('Settled');
   const [settledAmount, setSettledAmount] = useState<number>(0);
   const [itCess, setItCess] = useState<number>(0);
   const [utrRbiReference, setUtrRbiReference] = useState('');
@@ -54,7 +56,7 @@ export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
 
       const updatedRecord: FeeBillRecord = {
         ...contract,
-        paymentStatus: selectedStatus,
+        paymentStatus: selectedStatus as PaymentStatusType,
         settledAmount: selectedStatus === 'Settled' ? settledAmount : 0,
         itCess: selectedStatus === 'Settled' ? itCess : 0,
         utrRbiReference: selectedStatus === 'Settled' ? utrRbiReference : '',
@@ -131,29 +133,23 @@ export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
               <FileCheck className="w-4 h-4 text-emerald-600" /> Update Disbursement Status
             </h4>
 
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setSelectedStatus('Settled')}
-                className={`py-2 px-3 rounded-xl border text-xs font-extrabold cursor-pointer transition-all ${
-                  selectedStatus === 'Settled'
-                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                Mark as SETTLED
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedStatus('Not Settled')}
-                className={`py-2 px-3 rounded-xl border text-xs font-extrabold cursor-pointer transition-all ${
-                  selectedStatus === 'Not Settled'
-                    ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                Mark as NOT SETTLED
-              </button>
+            <div className={`grid grid-cols-${Math.min(paymentStatuses.length, 3)} gap-3`}>
+              {paymentStatuses.map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setSelectedStatus(st)}
+                  className={`py-2 px-3 rounded-xl border text-xs font-extrabold cursor-pointer transition-all ${
+                    selectedStatus === st
+                      ? st === 'Settled'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                        : 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  Mark as {st.toUpperCase()}
+                </button>
+              ))}
             </div>
 
             {selectedStatus === 'Settled' && (

@@ -1,32 +1,33 @@
 'use client';
 
 import React from 'react';
-import { FeeBillRecord } from '@/types/feeBill';
-import { formatINR } from '@/lib/feeBillMasterData';
+import { FeeBillRecord, FeeBillMasterDataConfig } from '@/types/feeBill';
+import { formatINR, DEFAULT_MASTER_DATA } from '@/lib/feeBillMasterData';
 import { Clock, Building, ArrowRight, ShieldAlert, CheckCircle2 } from 'lucide-react';
 
 interface FeeBillPendencyTrackerProps {
   bills: FeeBillRecord[];
+  masterData?: FeeBillMasterDataConfig;
   onViewBill: (bill: FeeBillRecord) => void;
 }
 
 export const FeeBillPendencyTracker: React.FC<FeeBillPendencyTrackerProps> = ({
   bills,
+  masterData,
   onViewBill,
 }) => {
   const pendingBills = bills.filter((b) => b.paymentStatus !== 'Settled');
 
   // Derive unique pendency stages dynamically from bills and master defaults
   const pendencyStages = React.useMemo(() => {
-    const defaultStages = [
-      'Pending with DE',
-      'Proposal Submitted to CE',
-      'Proposal Submitted to Government',
-      'G.O. Obtained',
-      'Payment Sanction',
-      'Payment Sanctioned',
-      'Sanction Pending',
-    ];
+    const defaultStages = Array.from(
+      new Set([
+        'Pending with DE',
+        ...(masterData?.statusOfObtainingGoOptions || DEFAULT_MASTER_DATA.statusOfObtainingGoOptions || []),
+        ...(masterData?.statusOfPaymentProposalOptions || DEFAULT_MASTER_DATA.statusOfPaymentProposalOptions || []),
+        'Payment Sanctioned',
+      ])
+    );
     const billStages = pendingBills.map((b) => b.currentPendency).filter(Boolean);
     const combined = Array.from(new Set([...defaultStages, ...billStages]));
     // Order: keep stages with active bills or defaults
@@ -34,7 +35,7 @@ export const FeeBillPendencyTracker: React.FC<FeeBillPendencyTrackerProps> = ({
       const hasBills = pendingBills.some((b) => b.currentPendency === stage);
       return hasBills || defaultStages.slice(0, 4).includes(stage);
     });
-  }, [pendingBills]);
+  }, [pendingBills, masterData]);
 
   return (
     <div className="space-y-6">

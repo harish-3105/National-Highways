@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { FeeBillMasterDataConfig } from '@/types/feeBill';
+import { DEFAULT_MASTER_DATA } from '@/lib/feeBillMasterData';
 import {
   Settings,
   Plus,
@@ -48,25 +49,15 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
   const [editValue, setEditValue] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Normalize fallback arrays
-  const lawyerDesignations = masterData.lawyerDesignations || [];
-  const caseTypes = masterData.caseTypes || [];
-  const casePertainsTo = masterData.casePertainsTo || ['GOTN', 'MoRTH', 'BOTH'];
-  const paymentStatuses = masterData.paymentStatuses || ['Settled', 'Not Settled'];
-  const statusOfObtainingGoOptions = masterData.statusOfObtainingGoOptions || [
-    'Proposal Submitted to CE',
-    'Proposal Submitted to Government',
-    'Draft G.O. Under Scrutiny',
-    'Clarification Sought',
-    'G.O. Obtained',
-  ];
-  const statusOfPaymentProposalOptions = masterData.statusOfPaymentProposalOptions || [
-    'Proposal Under Preparation',
-    'Pending with DE',
-    'Proposal Submitted to CE',
-    'Sanction Order Awaited',
-    'Payment Sanction',
-  ];
+  // Normalize fallback arrays from DEFAULT_MASTER_DATA
+  const lawyerDesignations = masterData.lawyerDesignations || DEFAULT_MASTER_DATA.lawyerDesignations;
+  const caseTypes = masterData.caseTypes || DEFAULT_MASTER_DATA.caseTypes;
+  const casePertainsTo = masterData.casePertainsTo || DEFAULT_MASTER_DATA.casePertainsTo;
+  const paymentStatuses = masterData.paymentStatuses || DEFAULT_MASTER_DATA.paymentStatuses;
+  const statusOfObtainingGoOptions =
+    masterData.statusOfObtainingGoOptions || DEFAULT_MASTER_DATA.statusOfObtainingGoOptions || [];
+  const statusOfPaymentProposalOptions =
+    masterData.statusOfPaymentProposalOptions || DEFAULT_MASTER_DATA.statusOfPaymentProposalOptions || [];
 
   const handleAdd = () => {
     if (!newTextValue.trim()) return;

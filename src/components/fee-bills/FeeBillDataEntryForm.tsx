@@ -12,6 +12,7 @@ import {
   calculateTotalFeeAmount,
   derivePendencyStage,
   formatINR,
+  DEFAULT_MASTER_DATA,
 } from '@/lib/feeBillMasterData';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import {
@@ -128,10 +129,21 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [duplicateWarning, setDuplicateWarning] = useState('');
 
-  const activeCircles = masterData.circles.filter((c) => c.active);
+  const activeCircles = (masterData.circles || DEFAULT_MASTER_DATA.circles).filter((c) => c.active);
   const availableDivisions = formData.circle
-    ? masterData.divisions.filter((d) => d.circleName === formData.circle && d.active)
-    : masterData.divisions.filter((d) => d.active);
+    ? (masterData.divisions || DEFAULT_MASTER_DATA.divisions).filter(
+        (d) => d.circleName === formData.circle && d.active
+      )
+    : (masterData.divisions || DEFAULT_MASTER_DATA.divisions).filter((d) => d.active);
+
+  const lawyerDesignations = masterData.lawyerDesignations || DEFAULT_MASTER_DATA.lawyerDesignations;
+  const caseTypes = masterData.caseTypes || DEFAULT_MASTER_DATA.caseTypes;
+  const casePertainsToOptions = masterData.casePertainsTo || DEFAULT_MASTER_DATA.casePertainsTo;
+  const paymentStatuses = masterData.paymentStatuses || DEFAULT_MASTER_DATA.paymentStatuses;
+  const statusOfObtainingGoOptions =
+    masterData.statusOfObtainingGoOptions || DEFAULT_MASTER_DATA.statusOfObtainingGoOptions || [];
+  const statusOfPaymentProposalOptions =
+    masterData.statusOfPaymentProposalOptions || DEFAULT_MASTER_DATA.statusOfPaymentProposalOptions || [];
 
   // Auto-calculate Assistance Amount (1/3 of Appearance Fee only) and Total Fee
   useEffect(() => {
@@ -264,25 +276,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
       setActiveTab(TABS[currentTabIndex - 1].id);
     }
   };
-
-  // Master dropdown options with fallbacks
-  const statusOfObtainingGoOptions =
-    masterData.statusOfObtainingGoOptions || [
-      'Proposal Submitted to CE',
-      'Proposal Submitted to Government',
-      'Draft G.O. Under Scrutiny',
-      'Clarification Sought',
-      'G.O. Obtained',
-    ];
-
-  const statusOfPaymentProposalOptions =
-    masterData.statusOfPaymentProposalOptions || [
-      'Proposal Under Preparation',
-      'Pending with DE',
-      'Proposal Submitted to CE',
-      'Sanction Order Awaited',
-      'Payment Sanction',
-    ];
 
   return (
     <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-5 pb-16">
@@ -494,7 +487,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-xs">
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Lawyer / Advocate Name <span className="text-red-500">*</span>
@@ -513,7 +506,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 Lawyer Designation
               </label>
               <SearchableSelect
-                options={masterData.lawyerDesignations}
+                options={lawyerDesignations}
                 value={formData.lawyerDesignation}
                 onChange={(val) => setFormData((prev) => ({ ...prev, lawyerDesignation: val }))}
                 placeholder=""
@@ -525,9 +518,21 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 Case Type & Category
               </label>
               <SearchableSelect
-                options={masterData.caseTypes}
+                options={caseTypes}
                 value={formData.caseType}
                 onChange={(val) => setFormData((prev) => ({ ...prev, caseType: val }))}
+                placeholder=""
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Case Pertains To
+              </label>
+              <SearchableSelect
+                options={casePertainsToOptions}
+                value={formData.casePertainsTo}
+                onChange={(val) => setFormData((prev) => ({ ...prev, casePertainsTo: val as any }))}
                 placeholder=""
               />
             </div>
@@ -599,7 +604,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                       Assistant Designation
                     </label>
                     <SearchableSelect
-                      options={masterData.lawyerDesignations}
+                      options={lawyerDesignations}
                       value={formData.assistantDesignation || ''}
                       onChange={(val) => setFormData((prev) => ({ ...prev, assistantDesignation: val }))}
                       placeholder=""
@@ -842,7 +847,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             </span>
           </div>
 
-          {/* Payment Proposal Stage Dropdown */}
+          {/* Payment Proposal Stage & Payment Status Dropdowns */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -852,6 +857,18 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={statusOfPaymentProposalOptions}
                 value={formData.statusOfPaymentProposal || ''}
                 onChange={(val) => setFormData((prev) => ({ ...prev, statusOfPaymentProposal: val }))}
+                placeholder=""
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Payment Status
+              </label>
+              <SearchableSelect
+                options={paymentStatuses}
+                value={formData.paymentStatus || 'Not Settled'}
+                onChange={(val) => setFormData((prev) => ({ ...prev, paymentStatus: val as any }))}
                 placeholder=""
               />
             </div>
