@@ -455,96 +455,161 @@ export const MajorProjectsDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 6 Top KPI Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
-        {/* Card 1: Active Works */}
-        <div
+      {/* 6 Top KPI Quadrant Cards (3 Rows × 2 Columns) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {/* Row 1, Col 1: Active Ongoing Works */}
+        <button
+          type="button"
           onClick={() => {
             setCompletionFilter('ACTIVE_ONLY');
             setSelectedStage('ALL');
+            setDelayMin('');
+            setCostAbove50CrOnly(false);
           }}
-          className={`p-4 rounded-2xl border shadow-xs flex items-center justify-between cursor-pointer transition-all ${
-            completionFilter === 'ACTIVE_ONLY' && selectedStage === 'ALL'
-              ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-400 ring-2 ring-blue-400/20'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-blue-300'
+          className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+            completionFilter === 'ACTIVE_ONLY' && selectedStage === 'ALL' && delayMin === '' && !costAbove50CrOnly
+              ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/40 dark:bg-blue-950/30'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
         >
-          <div className="space-y-1">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Active Ongoing</span>
-            <div className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono">
-              {activeCount}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              Active Ongoing Works
+              {completionFilter === 'ACTIVE_ONLY' && selectedStage === 'ALL' && delayMin === '' && !costAbove50CrOnly && (
+                <span className="normal-case text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">
+                  Active
+                </span>
+              )}
+            </span>
+            <div className="p-2.5 bg-blue-50 dark:bg-blue-950/50 rounded-lg text-blue-600 dark:text-blue-400">
+              <Building2 className="w-5 h-5" />
             </div>
-            <span className="text-[10px] text-slate-500 font-medium">Under monitoring</span>
           </div>
-          <div className="p-3 bg-blue-50 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400">
-            <Building2 className="w-5 h-5" />
-          </div>
-        </div>
-
-        {/* Card 2: Total Project Cost */}
-        <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Capital Outlay</span>
-            <div className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
-              ₹ {totalCostCr.toLocaleString('en-IN', { maximumFractionDigits: 1 })} Cr
+          <div className="mt-3">
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
+              {activeCount} <span className="text-sm font-normal text-slate-500 font-sans">Active Works</span> &bull;{' '}
+              <span className="text-base font-semibold text-slate-700 dark:text-slate-300 font-sans">{totalCount}</span>{' '}
+              <span className="text-sm font-normal text-slate-500 font-sans">Total</span>
             </div>
-            <span className="text-[10px] text-slate-500 font-medium">Sanctioned Outlay</span>
           </div>
-          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl text-emerald-600 dark:text-emerald-400">
-            <IndianRupee className="w-5 h-5" />
+          <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
+            Capital Highway Stretches Under Real-Time Monitoring
           </div>
-        </div>
+        </button>
 
-        {/* Card 3: Under Execution */}
-        <div
+        {/* Row 1, Col 2: Capital Outlay */}
+        <button
+          type="button"
+          onClick={() => setCostAbove50CrOnly(!costAbove50CrOnly)}
+          className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+            costAbove50CrOnly
+              ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/30'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              Capital Outlay Budget
+              {costAbove50CrOnly && (
+                <span className="normal-case text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                  &ge;₹50 Cr Filter Active
+                </span>
+              )}
+            </span>
+            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/50 rounded-lg text-emerald-600 dark:text-emerald-400">
+              <IndianRupee className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-300 font-mono">
+              ₹ {totalCostCr.toLocaleString('en-IN', { maximumFractionDigits: 1 })}{' '}
+              <span className="text-sm font-normal text-slate-500 font-sans">Cr Outlay</span> &bull;{' '}
+              <span className="text-base font-semibold text-emerald-600 font-sans">{above50CrCount}</span>{' '}
+              <span className="text-sm font-normal text-slate-500 font-sans">&ge;₹50 Cr</span>
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+            Sanctioned Project Budget &bull; Click to filter major works (&ge; ₹50 Cr)
+          </div>
+        </button>
+
+        {/* Row 2, Col 1: Under Execution */}
+        <button
+          type="button"
           onClick={() => {
             setCompletionFilter('ACTIVE_ONLY');
             setSelectedStage(selectedStage === 'IN_PROGRESS' ? 'ALL' : 'IN_PROGRESS');
+            setDelayMin('');
           }}
-          className={`p-4 rounded-2xl border shadow-xs flex items-center justify-between cursor-pointer transition-all ${
+          className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
             selectedStage === 'IN_PROGRESS' && completionFilter === 'ACTIVE_ONLY'
-              ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/20'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-emerald-300'
+              ? 'border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/40 dark:bg-indigo-950/30'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
         >
-          <div className="space-y-1">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Under Execution</span>
-            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-              {inProgressCount}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              Under Active Execution
+              {selectedStage === 'IN_PROGRESS' && completionFilter === 'ACTIVE_ONLY' && (
+                <span className="normal-case text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
+                  Active
+                </span>
+              )}
+            </span>
+            <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg text-indigo-600 dark:text-indigo-400">
+              <Activity className="w-5 h-5" />
             </div>
-            <span className="text-[10px] text-slate-500 font-medium">Physical active</span>
           </div>
-          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl text-emerald-600 dark:text-emerald-400">
-            <Activity className="w-5 h-5" />
+          <div className="mt-3">
+            <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-200 font-mono">
+              {inProgressCount} <span className="text-sm font-normal text-slate-500 font-sans">Projects On-Site</span>
+            </div>
           </div>
-        </div>
+          <div className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+            Physical Civil Construction & Road Laying In Progress
+          </div>
+        </button>
 
-        {/* Card 4: Tender Stage */}
-        <div
+        {/* Row 2, Col 2: Tender Stage */}
+        <button
+          type="button"
           onClick={() => {
             setCompletionFilter('ACTIVE_ONLY');
             setSelectedStage(selectedStage === 'TENDER_STAGE' ? 'ALL' : 'TENDER_STAGE');
+            setDelayMin('');
           }}
-          className={`p-4 rounded-2xl border shadow-xs flex items-center justify-between cursor-pointer transition-all ${
+          className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
             selectedStage === 'TENDER_STAGE'
-              ? 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-500 ring-2 ring-amber-500/20'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-amber-300'
+              ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/40 dark:bg-amber-950/30'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
         >
-          <div className="space-y-1">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Tender Stage</span>
-            <div className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
-              {tenderCount}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              Tender & Pre-Construction
+              {selectedStage === 'TENDER_STAGE' && (
+                <span className="normal-case text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
+                  Active
+                </span>
+              )}
+            </span>
+            <div className="p-2.5 bg-amber-50 dark:bg-amber-950/50 rounded-lg text-amber-600 dark:text-amber-400">
+              <Clock className="w-5 h-5" />
             </div>
-            <span className="text-[10px] text-slate-500 font-medium">Bidding / Scrutiny</span>
           </div>
-          <div className="p-3 bg-amber-50 dark:bg-amber-950/60 rounded-xl text-amber-600 dark:text-amber-400">
-            <Clock className="w-5 h-5" />
+          <div className="mt-3">
+            <div className="text-2xl font-bold text-amber-700 dark:text-amber-300 font-mono">
+              {tenderCount} <span className="text-sm font-normal text-slate-500 font-sans">Projects</span>
+            </div>
           </div>
-        </div>
+          <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
+            DPR Preparation, Bidding, Evaluation & Pre-Construction
+          </div>
+        </button>
 
-        {/* Card 5: Delayed Works */}
-        <div
+        {/* Row 3, Col 1: Delayed Works */}
+        <button
+          type="button"
           onClick={() => {
             setCompletionFilter('ACTIVE_ONLY');
             if (selectedStage === 'DELAYED') {
@@ -555,47 +620,75 @@ export const MajorProjectsDashboard: React.FC = () => {
               setDelayMin('0.01');
             }
           }}
-          className={`p-4 rounded-2xl border shadow-xs flex items-center justify-between cursor-pointer transition-all ${
+          className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
             selectedStage === 'DELAYED' || (delayMin !== '' && Number(delayMin) > 0)
-              ? 'bg-rose-50/80 dark:bg-rose-950/40 border-rose-500 ring-2 ring-rose-500/20'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-rose-300'
+              ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/40 dark:bg-rose-950/30'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
         >
-          <div className="space-y-1">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Delayed Works</span>
-            <div className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono">
-              {delayedCount}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              Delayed Works (Time Overrun)
+              {(selectedStage === 'DELAYED' || (delayMin !== '' && Number(delayMin) > 0)) && (
+                <span className="normal-case text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950 px-1.5 py-0.5 rounded border border-rose-200 dark:border-rose-800">
+                  Active
+                </span>
+              )}
+            </span>
+            <div className="p-2.5 bg-rose-50 dark:bg-rose-950/50 rounded-lg text-rose-600 dark:text-rose-400">
+              <AlertTriangle className="w-5 h-5" />
             </div>
-            <span className="text-[10px] text-slate-500 font-medium">Time Overrun &gt; 0y</span>
           </div>
-          <div className="p-3 bg-rose-50 dark:bg-rose-950/60 rounded-xl text-rose-600 dark:text-rose-400">
-            <AlertTriangle className="w-5 h-5" />
+          <div className="mt-3">
+            <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 font-mono">
+              {delayedCount} <span className="text-sm font-normal text-slate-500 font-sans">Overrun Projects</span>
+            </div>
           </div>
-        </div>
+          <div className="mt-2 text-xs text-rose-600 dark:text-rose-400 font-medium">
+            Time Overrun &gt; 0 Years &bull; Critical Milestone Review
+          </div>
+        </button>
 
-        {/* Card 6: Completed Works (100% Physical Progress) */}
-        <div
+        {/* Row 3, Col 2: Completed Works */}
+        <button
+          type="button"
           onClick={() => {
             setCompletionFilter(completionFilter === 'COMPLETED_ONLY' ? 'ACTIVE_ONLY' : 'COMPLETED_ONLY');
             setSelectedStage('ALL');
+            setDelayMin('');
           }}
-          className={`p-4 rounded-2xl border shadow-xs flex items-center justify-between cursor-pointer transition-all ${
+          className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
             completionFilter === 'COMPLETED_ONLY'
-              ? 'bg-teal-50/80 dark:bg-teal-950/40 border-teal-500 ring-2 ring-teal-500/20'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-teal-300'
+              ? 'border-teal-500 ring-2 ring-teal-500/20 bg-teal-50/40 dark:bg-teal-950/30'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
         >
-          <div className="space-y-1">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Completed Works</span>
-            <div className="text-2xl font-black text-teal-600 dark:text-teal-400 font-mono">
-              {completedCount}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              Completed Works (100% Done)
+              {completionFilter === 'COMPLETED_ONLY' && (
+                <span className="normal-case text-[10px] font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950 px-1.5 py-0.5 rounded border border-teal-200 dark:border-teal-800">
+                  Active
+                </span>
+              )}
+            </span>
+            <div className="p-2.5 bg-teal-50 dark:bg-teal-950/50 rounded-lg text-teal-600 dark:text-teal-400">
+              <CheckCircle2 className="w-5 h-5" />
             </div>
-            <span className="text-[10px] text-slate-500 font-medium">100% progress done</span>
           </div>
-          <div className="p-3 bg-teal-50 dark:bg-teal-950/60 rounded-xl text-teal-600 dark:text-teal-400">
-            <CheckCircle2 className="w-5 h-5" />
+          <div className="mt-3">
+            <div className="text-2xl font-bold text-teal-700 dark:text-teal-300 font-mono">
+              {completedCount} <span className="text-sm font-normal text-slate-500 font-sans">Works</span> &bull;{' '}
+              <span className="text-base font-semibold text-teal-600 font-sans">
+                ₹ {completedCostCr.toLocaleString('en-IN', { maximumFractionDigits: 1 })}
+              </span>{' '}
+              <span className="text-sm font-normal text-slate-500 font-sans">Cr Completed</span>
+            </div>
           </div>
-        </div>
+          <div className="mt-2 text-xs text-teal-600 dark:text-teal-400 font-medium">
+            100% Physical Progress Achieved &bull; Fully Operational
+          </div>
+        </button>
       </div>
 
       {/* Comprehensive Filter Panel */}
