@@ -875,7 +875,8 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
           </div>
 
           {/* Conditional Branch 1: If Status == Payment Sanction */}
-          {formData.statusOfPaymentProposal === 'Payment Sanction' && (
+          {(formData.statusOfPaymentProposal === 'Payment Sanction' ||
+            formData.statusOfPaymentProposal?.toLowerCase().includes('sanction')) && (
             <div className="p-5 bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl space-y-4 text-xs animate-in fade-in">
               <div className="font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
                 <FileText className="w-4 h-4 text-blue-600" /> Proceeding & Sanction Order Particulars
@@ -931,7 +932,10 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
           )}
 
           {/* Conditional Branch 2: If Sanctioned == YES (Settlement & Disbursement Banking Fields) */}
-          {(formData.isSanctioned === 'Yes' || formData.isSanctioned?.toLowerCase() === 'yes' || formData.paymentStatus === 'Settled') && (
+          {(formData.isSanctioned === 'Yes' ||
+            formData.isSanctioned?.toLowerCase() === 'yes' ||
+            formData.paymentStatus === 'Settled' ||
+            formData.paymentStatus?.toLowerCase() === 'settled') && (
             <div className="p-5 bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl space-y-4 text-xs animate-in fade-in">
               <div className="flex items-center justify-between">
                 <div className="font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
