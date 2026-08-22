@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FeeBillRecord, FeeBillMasterDataConfig } from '@/types/feeBill';
-import { DEFAULT_MASTER_DATA } from '@/lib/feeBillMasterData';
+import { DEFAULT_MASTER_DATA, formatINR } from '@/lib/feeBillMasterData';
 import { FeeBillListTable } from './FeeBillListTable';
 import { FeeBillDataEntryForm } from './FeeBillDataEntryForm';
 import { FeeBillPendencyTracker } from './FeeBillPendencyTracker';
@@ -23,17 +23,23 @@ import {
   RefreshCw,
   Download,
   Layers,
+  DollarSign,
+  CheckCircle2,
+  Scale,
 } from 'lucide-react';
 import { generateFeeBillsExcel } from '@/lib/export/feeBillsExportGenerator';
 
-export function FeeBillManagementPortal() {
+type PortalTab = 'workspace' | 'create' | 'settings';
+type WorkspaceViewMode = 'ledger' | 'pivot' | 'pendency' | 'analytics';
 
-  const [activeTab, setActiveTab] = useState<'list' | 'create' | 'pendency' | 'analytics' | 'settings'>('list');
+export function FeeBillManagementPortal() {
+  const [activeTab, setActiveTab] = useState<PortalTab>('workspace');
+  const [viewMode, setViewMode] = useState<WorkspaceViewMode>('ledger');
   const [bills, setBills] = useState<FeeBillRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [masterData, setMasterData] = useState<FeeBillMasterDataConfig>(DEFAULT_MASTER_DATA);
 
-  // Filters
+  // Filters (Shared globally across all workspace views)
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCircle, setSelectedCircle] = useState('');
   const [selectedDivision, setSelectedDivision] = useState('');
@@ -87,6 +93,31 @@ export function FeeBillManagementPortal() {
     fetchFeeBills();
   }, [fetchMasterData, fetchFeeBills]);
 
+  // Overall Financial KPIs for Active Filtered Results
+  const activeBills = useMemo(() => {
+    return bills.filter((b) => !b.isDeleted && b.delete_status !== 'DELETED');
+  }, [bills]);
+
+  const totalClaimsCount = activeBills.length;
+  const totalClaimsAmount = activeBills.reduce((acc, b) => acc + (Number(b.totalFeeAmount) || 0), 0);
+
+  const settledBills = activeBills.filter((b) => b.paymentStatus === 'Settled');
+  const settledAmount = settledBills.reduce(
+    (acc, b) => acc + (Number(b.settledAmount) || Number(b.totalFeeAmount) || 0),
+    0
+  );
+
+  const unsettledBills = activeBills.filter((b) => b.paymentStatus !== 'Settled');
+  const unsettledAmount = unsettledBills.reduce((acc, b) => acc + (Number(b.totalFeeAmount) || 0), 0);
+
+  const distinctCases = useMemo(() => {
+    return new Set(activeBills.map((b) => (b.caseNumber || '').trim().toUpperCase()).filter(Boolean)).size;
+  }, [activeBills]);
+
+  const distinctLawyers = useMemo(() => {
+    return new Set(activeBills.map((b) => (b.lawyerName || '').trim().toUpperCase()).filter(Boolean)).size;
+  }, [activeBills]);
+
   // Export handlers
   const handleExportExcel = async () => {
     const active = bills.filter((b) => !b.isDeleted && b.delete_status !== 'DELETED');
@@ -125,7 +156,7 @@ export function FeeBillManagementPortal() {
       const data = await res.json();
       if (data.success) {
         setEditingBill(null);
-        setActiveTab('list');
+        setActiveTab('workspace');
         fetchFeeBills();
       }
     } catch {
@@ -169,7 +200,7 @@ export function FeeBillManagementPortal() {
     }
   };
 
-  const availableDivisions = masterData.divisions.filter(
+  const availableDivisions = (masterData.divisions || []).filter(
     (d) => (!selectedCircle || d.circleName === selectedCircle) && d.active
   );
 
@@ -182,7 +213,7 @@ export function FeeBillManagementPortal() {
         onSave={handleSaveBill}
         onCancel={() => {
           setEditingBill(null);
-          setActiveTab('list');
+          setActiveTab('workspace');
         }}
       />
     );
@@ -201,7 +232,7 @@ export function FeeBillManagementPortal() {
               Legal & Lawyer Fee Bill Portal
             </h1>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Highways Department &bull; Government Order (G.O.) Claims, Assistance Fee Calculator & Audit System
+              Highways Department &bull; G.O. Claims, Assistance Fee Calculator & Pendency Audit System
             </p>
           </div>
         </div>
@@ -213,7 +244,7 @@ export function FeeBillManagementPortal() {
               fetchFeeBills();
             }}
             disabled={loading}
-            className="p-2.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
+            className="p-2.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
             title="Refresh Data"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -240,43 +271,19 @@ export function FeeBillManagementPortal() {
         </div>
       </div>
 
-      {/* Main Tab Navigation */}
+      {/* Main Top Navigation Tabs */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setActiveTab('list')}
+            onClick={() => setActiveTab('workspace')}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'list'
+              activeTab === 'workspace'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>Fee Bill Ledger ({bills.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('pendency')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'pendency'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            <span>Pendency Tracker</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'analytics'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            <span>Analytics & Pivot Matrix</span>
+            <span>Fee Claims Workspace ({bills.length})</span>
           </button>
 
           <button
@@ -291,105 +298,305 @@ export function FeeBillManagementPortal() {
             <span>Master Data Config</span>
           </button>
         </div>
-
-        {/* Show Archived / Soft Deleted Toggle */}
-        {activeTab === 'list' && (
-          <button
-            onClick={() => setShowArchived(!showArchived)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-              showArchived
-                ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-            }`}
-          >
-            <Archive className="w-3.5 h-3.5" />
-            <span>{showArchived ? 'Hide Archived' : 'Show Archived'}</span>
-          </button>
-        )}
       </div>
 
-      {/* Filter Bar for List View */}
-      {activeTab === 'list' && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                placeholder="Search Fee Bill No, Lawyer, Case..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+      {/* WORKSPACE AREA */}
+      {activeTab === 'workspace' && (
+        <div className="space-y-6">
+          {/* Interactive KPI Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1: All Claims */}
+            <button
+              type="button"
+              onClick={() => setPaymentStatusFilter('ALL')}
+              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer shadow-xs ${
+                paymentStatusFilter === 'ALL'
+                  ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-400 dark:border-blue-600 ring-2 ring-blue-500/20'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+                  Total Claims
+                </span>
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-xl">
+                  <DollarSign className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black text-slate-900 dark:text-slate-100">
+                {formatINR(totalClaimsAmount)}
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-500 font-semibold mt-1">
+                <span>{totalClaimsCount} Vouchers Total</span>
+                {paymentStatusFilter === 'ALL' && (
+                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950 px-2 py-0.5 rounded-full">
+                    Active Filter
+                  </span>
+                )}
+              </div>
+            </button>
 
-            <div className="w-full sm:w-44">
-              <SearchableSelect
-                options={['All Circles', ...(masterData.circles || []).filter((c) => c.active).map((c) => c.name)]}
-                value={selectedCircle ? `${selectedCircle}` : 'All Circles'}
-                onChange={(val) => {
-                  setSelectedCircle(val === 'All Circles' ? '' : val);
-                  setSelectedDivision('');
-                }}
-                placeholder="Filter Circle..."
-              />
-            </div>
+            {/* Card 2: Settled Claims */}
+            <button
+              type="button"
+              onClick={() => setPaymentStatusFilter('Settled')}
+              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer shadow-xs ${
+                paymentStatusFilter === 'Settled'
+                  ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-600 ring-2 ring-emerald-500/20'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                  Settled & Paid
+                </span>
+                <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black text-emerald-700 dark:text-emerald-300">
+                {formatINR(settledAmount)}
+              </div>
+              <div className="flex items-center justify-between text-xs text-emerald-600 font-semibold mt-1">
+                <span>{settledBills.length} Disbursed</span>
+                {paymentStatusFilter === 'Settled' && (
+                  <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full">
+                    Active Filter
+                  </span>
+                )}
+              </div>
+            </button>
 
-            <div className="w-full sm:w-48">
-              <SearchableSelect
-                options={['All Divisions', ...availableDivisions.map((d) => d.name)]}
-                value={selectedDivision ? `${selectedDivision}` : 'All Divisions'}
-                onChange={(val) => setSelectedDivision(val === 'All Divisions' ? '' : val)}
-                placeholder="Filter Division..."
-              />
-            </div>
+            {/* Card 3: Pending Settlement */}
+            <button
+              type="button"
+              onClick={() => setPaymentStatusFilter('Not Settled')}
+              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer shadow-xs ${
+                paymentStatusFilter === 'Not Settled'
+                  ? 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-400 dark:border-amber-600 ring-2 ring-amber-500/20'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                  Pending Settlement
+                </span>
+                <div className="p-2 bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 rounded-xl">
+                  <Clock className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black text-amber-700 dark:text-amber-300">
+                {formatINR(unsettledAmount)}
+              </div>
+              <div className="flex items-center justify-between text-xs text-amber-600 font-semibold mt-1">
+                <span>{unsettledBills.length} In Scrutiny</span>
+                {paymentStatusFilter === 'Not Settled' && (
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full">
+                    Active Filter
+                  </span>
+                )}
+              </div>
+            </button>
 
-            <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-1">
-              {(['ALL', ...(masterData.paymentStatuses || ['Not Settled', 'Settled'])]).map((st) => (
+            {/* Card 4: Cases & Advocates Represented */}
+            <button
+              type="button"
+              onClick={() => setViewMode('pivot')}
+              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer shadow-xs ${
+                viewMode === 'pivot'
+                  ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-600 ring-2 ring-indigo-500/20'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                  Cases & Counsel
+                </span>
+                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                  <Scale className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black text-indigo-900 dark:text-indigo-200">
+                {distinctCases} <span className="text-sm font-semibold text-slate-500">Cases</span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-indigo-600 font-semibold mt-1">
+                <span>{distinctLawyers} Advocates Empaneled</span>
+                <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950 px-2 py-0.5 rounded-full">
+                  Open Pivot
+                </span>
+              </div>
+            </button>
+          </div>
+
+          {/* Unified Workspace Toolbar: Search, Filters & View Mode Switcher */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              {/* Search & Geography Filters */}
+              <div className="flex flex-1 flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-[200px] max-w-md">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Search Voucher No, Case, Advocate..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="w-full sm:w-44">
+                  <SearchableSelect
+                    options={['All Circles', ...(masterData.circles || []).filter((c) => c.active).map((c) => c.name)]}
+                    value={selectedCircle ? `${selectedCircle}` : 'All Circles'}
+                    onChange={(val) => {
+                      setSelectedCircle(val === 'All Circles' ? '' : val);
+                      setSelectedDivision('');
+                    }}
+                    placeholder="Filter Circle..."
+                  />
+                </div>
+
+                <div className="w-full sm:w-48">
+                  <SearchableSelect
+                    options={['All Divisions', ...availableDivisions.map((d) => d.name)]}
+                    value={selectedDivision ? `${selectedDivision}` : 'All Divisions'}
+                    onChange={(val) => setSelectedDivision(val === 'All Divisions' ? '' : val)}
+                    placeholder="Filter Division..."
+                  />
+                </div>
+
                 <button
-                  key={st}
-                  onClick={() => setPaymentStatusFilter(st)}
-                  className={`flex-1 h-full py-1 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    paymentStatusFilter === st
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  onClick={() => setShowArchived(!showArchived)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                    showArchived
+                      ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                  }`}
+                  title="Toggle soft deleted vouchers"
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  <span>{showArchived ? 'Hide Archived' : 'Show Archived'}</span>
+                </button>
+              </div>
+
+              {/* View Mode Switcher */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl gap-1 self-start lg:self-auto overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('ledger')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    viewMode === 'ledger'
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
-                  {st === 'ALL' ? 'All' : st}
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Ledger</span>
                 </button>
-              ))}
+
+                <button
+                  type="button"
+                  onClick={() => setViewMode('pivot')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    viewMode === 'pivot'
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Case & Lawyer Pivot</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setViewMode('pendency')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    viewMode === 'pendency'
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Pendency Pipeline</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setViewMode('analytics')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    viewMode === 'analytics'
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <PieChart className="w-3.5 h-3.5" />
+                  <span>Analytics</span>
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Dynamic Active View Display */}
+          {viewMode === 'ledger' && (
+            <FeeBillListTable
+              bills={bills}
+              loading={loading}
+              masterData={masterData}
+              onView={(b) => setViewingBill(b)}
+              onEdit={(b) => {
+                setEditingBill(b);
+                setActiveTab('create');
+              }}
+              onAudit={(b) => setAuditingBill(b)}
+              onDelete={(b) => setDeletingBill(b)}
+              onRestore={(b) => handleRestoreBill(b)}
+            />
+          )}
+
+          {viewMode === 'pivot' && (
+            <FeeBillAnalysisDashboard
+              bills={bills}
+              masterData={masterData}
+              hideHeaderKpis={true}
+              initialPivotMode="case"
+              onViewBill={(b) => setViewingBill(b)}
+              onEditBill={(b) => {
+                setEditingBill(b);
+                setActiveTab('create');
+              }}
+            />
+          )}
+
+          {viewMode === 'pendency' && (
+            <FeeBillPendencyTracker
+              bills={bills}
+              masterData={masterData}
+              onViewBill={(b) => setViewingBill(b)}
+            />
+          )}
+
+          {viewMode === 'analytics' && (
+            <FeeBillAnalysisDashboard
+              bills={bills}
+              masterData={masterData}
+              hideHeaderKpis={true}
+              initialPivotMode="circle"
+              onViewBill={(b) => setViewingBill(b)}
+              onEditBill={(b) => {
+                setEditingBill(b);
+                setActiveTab('create');
+              }}
+            />
+          )}
         </div>
       )}
 
-      {/* Main Tab Views */}
-      {activeTab === 'list' && (
-        <FeeBillListTable
-          bills={bills}
-          loading={loading}
-          masterData={masterData}
-          onView={(b) => setViewingBill(b)}
-          onEdit={(b) => {
-            setEditingBill(b);
-            setActiveTab('create');
-          }}
-          onAudit={(b) => setAuditingBill(b)}
-          onDelete={(b) => setDeletingBill(b)}
-          onRestore={(b) => handleRestoreBill(b)}
-        />
-      )}
-
-      {activeTab === 'pendency' && (
-        <FeeBillPendencyTracker bills={bills} masterData={masterData} onViewBill={(b) => setViewingBill(b)} />
-      )}
-
-      {activeTab === 'analytics' && (
-        <FeeBillAnalysisDashboard bills={bills} masterData={masterData} />
-      )}
-
+      {/* SETTINGS AREA */}
       {activeTab === 'settings' && (
-        <MasterDataManagement masterData={masterData} onUpdateMasterData={(newData) => handleUpdateMasterData(newData)} />
+        <MasterDataManagement
+          masterData={masterData}
+          onUpdateMasterData={(newData) => handleUpdateMasterData(newData)}
+        />
       )}
 
       {/* Modals Suite */}

@@ -24,6 +24,8 @@ import { generateFeeBillsExcel, generateFeeBillsCSV } from '@/lib/export/feeBill
 interface FeeBillAnalysisDashboardProps {
   bills: FeeBillRecord[];
   masterData: FeeBillMasterDataConfig;
+  hideHeaderKpis?: boolean;
+  initialPivotMode?: PivotGroupMode;
   onViewBill?: (bill: FeeBillRecord) => void;
   onEditBill?: (bill: FeeBillRecord) => void;
 }
@@ -33,10 +35,12 @@ type PivotGroupMode = 'case' | 'lawyer' | 'division' | 'circle';
 export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> = ({
   bills,
   masterData,
+  hideHeaderKpis = false,
+  initialPivotMode = 'case',
   onViewBill,
   onEditBill,
 }) => {
-  const [pivotMode, setPivotMode] = useState<PivotGroupMode>('case');
+  const [pivotMode, setPivotMode] = useState<PivotGroupMode>(initialPivotMode);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -285,75 +289,77 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
   return (
     <div className="space-y-6">
       {/* 6 Executive Financial KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total Claims</span>
-            <div className="p-1.5 bg-blue-100 dark:bg-blue-950/60 rounded-lg text-blue-600 dark:text-blue-400">
-              <DollarSign className="w-3.5 h-3.5" />
+      {!hideHeaderKpis && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total Claims</span>
+              <div className="p-1.5 bg-blue-100 dark:bg-blue-950/60 rounded-lg text-blue-600 dark:text-blue-400">
+                <DollarSign className="w-3.5 h-3.5" />
+              </div>
             </div>
+            <div className="text-xl font-black text-slate-900 dark:text-slate-100">{formatINR(totalClaimsAmount)}</div>
+            <div className="text-[11px] text-slate-500 font-semibold">{totalClaimsCount} Vouchers</div>
           </div>
-          <div className="text-xl font-black text-slate-900 dark:text-slate-100">{formatINR(totalClaimsAmount)}</div>
-          <div className="text-[11px] text-slate-500 font-semibold">{totalClaimsCount} Vouchers</div>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-wider">Settled & Paid</span>
-            <div className="p-1.5 bg-emerald-100 dark:bg-emerald-950/60 rounded-lg text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 className="w-3.5 h-3.5" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-wider">Settled & Paid</span>
+              <div className="p-1.5 bg-emerald-100 dark:bg-emerald-950/60 rounded-lg text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              </div>
             </div>
+            <div className="text-xl font-black text-emerald-700 dark:text-emerald-300">{formatINR(settledAmount)}</div>
+            <div className="text-[11px] text-emerald-600 font-semibold">{settledBills.length} Disbursed</div>
           </div>
-          <div className="text-xl font-black text-emerald-700 dark:text-emerald-300">{formatINR(settledAmount)}</div>
-          <div className="text-[11px] text-emerald-600 font-semibold">{settledBills.length} Disbursed</div>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-extrabold text-amber-600 uppercase tracking-wider">Outstanding</span>
-            <div className="p-1.5 bg-amber-100 dark:bg-amber-950/60 rounded-lg text-amber-600 dark:text-amber-400">
-              <Clock className="w-3.5 h-3.5" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-amber-600 uppercase tracking-wider">Outstanding</span>
+              <div className="p-1.5 bg-amber-100 dark:bg-amber-950/60 rounded-lg text-amber-600 dark:text-amber-400">
+                <Clock className="w-3.5 h-3.5" />
+              </div>
             </div>
+            <div className="text-xl font-black text-amber-700 dark:text-amber-300">{formatINR(unsettledAmount)}</div>
+            <div className="text-[11px] text-amber-600 font-semibold">{unsettledBills.length} In Pipeline</div>
           </div>
-          <div className="text-xl font-black text-amber-700 dark:text-amber-300">{formatINR(unsettledAmount)}</div>
-          <div className="text-[11px] text-amber-600 font-semibold">{unsettledBills.length} In Pipeline</div>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-extrabold text-purple-600 uppercase tracking-wider">Settlement Rate</span>
-            <div className="p-1.5 bg-purple-100 dark:bg-purple-950/60 rounded-lg text-purple-600 dark:text-purple-400">
-              <TrendingUp className="w-3.5 h-3.5" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-purple-600 uppercase tracking-wider">Settlement Rate</span>
+              <div className="p-1.5 bg-purple-100 dark:bg-purple-950/60 rounded-lg text-purple-600 dark:text-purple-400">
+                <TrendingUp className="w-3.5 h-3.5" />
+              </div>
             </div>
+            <div className="text-xl font-black text-purple-700 dark:text-purple-300">
+              {totalClaimsCount > 0 ? Math.round((settledBills.length / totalClaimsCount) * 100) : 0}%
+            </div>
+            <div className="text-[11px] text-purple-600 font-semibold">Of Claims Cleared</div>
           </div>
-          <div className="text-xl font-black text-purple-700 dark:text-purple-300">
-            {totalClaimsCount > 0 ? Math.round((settledBills.length / totalClaimsCount) * 100) : 0}%
-          </div>
-          <div className="text-[11px] text-purple-600 font-semibold">Clearance Rate</div>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-extrabold text-indigo-600 uppercase tracking-wider">Distinct Cases</span>
-            <div className="p-1.5 bg-indigo-100 dark:bg-indigo-950/60 rounded-lg text-indigo-600 dark:text-indigo-400">
-              <Scale className="w-3.5 h-3.5" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-indigo-600 uppercase tracking-wider">Distinct Cases</span>
+              <div className="p-1.5 bg-indigo-100 dark:bg-indigo-950/60 rounded-lg text-indigo-600 dark:text-indigo-400">
+                <Scale className="w-3.5 h-3.5" />
+              </div>
             </div>
+            <div className="text-xl font-black text-indigo-900 dark:text-indigo-300">{distinctCases}</div>
+            <div className="text-[11px] text-indigo-600 font-semibold">Cases Represented</div>
           </div>
-          <div className="text-xl font-black text-indigo-900 dark:text-indigo-300">{distinctCases}</div>
-          <div className="text-[11px] text-indigo-600 font-semibold">Cases Represented</div>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-extrabold text-sky-600 uppercase tracking-wider">Law Officers</span>
-            <div className="p-1.5 bg-sky-100 dark:bg-sky-950/60 rounded-lg text-sky-600 dark:text-sky-400">
-              <User className="w-3.5 h-3.5" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-sky-600 uppercase tracking-wider">Law Officers</span>
+              <div className="p-1.5 bg-sky-100 dark:bg-sky-950/60 rounded-lg text-sky-600 dark:text-sky-400">
+                <User className="w-3.5 h-3.5" />
+              </div>
             </div>
+            <div className="text-xl font-black text-sky-900 dark:text-sky-300">{distinctLawyers}</div>
+            <div className="text-[11px] text-sky-600 font-semibold">Empaneled Advocates</div>
           </div>
-          <div className="text-xl font-black text-sky-900 dark:text-sky-300">{distinctLawyers}</div>
-          <div className="text-[11px] text-sky-600 font-semibold">Empaneled Advocates</div>
         </div>
-      </div>
+      )}
 
       {/* Pivot Mode Navigation & Export Controls */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
