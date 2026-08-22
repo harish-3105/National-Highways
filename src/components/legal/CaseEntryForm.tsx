@@ -9,24 +9,7 @@ import {
   GPOpinionType,
   ComplianceStatusType,
 } from '@/types/legal';
-import {
-  CIRCLE_OPTIONS,
-  CIRCLE_DIVISION_MAP,
-  APPEAL_LEVEL_OPTIONS,
-  APPEAL_CASE_TYPE_OPTIONS,
-  APPELLATE_COURT_OPTIONS,
-  CONDONATION_OF_DELAY_OPTIONS,
-  CASE_TYPE_OPTIONS,
-  CATEGORY_OPTIONS,
-  COURT_OPTIONS,
-  CASE_PERTAINS_TO_OPTIONS,
-  NATURE_OF_CASE_OPTIONS,
-  PRESENT_STAGE_OPTIONS,
-  CURRENT_STATUS_OPTIONS,
-  GP_OPINION_OPTIONS,
-  COMPLIANCE_STATUS_OPTIONS,
-  calculateAppealDelay,
-} from '@/lib/legal/masterData';
+import { CIRCLE_DIVISION_MAP, calculateAppealDelay } from '@/lib/legal/masterData';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { LegalMasterData } from '@/app/api/legal/master-data/route';
@@ -39,9 +22,7 @@ import {
   Clock,
   CheckCircle2,
   AlertTriangle,
-  HelpCircle,
   Sparkles,
-  ArrowRight,
   ShieldAlert,
 } from 'lucide-react';
 
@@ -57,36 +38,38 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
   return {
     id: initial?.id,
     caseClassification: initial?.caseClassification || 'Normal Case',
-    appealInfo: initial?.appealInfo || {
-      appealLevel: APPEAL_LEVEL_OPTIONS[0],
-      appealCaseType: APPEAL_CASE_TYPE_OPTIONS[0],
-      appealCaseNumber: '',
-      appealYear: String(new Date().getFullYear()),
-      appellateCourt: APPELLATE_COURT_OPTIONS[0],
-      appealFilingDate: '',
-      limitationDueDate: '',
-      delayInFilingAppeal: 'No',
-      delayPeriodDays: 0,
-      condonationOfDelay: CONDONATION_OF_DELAY_OPTIONS[0],
-    },
-    caseType: initial?.caseType || CASE_TYPE_OPTIONS[0],
-    circle: initial?.circle || 'Chennai',
-    division: initial?.division || 'Chennai City Division',
+    appealInfo: initial?.appealInfo
+      ? { ...initial.appealInfo }
+      : {
+          appealLevel: '',
+          appealCaseType: '',
+          appealCaseNumber: '',
+          appealYear: '',
+          appellateCourt: '',
+          appealFilingDate: '',
+          limitationDueDate: '',
+          delayInFilingAppeal: 'No',
+          delayPeriodDays: 0,
+          condonationOfDelay: '',
+        },
+    caseType: initial?.caseType || '',
+    circle: initial?.circle || '',
+    division: initial?.division || '',
     caseNumber: initial?.caseNumber || '',
-    caseYear: initial?.caseYear || String(new Date().getFullYear()),
-    category: initial?.category || CATEGORY_OPTIONS[0],
-    nameOfCourt: initial?.nameOfCourt || COURT_OPTIONS[0],
+    caseYear: initial?.caseYear || '',
+    category: initial?.category || '',
+    nameOfCourt: initial?.nameOfCourt || '',
     petitionerNames: initial?.petitionerNames || '',
-    respondentNames: initial?.respondentNames || 'The Secretary to Government, Highways and Minor Ports Department, Chennai & Others',
-    casePertainsTo: initial?.casePertainsTo || 'GOTN',
-    natureOfCase: initial?.natureOfCase || 'Work',
+    respondentNames: initial?.respondentNames || '',
+    casePertainsTo: initial?.casePertainsTo || '',
+    natureOfCase: initial?.natureOfCase || '',
     specifyNatureOfCase: initial?.specifyNatureOfCase || '',
     briefOfPrayer: initial?.briefOfPrayer || '',
     financialImplication: initial?.financialImplication || '',
-    presentStage: initial?.presentStage || PRESENT_STAGE_OPTIONS[0],
-    currentStatus: initial?.currentStatus || 'Pending',
-    caRequired: initial?.caRequired || 'Yes',
-    caFiled: initial?.caFiled || 'No',
+    presentStage: initial?.presentStage || '',
+    currentStatus: initial?.currentStatus || '',
+    caRequired: initial?.caRequired || ('' as any),
+    caFiled: initial?.caFiled || ('' as any),
     caDueDate: initial?.caDueDate || '',
     caFiledDate: initial?.caFiledDate || '',
     lastHearingDate: initial?.lastHearingDate || '',
@@ -96,27 +79,27 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     interimOrderDate: initial?.interimOrderDate || '',
     latestOrderFinalOrder: initial?.latestOrderFinalOrder || '',
     latestOrderDate: initial?.latestOrderDate || '',
-    complianceRequired: initial?.complianceRequired || 'No',
+    complianceRequired: initial?.complianceRequired || ('' as any),
     complianceAction: initial?.complianceAction || '',
     compliancePeriod: initial?.compliancePeriod || '',
     complianceEndDate: initial?.complianceEndDate || '',
     actionTakenDetailsForCompliance: initial?.actionTakenDetailsForCompliance || '',
-    complianceStatus: initial?.complianceStatus || 'Pending',
+    complianceStatus: initial?.complianceStatus || ('' as any),
     remarks: initial?.remarks || '',
-    finalResult: initial?.finalResult || 'No',
+    finalResult: initial?.finalResult || ('' as any),
     finalResultOrder: initial?.finalResultOrder || '',
     finalOrderDate: initial?.finalOrderDate || '',
-    adverseToDepartment: initial?.adverseToDepartment || 'No',
-    gpOpinion: initial?.gpOpinion || 'Pending',
-    appealFiled: initial?.appealFiled || 'No',
+    adverseToDepartment: initial?.adverseToDepartment || ('' as any),
+    gpOpinion: initial?.gpOpinion || ('' as any),
+    appealFiled: initial?.appealFiled || ('' as any),
     appealFiledDate: initial?.appealFiledDate || '',
     linkedAppealCaseId: initial?.linkedAppealCaseId || '',
     finalOrderComplianceActionGiven: initial?.finalOrderComplianceActionGiven || '',
-    finalOrderComplianceAction: initial?.finalOrderComplianceAction || 'No',
+    finalOrderComplianceAction: initial?.finalOrderComplianceAction || ('' as any),
     finalOrderCompliancePeriod: initial?.finalOrderCompliancePeriod || '',
     finalOrderComplianceEndDate: initial?.finalOrderComplianceEndDate || '',
     finalOrderComplianceActionTaken: initial?.finalOrderComplianceActionTaken || '',
-    finalOrderComplianceStatus: initial?.finalOrderComplianceStatus || 'Pending',
+    finalOrderComplianceStatus: initial?.finalOrderComplianceStatus || ('' as any),
     finalOrderRemarks: initial?.finalOrderRemarks || '',
   };
 };
@@ -131,50 +114,52 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   const [formData, setFormData] = useState<LegalCaseData>(() => getDefaultInitialState(initialData));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Dynamic Options (fallback to built-in constants if masterData is loading)
-  const circles = masterData?.circles && masterData.circles.length > 0 ? masterData.circles : [...CIRCLE_OPTIONS];
-  const caseTypes = masterData?.caseTypes && masterData.caseTypes.length > 0 ? masterData.caseTypes : CASE_TYPE_OPTIONS;
-  const categories = masterData?.categories && masterData.categories.length > 0 ? masterData.categories : CATEGORY_OPTIONS;
-  const courts = masterData?.courtNames && masterData.courtNames.length > 0 ? masterData.courtNames : COURT_OPTIONS;
-  const casePertainsToList = masterData?.casePertainsTo && masterData.casePertainsTo.length > 0 ? masterData.casePertainsTo : CASE_PERTAINS_TO_OPTIONS;
-  const natureOfCasesList = masterData?.natureOfCases && masterData.natureOfCases.length > 0 ? masterData.natureOfCases : NATURE_OF_CASE_OPTIONS;
-  const presentStages = masterData?.presentStages && masterData.presentStages.length > 0 ? masterData.presentStages : PRESENT_STAGE_OPTIONS;
-  const currentStatuses = masterData?.caseStatuses && masterData.caseStatuses.length > 0 ? masterData.caseStatuses : CURRENT_STATUS_OPTIONS;
-  const appealLevels = masterData?.appealLevels && masterData.appealLevels.length > 0 ? masterData.appealLevels : APPEAL_LEVEL_OPTIONS;
-  const appealCaseTypes = masterData?.appealCaseTypes && masterData.appealCaseTypes.length > 0 ? masterData.appealCaseTypes : APPEAL_CASE_TYPE_OPTIONS;
-  const appellateCourts = masterData?.appellateCourts && masterData.appellateCourts.length > 0 ? masterData.appellateCourts : APPELLATE_COURT_OPTIONS;
-  const condonationDelays = masterData?.condonationOfDelays && masterData.condonationOfDelays.length > 0 ? masterData.condonationOfDelays : CONDONATION_OF_DELAY_OPTIONS;
-  const gpOpinions = masterData?.gpOpinions && masterData.gpOpinions.length > 0 ? masterData.gpOpinions : GP_OPINION_OPTIONS;
-  const complianceStatuses = masterData?.complianceStatuses && masterData.complianceStatuses.length > 0 ? masterData.complianceStatuses : COMPLIANCE_STATUS_OPTIONS;
+  // Dynamic Master Data Options (driven strictly by masterData from DB)
+  const circles = masterData?.circles || [];
+  const caseTypes = masterData?.caseTypes || [];
+  const categories = masterData?.categories || [];
+  const courts = masterData?.courtNames || [];
+  const casePertainsToList = masterData?.casePertainsTo || [];
+  const natureOfCasesList = masterData?.natureOfCases || [];
+  const presentStages = masterData?.presentStages || [];
+  const currentStatuses = masterData?.caseStatuses || [];
+  const appealLevels = masterData?.appealLevels || [];
+  const appealCaseTypes = masterData?.appealCaseTypes || [];
+  const appellateCourts = masterData?.appellateCourts || [];
+  const condonationDelays = masterData?.condonationOfDelays || [];
+  const gpOpinions = masterData?.gpOpinions || [];
+  const complianceStatuses = masterData?.complianceStatuses || [];
 
-  // Divisions cascading by Circle
+  // Dynamic divisions: based on active circle from CIRCLE_DIVISION_MAP or masterData.divisions
   const divisions = useMemo(() => {
-    if (masterData?.divisions && masterData.divisions.length > 0) {
-      return masterData.divisions;
+    if (formData.circle && CIRCLE_DIVISION_MAP[formData.circle]) {
+      return CIRCLE_DIVISION_MAP[formData.circle];
     }
-    return CIRCLE_DIVISION_MAP[formData.circle] || ['Chennai City Division'];
+    return masterData?.divisions || [];
   }, [formData.circle, masterData?.divisions]);
 
   // Auto-calculate Appeal Delay whenever Appeal Filing Date or Limitation Due Date changes
   useEffect(() => {
     if (formData.caseClassification === 'Appeal Case' && formData.appealInfo) {
-      const { isDelayed, delayDays } = calculateAppealDelay(
-        formData.appealInfo.appealFilingDate,
-        formData.appealInfo.limitationDueDate
-      );
+      if (formData.appealInfo.appealFilingDate && formData.appealInfo.limitationDueDate) {
+        const { isDelayed, delayDays } = calculateAppealDelay(
+          formData.appealInfo.appealFilingDate,
+          formData.appealInfo.limitationDueDate
+        );
 
-      if (
-        formData.appealInfo.delayInFilingAppeal !== isDelayed ||
-        formData.appealInfo.delayPeriodDays !== delayDays
-      ) {
-        setFormData((prev) => ({
-          ...prev,
-          appealInfo: {
-            ...prev.appealInfo!,
-            delayInFilingAppeal: isDelayed,
-            delayPeriodDays: delayDays,
-          },
-        }));
+        if (
+          formData.appealInfo.delayInFilingAppeal !== isDelayed ||
+          formData.appealInfo.delayPeriodDays !== delayDays
+        ) {
+          setFormData((prev) => ({
+            ...prev,
+            appealInfo: {
+              ...prev.appealInfo!,
+              delayInFilingAppeal: isDelayed,
+              delayPeriodDays: delayDays,
+            },
+          }));
+        }
       }
     }
   }, [
@@ -210,11 +195,10 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   };
 
   const handleCircleChange = (newCircle: string) => {
-    const defaultDiv = CIRCLE_DIVISION_MAP[newCircle]?.[0] || '';
     setFormData((prev) => ({
       ...prev,
       circle: newCircle,
-      division: defaultDiv,
+      division: '', // Allow user to explicitly select division
     }));
   };
 
@@ -315,7 +299,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     if (validateForm()) {
       onSave(formData);
     } else {
-      // Scroll to first error
       const firstErrorKey = Object.keys(errors)[0];
       if (firstErrorKey) {
         const el = document.getElementById(firstErrorKey);
@@ -476,7 +459,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 options={appealCaseTypes}
                 value={formData.appealInfo?.appealCaseType || ''}
                 onChange={(val) => handleAppealInfoChange('appealCaseType', val)}
-                placeholder="Select Case Type (WA, CMA, AS, SLP)..."
+                placeholder="Select Appeal Case Type..."
               />
               {errors.appealCaseType && <p className="text-[11px] font-semibold text-rose-500">{errors.appealCaseType}</p>}
             </div>
@@ -490,7 +473,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 type="text"
                 value={formData.appealInfo?.appealCaseNumber || ''}
                 onChange={(e) => handleAppealInfoChange('appealCaseNumber', e.target.value)}
-                placeholder="e.g. WA 456/2024"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-amber-500"
               />
               {errors.appealCaseNumber && <p className="text-[11px] font-semibold text-rose-500">{errors.appealCaseNumber}</p>}
@@ -506,7 +489,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 maxLength={4}
                 value={formData.appealInfo?.appealYear || ''}
                 onChange={(e) => handleAppealInfoChange('appealYear', e.target.value.replace(/\D/g, ''))}
-                placeholder="e.g. 2024"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-amber-500"
               />
               {errors.appealYear && <p className="text-[11px] font-semibold text-rose-500">{errors.appealYear}</p>}
@@ -534,7 +517,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               <DatePickerInput
                 value={formData.appealInfo?.appealFilingDate || ''}
                 onChange={(val) => handleAppealInfoChange('appealFilingDate', val)}
-                placeholder="YYYY-MM-DD"
               />
               {errors.appealFilingDate && <p className="text-[11px] font-semibold text-rose-500">{errors.appealFilingDate}</p>}
             </div>
@@ -547,7 +529,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               <DatePickerInput
                 value={formData.appealInfo?.limitationDueDate || ''}
                 onChange={(val) => handleAppealInfoChange('limitationDueDate', val)}
-                placeholder="YYYY-MM-DD"
               />
               {errors.limitationDueDate && <p className="text-[11px] font-semibold text-rose-500">{errors.limitationDueDate}</p>}
             </div>
@@ -631,7 +612,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 options={caseTypes}
                 value={formData.caseType}
                 onChange={(val) => handleChange('caseType', val)}
-                placeholder="Select Case Type (WP, WA, etc.)..."
+                placeholder="Select Case Type..."
               />
               {errors.caseType && <p className="text-[11px] font-semibold text-rose-500">{errors.caseType}</p>}
             </div>
@@ -674,7 +655,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 id="caseNumber"
                 value={formData.caseNumber}
                 onChange={(e) => handleChange('caseNumber', e.target.value)}
-                placeholder="e.g. WP 12345/2023"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold outline-none focus:ring-2 focus:ring-blue-500"
               />
               {errors.caseNumber && <p className="text-[11px] font-semibold text-rose-500">{errors.caseNumber}</p>}
@@ -691,7 +672,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 maxLength={4}
                 value={formData.caseYear}
                 onChange={(e) => handleChange('caseYear', e.target.value.replace(/\D/g, ''))}
-                placeholder="e.g. 2023"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold outline-none focus:ring-2 focus:ring-blue-500"
               />
               {errors.caseYear && <p className="text-[11px] font-semibold text-rose-500">{errors.caseYear}</p>}
@@ -720,7 +701,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 options={courts}
                 value={formData.nameOfCourt}
                 onChange={(val) => handleChange('nameOfCourt', val)}
-                placeholder="Select Court..."
+                placeholder="Select Name of Court..."
               />
               {errors.nameOfCourt && <p className="text-[11px] font-semibold text-rose-500">{errors.nameOfCourt}</p>}
             </div>
@@ -734,7 +715,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 options={casePertainsToList}
                 value={formData.casePertainsTo}
                 onChange={(val) => handleChange('casePertainsTo', val)}
-                placeholder="GOTN / MoRTH / Both..."
+                placeholder="Select Organization..."
               />
               {errors.casePertainsTo && <p className="text-[11px] font-semibold text-rose-500">{errors.casePertainsTo}</p>}
             </div>
@@ -749,7 +730,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 id="petitionerNames"
                 value={formData.petitionerNames}
                 onChange={(e) => handleChange('petitionerNames', e.target.value)}
-                placeholder="e.g. Thiru. S. Ramanathan & 3 Others"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-blue-500"
               />
               {errors.petitionerNames && <p className="text-[11px] font-semibold text-rose-500">{errors.petitionerNames}</p>}
@@ -765,7 +746,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 id="respondentNames"
                 value={formData.respondentNames}
                 onChange={(e) => handleChange('respondentNames', e.target.value)}
-                placeholder="e.g. The Secretary to Govt, Highways Dept, Chennai & Others"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-blue-500"
               />
               {errors.respondentNames && <p className="text-[11px] font-semibold text-rose-500">{errors.respondentNames}</p>}
@@ -780,7 +761,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 options={natureOfCasesList}
                 value={formData.natureOfCase}
                 onChange={(val) => handleChange('natureOfCase', val)}
-                placeholder="Work, Tender, Land Acquisition..."
+                placeholder="Select Nature of Case..."
               />
               {errors.natureOfCase && <p className="text-[11px] font-semibold text-rose-500">{errors.natureOfCase}</p>}
             </div>
@@ -788,13 +769,13 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
             {/* Financial Implication */}
             <div className="space-y-1">
               <label className="font-extrabold text-slate-700 dark:text-slate-300">
-                Financial Implication (₹)
+                Financial Implication
               </label>
               <input
                 type="text"
                 value={formData.financialImplication || ''}
                 onChange={(e) => handleChange('financialImplication', e.target.value)}
-                placeholder="e.g. ₹ 4.50 Cr or ₹ 50,00,000"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -808,7 +789,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 options={presentStages}
                 value={formData.presentStage}
                 onChange={(val) => handleChange('presentStage', val)}
-                placeholder="Notice / Admission, Arguments..."
+                placeholder="Select Present Stage..."
               />
               {errors.presentStage && <p className="text-[11px] font-semibold text-rose-500">{errors.presentStage}</p>}
             </div>
@@ -822,7 +803,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 options={currentStatuses}
                 value={formData.currentStatus}
                 onChange={(val) => handleChange('currentStatus', val)}
-                placeholder="Pending, Disposed, Stay Granted..."
+                placeholder="Select Current Status..."
               />
               {errors.currentStatus && <p className="text-[11px] font-semibold text-rose-500">{errors.currentStatus}</p>}
             </div>
@@ -837,7 +818,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 id="briefOfPrayer"
                 value={formData.briefOfPrayer}
                 onChange={(e) => handleChange('briefOfPrayer', e.target.value)}
-                placeholder="Summarize the core prayer, interim relief sought, or challenge raised against the Highways department..."
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-blue-500"
               />
               {errors.briefOfPrayer && <p className="text-[11px] font-semibold text-rose-500">{errors.briefOfPrayer}</p>}
@@ -869,8 +850,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               </label>
               <SearchableSelect
                 options={['Yes', 'No']}
-                value={formData.caRequired}
+                value={formData.caRequired || ''}
                 onChange={(val) => handleChange('caRequired', val as YesNoType)}
+                placeholder="Select CA Required..."
               />
               {errors.caRequired && <p className="text-[11px] font-semibold text-rose-500">{errors.caRequired}</p>}
             </div>
@@ -882,8 +864,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               </label>
               <SearchableSelect
                 options={['Yes', 'No']}
-                value={formData.caFiled}
+                value={formData.caFiled || ''}
                 onChange={(val) => handleChange('caFiled', val as YesNoType)}
+                placeholder="Select CA Filed..."
               />
               {errors.caFiled && <p className="text-[11px] font-semibold text-rose-500">{errors.caFiled}</p>}
             </div>
@@ -896,7 +879,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               <DatePickerInput
                 value={formData.caDueDate || ''}
                 onChange={(val) => handleChange('caDueDate', val)}
-                placeholder="YYYY-MM-DD"
               />
             </div>
 
@@ -908,7 +890,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               <DatePickerInput
                 value={formData.caFiledDate || ''}
                 onChange={(val) => handleChange('caFiledDate', val)}
-                placeholder="YYYY-MM-DD"
                 disabled={formData.caFiled !== 'Yes'}
               />
               {errors.caFiledDate && <p className="text-[11px] font-semibold text-rose-500">{errors.caFiledDate}</p>}
@@ -941,7 +922,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               <DatePickerInput
                 value={formData.lastHearingDate || ''}
                 onChange={(val) => handleChange('lastHearingDate', val)}
-                placeholder="YYYY-MM-DD"
               />
             </div>
 
@@ -953,7 +933,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               <DatePickerInput
                 value={formData.nextHearingDate || ''}
                 onChange={(val) => handleChange('nextHearingDate', val)}
-                placeholder="YYYY-MM-DD"
               />
             </div>
 
@@ -966,7 +945,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 type="text"
                 value={formData.nextListingPurpose || ''}
                 onChange={(e) => handleChange('nextListingPurpose', e.target.value)}
-                placeholder="e.g. For filing counter / For arguments"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -980,7 +959,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 type="text"
                 value={formData.interimOrderDirection || ''}
                 onChange={(e) => handleChange('interimOrderDirection', e.target.value)}
-                placeholder="e.g. Interim stay on toll fee collection / Status quo"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -993,7 +972,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               <DatePickerInput
                 value={formData.interimOrderDate || ''}
                 onChange={(val) => handleChange('interimOrderDate', val)}
-                placeholder="YYYY-MM-DD"
               />
             </div>
 
@@ -1006,7 +984,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 type="text"
                 value={formData.latestOrderFinalOrder || ''}
                 onChange={(e) => handleChange('latestOrderFinalOrder', e.target.value)}
-                placeholder="e.g. Writ petition disposed with direction to consider representation"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -1019,7 +997,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               <DatePickerInput
                 value={formData.latestOrderDate || ''}
                 onChange={(val) => handleChange('latestOrderDate', val)}
-                placeholder="YYYY-MM-DD"
               />
             </div>
           </div>
@@ -1049,8 +1026,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               </label>
               <SearchableSelect
                 options={['Yes', 'No']}
-                value={formData.complianceRequired}
+                value={formData.complianceRequired || ''}
                 onChange={(val) => handleChange('complianceRequired', val as YesNoType)}
+                placeholder="Select Compliance Required..."
               />
               {errors.complianceRequired && <p className="text-[11px] font-semibold text-rose-500">{errors.complianceRequired}</p>}
             </div>
@@ -1064,7 +1042,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 type="text"
                 value={formData.complianceAction || ''}
                 onChange={(e) => handleChange('complianceAction', e.target.value)}
-                placeholder="e.g. Conduct joint inspection and pass speaking order"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-purple-500"
                 disabled={formData.complianceRequired !== 'Yes'}
               />
@@ -1080,7 +1058,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 type="text"
                 value={formData.compliancePeriod || ''}
                 onChange={(e) => handleChange('compliancePeriod', e.target.value)}
-                placeholder="e.g. 8 weeks / 2 months"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-purple-500"
                 disabled={formData.complianceRequired !== 'Yes'}
               />
@@ -1095,7 +1073,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               <DatePickerInput
                 value={formData.complianceEndDate || ''}
                 onChange={(val) => handleChange('complianceEndDate', val)}
-                placeholder="YYYY-MM-DD"
                 disabled={formData.complianceRequired !== 'Yes'}
               />
             </div>
@@ -1107,8 +1084,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               </label>
               <SearchableSelect
                 options={complianceStatuses}
-                value={formData.complianceStatus || 'Pending'}
+                value={formData.complianceStatus || ''}
                 onChange={(val) => handleChange('complianceStatus', val as ComplianceStatusType)}
+                placeholder="Select Compliance Status..."
                 disabled={formData.complianceRequired !== 'Yes'}
               />
               {errors.complianceStatus && <p className="text-[11px] font-semibold text-rose-500">{errors.complianceStatus}</p>}
@@ -1123,7 +1101,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 type="text"
                 value={formData.actionTakenDetailsForCompliance || ''}
                 onChange={(e) => handleChange('actionTakenDetailsForCompliance', e.target.value)}
-                placeholder="e.g. Notice issued to petitioner, inspection conducted on 12/04/2024"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-purple-500"
                 disabled={formData.complianceRequired !== 'Yes'}
               />
@@ -1141,7 +1119,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 type="text"
                 value={formData.remarks || ''}
                 onChange={(e) => handleChange('remarks', e.target.value)}
-                placeholder="Optional general remarks..."
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
@@ -1168,12 +1146,13 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
             {/* Final Result (Concluded?) */}
             <div className="space-y-1">
               <label className="font-extrabold text-slate-700 dark:text-slate-300">
-                Final Result (Concluded / Disposed?) *
+                Final Result (Concluded?) *
               </label>
               <SearchableSelect
                 options={['Yes', 'No']}
-                value={formData.finalResult}
+                value={formData.finalResult || ''}
                 onChange={(val) => handleChange('finalResult', val as YesNoType)}
+                placeholder="Select Final Result..."
               />
               {errors.finalResult && <p className="text-[11px] font-semibold text-rose-500">{errors.finalResult}</p>}
             </div>
@@ -1187,7 +1166,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 type="text"
                 value={formData.finalResultOrder || ''}
                 onChange={(e) => handleChange('finalResultOrder', e.target.value)}
-                placeholder="e.g. Writ petition dismissed / Quashed impugned notification"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-emerald-500"
                 disabled={formData.finalResult !== 'Yes'}
               />
@@ -1202,7 +1181,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               <DatePickerInput
                 value={formData.finalOrderDate || ''}
                 onChange={(val) => handleChange('finalOrderDate', val)}
-                placeholder="YYYY-MM-DD"
                 disabled={formData.finalResult !== 'Yes'}
               />
               {errors.finalOrderDate && <p className="text-[11px] font-semibold text-rose-500">{errors.finalOrderDate}</p>}
@@ -1215,8 +1193,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               </label>
               <SearchableSelect
                 options={['Yes', 'No']}
-                value={formData.adverseToDepartment}
+                value={formData.adverseToDepartment || ''}
                 onChange={(val) => handleChange('adverseToDepartment', val as YesNoType)}
+                placeholder="Select Adverse Status..."
               />
               {errors.adverseToDepartment && <p className="text-[11px] font-semibold text-rose-500">{errors.adverseToDepartment}</p>}
             </div>
@@ -1228,7 +1207,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               </label>
               <SearchableSelect
                 options={gpOpinions}
-                value={formData.gpOpinion}
+                value={formData.gpOpinion || ''}
                 onChange={(val) => handleChange('gpOpinion', val as GPOpinionType)}
                 placeholder="Select GP Opinion..."
               />
@@ -1261,8 +1240,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               </label>
               <SearchableSelect
                 options={['Yes', 'No']}
-                value={formData.appealFiled}
+                value={formData.appealFiled || ''}
                 onChange={(val) => handleChange('appealFiled', val as YesNoType)}
+                placeholder="Select Appeal Filed..."
               />
               {errors.appealFiled && <p className="text-[11px] font-semibold text-rose-500">{errors.appealFiled}</p>}
             </div>
@@ -1275,7 +1255,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               <DatePickerInput
                 value={formData.appealFiledDate || ''}
                 onChange={(val) => handleChange('appealFiledDate', val)}
-                placeholder="YYYY-MM-DD"
                 disabled={formData.appealFiled !== 'Yes'}
               />
               {errors.appealFiledDate && <p className="text-[11px] font-semibold text-rose-500">{errors.appealFiledDate}</p>}
@@ -1291,7 +1270,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                   Please enter the details of the appeal case as a new case.
                 </p>
                 <p className="text-amber-700 dark:text-amber-400">
-                  Save this lower court case, then use <strong>Case Type = Appeal Case</strong> to file the appellate proceeding (WA / CMA / SLP) with the dedicated appeal tracking header.
+                  Save this lower court case, then use <strong>Case Type = Appeal Case</strong> to file the appellate proceeding with the dedicated appeal tracking header.
                 </p>
               </div>
             </div>
@@ -1324,7 +1303,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 type="text"
                 value={formData.finalOrderComplianceActionGiven || ''}
                 onChange={(e) => handleChange('finalOrderComplianceActionGiven', e.target.value)}
-                placeholder="e.g. Pass final speaking order on petitioner representation within 12 weeks"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-teal-500"
               />
               {errors.finalOrderComplianceActionGiven && (
@@ -1339,8 +1318,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               </label>
               <SearchableSelect
                 options={['Yes', 'No']}
-                value={formData.finalOrderComplianceAction || 'No'}
+                value={formData.finalOrderComplianceAction || ''}
                 onChange={(val) => handleChange('finalOrderComplianceAction', val as YesNoType)}
+                placeholder="Select Compliance Action..."
               />
               {errors.finalOrderComplianceAction && (
                 <p className="text-[11px] font-semibold text-rose-500">{errors.finalOrderComplianceAction}</p>
@@ -1356,7 +1336,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 type="text"
                 value={formData.finalOrderCompliancePeriod || ''}
                 onChange={(e) => handleChange('finalOrderCompliancePeriod', e.target.value)}
-                placeholder="e.g. 12 weeks / 90 days"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-teal-500"
               />
               {errors.finalOrderCompliancePeriod && (
@@ -1372,7 +1352,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               <DatePickerInput
                 value={formData.finalOrderComplianceEndDate || ''}
                 onChange={(val) => handleChange('finalOrderComplianceEndDate', val)}
-                placeholder="YYYY-MM-DD"
               />
             </div>
 
@@ -1383,8 +1362,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               </label>
               <SearchableSelect
                 options={complianceStatuses}
-                value={formData.finalOrderComplianceStatus || 'Pending'}
+                value={formData.finalOrderComplianceStatus || ''}
                 onChange={(val) => handleChange('finalOrderComplianceStatus', val as ComplianceStatusType)}
+                placeholder="Select Compliance Status..."
               />
               {errors.finalOrderComplianceStatus && (
                 <p className="text-[11px] font-semibold text-rose-500">{errors.finalOrderComplianceStatus}</p>
@@ -1400,7 +1380,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 type="text"
                 value={formData.finalOrderComplianceActionTaken || ''}
                 onChange={(e) => handleChange('finalOrderComplianceActionTaken', e.target.value)}
-                placeholder="e.g. Speaking order issued on 15/06/2024 vide letter no. 4521/2024"
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-teal-500"
               />
               {errors.finalOrderComplianceActionTaken && (
@@ -1417,7 +1397,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 type="text"
                 value={formData.finalOrderRemarks || ''}
                 onChange={(e) => handleChange('finalOrderRemarks', e.target.value)}
-                placeholder="Optional compliance remarks..."
+                placeholder=""
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>

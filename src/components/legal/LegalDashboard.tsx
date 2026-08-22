@@ -179,44 +179,44 @@ export const LegalDashboard: React.FC = () => {
         body: JSON.stringify(savedData),
       });
 
-      // 2. Prepare pre-filled Appeal Case
+      // 2. Prepare pre-filled Appeal Case (unforced dropdowns so user selects)
       const appealCaseInit: Partial<LegalCaseData> = {
         caseClassification: 'Appeal Case',
         appealInfo: {
-          appealLevel: 'Single Bench to Division Bench (High Court)',
-          appealCaseType: 'Writ Appeal (WA)',
+          appealLevel: '',
+          appealCaseType: '',
           appealCaseNumber: '',
-          appealYear: String(new Date().getFullYear()),
-          appellateCourt: 'High Court of Madras (Division Bench, Principal Seat, Chennai)',
+          appealYear: '',
+          appellateCourt: '',
           appealFilingDate: savedData.appealFiledDate || '',
           limitationDueDate: '',
           delayInFilingAppeal: 'No',
           delayPeriodDays: 0,
-          condonationOfDelay: 'Pending',
+          condonationOfDelay: '',
         },
-        caseType: 'Writ Appeal (WA)',
-        circle: savedData.circle,
-        division: savedData.division,
+        caseType: '',
+        circle: savedData.circle || '',
+        division: savedData.division || '',
         caseNumber: '',
-        caseYear: String(new Date().getFullYear()),
-        category: 'Filed By Department',
-        nameOfCourt: 'High Court of Madras (Division Bench, Principal Seat, Chennai)',
+        caseYear: '',
+        category: '',
+        nameOfCourt: '',
         petitionerNames: savedData.category === 'Filed Against Department' ? savedData.respondentNames : savedData.petitionerNames,
         respondentNames: savedData.category === 'Filed Against Department' ? savedData.petitionerNames : savedData.respondentNames,
-        casePertainsTo: savedData.casePertainsTo,
-        natureOfCase: savedData.natureOfCase,
-        briefOfPrayer: `Writ Appeal against final order dated ${savedData.finalOrderDate || 'N/A'} in ${savedData.caseNumber}: ${savedData.briefOfPrayer}`,
-        presentStage: 'Notice / Admission',
-        currentStatus: 'Pending',
-        caRequired: 'Yes',
-        caFiled: 'No',
+        casePertainsTo: savedData.casePertainsTo || '',
+        natureOfCase: savedData.natureOfCase || '',
+        briefOfPrayer: `Appeal in ${savedData.caseNumber}: ${savedData.briefOfPrayer}`,
+        presentStage: '',
+        currentStatus: '',
+        caRequired: '' as any,
+        caFiled: '' as any,
         caDueDate: '',
         caFiledDate: '',
-        complianceRequired: 'No',
-        finalResult: 'No',
-        adverseToDepartment: 'No',
-        gpOpinion: 'Pending',
-        appealFiled: 'No',
+        complianceRequired: '' as any,
+        finalResult: '' as any,
+        adverseToDepartment: '' as any,
+        gpOpinion: '' as any,
+        appealFiled: '' as any,
       };
 
       setSelectedCaseForEdit(appealCaseInit as LegalCaseData);
@@ -248,7 +248,7 @@ export const LegalDashboard: React.FC = () => {
     return { total, normalCount, appealCount, counterPending, compliancePending, adverseCount, disposedCount };
   }, [cases]);
 
-  const divisionOptions = filterCircle ? CIRCLE_DIVISION_MAP[filterCircle] || [] : [];
+  const divisionOptions = filterCircle ? (CIRCLE_DIVISION_MAP[filterCircle] || masterData?.divisions || []) : [];
 
   if (uiMode === 'FORM') {
     return (
@@ -396,7 +396,7 @@ export const LegalDashboard: React.FC = () => {
           {/* Circle Filter */}
           <div>
             <SearchableSelect
-              options={['All Circles', ...CIRCLE_OPTIONS]}
+              options={['All Circles', ...(masterData?.circles || [])]}
               value={filterCircle ? `${filterCircle}` : 'All Circles'}
               onChange={(val) => {
                 setFilterCircle(val === 'All Circles' ? '' : val);
