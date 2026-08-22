@@ -777,7 +777,10 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
           {/* Conditional Branch: If G.O. Required == YES and Status == G.O. Obtained */}
           {(formData.goStatus === 'Yes' || formData.goStatus?.toLowerCase() === 'yes') &&
-            (formData.statusOfObtainingGo === 'G.O. Obtained' || formData.statusOfObtainingGo?.toLowerCase().includes('obtained')) && (
+            (formData.statusOfObtainingGo === 'G.O. Obtained' ||
+              formData.statusOfObtainingGo === 'GO Obtained' ||
+              formData.statusOfObtainingGo?.toLowerCase() === 'g.o. obtained' ||
+              formData.statusOfObtainingGo?.toLowerCase() === 'go obtained') && (
             <div className="p-5 bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl space-y-3 text-xs animate-in fade-in">
               <div className="font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Official G.O. Reference Particulars
@@ -876,7 +879,9 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
           {/* Conditional Branch 1: If Status == Payment Sanction */}
           {(formData.statusOfPaymentProposal === 'Payment Sanction' ||
-            formData.statusOfPaymentProposal?.toLowerCase().includes('sanction')) && (
+            formData.statusOfPaymentProposal === 'Payment Sanctioned' ||
+            formData.statusOfPaymentProposal?.toLowerCase() === 'payment sanction' ||
+            formData.statusOfPaymentProposal?.toLowerCase() === 'payment sanctioned') && (
             <div className="p-5 bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl space-y-4 text-xs animate-in fade-in">
               <div className="font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
                 <FileText className="w-4 h-4 text-blue-600" /> Proceeding & Sanction Order Particulars
