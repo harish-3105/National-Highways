@@ -1,15 +1,28 @@
 'use client';
 
 import React from 'react';
-import { CaseEntryFormData } from '@/types/legal';
-import { X, Printer, FileText, Gavel, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { LegalCaseData } from '@/types/legal';
+import {
+  X,
+  Printer,
+  FileText,
+  Gavel,
+  CheckCircle2,
+  AlertTriangle,
+  Clock,
+  ShieldAlert,
+  Scale,
+  Calendar,
+  Building,
+} from 'lucide-react';
 
 interface CaseViewModalProps {
-  caseData: CaseEntryFormData;
+  caseData: LegalCaseData;
   onClose: () => void;
+  onEdit?: (c: LegalCaseData) => void;
 }
 
-export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose }) => {
+export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose, onEdit }) => {
   const handlePrint = () => {
     window.print();
   };
@@ -28,6 +41,8 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose 
     };
   }, [onClose]);
 
+  const isAppeal = caseData.caseClassification === 'Appeal Case';
+
   return (
     <div
       className="legal-print-modal-wrapper fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4"
@@ -37,21 +52,39 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose 
         className="legal-print-card bg-white dark:bg-slate-900 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
+        {/* Modal Top Header */}
         <div className="bg-blue-900 text-white px-6 py-4 flex items-center justify-between print:bg-blue-950 print:text-white">
           <div className="flex items-center gap-3">
-            <FileText className="w-6 h-6 text-blue-400 shrink-0 print:hidden" />
+            <div className="p-2 bg-white/10 rounded-xl shrink-0 print:hidden">
+              {isAppeal ? <Gavel className="w-5 h-5 text-amber-300" /> : <Scale className="w-5 h-5 text-blue-300" />}
+            </div>
             <div>
-              <h3 className="font-extrabold text-base text-white">
-                Legal Case Record Details
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-base text-white">
+                  {caseData.caseNumber} ({caseData.caseYear})
+                </h3>
+                <span className="text-[10px] bg-blue-800 text-blue-200 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                  {caseData.caseClassification}
+                </span>
+              </div>
               <span className="text-xs text-blue-200 print:text-blue-100">
-                Case No: {caseData.caseNumber} ({caseData.caseYear}) &bull; {caseData.circle} Circle &bull; {caseData.division} Division
+                {caseData.circle} Circle &bull; {caseData.division} &bull; {caseData.nameOfCourt}
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-2 print-hide">
+            {onEdit && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onEdit(caseData);
+                }}
+                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+              >
+                Edit Case
+              </button>
+            )}
             <button
               onClick={handlePrint}
               className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-semibold px-3.5 py-1.5 rounded-xl transition-colors cursor-pointer"
@@ -79,14 +112,14 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose 
               Legal Cell &bull; {caseData.circle} Circle ({caseData.division})
             </p>
             <p className="text-[11px] text-slate-600 font-mono mt-1">
-              Official Litigation Report &bull; Case No: {caseData.caseNumber} ({caseData.caseYear}) &bull; Printed: {new Date().toLocaleDateString('en-IN')}
+              Litigation Docket &bull; Case No: {caseData.caseNumber} ({caseData.caseYear}) &bull; Classification: {caseData.caseClassification} &bull; Generated: {new Date().toLocaleDateString('en-IN')}
             </p>
           </div>
 
-          {/* Status Badges Header */}
+          {/* Quick Status Badges Strip */}
           <div className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 print:bg-slate-100 print:border-slate-300">
             <span className="bg-blue-900 text-white px-3 py-1 rounded-lg font-bold text-xs">
-              Case No: {caseData.caseNumber}
+              {caseData.caseType}
             </span>
             <span className="bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-lg font-bold text-xs print:bg-blue-200 print:text-blue-950">
               {caseData.category}
@@ -96,318 +129,363 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose 
             </span>
             <span
               className={`px-3 py-1 rounded-lg font-bold text-xs ${
-                caseData.counterAffidavitFiled === 'Yes'
+                caseData.caFiled === 'Yes'
                   ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 print:bg-emerald-200 print:text-emerald-950'
                   : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 print:bg-amber-200 print:text-amber-950'
               }`}
             >
-              Counter Affidavit: {caseData.counterAffidavitFiled === 'Yes' ? 'Filed' : 'Pending'}
+              Counter Affidavit: {caseData.caFiled === 'Yes' ? 'Filed' : 'Pending'}
             </span>
-            {caseData.convertedCase?.enabled && (
-              <span className="bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200 px-3 py-1 rounded-lg font-bold text-xs print:bg-purple-200 print:text-purple-950">
-                Converted Petition Filed
+            <span
+              className={`px-3 py-1 rounded-lg font-bold text-xs ${
+                caseData.currentStatus === 'Disposed'
+                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200'
+                  : 'bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-200'
+              }`}
+            >
+              Status: {caseData.currentStatus}
+            </span>
+            {caseData.adverseToDepartment === 'Yes' && (
+              <span className="bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200 px-3 py-1 rounded-lg font-bold text-xs">
+                ⚠️ Adverse to Dept
               </span>
             )}
           </div>
 
-          {/* Section 1: Administrative Details */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-2 print:border-slate-300 print:bg-white">
-            <h4 className="font-bold text-xs text-blue-900 dark:text-blue-400 uppercase tracking-wider print:text-blue-950">
-              Section 1 &ndash; Administrative Details
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-              <div><strong className="text-slate-500 print:text-slate-700">Circle:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.circle} Circle</span></div>
-              <div><strong className="text-slate-500 print:text-slate-700">Division:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.division}</span></div>
-              {caseData.lawyerName && (
-                <div><strong className="text-slate-500 print:text-slate-700">Assigned Legal Counsel:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.lawyerName}</span></div>
-              )}
-            </div>
-          </div>
-
-          {/* Section 2: Case Particulars */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3 print:border-slate-300 print:bg-white">
-            <h4 className="font-bold text-xs text-blue-900 dark:text-blue-400 uppercase tracking-wider print:text-blue-950">
-              Section 2 &ndash; Case Particulars
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-              <div><strong className="text-slate-500 print:text-slate-700">Case Number:</strong> <span className="font-bold text-blue-600 dark:text-blue-400 print:text-blue-900">{caseData.caseNumber}</span></div>
-              <div><strong className="text-slate-500 print:text-slate-700">Case Year:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.caseYear}</span></div>
-              <div><strong className="text-slate-500 print:text-slate-700">Category:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.category}</span></div>
-              <div><strong className="text-slate-500 print:text-slate-700">Name of Court:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.nameOfCourt}</span></div>
-              <div><strong className="text-slate-500 print:text-slate-700">Name of Respondent:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.nameOfRespondent}</span></div>
-              <div><strong className="text-slate-500 print:text-slate-700">Case Pertains To:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.casePertainsTo}</span></div>
-              <div className="sm:col-span-2 md:col-span-3">
-                <strong className="text-slate-500 print:text-slate-700">Nature of Case:</strong>{' '}
-                <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">
-                  {caseData.natureOfCase} {caseData.natureOfCase === 'Other' && caseData.specifyNatureOfCase ? `(${caseData.specifyNatureOfCase})` : ''}
+          {/* SECTION A: APPEAL CASE INFORMATION (If Appeal Case) */}
+          {isAppeal && caseData.appealInfo && (
+            <div className="bg-amber-50/40 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-700 rounded-xl p-5 space-y-4 print:border-amber-400 print:bg-amber-50">
+              <div className="flex items-center justify-between border-b border-amber-200 dark:border-amber-800 pb-2">
+                <div className="flex items-center gap-2">
+                  <Gavel className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+                  <h4 className="font-extrabold text-xs text-amber-950 dark:text-amber-100 uppercase tracking-wider">
+                    A. Appeal Case Information
+                  </h4>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-wider bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 px-2 py-0.5 rounded">
+                  Appellate Track
                 </span>
               </div>
-            </div>
 
-            <div className="space-y-3 pt-2">
-              <div>
-                <strong className="text-slate-600 dark:text-slate-400 print:text-slate-800 block mb-1">Brief of the Prayer:</strong>
-                <p className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-slate-50 print:border-slate-300 print:text-slate-950">
-                  {caseData.briefOfPrayer || 'N/A'}
-                </p>
-              </div>
-
-              <div>
-                <strong className="text-slate-600 dark:text-slate-400 print:text-slate-800 block mb-1">Case Details & Present Status:</strong>
-                <p className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-slate-50 print:border-slate-300 print:text-slate-950">
-                  {caseData.caseDetailsPresentStatus || 'N/A'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Counter Affidavit & Post Hearing */}
-          {caseData.counterAffidavitFiled === 'Yes' ? (
-            <div className="space-y-4">
-              <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 space-y-3 print:bg-emerald-50/40 print:border-emerald-300">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 print:text-emerald-800" />
-                  <h4 className="font-bold text-xs text-emerald-800 dark:text-emerald-300 uppercase tracking-wider print:text-emerald-950">
-                    Counter Affidavit Details (Filed)
-                  </h4>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div><strong className="text-slate-500 print:text-slate-700">Date of Filing:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.counterAffidavitData?.dateOfFiling || 'N/A'}</span></div>
-                  <div><strong className="text-slate-500 print:text-slate-700">Last Hearing Date:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.counterAffidavitData?.lastHearingDate || 'N/A'}</span></div>
-                  <div><strong className="text-slate-500 print:text-slate-700">Next Hearing Date:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.counterAffidavitData?.nextHearingDate || 'N/A'}</span></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                <div>
+                  <strong className="text-slate-500 block">Appeal Level:</strong>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.appealInfo.appealLevel}</span>
                 </div>
                 <div>
-                  <strong className="text-slate-600 dark:text-slate-400 print:text-slate-800 block mb-1">Counter Affidavit Details:</strong>
-                  <p className="bg-white dark:bg-slate-900/60 p-3 rounded-lg border border-emerald-100 dark:border-emerald-900 text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-white print:border-emerald-300 print:text-slate-950">
-                    {caseData.counterAffidavitData?.details || 'N/A'}
-                  </p>
+                  <strong className="text-slate-500 block">Appeal Case Type:</strong>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.appealInfo.appealCaseType}</span>
                 </div>
-              </div>
-
-              <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-3 print:bg-blue-50/40 print:border-blue-300">
-                <div className="flex items-center gap-2">
-                  <Gavel className="w-4 h-4 text-blue-600 dark:text-blue-400 print:text-blue-900" />
-                  <h4 className="font-bold text-xs text-blue-900 dark:text-blue-300 uppercase tracking-wider print:text-blue-950">
-                    Post Hearing Details
-                  </h4>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                  <div><strong className="text-slate-500 print:text-slate-700">Order Date:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.postHearingData?.orderDate || 'N/A'}</span></div>
-                  <div><strong className="text-slate-500 print:text-slate-700">Compliance Period:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.postHearingData?.compliancePeriod || 'N/A'}</span></div>
-                  <div><strong className="text-slate-500 print:text-slate-700">End Date Compliance:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.postHearingData?.endDateForCompliance || 'N/A'}</span></div>
-                  <div><strong className="text-slate-500 print:text-slate-700">Appeal Eligibility:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.postHearingData?.eligibilityForAppeal || 'No'}</span></div>
-                </div>
-
-                {caseData.postHearingData?.actionBeforeNextHearing && (
-                  <div>
-                    <strong className="text-slate-600 dark:text-slate-400 print:text-slate-800 block mb-1">Action to be Taken Before Next Hearing:</strong>
-                    <p className="bg-white dark:bg-slate-900/60 p-3 rounded-lg border border-blue-100 dark:border-blue-900 text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-white print:border-blue-300 print:text-slate-950">
-                      {caseData.postHearingData.actionBeforeNextHearing}
-                    </p>
-                  </div>
-                )}
-
-                {caseData.postHearingData?.interimOrFinalOrder && (
-                  <div>
-                    <strong className="text-slate-600 dark:text-slate-400 print:text-slate-800 block mb-1">Interim / Final Order:</strong>
-                    <p className="bg-white dark:bg-slate-900/60 p-3 rounded-lg border border-blue-100 dark:border-blue-900 text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-white print:border-blue-300 print:text-slate-950">
-                      {caseData.postHearingData.interimOrFinalOrder}
-                    </p>
-                  </div>
-                )}
-
-                {caseData.postHearingData?.statusOfActionTakenForCompliance && (
-                  <div>
-                    <strong className="text-slate-600 dark:text-slate-400 print:text-slate-800 block mb-1">Status of Action Taken for Compliance:</strong>
-                    <p className="bg-white dark:bg-slate-900/60 p-3 rounded-lg border border-blue-100 dark:border-blue-900 text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-white print:border-blue-300 print:text-slate-950">
-                      {caseData.postHearingData.statusOfActionTakenForCompliance}
-                    </p>
-                  </div>
-                )}
-
-                {caseData.postHearingData?.eligibilityForAppeal === 'Yes' && (
-                  <div>
-                    <strong className="text-slate-600 dark:text-slate-400 print:text-slate-800 block mb-1">Action Taken for Appeal:</strong>
-                    <p className="bg-white dark:bg-slate-900/60 p-3 rounded-lg border border-blue-100 dark:border-blue-900 text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-white print:border-blue-300 print:text-slate-950">
-                      {caseData.postHearingData.actionTakenForAppeal || 'N/A'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 space-y-2 print:bg-amber-50/40 print:border-amber-300">
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 print:text-amber-800" />
-                <h4 className="font-bold text-xs text-amber-800 dark:text-amber-300 uppercase tracking-wider print:text-amber-950">
-                  Pending Counter Affidavit Action Required
-                </h4>
-              </div>
-              <div>
-                <strong className="text-slate-600 dark:text-slate-400 print:text-slate-800 block mb-1">Action to be Taken to File Counter Affidavit:</strong>
-                <p className="bg-white dark:bg-slate-900/60 p-3 rounded-lg border border-amber-100 dark:border-amber-900 text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-white print:border-amber-300 print:text-slate-950">
-                  {caseData.actionToTakeForCounterAffidavit || 'N/A'}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Module 2: Converted Case Proceedings */}
-          {caseData.convertedCase?.enabled && (
-            <div className="border-2 border-slate-900 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 rounded-xl p-5 space-y-4 print:border-slate-800 print:bg-slate-50">
-              <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700 print:border-slate-300">
-                <Gavel className="w-5 h-5 text-purple-700 dark:text-purple-400 print:text-purple-900" />
                 <div>
-                  <h4 className="font-extrabold text-xs text-slate-900 dark:text-slate-100 uppercase tracking-wider print:text-slate-950">
-                    MODULE 2: Converted Case Proceedings
-                  </h4>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 print:text-slate-700">
-                    Appeal / Petition Proceedings Details
+                  <strong className="text-slate-500 block">Appeal Case Number:</strong>
+                  <span className="font-bold text-amber-700 dark:text-amber-400 font-mono">{caseData.appealInfo.appealCaseNumber} ({caseData.appealInfo.appealYear})</span>
+                </div>
+                <div className="sm:col-span-2">
+                  <strong className="text-slate-500 block">Appellate Court:</strong>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.appealInfo.appellateCourt}</span>
+                </div>
+                <div>
+                  <strong className="text-slate-500 block">Condonation of Delay:</strong>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.appealInfo.condonationOfDelay}</span>
+                </div>
+                <div>
+                  <strong className="text-slate-500 block">Appeal Filing Date:</strong>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.appealInfo.appealFilingDate || 'N/A'}</span>
+                </div>
+                <div>
+                  <strong className="text-slate-500 block">Limitation / Due Date:</strong>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.appealInfo.limitationDueDate || 'N/A'}</span>
+                </div>
+                <div>
+                  <strong className="text-slate-500 block">Delay Calculation:</strong>
+                  <span
+                    className={`inline-flex items-center gap-1 font-bold ${
+                      caseData.appealInfo.delayInFilingAppeal === 'Yes' ? 'text-rose-600' : 'text-emerald-600'
+                    }`}
+                  >
+                    {caseData.appealInfo.delayInFilingAppeal === 'Yes'
+                      ? `⚠️ Delayed by ${caseData.appealInfo.delayPeriodDays} days`
+                      : '✓ Filed in time (0 days delay)'}
                   </span>
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div><strong className="text-slate-500 print:text-slate-700">Converted Category:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.convertedCase.category}</span></div>
-                <div><strong className="text-slate-500 print:text-slate-700">Type of Petition:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.convertedCase.typeOfPetition} {caseData.convertedCase.typeOfPetition === 'Other' && caseData.convertedCase.specifyPetitionType ? `(${caseData.convertedCase.specifyPetitionType})` : ''}</span></div>
-                <div><strong className="text-slate-500 print:text-slate-700">Converted Case Number:</strong> <span className="font-bold text-blue-600 dark:text-blue-400 print:text-blue-900">{caseData.convertedCase.caseNumber}</span></div>
-                <div><strong className="text-slate-500 print:text-slate-700">Converted Case Year:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.convertedCase.caseYear}</span></div>
-                <div><strong className="text-slate-500 print:text-slate-700">State:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.convertedCase.state}</span></div>
-                <div><strong className="text-slate-500 print:text-slate-700">District:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.convertedCase.district}</span></div>
-                <div><strong className="text-slate-500 print:text-slate-700">Court Complex:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.convertedCase.courtComplex}</span></div>
-                <div><strong className="text-slate-500 print:text-slate-700">Petitioner Name:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.convertedCase.petitionerName}</span></div>
-                <div><strong className="text-slate-500 print:text-slate-700">Respondent Name:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.convertedCase.respondentName}</span></div>
-                {caseData.convertedCase.impugnedCaseNumber && (
-                  <div><strong className="text-slate-500 print:text-slate-700">Impugned Case Number:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.convertedCase.impugnedCaseNumber}</span></div>
-                )}
-                {caseData.convertedCase.orderIssued && (
-                  <div><strong className="text-slate-500 print:text-slate-700">Order Issued:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.convertedCase.orderIssued}</span></div>
-                )}
-                {caseData.convertedCase.orderDate && (
-                  <div><strong className="text-slate-500 print:text-slate-700">Order Date:</strong> <span className="font-bold text-slate-900 dark:text-slate-100 print:text-slate-950">{caseData.convertedCase.orderDate}</span></div>
-                )}
-              </div>
-
-              <div className="space-y-3 pt-2">
-                <div>
-                  <strong className="text-slate-600 dark:text-slate-400 print:text-slate-800 block mb-1">Brief of Prayer (Petition):</strong>
-                  <p className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-white print:border-slate-300 print:text-slate-950">
-                    {caseData.convertedCase.briefOfPrayer || 'N/A'}
-                  </p>
-                </div>
-
-                {caseData.convertedCase.caseDetailsPresentStatus && (
-                  <div>
-                    <strong className="text-slate-600 dark:text-slate-400 print:text-slate-800 block mb-1">Case Details & Present Status (Petition):</strong>
-                    <p className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-white print:border-slate-300 print:text-slate-950">
-                      {caseData.convertedCase.caseDetailsPresentStatus}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Converted Case Counter Affidavit & Post Hearing */}
-              {caseData.convertedCase.counterAffidavitFiled === 'Yes' ? (
-                <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-700 print:border-slate-300">
-                  <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 space-y-3 print:bg-emerald-50/40 print:border-emerald-300">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 print:text-emerald-800" />
-                      <h5 className="font-bold text-xs text-emerald-800 dark:text-emerald-300 uppercase tracking-wider print:text-emerald-950">
-                        Petition Counter Affidavit Details (Filed)
-                      </h5>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                      <div><strong className="text-slate-500 print:text-slate-700">Date of Filing:</strong> <span className="font-bold print:text-slate-950">{caseData.convertedCase.counterAffidavitData?.dateOfFiling || 'N/A'}</span></div>
-                      <div><strong className="text-slate-500 print:text-slate-700">Last Hearing Date:</strong> <span className="font-bold print:text-slate-950">{caseData.convertedCase.counterAffidavitData?.lastHearingDate || 'N/A'}</span></div>
-                      <div><strong className="text-slate-500 print:text-slate-700">Next Hearing Date:</strong> <span className="font-bold print:text-slate-950">{caseData.convertedCase.counterAffidavitData?.nextHearingDate || 'N/A'}</span></div>
-                    </div>
-                    {caseData.convertedCase.counterAffidavitData?.details && (
-                      <div>
-                        <strong className="text-slate-600 dark:text-slate-400 print:text-slate-800 block mb-1">Counter Affidavit Details:</strong>
-                        <p className="bg-white dark:bg-slate-900 p-2.5 rounded-lg text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-white print:border-emerald-300 print:text-slate-950">
-                          {caseData.convertedCase.counterAffidavitData.details}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {caseData.convertedCase.postHearingData && (
-                    <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-3 print:bg-blue-50/40 print:border-blue-300">
-                      <div className="flex items-center gap-2">
-                        <Gavel className="w-4 h-4 text-blue-600 dark:text-blue-400 print:text-blue-900" />
-                        <h5 className="font-bold text-xs text-blue-900 dark:text-blue-300 uppercase tracking-wider print:text-blue-950">
-                          Petition Post Hearing Details
-                        </h5>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                        <div><strong className="text-slate-500 print:text-slate-700">Order Date:</strong> <span className="font-bold print:text-slate-950">{caseData.convertedCase.postHearingData.orderDate || 'N/A'}</span></div>
-                        <div><strong className="text-slate-500 print:text-slate-700">Compliance Period:</strong> <span className="font-bold print:text-slate-950">{caseData.convertedCase.postHearingData.compliancePeriod || 'N/A'}</span></div>
-                        <div><strong className="text-slate-500 print:text-slate-700">End Date Compliance:</strong> <span className="font-bold print:text-slate-950">{caseData.convertedCase.postHearingData.endDateForCompliance || 'N/A'}</span></div>
-                      </div>
-                      {caseData.convertedCase.postHearingData.actionBeforeNextHearing && (
-                        <div>
-                          <strong className="text-slate-600 dark:text-slate-400 print:text-slate-800 block mb-1">Action Before Next Hearing:</strong>
-                          <p className="bg-white dark:bg-slate-900 p-2.5 rounded-lg text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-white print:border-blue-300 print:text-slate-950">
-                            {caseData.convertedCase.postHearingData.actionBeforeNextHearing}
-                          </p>
-                        </div>
-                      )}
-                      {caseData.convertedCase.postHearingData.interimOrFinalOrder && (
-                        <div>
-                          <strong className="text-slate-600 dark:text-slate-400 print:text-slate-800 block mb-1">Interim / Final Order:</strong>
-                          <p className="bg-white dark:bg-slate-900 p-2.5 rounded-lg text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-white print:border-blue-300 print:text-slate-950">
-                            {caseData.convertedCase.postHearingData.interimOrFinalOrder}
-                          </p>
-                        </div>
-                      )}
-                      {caseData.convertedCase.postHearingData.statusOfActionTakenForCompliance && (
-                        <div>
-                          <strong className="text-slate-600 dark:text-slate-400 print:text-slate-800 block mb-1">Status of Action Taken for Compliance:</strong>
-                          <p className="bg-white dark:bg-slate-900 p-2.5 rounded-lg text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-white print:border-blue-300 print:text-slate-950">
-                            {caseData.convertedCase.postHearingData.statusOfActionTakenForCompliance}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                caseData.convertedCase.actionToTakeForCounterAffidavit && (
-                  <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 space-y-2 pt-2 print:bg-amber-50/40 print:border-amber-300">
-                    <div className="flex items-center gap-2">
-                      <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 print:text-amber-800" />
-                      <h5 className="font-bold text-xs text-amber-800 dark:text-amber-300 uppercase tracking-wider print:text-amber-950">
-                        Petition Pending Counter Affidavit Action Required
-                      </h5>
-                    </div>
-                    <p className="bg-white dark:bg-slate-900 p-3 rounded-lg text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap print:bg-white print:border-amber-300 print:text-slate-950">
-                      {caseData.convertedCase.actionToTakeForCounterAffidavit}
-                    </p>
-                  </div>
-                )
-              )}
             </div>
           )}
 
-          {/* Official Document Footer for Print Output */}
-          <div className="hidden print:flex justify-between items-center pt-4 border-t border-slate-300 text-[10px] text-slate-600">
-            <div>
-              <strong className="block text-slate-800 uppercase font-sans">Highways Department Legal Cell &bull; Government of Tamil Nadu</strong>
-              <span>Confidential Case Record Report</span>
+          {/* SECTION B.1: CASE INFORMATION */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4 print:border-slate-300 print:bg-white">
+            <h4 className="font-extrabold text-xs text-blue-900 dark:text-blue-400 uppercase tracking-wider">
+              B. Case Information
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+              <div>
+                <strong className="text-slate-500 block">Case Type:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.caseType}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Case Number & Year:</strong>
+                <span className="font-bold text-blue-600 dark:text-blue-400 font-mono text-sm">{caseData.caseNumber} ({caseData.caseYear})</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Category:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.category}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Circle Jurisdiction:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.circle} Circle</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Division Jurisdiction:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.division}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Name of Court:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.nameOfCourt}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Case Pertains To:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.casePertainsTo}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Nature of Case:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">
+                  {caseData.natureOfCase} {caseData.specifyNatureOfCase ? `(${caseData.specifyNatureOfCase})` : ''}
+                </span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Financial Implication:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.financialImplication || 'N/A'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Present Stage:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.presentStage}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Current Status:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.currentStatus}</span>
+              </div>
             </div>
-            <div className="text-right">
-              <span>Generated: {new Date().toLocaleString()}</span>
+
+            {/* Parties */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+                <strong className="text-slate-500 block mb-1">Name of Petitioner(s):</strong>
+                <p className="font-bold text-slate-900 dark:text-slate-100 whitespace-pre-wrap">{caseData.petitionerNames || 'N/A'}</p>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+                <strong className="text-slate-500 block mb-1">Name of Respondent(s):</strong>
+                <p className="font-bold text-slate-900 dark:text-slate-100 whitespace-pre-wrap">{caseData.respondentNames || 'N/A'}</p>
+              </div>
+            </div>
+
+            {/* Brief of Prayer */}
+            <div className="pt-2">
+              <strong className="text-slate-500 block mb-1">Brief of the Prayer:</strong>
+              <p className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap">
+                {caseData.briefOfPrayer || 'N/A'}
+              </p>
+            </div>
+          </div>
+
+          {/* SECTION B.2: CA (COUNTER AFFIDAVIT) INFORMATION */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-3 print:border-slate-300 print:bg-white">
+            <h4 className="font-extrabold text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+              CA (Counter Affidavit) Information
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div>
+                <strong className="text-slate-500 block">CA Required:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.caRequired}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">CA Filed:</strong>
+                <span className={`font-bold ${caseData.caFiled === 'Yes' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {caseData.caFiled}
+                </span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">CA Due Date:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.caDueDate || 'N/A'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">CA Filed Date:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.caFiledDate || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION B.3: HEARING & ORDERS */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-3 print:border-slate-300 print:bg-white">
+            <h4 className="font-extrabold text-xs text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">
+              Hearing & Orders
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+              <div>
+                <strong className="text-slate-500 block">Last Hearing Date:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.lastHearingDate || 'N/A'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Next Hearing Date:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.nextHearingDate || 'N/A'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Next Listing Purpose:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.nextListingPurpose || 'N/A'}</span>
+              </div>
+              <div className="sm:col-span-2">
+                <strong className="text-slate-500 block">Interim Order / Direction:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.interimOrderDirection || 'N/A'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Interim Order Date:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.interimOrderDate || 'N/A'}</span>
+              </div>
+              <div className="sm:col-span-2">
+                <strong className="text-slate-500 block">Latest Order / Final Order:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.latestOrderFinalOrder || 'N/A'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Latest Order Date:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.latestOrderDate || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION B.4: COMPLIANCE (GENERAL / INTERIM) */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-3 print:border-slate-300 print:bg-white">
+            <h4 className="font-extrabold text-xs text-purple-700 dark:text-purple-400 uppercase tracking-wider">
+              Compliance (Interim Directions)
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+              <div>
+                <strong className="text-slate-500 block">Compliance Required:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.complianceRequired}</span>
+              </div>
+              <div className="sm:col-span-2">
+                <strong className="text-slate-500 block">Compliance Action:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.complianceAction || 'N/A'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Compliance Period:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.compliancePeriod || 'N/A'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Compliance End Date:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.complianceEndDate || 'N/A'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Compliance Status:</strong>
+                <span className={`font-bold ${caseData.complianceStatus === 'Complied' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {caseData.complianceStatus || 'Pending'}
+                </span>
+              </div>
+              <div className="sm:col-span-3">
+                <strong className="text-slate-500 block">Action Taken Details for Compliance:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.actionTakenDetailsForCompliance || 'N/A'}</span>
+              </div>
+              {caseData.remarks && (
+                <div className="sm:col-span-3">
+                  <strong className="text-slate-500 block">Remarks:</strong>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{caseData.remarks}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* SECTION B.5 & B.6: FINAL RESULT, GP OPINION & APPEAL */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-3 print:border-slate-300 print:bg-white">
+            <h4 className="font-extrabold text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+              Final Result, GP Opinion & Appeal
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+              <div>
+                <strong className="text-slate-500 block">Final Result (Concluded?):</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.finalResult}</span>
+              </div>
+              <div className="sm:col-span-2">
+                <strong className="text-slate-500 block">Final Result Order:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.finalResultOrder || 'N/A'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Final Order Date:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.finalOrderDate || 'N/A'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Adverse to Department:</strong>
+                <span className={`font-bold ${caseData.adverseToDepartment === 'Yes' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                  {caseData.adverseToDepartment}
+                </span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">GP Opinion:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.gpOpinion}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Appeal Filed:</strong>
+                <span className={`font-bold ${caseData.appealFiled === 'Yes' ? 'text-amber-600' : 'text-slate-700'}`}>
+                  {caseData.appealFiled}
+                </span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Appeal Filed Date:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.appealFiledDate || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION B.7: FINAL-ORDER COMPLIANCE */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-3 print:border-slate-300 print:bg-white">
+            <h4 className="font-extrabold text-xs text-teal-700 dark:text-teal-400 uppercase tracking-wider">
+              Final-Order Compliance
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+              <div className="sm:col-span-2">
+                <strong className="text-slate-500 block">Compliance Action Given in Final Order:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.finalOrderComplianceActionGiven || 'N/A'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Compliance Action:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.finalOrderComplianceAction || 'No'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Compliance Period:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.finalOrderCompliancePeriod || 'N/A'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Compliance End Date:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.finalOrderComplianceEndDate || 'N/A'}</span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Compliance Status:</strong>
+                <span className={`font-bold ${caseData.finalOrderComplianceStatus === 'Complied' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {caseData.finalOrderComplianceStatus || 'Pending'}
+                </span>
+              </div>
+              <div className="sm:col-span-3">
+                <strong className="text-slate-500 block">Compliance Action Taken:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.finalOrderComplianceActionTaken || 'N/A'}</span>
+              </div>
+              {caseData.finalOrderRemarks && (
+                <div className="sm:col-span-3">
+                  <strong className="text-slate-500 block">Compliance Remarks:</strong>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{caseData.finalOrderRemarks}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Modal Footer */}
-        <div className="bg-slate-50 dark:bg-slate-800/60 p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end print-hide">
+        <div className="bg-slate-50 dark:bg-slate-800/80 px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between print-hide">
+          <span className="text-xs text-slate-500">
+            Last Updated: {caseData.updatedAt ? new Date(caseData.updatedAt).toLocaleString('en-IN') : 'N/A'}
+          </span>
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+            className="px-5 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition-colors cursor-pointer"
           >
-            Close Window
+            Close
           </button>
         </div>
       </div>

@@ -87,7 +87,7 @@ export const DeleteLegalCaseModal: React.FC<DeleteLegalCaseModalProps> = ({
               {caseData.circle} Circle &bull; {caseData.division}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium line-clamp-1 mt-0.5">
-              {caseData.nameOfCourt} &bull; {caseData.nameOfRespondent}
+              {caseData.nameOfCourt} &bull; {caseData.respondentNames || (caseData as any).nameOfRespondent || 'Highways Department'}
             </p>
           </div>
 

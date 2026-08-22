@@ -425,3 +425,160 @@ export const DISTRICT_COURT_COMPLEX_MAP: Record<string, string[]> = {
     'DM cum JM Court, Kariapatti',
   ],
 };
+
+// -------------------------------------------------------------
+// DEFAULT MASTER DATA OPTIONS (Can be augmented via Master Config)
+// -------------------------------------------------------------
+
+export const APPEAL_LEVEL_OPTIONS = [
+  'Single Bench to Division Bench (High Court)',
+  'District / Sub Court to High Court',
+  'High Court to Supreme Court of India',
+  'Tribunal to High Court',
+  'Other Appellate Forum',
+];
+
+export const APPEAL_CASE_TYPE_OPTIONS = [
+  'Writ Appeal (WA)',
+  'Civil Miscellaneous Appeal (CMA)',
+  'Appeal Suit (AS)',
+  'Special Leave Petition (SLP)',
+  'Civil Revision Petition (CRP)',
+  'Review Petition',
+  'Letters Patent Appeal (LPA)',
+  'Other',
+];
+
+export const APPELLATE_COURT_OPTIONS = [
+  'High Court of Madras (Division Bench, Principal Seat, Chennai)',
+  'High Court of Madras (Madurai Bench)',
+  'Supreme Court of India (New Delhi)',
+  'Principal District & Sessions Court',
+  'National Green Tribunal (NGT) - Southern Zone',
+  'Other Appellate Forum',
+];
+
+export const CONDONATION_OF_DELAY_OPTIONS = [
+  'Pending',
+  'Allowed / Condoned',
+  'Dismissed / Rejected',
+  'Not Applicable / Filed In Time',
+];
+
+export const CASE_TYPE_OPTIONS = [
+  'Writ Petition (WP)',
+  'Writ Appeal (WA)',
+  'Civil Revision Petition (CRP)',
+  'Original Side Appeal (OSA)',
+  'Special Leave Petition (SLP)',
+  'Contempt Petition',
+  'Civil Miscellaneous Petition (CMP)',
+  'Review Application',
+  'Original Petition (OP)',
+  'Original Suit (OS)',
+  'Appeal Suit (AS)',
+  'Civil Miscellaneous Appeal (CMA)',
+  'Arbitration Original Petition (Arb. OP)',
+  'Other',
+];
+
+export const CATEGORY_OPTIONS = [
+  'Filed Against Department',
+  'Filed By Department',
+];
+
+export const COURT_OPTIONS = [
+  'High Court of Madras (Principal Seat, Chennai)',
+  'High Court of Madras (Madurai Bench)',
+  'Supreme Court of India (New Delhi)',
+  'City Civil Court Complex, Chennai',
+  'District & Sessions Court',
+  'Subordinate Judge Court (Sub Court)',
+  'District Munsif Court',
+  'National Green Tribunal (Southern Zone)',
+  'Labour Court / Industrial Tribunal',
+  'Other Court',
+];
+
+export const CASE_PERTAINS_TO_OPTIONS = [
+  'GOTN',
+  'MoRTH',
+  'Both',
+  'NHAI',
+];
+
+export const NATURE_OF_CASE_OPTIONS = [
+  'Work',
+  'Tender',
+  'Land Acquisition',
+  'Encroachment',
+  'Arbitration / Dispute',
+  'Service Matter / Service Rights',
+  'Toll Plaza / User Fee',
+  'Road Safety & Maintenance',
+  'Other',
+];
+
+export const PRESENT_STAGE_OPTIONS = [
+  'Notice / Admission',
+  'Counter Affidavit Pending',
+  'Interim Stay / Direction in Operation',
+  'Counter Filed / Awaiting Hearing',
+  'Arguments in Progress',
+  'Orders Reserved',
+  'Disposed / Final Order Issued',
+  'Compliance Pending',
+  'Contempt Proceedings Initiated',
+  'Appeal Filed in Higher Forum',
+];
+
+export const CURRENT_STATUS_OPTIONS = [
+  'Pending',
+  'Disposed',
+  'Stay Granted',
+  'Interim Order Issued',
+  'Dismissed',
+  'Allowed in Favour',
+  'Allowed Adverse to Dept',
+  'Remanded',
+];
+
+export const GP_OPINION_OPTIONS = [
+  'Pending',
+  'Not Recommended',
+  'Recommended',
+  'Not Required',
+];
+
+export const COMPLIANCE_STATUS_OPTIONS = [
+  'Complied',
+  'Pending',
+];
+
+// Helper: Calculate Appeal Delay in Days
+export function calculateAppealDelay(
+  appealFilingDate?: string,
+  limitationDueDate?: string
+): { isDelayed: 'Yes' | 'No'; delayDays: number } {
+  if (!appealFilingDate || !limitationDueDate) {
+    return { isDelayed: 'No', delayDays: 0 };
+  }
+
+  const filing = new Date(appealFilingDate);
+  const due = new Date(limitationDueDate);
+
+  if (isNaN(filing.getTime()) || isNaN(due.getTime())) {
+    return { isDelayed: 'No', delayDays: 0 };
+  }
+
+  // Calculate day difference
+  const diffTime = filing.getTime() - due.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays > 0) {
+    return { isDelayed: 'Yes', delayDays: diffDays };
+  }
+
+  return { isDelayed: 'No', delayDays: 0 };
+}
+

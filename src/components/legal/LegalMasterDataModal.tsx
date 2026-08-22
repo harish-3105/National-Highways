@@ -19,6 +19,9 @@ import {
   UserCheck,
   Search,
   FolderTree,
+  Gavel,
+  Clock,
+  ShieldAlert,
 } from 'lucide-react';
 import { LegalMasterData, LegalCategory } from '@/app/api/legal/master-data/route';
 
@@ -66,8 +69,13 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
       case 'nature_of_case': return masterData.natureOfCases || [];
       case 'court_name': return masterData.courtNames || [];
       case 'law_officer': return masterData.lawOfficers || [];
-      case 'petition_type': return masterData.petitionTypes || ['Review Petition', 'Contempt Petition', 'Execution Petition', 'Special Leave Petition (SLP)', 'Other'];
-      case 'converted_category': return masterData.convertedCategories || ['Appealed by Department', 'Appealed by Other Party', 'Other'];
+      case 'appeal_level': return masterData.appealLevels || [];
+      case 'appeal_case_type': return masterData.appealCaseTypes || [];
+      case 'appellate_court': return masterData.appellateCourts || [];
+      case 'condonation_of_delay': return masterData.condonationOfDelays || [];
+      case 'present_stage': return masterData.presentStages || [];
+      case 'gp_opinion': return masterData.gpOpinions || [];
+      case 'compliance_status': return masterData.complianceStatuses || [];
       default: return [];
     }
   };
@@ -99,30 +107,26 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
         body: JSON.stringify({ category: activeCategory, value: newValue.trim() }),
       });
 
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to add master option');
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to add option');
+      }
 
+      setSuccess(`Added "${newValue.trim()}" successfully!`);
       setNewValue('');
-      setSuccess(`Added "${json.value}" successfully.`);
       onRefresh();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg || 'Failed to add option');
+      setError(err instanceof Error ? err.message : 'Error adding option');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStartEdit = (id?: string, value?: string) => {
-    if (!value) return;
-    setEditingId(id || value);
-    setEditingValue(value);
-    setError(null);
-    setSuccess(null);
-  };
-
-  const handleSaveEdit = async (id: string) => {
-    if (!editingValue.trim()) return;
+  const handleUpdateOption = async (id: string, originalVal: string) => {
+    if (!editingValue.trim() || editingValue.trim() === originalVal) {
+      setEditingId(null);
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -135,31 +139,29 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ category: activeCategory, value: editingValue.trim() }),
         });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Failed to update option');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to save updated option');
       } else {
         const res = await fetch('/api/legal/master-data', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id, value: editingValue.trim() }),
         });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Failed to update option');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to update option');
       }
 
+      setSuccess(`Updated successfully!`);
       setEditingId(null);
-      setEditingValue('');
-      setSuccess(`Updated option successfully.`);
       onRefresh();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg || 'Failed to update option');
+      setError(err instanceof Error ? err.message : 'Error updating option');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleConfirmDelete = async () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteConfirmItem) return;
 
     setLoading(true);
@@ -167,46 +169,46 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
     setSuccess(null);
 
     try {
-      let url = `/api/legal/master-data?`;
       if (deleteConfirmItem.id && !deleteConfirmItem.id.startsWith('default-')) {
-        url += `id=${encodeURIComponent(deleteConfirmItem.id)}`;
-      } else {
-        url += `category=${activeCategory}&value=${encodeURIComponent(deleteConfirmItem.value)}`;
+        const res = await fetch(`/api/legal/master-data?id=${deleteConfirmItem.id}`, {
+          method: 'DELETE',
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to delete option');
       }
 
-      const res = await fetch(url, { method: 'DELETE' });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to delete option');
-
-      setSuccess(`Removed "${deleteConfirmItem.value}" successfully.`);
+      setSuccess(`Deleted "${deleteConfirmItem.value}"`);
       setDeleteConfirmItem(null);
       onRefresh();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg || 'Failed to delete option');
+      setError(err instanceof Error ? err.message : 'Error deleting option');
     } finally {
       setLoading(false);
     }
   };
 
-  const tabs: { id: LegalCategory; label: string; icon: React.ComponentType<{ className?: string }>; count: number }[] = [
+  const tabs: { id: LegalCategory; label: string; icon: React.ElementType; count: number }[] = [
     { id: 'circle', label: 'Circles', icon: MapPin, count: masterData.circles?.length || 0 },
     { id: 'division', label: 'Divisions', icon: Building, count: masterData.divisions?.length || 0 },
-    { id: 'category', label: 'Filing Categories', icon: FolderTree, count: masterData.categories?.length || 2 },
-    { id: 'case_type', label: 'Case Types', icon: Scale, count: masterData.caseTypes?.length || 0 },
-    { id: 'case_status', label: 'Case Statuses', icon: Activity, count: masterData.caseStatuses?.length || 0 },
-    { id: 'case_pertains_to', label: 'Pertains To', icon: Building2, count: masterData.casePertainsTo?.length || 0 },
-    { id: 'nature_of_case', label: 'Nature of Case', icon: FileText, count: masterData.natureOfCases?.length || 0 },
+    { id: 'case_type', label: 'Case Types', icon: FileText, count: masterData.caseTypes?.length || 0 },
     { id: 'court_name', label: 'Courts & Tribunals', icon: Scale, count: masterData.courtNames?.length || 0 },
-    { id: 'law_officer', label: 'Law Officers', icon: UserCheck, count: masterData.lawOfficers?.length || 0 },
-    { id: 'petition_type', label: 'Petition Types', icon: FileText, count: masterData.petitionTypes?.length || 0 },
-    { id: 'converted_category', label: 'Appeal Categories', icon: FolderTree, count: masterData.convertedCategories?.length || 0 },
+    { id: 'category', label: 'Category', icon: Building2, count: masterData.categories?.length || 0 },
+    { id: 'case_pertains_to', label: 'Pertains To', icon: Building2, count: masterData.casePertainsTo?.length || 0 },
+    { id: 'nature_of_case', label: 'Nature of Cases', icon: Activity, count: masterData.natureOfCases?.length || 0 },
+    { id: 'present_stage', label: 'Present Stages', icon: Clock, count: masterData.presentStages?.length || 0 },
+    { id: 'case_status', label: 'Case Statuses', icon: Check, count: masterData.caseStatuses?.length || 0 },
+    { id: 'appeal_level', label: 'Appeal Levels', icon: Gavel, count: masterData.appealLevels?.length || 0 },
+    { id: 'appeal_case_type', label: 'Appeal Case Types', icon: FolderTree, count: masterData.appealCaseTypes?.length || 0 },
+    { id: 'appellate_court', label: 'Appellate Courts', icon: Scale, count: masterData.appellateCourts?.length || 0 },
+    { id: 'condonation_of_delay', label: 'Condonation Delays', icon: Clock, count: masterData.condonationOfDelays?.length || 0 },
+    { id: 'gp_opinion', label: 'GP Opinions', icon: UserCheck, count: masterData.gpOpinions?.length || 0 },
+    { id: 'compliance_status', label: 'Compliance Status', icon: ShieldAlert, count: masterData.complianceStatuses?.length || 0 },
   ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] relative"
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -220,13 +222,13 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
                 Legal Cases Master Data Configuration
               </h2>
               <p className="text-xs text-slate-500">
-                Configure dropdown values for Case Types, Courts, Law Officers, Circles, Divisions, etc.
+                Configure dropdown values for Case Types, Courts, Stages, Appeal Levels, etc.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -298,145 +300,144 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
             </button>
           </form>
 
-          {/* Search Filter */}
+          {/* Search Box */}
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Filter options..."
+              placeholder={`Filter active ${tabs.find((t) => t.id === activeCategory)?.label.toLowerCase()}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3.5 py-2 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
             />
           </div>
 
-          {/* List of Options Container with Vertical Scroller */}
-          <div className="space-y-2 mt-2 max-h-[60vh] overflow-y-auto dropdown-scroll overscroll-contain pr-1">
-            {filteredItems.length === 0 ? (
-              <div className="p-8 text-center text-slate-400">
-                No options found in this category. Add one above!
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {filteredItems.map((item) => (
+          {/* Items List Table */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+            <div className="max-h-[300px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+              {filteredItems.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-xs">
+                  No options found for "{searchTerm}". Add your first option above!
+                </div>
+              ) : (
+                filteredItems.map((item) => (
                   <div
-                    key={item.id || item.value}
-                    className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between gap-2"
+                    key={item.id}
+                    className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                   >
-                    {editingId === (item.id || item.value) ? (
-                      <div className="flex items-center gap-1.5 flex-1">
+                    {editingId === item.id ? (
+                      <div className="flex items-center gap-2 flex-1 mr-2">
                         <input
                           type="text"
                           value={editingValue}
                           onChange={(e) => setEditingValue(e.target.value)}
-                          className="w-full px-2.5 py-1 bg-white dark:bg-slate-800 border border-blue-500 rounded-lg text-xs font-bold text-slate-900 dark:text-slate-100 outline-none"
+                          className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-blue-500 rounded-lg text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none"
                           autoFocus
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveEdit(item.id || item.value);
-                            if (e.key === 'Escape') {
-                              setEditingId(null);
-                              setEditingValue('');
-                            }
+                            if (e.key === 'Enter') handleUpdateOption(item.id, item.value);
+                            if (e.key === 'Escape') setEditingId(null);
                           }}
                         />
                         <button
-                          onClick={() => handleSaveEdit(item.id || item.value)}
-                          className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg cursor-pointer"
-                          title="Save"
+                          onClick={() => handleUpdateOption(item.id, item.value)}
+                          disabled={loading}
+                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg"
+                          title="Save change"
                         >
-                          <Check className="w-3.5 h-3.5" />
+                          <Check className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            setEditingId(null);
-                            setEditingValue('');
-                          }}
-                          className="p-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-300 rounded-lg cursor-pointer"
-                          title="Cancel Edit"
+                          onClick={() => setEditingId(null)}
+                          className="p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                          title="Cancel"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <X className="w-4 h-4" />
                         </button>
                       </div>
                     ) : (
-                      <>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
-                          {item.value}
-                        </span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        {item.value}
+                      </span>
+                    )}
 
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            onClick={() => handleStartEdit(item.id, item.value)}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-lg transition-colors cursor-pointer"
-                            title="Edit Option"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirmItem({ id: item.id, value: item.value })}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/60 rounded-lg transition-colors cursor-pointer"
-                            title="Delete Option"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </>
+                    {editingId !== item.id && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingId(item.id);
+                            setEditingValue(item.value);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors cursor-pointer"
+                          title="Edit"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmItem(item)}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     )}
                   </div>
-                ))}
-              </div>
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
-          <span className="text-[11px] text-slate-400 font-mono">
-            Master Data Sync &bull; Propagates dynamically to Legal Cases Portal
-          </span>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-          >
-            Done
-          </button>
-        </div>
-
-        {/* Sub-Modal: Delete Confirmation */}
+        {/* Delete Confirmation Dialog */}
         {deleteConfirmItem && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200">
-            <div
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-3 animate-in zoom-in-95 duration-150"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center gap-2.5 text-red-600">
-                <AlertTriangle className="w-5 h-5 shrink-0" />
-                <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">Delete Option</h4>
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-2xs flex items-center justify-center p-4 z-10 animate-in fade-in duration-100">
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-sm w-full space-y-4 shadow-xl text-center">
+              <div className="w-10 h-10 bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto">
+                <AlertTriangle className="w-5 h-5" />
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
-                Are you sure you want to remove <strong className="text-slate-900 dark:text-slate-100">&quot;{deleteConfirmItem.value}&quot;</strong> from the master list?
-              </p>
-              <div className="flex justify-end gap-2 pt-2">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                  Delete Option?
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Are you sure you want to remove <strong>"{deleteConfirmItem.value}"</strong> from{' '}
+                  {tabs.find((t) => t.id === activeCategory)?.label}?
+                </p>
+              </div>
+              <div className="flex gap-2 justify-center pt-1">
                 <button
-                  type="button"
                   onClick={() => setDeleteConfirmItem(null)}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold cursor-pointer"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl hover:bg-slate-200 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  type="button"
-                  onClick={handleConfirmDelete}
+                  onClick={handleDeleteConfirm}
                   disabled={loading}
-                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 bg-red-600 text-white font-bold text-xs rounded-xl hover:bg-red-700 transition-colors shadow-xs"
                 >
-                  {loading ? 'Deleting...' : 'Delete'}
+                  {loading ? 'Deleting...' : 'Yes, Delete'}
                 </button>
               </div>
             </div>
           </div>
         )}
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+          <span className="text-xs text-slate-500">
+            Master changes are automatically available across legal case entry & edit forms.
+          </span>
+          <button
+            onClick={onClose}
+            className="px-5 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-800 dark:text-slate-200 rounded-xl font-bold text-xs transition-colors cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );
 };
+
 export default LegalMasterDataModal;

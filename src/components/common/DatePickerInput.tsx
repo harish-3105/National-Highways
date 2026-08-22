@@ -12,6 +12,7 @@ interface DatePickerInputProps {
   disabled?: boolean;
   maxToday?: boolean;
   helpText?: string;
+  placeholder?: string;
 }
 
 export const DatePickerInput: React.FC<DatePickerInputProps> = ({

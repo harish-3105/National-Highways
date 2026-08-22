@@ -1,20 +1,31 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  CaseEntryFormData,
-  CategoryType,
-  CasePertainsToType,
-  NatureOfCaseType,
-  ConvertedCaseProceedingsData,
-  ConvertedCategoryType,
-  PetitionType,
+  LegalCaseData,
+  AppealCaseInformation,
+  CaseClassificationType,
+  YesNoType,
+  GPOpinionType,
+  ComplianceStatusType,
 } from '@/types/legal';
 import {
   CIRCLE_OPTIONS,
   CIRCLE_DIVISION_MAP,
-  TN_DISTRICTS,
-  DISTRICT_COURT_COMPLEX_MAP,
+  APPEAL_LEVEL_OPTIONS,
+  APPEAL_CASE_TYPE_OPTIONS,
+  APPELLATE_COURT_OPTIONS,
+  CONDONATION_OF_DELAY_OPTIONS,
+  CASE_TYPE_OPTIONS,
+  CATEGORY_OPTIONS,
+  COURT_OPTIONS,
+  CASE_PERTAINS_TO_OPTIONS,
+  NATURE_OF_CASE_OPTIONS,
+  PRESENT_STAGE_OPTIONS,
+  CURRENT_STATUS_OPTIONS,
+  GP_OPINION_OPTIONS,
+  COMPLIANCE_STATUS_OPTIONS,
+  calculateAppealDelay,
 } from '@/lib/legal/masterData';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
@@ -22,207 +33,159 @@ import { LegalMasterData } from '@/app/api/legal/master-data/route';
 import {
   Save,
   ArrowLeft,
-  ChevronDown,
-  ChevronUp,
-  AlertCircle,
-  FileText,
-  CheckCircle2,
-  ShieldAlert,
   Gavel,
+  Scale,
+  FileText,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  HelpCircle,
+  Sparkles,
+  ArrowRight,
+  ShieldAlert,
 } from 'lucide-react';
 
 interface CaseEntryFormProps {
-  initialData?: Partial<CaseEntryFormData>;
+  initialData?: Partial<LegalCaseData>;
   masterData?: LegalMasterData;
-  onSave: (data: CaseEntryFormData) => void;
+  onSave: (data: LegalCaseData) => void;
+  onSaveAndCreateAppeal?: (savedData: LegalCaseData) => void;
   onCancel: () => void;
 }
 
-const initialFormState: CaseEntryFormData = {
-  circle: '',
-  division: '',
-  caseNumber: '',
-  caseYear: '',
-  category: '' as any,
-  nameOfCourt: '',
-  nameOfRespondent: '',
-  casePertainsTo: '' as any,
-  natureOfCase: '' as any,
-  specifyNatureOfCase: '',
-  briefOfPrayer: '',
-  caseDetailsPresentStatus: '',
-  counterAffidavitFiled: 'No',
-  counterAffidavitData: {
-    dateOfFiling: '',
-    details: '',
-    lastHearingDate: '',
-    nextHearingDate: '',
-  },
-  postHearingData: {
-    actionBeforeNextHearing: '',
-    interimOrFinalOrder: '',
-    orderDate: '',
-    compliancePeriod: '',
-    endDateForCompliance: '',
-    statusOfActionTakenForCompliance: '',
-    eligibilityForAppeal: 'No',
-    actionTakenForAppeal: '',
-  },
-  actionToTakeForCounterAffidavit: '',
-  convertedCase: {
-    enabled: false,
-    category: '' as any,
-    typeOfPetition: '' as any,
-    specifyPetitionType: '',
-    caseNumber: '',
-    caseYear: '',
-    state: 'Tamil Nadu',
-    district: '',
-    courtComplex: '',
-    petitionerName: '',
-    respondentName: '',
-    briefOfPrayer: '',
-    impugnedCaseNumber: '',
-    orderIssued: '',
-    orderDate: '',
-    caseDetailsPresentStatus: '',
-    counterAffidavitFiled: 'No',
-    counterAffidavitData: {
-      dateOfFiling: '',
-      details: '',
-      lastHearingDate: '',
-      nextHearingDate: '',
+const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData => {
+  return {
+    id: initial?.id,
+    caseClassification: initial?.caseClassification || 'Normal Case',
+    appealInfo: initial?.appealInfo || {
+      appealLevel: APPEAL_LEVEL_OPTIONS[0],
+      appealCaseType: APPEAL_CASE_TYPE_OPTIONS[0],
+      appealCaseNumber: '',
+      appealYear: String(new Date().getFullYear()),
+      appellateCourt: APPELLATE_COURT_OPTIONS[0],
+      appealFilingDate: '',
+      limitationDueDate: '',
+      delayInFilingAppeal: 'No',
+      delayPeriodDays: 0,
+      condonationOfDelay: CONDONATION_OF_DELAY_OPTIONS[0],
     },
-    postHearingData: {
-      actionBeforeNextHearing: '',
-      interimOrFinalOrder: '',
-      orderDate: '',
-      compliancePeriod: '',
-      endDateForCompliance: '',
-      statusOfActionTakenForCompliance: '',
-    },
-    actionToTakeForCounterAffidavit: '',
-  },
+    caseType: initial?.caseType || CASE_TYPE_OPTIONS[0],
+    circle: initial?.circle || 'Chennai',
+    division: initial?.division || 'Chennai City Division',
+    caseNumber: initial?.caseNumber || '',
+    caseYear: initial?.caseYear || String(new Date().getFullYear()),
+    category: initial?.category || CATEGORY_OPTIONS[0],
+    nameOfCourt: initial?.nameOfCourt || COURT_OPTIONS[0],
+    petitionerNames: initial?.petitionerNames || '',
+    respondentNames: initial?.respondentNames || 'The Secretary to Government, Highways and Minor Ports Department, Chennai & Others',
+    casePertainsTo: initial?.casePertainsTo || 'GOTN',
+    natureOfCase: initial?.natureOfCase || 'Work',
+    specifyNatureOfCase: initial?.specifyNatureOfCase || '',
+    briefOfPrayer: initial?.briefOfPrayer || '',
+    financialImplication: initial?.financialImplication || '',
+    presentStage: initial?.presentStage || PRESENT_STAGE_OPTIONS[0],
+    currentStatus: initial?.currentStatus || 'Pending',
+    caRequired: initial?.caRequired || 'Yes',
+    caFiled: initial?.caFiled || 'No',
+    caDueDate: initial?.caDueDate || '',
+    caFiledDate: initial?.caFiledDate || '',
+    lastHearingDate: initial?.lastHearingDate || '',
+    nextHearingDate: initial?.nextHearingDate || '',
+    nextListingPurpose: initial?.nextListingPurpose || '',
+    interimOrderDirection: initial?.interimOrderDirection || '',
+    interimOrderDate: initial?.interimOrderDate || '',
+    latestOrderFinalOrder: initial?.latestOrderFinalOrder || '',
+    latestOrderDate: initial?.latestOrderDate || '',
+    complianceRequired: initial?.complianceRequired || 'No',
+    complianceAction: initial?.complianceAction || '',
+    compliancePeriod: initial?.compliancePeriod || '',
+    complianceEndDate: initial?.complianceEndDate || '',
+    actionTakenDetailsForCompliance: initial?.actionTakenDetailsForCompliance || '',
+    complianceStatus: initial?.complianceStatus || 'Pending',
+    remarks: initial?.remarks || '',
+    finalResult: initial?.finalResult || 'No',
+    finalResultOrder: initial?.finalResultOrder || '',
+    finalOrderDate: initial?.finalOrderDate || '',
+    adverseToDepartment: initial?.adverseToDepartment || 'No',
+    gpOpinion: initial?.gpOpinion || 'Pending',
+    appealFiled: initial?.appealFiled || 'No',
+    appealFiledDate: initial?.appealFiledDate || '',
+    linkedAppealCaseId: initial?.linkedAppealCaseId || '',
+    finalOrderComplianceActionGiven: initial?.finalOrderComplianceActionGiven || '',
+    finalOrderComplianceAction: initial?.finalOrderComplianceAction || 'No',
+    finalOrderCompliancePeriod: initial?.finalOrderCompliancePeriod || '',
+    finalOrderComplianceEndDate: initial?.finalOrderComplianceEndDate || '',
+    finalOrderComplianceActionTaken: initial?.finalOrderComplianceActionTaken || '',
+    finalOrderComplianceStatus: initial?.finalOrderComplianceStatus || 'Pending',
+    finalOrderRemarks: initial?.finalOrderRemarks || '',
+  };
 };
 
 export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   initialData,
   masterData,
   onSave,
+  onSaveAndCreateAppeal,
   onCancel,
 }) => {
-  const [formData, setFormData] = useState<CaseEntryFormData>(() => {
-    const base: CaseEntryFormData = {
-      ...initialFormState,
-      ...initialData,
-      counterAffidavitData: {
-        dateOfFiling: initialData?.counterAffidavitData?.dateOfFiling || '',
-        details: initialData?.counterAffidavitData?.details || '',
-        lastHearingDate: initialData?.counterAffidavitData?.lastHearingDate || '',
-        nextHearingDate: initialData?.counterAffidavitData?.nextHearingDate || '',
-      },
-      postHearingData: {
-        actionBeforeNextHearing: initialData?.postHearingData?.actionBeforeNextHearing || '',
-        interimOrFinalOrder: initialData?.postHearingData?.interimOrFinalOrder || '',
-        orderDate: initialData?.postHearingData?.orderDate || '',
-        compliancePeriod: initialData?.postHearingData?.compliancePeriod || '',
-        endDateForCompliance: initialData?.postHearingData?.endDateForCompliance || '',
-        statusOfActionTakenForCompliance: initialData?.postHearingData?.statusOfActionTakenForCompliance || '',
-        eligibilityForAppeal: initialData?.postHearingData?.eligibilityForAppeal || 'No',
-        actionTakenForAppeal: initialData?.postHearingData?.actionTakenForAppeal || '',
-      },
-      convertedCase: {
-        enabled: initialData?.convertedCase?.enabled || false,
-        category: initialData?.convertedCase?.category || ('' as any),
-        typeOfPetition: initialData?.convertedCase?.typeOfPetition || ('' as any),
-        specifyPetitionType: initialData?.convertedCase?.specifyPetitionType || '',
-        caseNumber: initialData?.convertedCase?.caseNumber || '',
-        caseYear: initialData?.convertedCase?.caseYear || '',
-        state: 'Tamil Nadu',
-        district: initialData?.convertedCase?.district || '',
-        courtComplex: initialData?.convertedCase?.courtComplex || '',
-        petitionerName: initialData?.convertedCase?.petitionerName || '',
-        respondentName: initialData?.convertedCase?.respondentName || '',
-        briefOfPrayer: initialData?.convertedCase?.briefOfPrayer || '',
-        impugnedCaseNumber: initialData?.convertedCase?.impugnedCaseNumber || '',
-        orderIssued: initialData?.convertedCase?.orderIssued || '',
-        orderDate: initialData?.convertedCase?.orderDate || '',
-        caseDetailsPresentStatus: initialData?.convertedCase?.caseDetailsPresentStatus || '',
-        counterAffidavitFiled: initialData?.convertedCase?.counterAffidavitFiled || 'No',
-        counterAffidavitData: {
-          dateOfFiling: initialData?.convertedCase?.counterAffidavitData?.dateOfFiling || '',
-          details: initialData?.convertedCase?.counterAffidavitData?.details || '',
-          lastHearingDate: initialData?.convertedCase?.counterAffidavitData?.lastHearingDate || '',
-          nextHearingDate: initialData?.convertedCase?.counterAffidavitData?.nextHearingDate || '',
-        },
-        postHearingData: {
-          actionBeforeNextHearing: initialData?.convertedCase?.postHearingData?.actionBeforeNextHearing || '',
-          interimOrFinalOrder: initialData?.convertedCase?.postHearingData?.interimOrFinalOrder || '',
-          orderDate: initialData?.convertedCase?.postHearingData?.orderDate || '',
-          compliancePeriod: initialData?.convertedCase?.postHearingData?.compliancePeriod || '',
-          endDateForCompliance: initialData?.convertedCase?.postHearingData?.endDateForCompliance || '',
-          statusOfActionTakenForCompliance: initialData?.convertedCase?.postHearingData?.statusOfActionTakenForCompliance || '',
-        },
-        actionToTakeForCounterAffidavit: initialData?.convertedCase?.actionToTakeForCounterAffidavit || '',
-      },
-    };
-    return base;
-  });
-
+  const [formData, setFormData] = useState<LegalCaseData>(() => getDefaultInitialState(initialData));
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isConvertedExpanded, setIsConvertedExpanded] = useState<boolean>(
-    initialData?.convertedCase?.enabled || false
-  );
 
-  const circleOptions = masterData?.circles && masterData.circles.length > 0
-    ? masterData.circles
-    : Array.from(CIRCLE_OPTIONS);
+  // Dynamic Options (fallback to built-in constants if masterData is loading)
+  const circles = masterData?.circles && masterData.circles.length > 0 ? masterData.circles : [...CIRCLE_OPTIONS];
+  const caseTypes = masterData?.caseTypes && masterData.caseTypes.length > 0 ? masterData.caseTypes : CASE_TYPE_OPTIONS;
+  const categories = masterData?.categories && masterData.categories.length > 0 ? masterData.categories : CATEGORY_OPTIONS;
+  const courts = masterData?.courtNames && masterData.courtNames.length > 0 ? masterData.courtNames : COURT_OPTIONS;
+  const casePertainsToList = masterData?.casePertainsTo && masterData.casePertainsTo.length > 0 ? masterData.casePertainsTo : CASE_PERTAINS_TO_OPTIONS;
+  const natureOfCasesList = masterData?.natureOfCases && masterData.natureOfCases.length > 0 ? masterData.natureOfCases : NATURE_OF_CASE_OPTIONS;
+  const presentStages = masterData?.presentStages && masterData.presentStages.length > 0 ? masterData.presentStages : PRESENT_STAGE_OPTIONS;
+  const currentStatuses = masterData?.caseStatuses && masterData.caseStatuses.length > 0 ? masterData.caseStatuses : CURRENT_STATUS_OPTIONS;
+  const appealLevels = masterData?.appealLevels && masterData.appealLevels.length > 0 ? masterData.appealLevels : APPEAL_LEVEL_OPTIONS;
+  const appealCaseTypes = masterData?.appealCaseTypes && masterData.appealCaseTypes.length > 0 ? masterData.appealCaseTypes : APPEAL_CASE_TYPE_OPTIONS;
+  const appellateCourts = masterData?.appellateCourts && masterData.appellateCourts.length > 0 ? masterData.appellateCourts : APPELLATE_COURT_OPTIONS;
+  const condonationDelays = masterData?.condonationOfDelays && masterData.condonationOfDelays.length > 0 ? masterData.condonationOfDelays : CONDONATION_OF_DELAY_OPTIONS;
+  const gpOpinions = masterData?.gpOpinions && masterData.gpOpinions.length > 0 ? masterData.gpOpinions : GP_OPINION_OPTIONS;
+  const complianceStatuses = masterData?.complianceStatuses && masterData.complianceStatuses.length > 0 ? masterData.complianceStatuses : COMPLIANCE_STATUS_OPTIONS;
 
-  // Dynamic Division options based on Circle
-  const divisionOptions = formData.circle
-    ? (CIRCLE_DIVISION_MAP[formData.circle] || masterData?.divisions || [])
-    : (masterData?.divisions || []);
-
-  // Dynamic Court Complex options based on District for Module 2
-  const courtComplexOptions = formData.convertedCase?.district
-    ? DISTRICT_COURT_COMPLEX_MAP[formData.convertedCase.district] || []
-    : [];
-
-  const handleCircleChange = (circleVal: string) => {
-    setFormData((prev) => {
-      const validDivisions = CIRCLE_DIVISION_MAP[circleVal] || [];
-      const newDivision = validDivisions.includes(prev.division) ? prev.division : '';
-      return {
-        ...prev,
-        circle: circleVal,
-        division: newDivision,
-      };
-    });
-    if (errors['circle']) {
-      setErrors((prev) => ({ ...prev, circle: '' }));
+  // Divisions cascading by Circle
+  const divisions = useMemo(() => {
+    if (masterData?.divisions && masterData.divisions.length > 0) {
+      return masterData.divisions;
     }
-  };
+    return CIRCLE_DIVISION_MAP[formData.circle] || ['Chennai City Division'];
+  }, [formData.circle, masterData?.divisions]);
 
-  const handleDistrictChange = (districtVal: string) => {
-    setFormData((prev) => {
-      const validComplexes = DISTRICT_COURT_COMPLEX_MAP[districtVal] || [];
-      const currentConv = prev.convertedCase || initialFormState.convertedCase!;
-      const newComplex = validComplexes.includes(currentConv.courtComplex) ? currentConv.courtComplex : '';
-      return {
-        ...prev,
-        convertedCase: {
-          ...currentConv,
-          district: districtVal,
-          courtComplex: newComplex,
-        },
-      };
-    });
-    if (errors['convertedCase.district']) {
-      setErrors((prev) => ({ ...prev, 'convertedCase.district': '' }));
+  // Auto-calculate Appeal Delay whenever Appeal Filing Date or Limitation Due Date changes
+  useEffect(() => {
+    if (formData.caseClassification === 'Appeal Case' && formData.appealInfo) {
+      const { isDelayed, delayDays } = calculateAppealDelay(
+        formData.appealInfo.appealFilingDate,
+        formData.appealInfo.limitationDueDate
+      );
+
+      if (
+        formData.appealInfo.delayInFilingAppeal !== isDelayed ||
+        formData.appealInfo.delayPeriodDays !== delayDays
+      ) {
+        setFormData((prev) => ({
+          ...prev,
+          appealInfo: {
+            ...prev.appealInfo!,
+            delayInFilingAppeal: isDelayed,
+            delayPeriodDays: delayDays,
+          },
+        }));
+      }
     }
-  };
+  }, [
+    formData.caseClassification,
+    formData.appealInfo?.appealFilingDate,
+    formData.appealInfo?.limitationDueDate,
+    formData.appealInfo?.delayInFilingAppeal,
+    formData.appealInfo?.delayPeriodDays,
+  ]);
 
-  const updateField = (field: keyof CaseEntryFormData, value: unknown) => {
+  const handleChange = <K extends keyof LegalCaseData>(field: K, value: LegalCaseData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => {
@@ -233,1005 +196,1282 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     }
   };
 
-  const updateNestedField = (section: 'counterAffidavitData' | 'postHearingData', field: string, value: unknown) => {
+  const handleAppealInfoChange = <K extends keyof AppealCaseInformation>(
+    field: K,
+    value: AppealCaseInformation[K]
+  ) => {
     setFormData((prev) => ({
       ...prev,
-      [section]: {
-        ...prev[section],
+      appealInfo: {
+        ...(prev.appealInfo || (getDefaultInitialState().appealInfo as AppealCaseInformation)),
         [field]: value,
       },
     }));
-    const errKey = `${section}.${field}`;
-    if (errors[errKey]) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next[errKey];
-        return next;
-      });
-    }
   };
 
-  const updateConvertedField = (field: keyof ConvertedCaseProceedingsData, value: unknown) => {
+  const handleCircleChange = (newCircle: string) => {
+    const defaultDiv = CIRCLE_DIVISION_MAP[newCircle]?.[0] || '';
     setFormData((prev) => ({
       ...prev,
-      convertedCase: {
-        ...(prev.convertedCase || initialFormState.convertedCase!),
-        [field]: value,
-      },
+      circle: newCircle,
+      division: defaultDiv,
     }));
-    const errKey = `convertedCase.${field}`;
-    if (errors[errKey]) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next[errKey];
-        return next;
-      });
-    }
-  };
-
-  const updateConvertedNestedField = (section: 'counterAffidavitData' | 'postHearingData', field: string, value: unknown) => {
-    setFormData((prev) => {
-      const conv = prev.convertedCase || initialFormState.convertedCase!;
-      return {
-        ...prev,
-        convertedCase: {
-          ...conv,
-          [section]: {
-            ...conv[section],
-            [field]: value,
-          },
-        },
-      };
-    });
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const errs: Record<string, string> = {};
 
-    // Module 1 Validations
-    if (!formData.circle) newErrors['circle'] = 'Circle selection is required';
-    if (!formData.division) newErrors['division'] = 'Division selection is required';
-    if (!formData.caseNumber?.trim()) newErrors['caseNumber'] = 'Case Number is required';
+    // Top Level Mode
+    if (!formData.caseClassification) {
+      errs.caseClassification = 'Case Type classification is required';
+    }
 
-    if (!formData.caseYear?.trim()) {
-      newErrors['caseYear'] = 'Case Year is required';
-    } else if (!/^\d{4}$/.test(formData.caseYear.trim())) {
-      newErrors['caseYear'] = 'Case Year must be exactly 4 digits (e.g. 2024)';
-    } else {
-      const year = parseInt(formData.caseYear, 10);
-      const currentYear = new Date().getFullYear();
-      if (year < 1950 || year > currentYear + 1) {
-        newErrors['caseYear'] = `Year must be between 1950 and ${currentYear + 1}`;
+    // Section A validations if Appeal Case
+    if (formData.caseClassification === 'Appeal Case') {
+      if (!formData.appealInfo?.appealLevel) errs.appealLevel = 'Appeal Level is required';
+      if (!formData.appealInfo?.appealCaseType) errs.appealCaseType = 'Appeal Case Type is required';
+      if (!formData.appealInfo?.appealCaseNumber?.trim()) errs.appealCaseNumber = 'Appeal Case Number is required';
+      if (!formData.appealInfo?.appealYear?.trim()) errs.appealYear = 'Appeal Year is required';
+      if (!formData.appealInfo?.appellateCourt) errs.appellateCourt = 'Appellate Court is required';
+      if (!formData.appealInfo?.appealFilingDate) errs.appealFilingDate = 'Appeal Filing Date is required';
+      if (!formData.appealInfo?.limitationDueDate) errs.limitationDueDate = 'Limitation / Due Date is required';
+      if (!formData.appealInfo?.condonationOfDelay) errs.condonationOfDelay = 'Condonation of Delay is required';
+    }
+
+    // Section B.1 validations (Case Information)
+    if (!formData.caseType) errs.caseType = 'Case Type is required';
+    if (!formData.circle) errs.circle = 'Circle is required';
+    if (!formData.division) errs.division = 'Division is required';
+    if (!formData.caseNumber?.trim()) errs.caseNumber = 'Case Number is required';
+    if (!formData.caseYear?.trim()) errs.caseYear = 'Case Year is required';
+    if (!formData.category) errs.category = 'Category is required';
+    if (!formData.nameOfCourt) errs.nameOfCourt = 'Name of Court is required';
+    if (!formData.petitionerNames?.trim()) errs.petitionerNames = 'Name of Petitioner(s) is required';
+    if (!formData.respondentNames?.trim()) errs.respondentNames = 'Name of Respondent(s) is required';
+    if (!formData.casePertainsTo) errs.casePertainsTo = 'Case Pertains To is required';
+    if (!formData.natureOfCase) errs.natureOfCase = 'Nature of Case is required';
+    if (!formData.briefOfPrayer?.trim()) errs.briefOfPrayer = 'Brief of the Prayer is required';
+    if (!formData.presentStage) errs.presentStage = 'Present Stage is required';
+    if (!formData.currentStatus) errs.currentStatus = 'Current Status is required';
+
+    // Section B.2 validations (CA Information)
+    if (!formData.caRequired) errs.caRequired = 'CA Required selection is required';
+    if (!formData.caFiled) errs.caFiled = 'CA Filed selection is required';
+    if (formData.caFiled === 'Yes' && !formData.caFiledDate) {
+      errs.caFiledDate = 'CA Filed Date is required when CA Filed = Yes';
+    }
+
+    // Section B.4 validations (Compliance)
+    if (!formData.complianceRequired) errs.complianceRequired = 'Compliance Required is required';
+    if (formData.complianceRequired === 'Yes') {
+      if (!formData.complianceAction?.trim()) errs.complianceAction = 'Compliance Action is required';
+      if (!formData.compliancePeriod?.trim()) errs.compliancePeriod = 'Compliance Period is required';
+      if (!formData.actionTakenDetailsForCompliance?.trim()) {
+        errs.actionTakenDetailsForCompliance = 'Action Taken Details for Compliance is required';
+      }
+      if (!formData.complianceStatus) errs.complianceStatus = 'Compliance Status is required';
+    }
+
+    // Section B.5 validations (Final Result)
+    if (!formData.finalResult) errs.finalResult = 'Final Result selection is required';
+    if (formData.finalResult === 'Yes') {
+      if (!formData.finalResultOrder?.trim()) errs.finalResultOrder = 'Final Result Order details are required';
+      if (!formData.finalOrderDate) errs.finalOrderDate = 'Final Order Date is required';
+    }
+    if (!formData.adverseToDepartment) errs.adverseToDepartment = 'Adverse to Department is required';
+    if (!formData.gpOpinion) errs.gpOpinion = 'GP Opinion is required';
+
+    // Section B.6 validations (Appeal)
+    if (!formData.appealFiled) errs.appealFiled = 'Appeal Filed is required';
+    if (formData.appealFiled === 'Yes' && !formData.appealFiledDate) {
+      errs.appealFiledDate = 'Appeal Filed Date is required when Appeal Filed = Yes';
+    }
+
+    // Section B.7 validations (Final-Order Compliance)
+    if (formData.finalResult === 'Yes') {
+      if (!formData.finalOrderComplianceActionGiven?.trim()) {
+        errs.finalOrderComplianceActionGiven = 'Compliance Action Given in Final Order is required';
+      }
+      if (!formData.finalOrderComplianceAction) {
+        errs.finalOrderComplianceAction = 'Compliance Action is required';
+      }
+      if (!formData.finalOrderCompliancePeriod?.trim()) {
+        errs.finalOrderCompliancePeriod = 'Compliance Period is required';
+      }
+      if (!formData.finalOrderComplianceActionTaken?.trim()) {
+        errs.finalOrderComplianceActionTaken = 'Compliance Action Taken details are required';
+      }
+      if (!formData.finalOrderComplianceStatus) {
+        errs.finalOrderComplianceStatus = 'Compliance Status is required';
       }
     }
 
-    if (!formData.category) newErrors['category'] = 'Category is required';
-    if (!formData.nameOfCourt?.trim()) newErrors['nameOfCourt'] = 'Name of Court is required';
-    if (!formData.nameOfRespondent?.trim()) newErrors['nameOfRespondent'] = 'Name of Respondent is required';
-    if (!formData.casePertainsTo) newErrors['casePertainsTo'] = 'Case Pertains To is required';
-    if (!formData.natureOfCase) newErrors['natureOfCase'] = 'Nature of Case is required';
-
-    if (formData.natureOfCase === 'Other' && !formData.specifyNatureOfCase?.trim()) {
-      newErrors['specifyNatureOfCase'] = 'Please specify the Nature of Case';
-    }
-
-    if (!formData.briefOfPrayer?.trim()) newErrors['briefOfPrayer'] = 'Brief of Prayer is required';
-    if (!formData.caseDetailsPresentStatus?.trim()) newErrors['caseDetailsPresentStatus'] = 'Case Details & Present Status is required';
-
-    if (formData.counterAffidavitFiled === 'Yes') {
-      if (!formData.counterAffidavitData?.dateOfFiling) {
-        newErrors['counterAffidavitData.dateOfFiling'] = 'Filing date is required';
-      } else {
-        const filingDate = new Date(formData.counterAffidavitData.dateOfFiling);
-        const today = new Date();
-        if (filingDate > today) {
-          newErrors['counterAffidavitData.dateOfFiling'] = 'Filing date cannot be in the future';
-        }
-      }
-      if (!formData.counterAffidavitData?.details?.trim()) {
-        newErrors['counterAffidavitData.details'] = 'Counter Affidavit details are required';
-      }
-
-      if (formData.postHearingData?.eligibilityForAppeal === 'Yes' && !formData.postHearingData?.actionTakenForAppeal?.trim()) {
-        newErrors['postHearingData.actionTakenForAppeal'] = 'Action Taken for Appeal is required when eligible';
-      }
-    } else {
-      if (!formData.actionToTakeForCounterAffidavit?.trim()) {
-        newErrors['actionToTakeForCounterAffidavit'] = 'Action to be taken to file Counter Affidavit is required';
-      }
-    }
-
-    // Module 2 Validations (if enabled)
-    if (formData.convertedCase?.enabled) {
-      const conv = formData.convertedCase;
-      if (!conv.category) newErrors['convertedCase.category'] = 'Category is required for Converted Case';
-      if (!conv.typeOfPetition) newErrors['convertedCase.typeOfPetition'] = 'Type of Petition is required';
-      if (conv.typeOfPetition === 'Other' && !conv.specifyPetitionType?.trim()) {
-        newErrors['convertedCase.specifyPetitionType'] = 'Please specify Petition Type';
-      }
-      if (!conv.caseNumber?.trim()) newErrors['convertedCase.caseNumber'] = 'Case Number is required';
-      if (!conv.caseYear?.trim()) {
-        newErrors['convertedCase.caseYear'] = 'Case Year is required';
-      } else if (!/^\d{4}$/.test(conv.caseYear.trim())) {
-        newErrors['convertedCase.caseYear'] = 'Case Year must be exactly 4 digits';
-      }
-      if (!conv.district) newErrors['convertedCase.district'] = 'District is required';
-      if (!conv.courtComplex) newErrors['convertedCase.courtComplex'] = 'Court Complex is required';
-      if (!conv.petitionerName?.trim()) newErrors['convertedCase.petitionerName'] = 'Petitioner Name is required';
-      if (!conv.respondentName?.trim()) newErrors['convertedCase.respondentName'] = 'Respondent Name is required';
-      if (!conv.briefOfPrayer?.trim()) newErrors['convertedCase.briefOfPrayer'] = 'Brief of Prayer is required';
-      if (!conv.caseDetailsPresentStatus?.trim()) newErrors['convertedCase.caseDetailsPresentStatus'] = 'Case Details & Present Status is required';
-
-      if (conv.counterAffidavitFiled === 'No' && !conv.actionToTakeForCounterAffidavit?.trim()) {
-        newErrors['convertedCase.actionToTakeForCounterAffidavit'] = 'Action to be taken to file counter affidavit is required';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
       onSave(formData);
     } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Scroll to first error
+      const firstErrorKey = Object.keys(errors)[0];
+      if (firstErrorKey) {
+        const el = document.getElementById(firstErrorKey);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  };
+
+  const handleSaveAndCreateAppealClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (validateForm()) {
+      if (onSaveAndCreateAppeal) {
+        onSaveAndCreateAppeal(formData);
+      } else {
+        onSave(formData);
+      }
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-6">
-      {/* Top Header & Buttons */}
-      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <form onSubmit={handleFormSubmit} className="space-y-6 max-w-5xl mx-auto pb-12">
+      {/* Top Header Card */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to List
-          </button>
+          <div className="p-3 bg-blue-100 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400">
+            <Scale className="w-6 h-6" />
+          </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-              {initialData?.id ? 'Edit Legal Litigation Case Record' : 'New Legal Litigation Case Entry'}
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Highways Department Legal Cell &bull; Case Entry & Converted Proceedings
+            <h1 className="text-lg font-black text-slate-900 dark:text-slate-100">
+              {formData.id ? 'Edit Legal Case Record' : 'New Legal Case Entry'}
+            </h1>
+            <p className="text-xs text-slate-500 font-medium">
+              Tamil Nadu Highways Department &bull; High Court, Appellate & District Litigation System
             </p>
           </div>
         </div>
 
         <button
-          type="submit"
-          className="flex items-center justify-center gap-2 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer"
+          type="button"
+          onClick={onCancel}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors self-start md:self-auto cursor-pointer"
         >
-          <Save className="w-4 h-4" /> Save Complete Case Entry
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Legal Dashboard</span>
         </button>
       </div>
 
-      {/* Error Banner */}
-      {Object.keys(errors).length > 0 && (
-        <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl p-4 text-rose-800 dark:text-rose-200 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 mt-0.5 shrink-0" />
-          <div className="text-xs">
-            <strong className="font-bold text-sm block mb-1">
-              Please correct the following errors before submitting ({Object.keys(errors).length}):
-            </strong>
-            <ul className="list-disc pl-5 space-y-0.5 font-medium">
-              {Object.entries(errors).map(([key, msg]) => (
-                <li key={key}>{msg}</li>
-              ))}
-            </ul>
+      {/* CORE FLOW SELECTOR: Normal Case vs Appeal Case */}
+      <div className="bg-gradient-to-r from-blue-50/70 via-indigo-50/50 to-blue-50/70 dark:from-slate-900 dark:via-indigo-950/20 dark:to-slate-900 border-2 border-blue-200 dark:border-blue-800/80 rounded-2xl p-5 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[11px] font-black text-white">
+              1
+            </span>
+            <span>Case Classification (Core Entry Type) *</span>
+          </label>
+          <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+            {formData.caseClassification === 'Appeal Case' ? '⚡ Appeal Mini-Form Active' : 'Standard Case Form'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <button
+            type="button"
+            onClick={() => handleChange('caseClassification', 'Normal Case')}
+            className={`p-4 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+              formData.caseClassification === 'Normal Case'
+                ? 'border-blue-600 bg-white dark:bg-slate-900 text-blue-900 dark:text-blue-100 shadow-md ring-2 ring-blue-500/20 font-bold'
+                : 'border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+            }`}
+          >
+            <div>
+              <div className="text-sm font-extrabold flex items-center gap-2">
+                <span>Normal Case</span>
+                {formData.caseClassification === 'Normal Case' && (
+                  <span className="text-[10px] bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-black">
+                    Active
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 font-normal mt-0.5">
+                Standard original petition / suit (WP, OS, CRP, CMP, etc.)
+              </p>
+            </div>
+            <FileText className={`w-5 h-5 ${formData.caseClassification === 'Normal Case' ? 'text-blue-600' : 'text-slate-400'}`} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleChange('caseClassification', 'Appeal Case')}
+            className={`p-4 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+              formData.caseClassification === 'Appeal Case'
+                ? 'border-amber-500 bg-white dark:bg-slate-900 text-amber-900 dark:text-amber-100 shadow-md ring-2 ring-amber-500/20 font-bold'
+                : 'border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+            }`}
+          >
+            <div>
+              <div className="text-sm font-extrabold flex items-center gap-2">
+                <span>Appeal Case</span>
+                {formData.caseClassification === 'Appeal Case' && (
+                  <span className="text-[10px] bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full font-black">
+                    Active
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 font-normal mt-0.5">
+                Appellate proceeding (WA, CMA, AS, SLP) with delay computation
+              </p>
+            </div>
+            <Gavel className={`w-5 h-5 ${formData.caseClassification === 'Appeal Case' ? 'text-amber-600' : 'text-slate-400'}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* SECTION A: APPEAL CASE INFORMATION (Rendered ONLY when Case Type = Appeal Case) */}
+      {formData.caseClassification === 'Appeal Case' && (
+        <div className="bg-amber-50/40 dark:bg-amber-950/20 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-6 shadow-xs space-y-5 animate-in fade-in slide-in-from-top-3 duration-200">
+          <div className="flex items-center justify-between border-b border-amber-200 dark:border-amber-800 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/60 rounded-xl text-amber-700 dark:text-amber-300">
+                <Gavel className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-sm font-black text-amber-950 dark:text-amber-100 uppercase tracking-wide">
+                  A. Appeal Case Information
+                </h2>
+                <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+                  Appellate forum details & automatic limitation delay calculator
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 px-2.5 py-1 rounded-lg">
+              Appeal Mini-Form
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+            {/* Appeal Level */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Appeal Level *
+              </label>
+              <SearchableSelect
+                options={appealLevels}
+                value={formData.appealInfo?.appealLevel || ''}
+                onChange={(val) => handleAppealInfoChange('appealLevel', val)}
+                placeholder="Select Appeal Level..."
+              />
+              {errors.appealLevel && <p className="text-[11px] font-semibold text-rose-500">{errors.appealLevel}</p>}
+            </div>
+
+            {/* Appeal Case Type */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Appeal Case Type *
+              </label>
+              <SearchableSelect
+                options={appealCaseTypes}
+                value={formData.appealInfo?.appealCaseType || ''}
+                onChange={(val) => handleAppealInfoChange('appealCaseType', val)}
+                placeholder="Select Case Type (WA, CMA, AS, SLP)..."
+              />
+              {errors.appealCaseType && <p className="text-[11px] font-semibold text-rose-500">{errors.appealCaseType}</p>}
+            </div>
+
+            {/* Appeal Case Number */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Appeal Case Number *
+              </label>
+              <input
+                type="text"
+                value={formData.appealInfo?.appealCaseNumber || ''}
+                onChange={(e) => handleAppealInfoChange('appealCaseNumber', e.target.value)}
+                placeholder="e.g. WA 456/2024"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              {errors.appealCaseNumber && <p className="text-[11px] font-semibold text-rose-500">{errors.appealCaseNumber}</p>}
+            </div>
+
+            {/* Appeal Year */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Appeal Year *
+              </label>
+              <input
+                type="text"
+                maxLength={4}
+                value={formData.appealInfo?.appealYear || ''}
+                onChange={(e) => handleAppealInfoChange('appealYear', e.target.value.replace(/\D/g, ''))}
+                placeholder="e.g. 2024"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              {errors.appealYear && <p className="text-[11px] font-semibold text-rose-500">{errors.appealYear}</p>}
+            </div>
+
+            {/* Appellate Court */}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Appellate Court *
+              </label>
+              <SearchableSelect
+                options={appellateCourts}
+                value={formData.appealInfo?.appellateCourt || ''}
+                onChange={(val) => handleAppealInfoChange('appellateCourt', val)}
+                placeholder="Select Appellate Court..."
+              />
+              {errors.appellateCourt && <p className="text-[11px] font-semibold text-rose-500">{errors.appellateCourt}</p>}
+            </div>
+
+            {/* Appeal Filing Date */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Appeal Filing Date *
+              </label>
+              <DatePickerInput
+                value={formData.appealInfo?.appealFilingDate || ''}
+                onChange={(val) => handleAppealInfoChange('appealFilingDate', val)}
+                placeholder="YYYY-MM-DD"
+              />
+              {errors.appealFilingDate && <p className="text-[11px] font-semibold text-rose-500">{errors.appealFilingDate}</p>}
+            </div>
+
+            {/* Limitation / Due Date */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Limitation / Due Date *
+              </label>
+              <DatePickerInput
+                value={formData.appealInfo?.limitationDueDate || ''}
+                onChange={(val) => handleAppealInfoChange('limitationDueDate', val)}
+                placeholder="YYYY-MM-DD"
+              />
+              {errors.limitationDueDate && <p className="text-[11px] font-semibold text-rose-500">{errors.limitationDueDate}</p>}
+            </div>
+
+            {/* Condonation of Delay */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Condonation of Delay *
+              </label>
+              <SearchableSelect
+                options={condonationDelays}
+                value={formData.appealInfo?.condonationOfDelay || ''}
+                onChange={(val) => handleAppealInfoChange('condonationOfDelay', val)}
+                placeholder="Select Condonation Status..."
+              />
+              {errors.condonationOfDelay && <p className="text-[11px] font-semibold text-rose-500">{errors.condonationOfDelay}</p>}
+            </div>
+          </div>
+
+          {/* AUTO-COMPUTED DELAY PANEL */}
+          <div className="p-4 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <Clock className="w-5 h-5 text-amber-600 shrink-0" />
+              <div>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 block">
+                  System Computed Limitation Audit
+                </span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Delay in Filing Appeal:
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span
+                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider ${
+                  formData.appealInfo?.delayInFilingAppeal === 'Yes'
+                    ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+                    : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                }`}
+              >
+                {formData.appealInfo?.delayInFilingAppeal === 'Yes' ? '⚠️ Delay = Yes' : '✓ Delay = No'}
+              </span>
+
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                Delay Period:{' '}
+                <strong className="font-mono text-sm text-slate-900 dark:text-slate-100">
+                  {formData.appealInfo?.delayPeriodDays || 0} days
+                </strong>
+              </span>
+            </div>
           </div>
         </div>
       )}
 
-      {/* MODULE 1: CASE ENTRY */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-        {/* Module Title Ribbon */}
-        <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 text-white flex items-center gap-3">
-          <FileText className="w-5 h-5 text-blue-300" />
-          <div>
-            <h3 className="font-bold text-base text-white uppercase tracking-wider">
-              MODULE 1: Case Entry
-            </h3>
-            <span className="text-xs text-blue-200">
-              Primary case information and administrative circle/division assignment
-            </span>
+      {/* SECTION B: NORMAL CASE FORM */}
+      <div className="space-y-6">
+        {/* B.1: CASE INFORMATION */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-5">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2.5">
+            <div className="p-2 bg-blue-50 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                B. Case Information
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                Primary litigation details, court jurisdiction, and case classification
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="p-6 space-y-6">
-          {/* SECTION 1: Administrative Details */}
-          <div className="bg-slate-50 dark:bg-slate-800/40 p-5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
-            <h4 className="font-bold text-xs text-blue-900 dark:text-blue-400 uppercase tracking-wider border-b-2 border-blue-600 inline-block pb-1">
-              Section 1 &ndash; Administrative Details
-            </h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+            {/* Case Type */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Case Type *
+              </label>
               <SearchableSelect
-                label="Circle"
-                options={circleOptions}
+                options={caseTypes}
+                value={formData.caseType}
+                onChange={(val) => handleChange('caseType', val)}
+                placeholder="Select Case Type (WP, WA, etc.)..."
+              />
+              {errors.caseType && <p className="text-[11px] font-semibold text-rose-500">{errors.caseType}</p>}
+            </div>
+
+            {/* Circle */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Circle *
+              </label>
+              <SearchableSelect
+                options={circles}
                 value={formData.circle}
                 onChange={handleCircleChange}
                 placeholder="Select Circle..."
-                required
-                error={errors['circle']}
-                helpText="Selecting a Circle updates available Divisions"
               />
+              {errors.circle && <p className="text-[11px] font-semibold text-rose-500">{errors.circle}</p>}
+            </div>
 
+            {/* Division */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Division *
+              </label>
               <SearchableSelect
-                label="Division"
-                options={divisionOptions}
+                options={divisions}
                 value={formData.division}
-                onChange={(val) => updateField('division', val)}
-                placeholder={formData.circle ? "Select Division..." : "First select a Circle..."}
-                required
-                disabled={!formData.circle}
-                error={errors['division']}
-                helpText={!formData.circle ? "Select Circle first to populate Divisions" : `Showing divisions for ${formData.circle}`}
+                onChange={(val) => handleChange('division', val)}
+                placeholder="Select Division..."
               />
+              {errors.division && <p className="text-[11px] font-semibold text-rose-500">{errors.division}</p>}
+            </div>
+
+            {/* Case Number */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Case Number *
+              </label>
+              <input
+                type="text"
+                id="caseNumber"
+                value={formData.caseNumber}
+                onChange={(e) => handleChange('caseNumber', e.target.value)}
+                placeholder="e.g. WP 12345/2023"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {errors.caseNumber && <p className="text-[11px] font-semibold text-rose-500">{errors.caseNumber}</p>}
+            </div>
+
+            {/* Case Year */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Case Year *
+              </label>
+              <input
+                type="text"
+                id="caseYear"
+                maxLength={4}
+                value={formData.caseYear}
+                onChange={(e) => handleChange('caseYear', e.target.value.replace(/\D/g, ''))}
+                placeholder="e.g. 2023"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {errors.caseYear && <p className="text-[11px] font-semibold text-rose-500">{errors.caseYear}</p>}
+            </div>
+
+            {/* Category */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Category *
+              </label>
+              <SearchableSelect
+                options={categories}
+                value={formData.category}
+                onChange={(val) => handleChange('category', val)}
+                placeholder="Select Category..."
+              />
+              {errors.category && <p className="text-[11px] font-semibold text-rose-500">{errors.category}</p>}
+            </div>
+
+            {/* Name of Court */}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Name of Court *
+              </label>
+              <SearchableSelect
+                options={courts}
+                value={formData.nameOfCourt}
+                onChange={(val) => handleChange('nameOfCourt', val)}
+                placeholder="Select Court..."
+              />
+              {errors.nameOfCourt && <p className="text-[11px] font-semibold text-rose-500">{errors.nameOfCourt}</p>}
+            </div>
+
+            {/* Case Pertains To */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Case Pertains To *
+              </label>
+              <SearchableSelect
+                options={casePertainsToList}
+                value={formData.casePertainsTo}
+                onChange={(val) => handleChange('casePertainsTo', val)}
+                placeholder="GOTN / MoRTH / Both..."
+              />
+              {errors.casePertainsTo && <p className="text-[11px] font-semibold text-rose-500">{errors.casePertainsTo}</p>}
+            </div>
+
+            {/* Name of Petitioner(s) */}
+            <div className="space-y-1 sm:col-span-3">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Name of Petitioner(s) *
+              </label>
+              <input
+                type="text"
+                id="petitionerNames"
+                value={formData.petitionerNames}
+                onChange={(e) => handleChange('petitionerNames', e.target.value)}
+                placeholder="e.g. Thiru. S. Ramanathan & 3 Others"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {errors.petitionerNames && <p className="text-[11px] font-semibold text-rose-500">{errors.petitionerNames}</p>}
+            </div>
+
+            {/* Name of Respondent(s) */}
+            <div className="space-y-1 sm:col-span-3">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Name of Respondent(s) *
+              </label>
+              <input
+                type="text"
+                id="respondentNames"
+                value={formData.respondentNames}
+                onChange={(e) => handleChange('respondentNames', e.target.value)}
+                placeholder="e.g. The Secretary to Govt, Highways Dept, Chennai & Others"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {errors.respondentNames && <p className="text-[11px] font-semibold text-rose-500">{errors.respondentNames}</p>}
+            </div>
+
+            {/* Nature of Case */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Nature of Case *
+              </label>
+              <SearchableSelect
+                options={natureOfCasesList}
+                value={formData.natureOfCase}
+                onChange={(val) => handleChange('natureOfCase', val)}
+                placeholder="Work, Tender, Land Acquisition..."
+              />
+              {errors.natureOfCase && <p className="text-[11px] font-semibold text-rose-500">{errors.natureOfCase}</p>}
+            </div>
+
+            {/* Financial Implication */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Financial Implication (₹)
+              </label>
+              <input
+                type="text"
+                value={formData.financialImplication || ''}
+                onChange={(e) => handleChange('financialImplication', e.target.value)}
+                placeholder="e.g. ₹ 4.50 Cr or ₹ 50,00,000"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Present Stage */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Present Stage *
+              </label>
+              <SearchableSelect
+                options={presentStages}
+                value={formData.presentStage}
+                onChange={(val) => handleChange('presentStage', val)}
+                placeholder="Notice / Admission, Arguments..."
+              />
+              {errors.presentStage && <p className="text-[11px] font-semibold text-rose-500">{errors.presentStage}</p>}
+            </div>
+
+            {/* Current Status */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Current Status *
+              </label>
+              <SearchableSelect
+                options={currentStatuses}
+                value={formData.currentStatus}
+                onChange={(val) => handleChange('currentStatus', val)}
+                placeholder="Pending, Disposed, Stay Granted..."
+              />
+              {errors.currentStatus && <p className="text-[11px] font-semibold text-rose-500">{errors.currentStatus}</p>}
+            </div>
+
+            {/* Brief of the Prayer */}
+            <div className="space-y-1 sm:col-span-3">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Brief of the Prayer *
+              </label>
+              <textarea
+                rows={3}
+                id="briefOfPrayer"
+                value={formData.briefOfPrayer}
+                onChange={(e) => handleChange('briefOfPrayer', e.target.value)}
+                placeholder="Summarize the core prayer, interim relief sought, or challenge raised against the Highways department..."
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {errors.briefOfPrayer && <p className="text-[11px] font-semibold text-rose-500">{errors.briefOfPrayer}</p>}
+            </div>
+          </div>
+        </div>
+
+        {/* B.2: CA (COUNTER AFFIDAVIT) INFORMATION */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2.5">
+            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl text-emerald-600 dark:text-emerald-400">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                CA (Counter Affidavit) Information
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                Counter affidavit filing requirement and compliance schedule
+              </p>
             </div>
           </div>
 
-          {/* SECTION 2: Case Information */}
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
-            <h4 className="font-bold text-xs text-blue-900 dark:text-blue-400 uppercase tracking-wider border-b-2 border-blue-600 inline-block pb-1">
-              Section 2 &ndash; Case Particulars
-            </h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Case Number <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. WP 14502/2024"
-                  value={formData.caseNumber}
-                  onChange={(e) => updateField('caseNumber', e.target.value)}
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none transition-all ${
-                    errors['caseNumber'] ? 'border-rose-500 bg-rose-50/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
-                  }`}
-                />
-                {errors['caseNumber'] && <span className="text-[11px] font-semibold text-rose-500">{errors['caseNumber']}</span>}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Case Year <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  maxLength={4}
-                  placeholder="YYYY (e.g. 2024)"
-                  value={formData.caseYear}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-                    updateField('caseYear', val);
-                  }}
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none transition-all ${
-                    errors['caseYear'] ? 'border-rose-500 bg-rose-50/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
-                  }`}
-                />
-                {errors['caseYear'] && <span className="text-[11px] font-semibold text-rose-500">{errors['caseYear']}</span>}
-              </div>
-
-              <div>
-                <SearchableSelect
-                  label="Category"
-                  options={['Filed Against Department', 'Filed By Department']}
-                  value={formData.category}
-                  onChange={(val) => updateField('category', val as CategoryType)}
-                  placeholder="Select Category..."
-                  required
-                  error={errors['category']}
-                />
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+            {/* CA Required */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                CA Required *
+              </label>
+              <SearchableSelect
+                options={['Yes', 'No']}
+                value={formData.caRequired}
+                onChange={(val) => handleChange('caRequired', val as YesNoType)}
+              />
+              {errors.caRequired && <p className="text-[11px] font-semibold text-rose-500">{errors.caRequired}</p>}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Name of Court <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. High Court of Madras / District Court"
-                  value={formData.nameOfCourt}
-                  onChange={(e) => updateField('nameOfCourt', e.target.value)}
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none transition-all ${
-                    errors['nameOfCourt'] ? 'border-rose-500 bg-rose-50/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
-                  }`}
-                />
-                {errors['nameOfCourt'] && <span className="text-[11px] font-semibold text-rose-500">{errors['nameOfCourt']}</span>}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Name of Respondent <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Secretary to Govt, Highways Dept"
-                  value={formData.nameOfRespondent}
-                  onChange={(e) => updateField('nameOfRespondent', e.target.value)}
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none transition-all ${
-                    errors['nameOfRespondent'] ? 'border-rose-500 bg-rose-50/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
-                  }`}
-                />
-                {errors['nameOfRespondent'] && <span className="text-[11px] font-semibold text-rose-500">{errors['nameOfRespondent']}</span>}
-              </div>
-
-              <div>
-                <SearchableSelect
-                  label="Case Pertains To"
-                  options={
-                    masterData?.casePertainsTo && masterData.casePertainsTo.length > 0
-                      ? masterData.casePertainsTo
-                      : ['GOTN', 'MoRTH', 'Both', 'NHAI']
-                  }
-                  value={formData.casePertainsTo}
-                  onChange={(val) => updateField('casePertainsTo', val as CasePertainsToType)}
-                  placeholder="Select Pertains To..."
-                  required
-                  error={errors['casePertainsTo']}
-                />
-              </div>
+            {/* CA Filed */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                CA Filed *
+              </label>
+              <SearchableSelect
+                options={['Yes', 'No']}
+                value={formData.caFiled}
+                onChange={(val) => handleChange('caFiled', val as YesNoType)}
+              />
+              {errors.caFiled && <p className="text-[11px] font-semibold text-rose-500">{errors.caFiled}</p>}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <SearchableSelect
-                  label="Nature of Case"
-                  options={
-                    masterData?.natureOfCases && masterData.natureOfCases.length > 0
-                      ? masterData.natureOfCases
-                      : ['Work', 'Tender', 'Land Acquisition', 'Encroachment', 'Arbitration', 'Service Matter', 'Other']
-                  }
-                  value={formData.natureOfCase}
-                  onChange={(val) => updateField('natureOfCase', val as NatureOfCaseType)}
-                  placeholder="Select Nature of Case..."
-                  required
-                  error={errors['natureOfCase']}
-                />
-              </div>
+            {/* CA Due Date */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                CA Due Date
+              </label>
+              <DatePickerInput
+                value={formData.caDueDate || ''}
+                onChange={(val) => handleChange('caDueDate', val)}
+                placeholder="YYYY-MM-DD"
+              />
+            </div>
 
-              {formData.natureOfCase === 'Other' && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Specify Nature of Case <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter specific nature of case..."
-                    value={formData.specifyNatureOfCase || ''}
-                    onChange={(e) => updateField('specifyNatureOfCase', e.target.value)}
-                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none transition-all ${
-                      errors['specifyNatureOfCase'] ? 'border-rose-500 bg-rose-50/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
-                    }`}
-                  />
-                  {errors['specifyNatureOfCase'] && <span className="text-[11px] font-semibold text-rose-500">{errors['specifyNatureOfCase']}</span>}
-                </div>
+            {/* CA Filed Date (Conditional: CA Filed = Yes) */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                CA Filed Date {formData.caFiled === 'Yes' && '*'}
+              </label>
+              <DatePickerInput
+                value={formData.caFiledDate || ''}
+                onChange={(val) => handleChange('caFiledDate', val)}
+                placeholder="YYYY-MM-DD"
+                disabled={formData.caFiled !== 'Yes'}
+              />
+              {errors.caFiledDate && <p className="text-[11px] font-semibold text-rose-500">{errors.caFiledDate}</p>}
+            </div>
+          </div>
+        </div>
+
+        {/* B.3: HEARING & ORDERS */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl text-indigo-600 dark:text-indigo-400">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                Hearing & Orders
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                Last hearing, upcoming listing, interim directions, and latest orders
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+            {/* Last Hearing Date */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Last Hearing Date
+              </label>
+              <DatePickerInput
+                value={formData.lastHearingDate || ''}
+                onChange={(val) => handleChange('lastHearingDate', val)}
+                placeholder="YYYY-MM-DD"
+              />
+            </div>
+
+            {/* Next Hearing Date */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Next Hearing Date
+              </label>
+              <DatePickerInput
+                value={formData.nextHearingDate || ''}
+                onChange={(val) => handleChange('nextHearingDate', val)}
+                placeholder="YYYY-MM-DD"
+              />
+            </div>
+
+            {/* Next Listing Purpose */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Next Listing Purpose
+              </label>
+              <input
+                type="text"
+                value={formData.nextListingPurpose || ''}
+                onChange={(e) => handleChange('nextListingPurpose', e.target.value)}
+                placeholder="e.g. For filing counter / For arguments"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            {/* Interim Order / Direction */}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Interim Order / Direction
+              </label>
+              <input
+                type="text"
+                value={formData.interimOrderDirection || ''}
+                onChange={(e) => handleChange('interimOrderDirection', e.target.value)}
+                placeholder="e.g. Interim stay on toll fee collection / Status quo"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            {/* Interim Order Date */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Interim Order Date
+              </label>
+              <DatePickerInput
+                value={formData.interimOrderDate || ''}
+                onChange={(val) => handleChange('interimOrderDate', val)}
+                placeholder="YYYY-MM-DD"
+              />
+            </div>
+
+            {/* Latest Order / Final Order */}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Latest Order / Final Order
+              </label>
+              <input
+                type="text"
+                value={formData.latestOrderFinalOrder || ''}
+                onChange={(e) => handleChange('latestOrderFinalOrder', e.target.value)}
+                placeholder="e.g. Writ petition disposed with direction to consider representation"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            {/* Latest Order Date */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Latest Order Date
+              </label>
+              <DatePickerInput
+                value={formData.latestOrderDate || ''}
+                onChange={(val) => handleChange('latestOrderDate', val)}
+                placeholder="YYYY-MM-DD"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* B.4: COMPLIANCE (GENERAL / INTERIM) */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2.5">
+            <div className="p-2 bg-purple-50 dark:bg-purple-950/60 rounded-xl text-purple-600 dark:text-purple-400">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                Compliance (Interim Directions & Orders)
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                Action required by department, time limits, and compliance status
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+            {/* Compliance Required */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Compliance Required *
+              </label>
+              <SearchableSelect
+                options={['Yes', 'No']}
+                value={formData.complianceRequired}
+                onChange={(val) => handleChange('complianceRequired', val as YesNoType)}
+              />
+              {errors.complianceRequired && <p className="text-[11px] font-semibold text-rose-500">{errors.complianceRequired}</p>}
+            </div>
+
+            {/* Compliance Action */}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Compliance Action {formData.complianceRequired === 'Yes' && '*'}
+              </label>
+              <input
+                type="text"
+                value={formData.complianceAction || ''}
+                onChange={(e) => handleChange('complianceAction', e.target.value)}
+                placeholder="e.g. Conduct joint inspection and pass speaking order"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={formData.complianceRequired !== 'Yes'}
+              />
+              {errors.complianceAction && <p className="text-[11px] font-semibold text-rose-500">{errors.complianceAction}</p>}
+            </div>
+
+            {/* Compliance Period */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Compliance Period {formData.complianceRequired === 'Yes' && '*'}
+              </label>
+              <input
+                type="text"
+                value={formData.compliancePeriod || ''}
+                onChange={(e) => handleChange('compliancePeriod', e.target.value)}
+                placeholder="e.g. 8 weeks / 2 months"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={formData.complianceRequired !== 'Yes'}
+              />
+              {errors.compliancePeriod && <p className="text-[11px] font-semibold text-rose-500">{errors.compliancePeriod}</p>}
+            </div>
+
+            {/* Compliance End Date */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Compliance End Date
+              </label>
+              <DatePickerInput
+                value={formData.complianceEndDate || ''}
+                onChange={(val) => handleChange('complianceEndDate', val)}
+                placeholder="YYYY-MM-DD"
+                disabled={formData.complianceRequired !== 'Yes'}
+              />
+            </div>
+
+            {/* Compliance Status */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Compliance Status {formData.complianceRequired === 'Yes' && '*'}
+              </label>
+              <SearchableSelect
+                options={complianceStatuses}
+                value={formData.complianceStatus || 'Pending'}
+                onChange={(val) => handleChange('complianceStatus', val as ComplianceStatusType)}
+                disabled={formData.complianceRequired !== 'Yes'}
+              />
+              {errors.complianceStatus && <p className="text-[11px] font-semibold text-rose-500">{errors.complianceStatus}</p>}
+            </div>
+
+            {/* Action Taken Details for Compliance */}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Action Taken Details for Compliance {formData.complianceRequired === 'Yes' && '*'}
+              </label>
+              <input
+                type="text"
+                value={formData.actionTakenDetailsForCompliance || ''}
+                onChange={(e) => handleChange('actionTakenDetailsForCompliance', e.target.value)}
+                placeholder="e.g. Notice issued to petitioner, inspection conducted on 12/04/2024"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={formData.complianceRequired !== 'Yes'}
+              />
+              {errors.actionTakenDetailsForCompliance && (
+                <p className="text-[11px] font-semibold text-rose-500">{errors.actionTakenDetailsForCompliance}</p>
               )}
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Brief of the Prayer <span className="text-rose-500">*</span>
+            {/* Remarks */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Remarks
               </label>
-              <textarea
-                rows={3}
-                placeholder="Enter detailed summary of the prayer requested in the petition..."
-                value={formData.briefOfPrayer}
-                onChange={(e) => updateField('briefOfPrayer', e.target.value)}
-                className={`w-full p-3 rounded-xl border text-xs font-semibold outline-none transition-all ${
-                  errors['briefOfPrayer'] ? 'border-rose-500 bg-rose-50/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
-                }`}
+              <input
+                type="text"
+                value={formData.remarks || ''}
+                onChange={(e) => handleChange('remarks', e.target.value)}
+                placeholder="Optional general remarks..."
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-purple-500"
               />
-              {errors['briefOfPrayer'] && <span className="text-[11px] font-semibold text-rose-500">{errors['briefOfPrayer']}</span>}
+            </div>
+          </div>
+        </div>
+
+        {/* B.5: FINAL RESULT & GP OPINION */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2.5">
+            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                Final Result & GP Opinion
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                Case disposal outcome, adverse orders, and Government Pleader recommendation
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+            {/* Final Result (Concluded?) */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Final Result (Concluded / Disposed?) *
+              </label>
+              <SearchableSelect
+                options={['Yes', 'No']}
+                value={formData.finalResult}
+                onChange={(val) => handleChange('finalResult', val as YesNoType)}
+              />
+              {errors.finalResult && <p className="text-[11px] font-semibold text-rose-500">{errors.finalResult}</p>}
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Case Details & Present Status <span className="text-rose-500">*</span>
+            {/* Final Result Order */}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Final Result Order {formData.finalResult === 'Yes' && '*'}
               </label>
-              <textarea
-                rows={3}
-                placeholder="Enter current status, court proceedings, stay orders, or pending actions..."
-                value={formData.caseDetailsPresentStatus}
-                onChange={(e) => updateField('caseDetailsPresentStatus', e.target.value)}
-                className={`w-full p-3 rounded-xl border text-xs font-semibold outline-none transition-all ${
-                  errors['caseDetailsPresentStatus'] ? 'border-rose-500 bg-rose-50/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
-                }`}
+              <input
+                type="text"
+                value={formData.finalResultOrder || ''}
+                onChange={(e) => handleChange('finalResultOrder', e.target.value)}
+                placeholder="e.g. Writ petition dismissed / Quashed impugned notification"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-emerald-500"
+                disabled={formData.finalResult !== 'Yes'}
               />
-              {errors['caseDetailsPresentStatus'] && <span className="text-[11px] font-semibold text-rose-500">{errors['caseDetailsPresentStatus']}</span>}
+              {errors.finalResultOrder && <p className="text-[11px] font-semibold text-rose-500">{errors.finalResultOrder}</p>}
             </div>
 
-            {/* Counter Affidavit Filed Toggle */}
-            <div className="bg-slate-100 dark:bg-slate-800/80 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">
-                  Counter Affidavit Filed? <span className="text-rose-500">*</span>
-                </label>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  Has the department submitted a counter affidavit in court?
+            {/* Final Order Date */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Final Order Date {formData.finalResult === 'Yes' && '*'}
+              </label>
+              <DatePickerInput
+                value={formData.finalOrderDate || ''}
+                onChange={(val) => handleChange('finalOrderDate', val)}
+                placeholder="YYYY-MM-DD"
+                disabled={formData.finalResult !== 'Yes'}
+              />
+              {errors.finalOrderDate && <p className="text-[11px] font-semibold text-rose-500">{errors.finalOrderDate}</p>}
+            </div>
+
+            {/* Adverse to Department */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Adverse to Department *
+              </label>
+              <SearchableSelect
+                options={['Yes', 'No']}
+                value={formData.adverseToDepartment}
+                onChange={(val) => handleChange('adverseToDepartment', val as YesNoType)}
+              />
+              {errors.adverseToDepartment && <p className="text-[11px] font-semibold text-rose-500">{errors.adverseToDepartment}</p>}
+            </div>
+
+            {/* GP Opinion */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                GP Opinion *
+              </label>
+              <SearchableSelect
+                options={gpOpinions}
+                value={formData.gpOpinion}
+                onChange={(val) => handleChange('gpOpinion', val as GPOpinionType)}
+                placeholder="Select GP Opinion..."
+              />
+              {errors.gpOpinion && <p className="text-[11px] font-semibold text-rose-500">{errors.gpOpinion}</p>}
+            </div>
+          </div>
+        </div>
+
+        {/* B.6: APPEAL FILED STATUS & WORKFLOW BANNER */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2.5">
+            <div className="p-2 bg-amber-50 dark:bg-amber-950/60 rounded-xl text-amber-600 dark:text-amber-400">
+              <Gavel className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                Appeal Filing Decision
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                Appellate remedy against lower court order
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            {/* Appeal Filed */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Appeal Filed *
+              </label>
+              <SearchableSelect
+                options={['Yes', 'No']}
+                value={formData.appealFiled}
+                onChange={(val) => handleChange('appealFiled', val as YesNoType)}
+              />
+              {errors.appealFiled && <p className="text-[11px] font-semibold text-rose-500">{errors.appealFiled}</p>}
+            </div>
+
+            {/* Appeal Filed Date */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Appeal Filed Date {formData.appealFiled === 'Yes' && '*'}
+              </label>
+              <DatePickerInput
+                value={formData.appealFiledDate || ''}
+                onChange={(val) => handleChange('appealFiledDate', val)}
+                placeholder="YYYY-MM-DD"
+                disabled={formData.appealFiled !== 'Yes'}
+              />
+              {errors.appealFiledDate && <p className="text-[11px] font-semibold text-rose-500">{errors.appealFiledDate}</p>}
+            </div>
+          </div>
+
+          {/* Footnote / Guidance Callout when Appeal Filed = Yes */}
+          {formData.appealFiled === 'Yes' && (
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-xl flex items-start gap-3 text-xs">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-1 flex-1">
+                <p className="font-bold text-amber-900 dark:text-amber-200">
+                  Please enter the details of the appeal case as a new case.
+                </p>
+                <p className="text-amber-700 dark:text-amber-400">
+                  Save this lower court case, then use <strong>Case Type = Appeal Case</strong> to file the appellate proceeding (WA / CMA / SLP) with the dedicated appeal tracking header.
                 </p>
               </div>
-
-              <div className="w-64">
-                <SearchableSelect
-                  options={['Yes', 'No']}
-                  value={formData.counterAffidavitFiled}
-                  onChange={(val) => updateField('counterAffidavitFiled', val as 'Yes' | 'No')}
-                  placeholder="Select..."
-                />
-              </div>
             </div>
-
-            {/* Branch 1: Counter Affidavit Filed = YES */}
-            {formData.counterAffidavitFiled === 'Yes' && (
-              <div className="space-y-4 pt-2">
-                <div className="bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 p-5 rounded-xl space-y-4">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <h5 className="font-bold text-xs text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
-                      Counter Affidavit Details
-                    </h5>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <DatePickerInput
-                      label="Date of Filing"
-                      value={formData.counterAffidavitData?.dateOfFiling || ''}
-                      onChange={(val) => updateNestedField('counterAffidavitData', 'dateOfFiling', val)}
-                      required
-                      maxToday
-                      error={errors['counterAffidavitData.dateOfFiling']}
-                      helpText="Date when counter affidavit was officially submitted"
-                    />
-
-                    <DatePickerInput
-                      label="Last Hearing Date"
-                      value={formData.counterAffidavitData?.lastHearingDate || ''}
-                      onChange={(val) => updateNestedField('counterAffidavitData', 'lastHearingDate', val)}
-                    />
-
-                    <DatePickerInput
-                      label="Next Hearing Date"
-                      value={formData.counterAffidavitData?.nextHearingDate || ''}
-                      onChange={(val) => updateNestedField('counterAffidavitData', 'nextHearingDate', val)}
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Counter Affidavit Details <span className="text-rose-500">*</span>
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="Summary of counter affidavit arguments, annexures, and defense submitted..."
-                      value={formData.counterAffidavitData?.details || ''}
-                      onChange={(e) => updateNestedField('counterAffidavitData', 'details', e.target.value)}
-                      className={`w-full p-3 rounded-xl border text-xs font-semibold outline-none transition-all ${
-                        errors['counterAffidavitData.details'] ? 'border-rose-500 bg-rose-50/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
-                      }`}
-                    />
-                    {errors['counterAffidavitData.details'] && <span className="text-[11px] font-semibold text-rose-500">{errors['counterAffidavitData.details']}</span>}
-                  </div>
-                </div>
-
-                {/* Post Hearing Details Card */}
-                <div className="bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-5 rounded-xl space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Gavel className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <h5 className="font-bold text-xs text-blue-900 dark:text-blue-300 uppercase tracking-wider">
-                      Post Hearing Details
-                    </h5>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        Action to be Taken Before Next Hearing Date (if any)
-                      </label>
-                      <textarea
-                        rows={2}
-                        placeholder="Additional documents, site inspection, compliance report..."
-                        value={formData.postHearingData?.actionBeforeNextHearing || ''}
-                        onChange={(e) => updateNestedField('postHearingData', 'actionBeforeNextHearing', e.target.value)}
-                        className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        Interim Order / Final Order
-                      </label>
-                      <textarea
-                        rows={2}
-                        placeholder="Details of court orders issued..."
-                        value={formData.postHearingData?.interimOrFinalOrder || ''}
-                        onChange={(e) => updateNestedField('postHearingData', 'interimOrFinalOrder', e.target.value)}
-                        className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <DatePickerInput
-                      label="Order Date"
-                      value={formData.postHearingData?.orderDate || ''}
-                      onChange={(val) => updateNestedField('postHearingData', 'orderDate', val)}
-                    />
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        Compliance Period (if any)
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 4 Weeks / 30 Days"
-                        value={formData.postHearingData?.compliancePeriod || ''}
-                        onChange={(e) => updateNestedField('postHearingData', 'compliancePeriod', e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none"
-                      />
-                    </div>
-
-                    <DatePickerInput
-                      label="End Date for Compliance"
-                      value={formData.postHearingData?.endDateForCompliance || ''}
-                      onChange={(val) => updateNestedField('postHearingData', 'endDateForCompliance', val)}
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Status of Action Taken for Compliance
-                    </label>
-                    <textarea
-                      rows={2}
-                      placeholder="Status of departmental action taken towards order compliance..."
-                      value={formData.postHearingData?.statusOfActionTakenForCompliance || ''}
-                      onChange={(e) => updateNestedField('postHearingData', 'statusOfActionTakenForCompliance', e.target.value)}
-                      className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none"
-                    />
-                  </div>
-
-                  {/* Eligibility for Appeal */}
-                  <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div>
-                        <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">
-                          Eligibility for Appeal (as advised by Government Pleader)
-                        </label>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                          Has the Government Pleader recommended filing an appeal?
-                        </p>
-                      </div>
-                      <div className="w-56">
-                        <SearchableSelect
-                          options={['Yes', 'No']}
-                          value={formData.postHearingData?.eligibilityForAppeal || 'No'}
-                          onChange={(val) => updateNestedField('postHearingData', 'eligibilityForAppeal', val as 'Yes' | 'No')}
-                          placeholder="Select..."
-                        />
-                      </div>
-                    </div>
-
-                    {formData.postHearingData?.eligibilityForAppeal === 'Yes' && (
-                      <div className="flex flex-col gap-1.5 pt-2">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                          Action Taken for Appeal <span className="text-rose-500">*</span>
-                        </label>
-                        <textarea
-                          rows={2}
-                          placeholder="Details of appeal draft prepared, court fee paid, or petition filing status..."
-                          value={formData.postHearingData?.actionTakenForAppeal || ''}
-                          onChange={(e) => updateNestedField('postHearingData', 'actionTakenForAppeal', e.target.value)}
-                          className={`w-full p-2.5 rounded-xl border text-xs font-semibold outline-none transition-all ${
-                            errors['postHearingData.actionTakenForAppeal'] ? 'border-rose-500 bg-rose-50/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
-                          }`}
-                        />
-                        {errors['postHearingData.actionTakenForAppeal'] && (
-                          <span className="text-[11px] font-semibold text-rose-500">{errors['postHearingData.actionTakenForAppeal']}</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Branch 2: Counter Affidavit Filed = NO */}
-            {formData.counterAffidavitFiled === 'No' && (
-              <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-5 rounded-xl space-y-3">
-                <div className="flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  <h5 className="font-bold text-xs text-amber-800 dark:text-amber-300 uppercase tracking-wider">
-                    Action Required: Pending Counter Affidavit
-                  </h5>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Action to be Taken to File Counter Affidavit <span className="text-rose-500">*</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Specify action steps, responsible officers, drafting progress, and timeline to file counter affidavit..."
-                    value={formData.actionToTakeForCounterAffidavit || ''}
-                    onChange={(e) => updateField('actionToTakeForCounterAffidavit', e.target.value)}
-                    className={`w-full p-3 rounded-xl border text-xs font-semibold outline-none transition-all ${
-                      errors['actionToTakeForCounterAffidavit'] ? 'border-rose-500 bg-rose-50/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
-                    }`}
-                  />
-                  {errors['actionToTakeForCounterAffidavit'] && (
-                    <span className="text-[11px] font-semibold text-rose-500">{errors['actionToTakeForCounterAffidavit']}</span>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          )}
         </div>
-      </div>
 
-      {/* MODULE 2: CONVERTED CASE PROCEEDINGS (COLLAPSIBLE ACCORDION SECTION) */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-        {/* Module Header & Toggle Button */}
-        <div
-          onClick={() => {
-            const nextState = !isConvertedExpanded;
-            setIsConvertedExpanded(nextState);
-            updateConvertedField('enabled', nextState);
-          }}
-          className={`px-6 py-4 cursor-pointer flex items-center justify-between transition-colors ${
-            isConvertedExpanded
-              ? 'bg-slate-900 text-white dark:bg-slate-800'
-              : 'bg-slate-50 dark:bg-slate-800/40 text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <Gavel className={`w-5 h-5 ${isConvertedExpanded ? 'text-blue-400' : 'text-blue-900 dark:text-blue-400'}`} />
+        {/* B.7: FINAL-ORDER COMPLIANCE */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2.5">
+            <div className="p-2 bg-teal-50 dark:bg-teal-950/60 rounded-xl text-teal-600 dark:text-teal-400">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
             <div>
-              <h3 className="font-bold text-base tracking-tight">
-                MODULE 2: Converted Case Proceedings
-              </h3>
-              <span className={`text-xs ${isConvertedExpanded ? 'text-slate-400' : 'text-slate-500'}`}>
-                {isConvertedExpanded
-                  ? 'Separate collapsible section active &bull; Appeal / Petition proceedings'
-                  : 'Click to expand converted case proceedings section'}
-              </span>
+              <h2 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                Final-Order Compliance
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                Mandates, directions, and departmental action taken pursuant to the final judgment
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span
-              className={`text-[11px] font-bold px-3 py-1 rounded-full transition-colors ${
-                isConvertedExpanded
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-              }`}
-            >
-              {isConvertedExpanded ? 'SECTION EXPANDED' : 'SECTION COLLAPSED'}
-            </span>
-            {isConvertedExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+            {/* Compliance Action Given in Final Order */}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Compliance Action Given in Final Order {formData.finalResult === 'Yes' && '*'}
+              </label>
+              <input
+                type="text"
+                value={formData.finalOrderComplianceActionGiven || ''}
+                onChange={(e) => handleChange('finalOrderComplianceActionGiven', e.target.value)}
+                placeholder="e.g. Pass final speaking order on petitioner representation within 12 weeks"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-teal-500"
+              />
+              {errors.finalOrderComplianceActionGiven && (
+                <p className="text-[11px] font-semibold text-rose-500">{errors.finalOrderComplianceActionGiven}</p>
+              )}
+            </div>
+
+            {/* Compliance Action (Yes/No) */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Compliance Action {formData.finalResult === 'Yes' && '*'}
+              </label>
+              <SearchableSelect
+                options={['Yes', 'No']}
+                value={formData.finalOrderComplianceAction || 'No'}
+                onChange={(val) => handleChange('finalOrderComplianceAction', val as YesNoType)}
+              />
+              {errors.finalOrderComplianceAction && (
+                <p className="text-[11px] font-semibold text-rose-500">{errors.finalOrderComplianceAction}</p>
+              )}
+            </div>
+
+            {/* Compliance Period */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Compliance Period {formData.finalResult === 'Yes' && '*'}
+              </label>
+              <input
+                type="text"
+                value={formData.finalOrderCompliancePeriod || ''}
+                onChange={(e) => handleChange('finalOrderCompliancePeriod', e.target.value)}
+                placeholder="e.g. 12 weeks / 90 days"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-teal-500"
+              />
+              {errors.finalOrderCompliancePeriod && (
+                <p className="text-[11px] font-semibold text-rose-500">{errors.finalOrderCompliancePeriod}</p>
+              )}
+            </div>
+
+            {/* Compliance End Date */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Compliance End Date
+              </label>
+              <DatePickerInput
+                value={formData.finalOrderComplianceEndDate || ''}
+                onChange={(val) => handleChange('finalOrderComplianceEndDate', val)}
+                placeholder="YYYY-MM-DD"
+              />
+            </div>
+
+            {/* Compliance Status */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Compliance Status {formData.finalResult === 'Yes' && '*'}
+              </label>
+              <SearchableSelect
+                options={complianceStatuses}
+                value={formData.finalOrderComplianceStatus || 'Pending'}
+                onChange={(val) => handleChange('finalOrderComplianceStatus', val as ComplianceStatusType)}
+              />
+              {errors.finalOrderComplianceStatus && (
+                <p className="text-[11px] font-semibold text-rose-500">{errors.finalOrderComplianceStatus}</p>
+              )}
+            </div>
+
+            {/* Compliance Action Taken */}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Compliance Action Taken {formData.finalResult === 'Yes' && '*'}
+              </label>
+              <input
+                type="text"
+                value={formData.finalOrderComplianceActionTaken || ''}
+                onChange={(e) => handleChange('finalOrderComplianceActionTaken', e.target.value)}
+                placeholder="e.g. Speaking order issued on 15/06/2024 vide letter no. 4521/2024"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-teal-500"
+              />
+              {errors.finalOrderComplianceActionTaken && (
+                <p className="text-[11px] font-semibold text-rose-500">{errors.finalOrderComplianceActionTaken}</p>
+              )}
+            </div>
+
+            {/* Remarks */}
+            <div className="space-y-1">
+              <label className="font-extrabold text-slate-700 dark:text-slate-300">
+                Remarks
+              </label>
+              <input
+                type="text"
+                value={formData.finalOrderRemarks || ''}
+                onChange={(e) => handleChange('finalOrderRemarks', e.target.value)}
+                placeholder="Optional compliance remarks..."
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
           </div>
         </div>
-
-        {/* Collapsible Body */}
-        {isConvertedExpanded && (
-          <div className="p-6 space-y-6 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
-            {/* Category & Petition Type */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Category <span className="text-rose-500">*</span>
-                </label>
-                <SearchableSelect
-                  options={masterData?.convertedCategories || ['Appealed by Department', 'Appealed by Other Party', 'Other']}
-                  value={formData.convertedCase?.category || ''}
-                  onChange={(val) => updateConvertedField('category', val as ConvertedCategoryType)}
-                  placeholder="Select Category..."
-                  required
-                />
-                {errors['convertedCase.category'] && <span className="text-[11px] font-semibold text-rose-500">{errors['convertedCase.category']}</span>}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Type of Petition <span className="text-rose-500">*</span>
-                </label>
-                <SearchableSelect
-                  options={masterData?.petitionTypes || ['Review Petition', 'Contempt Petition', 'Execution Petition', 'Special Leave Petition (SLP)', 'Writ Appeal (WA)', 'Other']}
-                  value={formData.convertedCase?.typeOfPetition || ''}
-                  onChange={(val) => updateConvertedField('typeOfPetition', val as PetitionType)}
-                  placeholder="Select Petition Type..."
-                  required
-                />
-                {errors['convertedCase.typeOfPetition'] && <span className="text-[11px] font-semibold text-rose-500">{errors['convertedCase.typeOfPetition']}</span>}
-              </div>
-
-              {formData.convertedCase?.typeOfPetition === 'Other' && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Specify Petition Type <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter petition type..."
-                    value={formData.convertedCase?.specifyPetitionType || ''}
-                    onChange={(e) => updateConvertedField('specifyPetitionType', e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold outline-none"
-                  />
-                  {errors['convertedCase.specifyPetitionType'] && <span className="text-[11px] font-semibold text-rose-500">{errors['convertedCase.specifyPetitionType']}</span>}
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Case Number <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Converted case number..."
-                  value={formData.convertedCase?.caseNumber || ''}
-                  onChange={(e) => updateConvertedField('caseNumber', e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold outline-none"
-                />
-                {errors['convertedCase.caseNumber'] && <span className="text-[11px] font-semibold text-rose-500">{errors['convertedCase.caseNumber']}</span>}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Case Year <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  maxLength={4}
-                  placeholder="YYYY (4 digits)"
-                  value={formData.convertedCase?.caseYear || ''}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-                    updateConvertedField('caseYear', val);
-                  }}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold outline-none"
-                />
-                {errors['convertedCase.caseYear'] && <span className="text-[11px] font-semibold text-rose-500">{errors['convertedCase.caseYear']}</span>}
-              </div>
-            </div>
-
-            {/* COURT INFORMATION */}
-            <div className="bg-slate-50 dark:bg-slate-800/40 p-5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
-              <h4 className="font-bold text-xs text-blue-900 dark:text-blue-400 uppercase tracking-wider">
-                Court Information
-              </h4>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    State <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value="Tamil Nadu"
-                    readOnly
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-xs font-extrabold text-slate-500 cursor-not-allowed"
-                  />
-                  <span className="text-[11px] text-slate-400">Read-only state standard</span>
-                </div>
-
-                <SearchableSelect
-                  label="District"
-                  options={TN_DISTRICTS}
-                  value={formData.convertedCase?.district || ''}
-                  onChange={handleDistrictChange}
-                  placeholder="Select Tamil Nadu District..."
-                  required
-                  error={errors['convertedCase.district']}
-                  helpText="Select district to populate specific Court Complexes"
-                />
-
-                <SearchableSelect
-                  label="Court Complex"
-                  options={courtComplexOptions}
-                  value={formData.convertedCase?.courtComplex || ''}
-                  onChange={(val) => updateConvertedField('courtComplex', val)}
-                  placeholder={formData.convertedCase?.district ? "Select Court Complex..." : "First select a District..."}
-                  required
-                  disabled={!formData.convertedCase?.district}
-                  error={errors['convertedCase.courtComplex']}
-                  helpText={!formData.convertedCase?.district ? "Select District first" : `Showing court complexes for ${formData.convertedCase.district}`}
-                />
-              </div>
-            </div>
-
-            {/* PETITION INFORMATION */}
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
-              <h4 className="font-bold text-xs text-blue-900 dark:text-blue-400 uppercase tracking-wider">
-                Petition Information
-              </h4>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Petitioner Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter Petitioner Name..."
-                    value={formData.convertedCase?.petitionerName || ''}
-                    onChange={(e) => updateConvertedField('petitionerName', e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold outline-none"
-                  />
-                  {errors['convertedCase.petitionerName'] && <span className="text-[11px] font-semibold text-rose-500">{errors['convertedCase.petitionerName']}</span>}
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Respondent Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter Respondent Name..."
-                    value={formData.convertedCase?.respondentName || ''}
-                    onChange={(e) => updateConvertedField('respondentName', e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold outline-none"
-                  />
-                  {errors['convertedCase.respondentName'] && <span className="text-[11px] font-semibold text-rose-500">{errors['convertedCase.respondentName']}</span>}
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Impugned Case Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Original WP No."
-                    value={formData.convertedCase?.impugnedCaseNumber || ''}
-                    onChange={(e) => updateConvertedField('impugnedCaseNumber', e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Order Issued
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Order summary..."
-                    value={formData.convertedCase?.orderIssued || ''}
-                    onChange={(e) => updateConvertedField('orderIssued', e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold outline-none"
-                  />
-                </div>
-
-                <DatePickerInput
-                  label="Order Date"
-                  value={formData.convertedCase?.orderDate || ''}
-                  onChange={(val) => updateConvertedField('orderDate', val)}
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Brief of Prayer <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Prayer requested in converted petition..."
-                  value={formData.convertedCase?.briefOfPrayer || ''}
-                  onChange={(e) => updateConvertedField('briefOfPrayer', e.target.value)}
-                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold outline-none"
-                />
-                {errors['convertedCase.briefOfPrayer'] && <span className="text-[11px] font-semibold text-rose-500">{errors['convertedCase.briefOfPrayer']}</span>}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Case Details & Present Status <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Current proceedings in petition..."
-                  value={formData.convertedCase?.caseDetailsPresentStatus || ''}
-                  onChange={(e) => updateConvertedField('caseDetailsPresentStatus', e.target.value)}
-                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold outline-none"
-                />
-                {errors['convertedCase.caseDetailsPresentStatus'] && <span className="text-[11px] font-semibold text-rose-500">{errors['convertedCase.caseDetailsPresentStatus']}</span>}
-              </div>
-
-              {/* Converted Case Counter Affidavit Dropdown */}
-              <div className="bg-slate-100 dark:bg-slate-800/80 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
-                  Counter Affidavit Filed in Petition?
-                </label>
-                <div className="w-40">
-                  <SearchableSelect
-                    options={['Yes', 'No']}
-                    value={formData.convertedCase?.counterAffidavitFiled || ''}
-                    onChange={(val) => updateConvertedField('counterAffidavitFiled', val as 'Yes' | 'No')}
-                    placeholder="Select..."
-                  />
-                </div>
-              </div>
-
-              {formData.convertedCase?.counterAffidavitFiled === 'Yes' && (
-                <div className="bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 p-4 rounded-xl space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <DatePickerInput
-                      label="Date of Filing"
-                      value={formData.convertedCase?.counterAffidavitData?.dateOfFiling || ''}
-                      onChange={(val) => updateConvertedNestedField('counterAffidavitData', 'dateOfFiling', val)}
-                    />
-                    <DatePickerInput
-                      label="Last Hearing Date"
-                      value={formData.convertedCase?.counterAffidavitData?.lastHearingDate || ''}
-                      onChange={(val) => updateConvertedNestedField('counterAffidavitData', 'lastHearingDate', val)}
-                    />
-                    <DatePickerInput
-                      label="Next Hearing Date"
-                      value={formData.convertedCase?.counterAffidavitData?.nextHearingDate || ''}
-                      onChange={(val) => updateConvertedNestedField('counterAffidavitData', 'nextHearingDate', val)}
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Counter Affidavit Details
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={formData.convertedCase?.counterAffidavitData?.details || ''}
-                      onChange={(e) => updateConvertedNestedField('counterAffidavitData', 'details', e.target.value)}
-                      className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {formData.convertedCase?.counterAffidavitFiled === 'No' && (
-                <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-4 rounded-xl space-y-2">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Action to be Taken to File Counter Affidavit <span className="text-rose-500">*</span>
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={formData.convertedCase?.actionToTakeForCounterAffidavit || ''}
-                    onChange={(e) => updateConvertedField('actionToTakeForCounterAffidavit', e.target.value)}
-                    className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none"
-                  />
-                  {errors['convertedCase.actionToTakeForCounterAffidavit'] && (
-                    <span className="text-[11px] font-semibold text-rose-500">{errors['convertedCase.actionToTakeForCounterAffidavit']}</span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Bottom Actions Bar */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3 shadow-xs">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors cursor-pointer"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          className="flex items-center gap-2 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer"
-        >
-          <Save className="w-4 h-4" /> Save Complete Case Entry
-        </button>
+      {/* FORM ACTION TOOLBAR */}
+      <div className="sticky bottom-4 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-3">
+        <div className="text-xs text-slate-500 font-medium">
+          {formData.caseClassification === 'Appeal Case' ? (
+            <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold">
+              <Gavel className="w-4 h-4" />
+              <span>Filing Appellate Proceeding</span>
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 text-blue-700 dark:text-blue-400 font-bold">
+              <FileText className="w-4 h-4" />
+              <span>Standard Legal Case Record</span>
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+
+          {/* Primary Save */}
+          <button
+            type="submit"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+          >
+            <Save className="w-4 h-4" />
+            <span>Save Case Record</span>
+          </button>
+
+          {/* Dual Action when Appeal Filed = Yes */}
+          {formData.appealFiled === 'Yes' && (
+            <button
+              type="button"
+              onClick={handleSaveAndCreateAppealClick}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+              title="Save current case and immediately open the Appeal Case entry form"
+            >
+              <Sparkles className="w-4 h-4 text-amber-200" />
+              <span>Save & File Appeal Case ⚡</span>
+            </button>
+          )}
+        </div>
       </div>
     </form>
   );

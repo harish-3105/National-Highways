@@ -25,7 +25,14 @@ export type LegalCategory =
   | "court_name"
   | "law_officer"
   | "petition_type"
-  | "converted_category";
+  | "converted_category"
+  | "appeal_level"
+  | "appeal_case_type"
+  | "appellate_court"
+  | "condonation_of_delay"
+  | "present_stage"
+  | "gp_opinion"
+  | "compliance_status";
 
 export interface LegalMasterConfigItem {
   id: string;
@@ -47,6 +54,13 @@ export interface LegalMasterData {
   lawOfficers: string[];
   petitionTypes: string[];
   convertedCategories: string[];
+  appealLevels: string[];
+  appealCaseTypes: string[];
+  appellateCourts: string[];
+  condonationOfDelays: string[];
+  presentStages: string[];
+  gpOpinions: string[];
+  complianceStatuses: string[];
 }
 
 const DEFAULT_CIRCLES = ["Chennai", "Madurai", "Salem", "Coimbatore", "Tirunelveli", "Villupuram"];
@@ -75,14 +89,20 @@ const DEFAULT_CASE_TYPES = [
   "Civil Miscellaneous Petition (CMP)",
   "Review Application",
   "Original Petition (OP)",
+  "Original Suit (OS)",
+  "Appeal Suit (AS)",
+  "Civil Miscellaneous Appeal (CMA)",
+  "Arbitration Original Petition (Arb. OP)",
+  "Other",
 ];
 const DEFAULT_CASE_STATUSES = [
   "Pending",
   "Disposed",
   "Stay Granted",
-  "Interim Order",
+  "Interim Order Issued",
   "Dismissed",
-  "Allowed",
+  "Allowed in Favour",
+  "Allowed Adverse to Dept",
   "Remanded",
 ];
 const DEFAULT_CASE_PERTAINS_TO = ["GOTN", "MoRTH", "Both", "NHAI"];
@@ -91,17 +111,24 @@ const DEFAULT_NATURE_OF_CASES = [
   "Tender",
   "Land Acquisition",
   "Encroachment",
-  "Arbitration",
-  "Service Matter",
+  "Arbitration / Dispute",
+  "Service Matter / Service Rights",
+  "Toll Plaza / User Fee",
+  "Road Safety & Maintenance",
   "Other",
 ];
 const DEFAULT_COURT_NAMES = [
   "High Court of Madras (Principal Seat, Chennai)",
   "High Court of Madras (Madurai Bench)",
   "Supreme Court of India (New Delhi)",
+  "City Civil Court Complex, Chennai",
+  "District & Sessions Court",
+  "Subordinate Judge Court (Sub Court)",
+  "District Munsif Court",
   "National Green Tribunal (NGT), Southern Zone",
+  "Labour Court / Industrial Tribunal",
   "Arbitral Tribunal",
-  "District Court Complex",
+  "Other Court",
 ];
 const DEFAULT_LAW_OFFICERS = [
   "Advocate General of Tamil Nadu",
@@ -125,6 +152,66 @@ const DEFAULT_CONVERTED_CATEGORIES = [
   "Other",
 ];
 
+const DEFAULT_APPEAL_LEVELS = [
+  "Single Bench to Division Bench (High Court)",
+  "District / Sub Court to High Court",
+  "High Court to Supreme Court of India",
+  "Tribunal to High Court",
+  "Other Appellate Forum",
+];
+
+const DEFAULT_APPEAL_CASE_TYPES = [
+  "Writ Appeal (WA)",
+  "Civil Miscellaneous Appeal (CMA)",
+  "Appeal Suit (AS)",
+  "Special Leave Petition (SLP)",
+  "Civil Revision Petition (CRP)",
+  "Review Petition",
+  "Letters Patent Appeal (LPA)",
+  "Other",
+];
+
+const DEFAULT_APPELLATE_COURTS = [
+  "High Court of Madras (Division Bench, Principal Seat, Chennai)",
+  "High Court of Madras (Madurai Bench)",
+  "Supreme Court of India (New Delhi)",
+  "Principal District & Sessions Court",
+  "National Green Tribunal (NGT) - Southern Zone",
+  "Other Appellate Forum",
+];
+
+const DEFAULT_CONDONATION_OF_DELAYS = [
+  "Pending",
+  "Allowed / Condoned",
+  "Dismissed / Rejected",
+  "Not Applicable / Filed In Time",
+];
+
+const DEFAULT_PRESENT_STAGES = [
+  "Notice / Admission",
+  "Counter Affidavit Pending",
+  "Interim Stay / Direction in Operation",
+  "Counter Filed / Awaiting Hearing",
+  "Arguments in Progress",
+  "Orders Reserved",
+  "Disposed / Final Order Issued",
+  "Compliance Pending",
+  "Contempt Proceedings Initiated",
+  "Appeal Filed in Higher Forum",
+];
+
+const DEFAULT_GP_OPINIONS = [
+  "Pending",
+  "Not Recommended",
+  "Recommended",
+  "Not Required",
+];
+
+const DEFAULT_COMPLIANCE_STATUSES = [
+  "Complied",
+  "Pending",
+];
+
 function groupLegalMasterData(items: LegalMasterConfigItem[]): LegalMasterData {
   const getVals = (cat: LegalCategory, defs: string[]) => {
     const dbVals = items.filter((i) => i.category === cat).map((i) => i.value);
@@ -144,6 +231,13 @@ function groupLegalMasterData(items: LegalMasterConfigItem[]): LegalMasterData {
     lawOfficers: getVals("law_officer", DEFAULT_LAW_OFFICERS),
     petitionTypes: getVals("petition_type", DEFAULT_PETITION_TYPES),
     convertedCategories: getVals("converted_category", DEFAULT_CONVERTED_CATEGORIES),
+    appealLevels: getVals("appeal_level", DEFAULT_APPEAL_LEVELS),
+    appealCaseTypes: getVals("appeal_case_type", DEFAULT_APPEAL_CASE_TYPES),
+    appellateCourts: getVals("appellate_court", DEFAULT_APPELLATE_COURTS),
+    condonationOfDelays: getVals("condonation_of_delay", DEFAULT_CONDONATION_OF_DELAYS),
+    presentStages: getVals("present_stage", DEFAULT_PRESENT_STAGES),
+    gpOpinions: getVals("gp_opinion", DEFAULT_GP_OPINIONS),
+    complianceStatuses: getVals("compliance_status", DEFAULT_COMPLIANCE_STATUSES),
   };
 }
 
@@ -198,6 +292,13 @@ export async function POST(request: NextRequest) {
       "law_officer",
       "petition_type",
       "converted_category",
+      "appeal_level",
+      "appeal_case_type",
+      "appellate_court",
+      "condonation_of_delay",
+      "present_stage",
+      "gp_opinion",
+      "compliance_status",
     ];
 
     const cleanCategory = category.trim().toLowerCase() as LegalCategory;
@@ -249,9 +350,8 @@ export async function PUT(request: NextRequest) {
     }
 
     const { id, value } = await request.json();
-
     if (!id || !value || typeof value !== "string" || value.trim() === "") {
-      return NextResponse.json({ error: "ID and updated value are required" }, { status: 400 });
+      return NextResponse.json({ error: "ID and new value are required" }, { status: 400 });
     }
 
     const cleanValue = value.trim();
@@ -287,7 +387,7 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json({ error: "ID query parameter is required" }, { status: 400 });
+      return NextResponse.json({ error: "Config ID is required" }, { status: 400 });
     }
 
     const { error } = await supabase
@@ -300,7 +400,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, message: "Deleted successfully" });
+    return NextResponse.json({ success: true });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("DELETE /api/legal/master-data error:", msg);
