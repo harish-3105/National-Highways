@@ -292,27 +292,86 @@ export const StaffDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Metrics Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 block">Total Staff</span>
-                <div className="text-xl font-black text-slate-900 dark:text-slate-100 mt-1">{activeStaffCount}</div>
-                <span className="text-[10px] text-slate-500 font-semibold">{filteredStaff.length} Match Filter</span>
+            {/* 4 KPI Quadrants (2x2 Grid) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Quadrant 1: Top-Left */}
+              <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Quadrant 1: Total Personnel
+                  </span>
+                  <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-700 dark:text-slate-300">
+                    <Users className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono">
+                    {activeStaffCount} <span className="text-sm font-semibold text-slate-500 font-sans">Active Staff</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-slate-500 font-medium">
+                  {filteredStaff.length} matching current filter criteria
+                </div>
               </div>
-              <div className="p-4 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-900/60 rounded-2xl shadow-xs">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">Offices</span>
-                <div className="text-xl font-black text-blue-700 dark:text-blue-300 mt-1">{uniqueOffices}</div>
-                <span className="text-[10px] text-blue-600/80 font-semibold">Active Locations</span>
+
+              {/* Quadrant 2: Top-Right */}
+              <div className="p-5 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-900/60 rounded-2xl shadow-xs flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                    Quadrant 2: Office Deployments
+                  </span>
+                  <div className="p-2.5 bg-blue-100 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-blue-700 dark:text-blue-300 font-mono">
+                    {uniqueOffices} <span className="text-sm font-semibold text-slate-500 font-sans">Offices</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
+                  Active headquarters and field operational bases
+                </div>
               </div>
-              <div className="p-4 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-900/60 rounded-2xl shadow-xs">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 block">Circles & Divs</span>
-                <div className="text-xl font-black text-indigo-700 dark:text-indigo-300 mt-1">{uniqueCircles} / {uniqueDivisions}</div>
-                <span className="text-[10px] text-indigo-600/80 font-semibold">Jurisdictions</span>
+
+              {/* Quadrant 3: Bottom-Left */}
+              <div className="p-5 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-900/60 rounded-2xl shadow-xs flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                    Quadrant 3: Circles & Divisions
+                  </span>
+                  <div className="p-2.5 bg-indigo-100 dark:bg-indigo-950/60 rounded-xl text-indigo-600 dark:text-indigo-400">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-indigo-700 dark:text-indigo-300 font-mono">
+                    {uniqueCircles} <span className="text-sm font-semibold text-slate-500 font-sans">Circles</span> &bull; {uniqueDivisions} <span className="text-sm font-semibold text-slate-500 font-sans">Divisions</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+                  Regional jurisdictions & project coverage units
+                </div>
               </div>
-              <div className="p-4 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/60 rounded-2xl shadow-xs">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Roles</span>
-                <div className="text-xl font-black text-emerald-700 dark:text-emerald-300 mt-1">{uniqueDesignations}</div>
-                <span className="text-[10px] text-emerald-600/80 font-semibold">Designations</span>
+
+              {/* Quadrant 4: Bottom-Right */}
+              <div className="p-5 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/60 rounded-2xl shadow-xs flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    Quadrant 4: Roles & Designations
+                  </span>
+                  <div className="p-2.5 bg-emerald-100 dark:bg-emerald-950/60 rounded-xl text-emerald-600 dark:text-emerald-400">
+                    <Briefcase className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-emerald-700 dark:text-emerald-300 font-mono">
+                    {uniqueDesignations} <span className="text-sm font-semibold text-slate-500 font-sans">Designations</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                  Engineering cadre and administrative positions
+                </div>
               </div>
             </div>
 
