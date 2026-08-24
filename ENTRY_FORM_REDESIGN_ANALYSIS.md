@@ -22,6 +22,14 @@ The Legal Cases module solves this using a **full-page screen state** (`uiMode: 
 * 🎛️ **Rich Form Controls**: Integrated `SearchableSelect`, `DatePickerInput`, conditional sub-sections (e.g. Converted Proceedings toggle), and inline error messages.
 * 🔻 **Bottom Action Bar**: Secondary Cancel and Save buttons for effortless submission without having to scroll back to top.
 
+### The Stage-Gated Lifecycle Sub-Navigation Standard (Applies to All Modules)
+To standardize entry across long multi-attribute forms without overwhelming the user or trapping them in premature validations:
+1. **Lifecycle Sub-Nav Tabs**: Split forms into sequential, chronological stages mirroring how project milestones unfold in real life.
+2. **Tab 1 Identity Baseline**: Tab 1 holds foundational identifiers. All mandatory fields in Tab 1 must be satisfied before saving the initial draft.
+3. **Sequential Tab Unlocking**: Users can only advance to Tab $N+1$ once all mandatory fields of Tab $N$ are completely filled and valid.
+4. **Stage-Scoped Progressive Saving**: When saving from Tab $N$, validation only checks mandatory fields up to Tab $N$ (Tabs $1 \dots N$). Future stages ($N+1 \dots$) never block saving the current progress.
+5. **Clean Neutral Inputs**: Zero grey placeholder suggestions across all module forms.
+
 ---
 
 ## 2. Module-by-Module In-Depth Analysis & Transition Plan

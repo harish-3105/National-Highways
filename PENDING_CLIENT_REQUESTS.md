@@ -23,12 +23,16 @@ The system is a centralized departmental management platform for the **Tamil Nad
 
 ## 2. Global Core Principles & Paradigms
 
-### A. Global Data Entry Philosophy: Lifecycle Sub-Navigation & Progressive Saving
+### A. Global Data Entry Philosophy: Stage-Gated Lifecycle Sub-Navigation & Progressive Saving
 * **Viewing Experience**: Tables, dashboards, passports, and charts remain comprehensive, unified, and high-density.
 * **Adding & Editing Experience**: Replaces overwhelming 30+ column vertical scrolling pages with **Lifecycle Sub-Navigation Tab Bars & Stage Steppers**.
 * **Real-Life Chronological Lifecycle Splitting**: Forms are divided into stages mirroring how project data is acquired over time in real life.
-* **Non-Blocking Progressive Saving**: Only primary identifiers are required to draft a record. Field officers can fill any single stage (e.g. Stage 1 at sanction time), save immediately, and return weeks or months later to fill subsequent stages as milestones occur.
-* **Clean Neutral Forms**: Zero intrusive grey sample/placeholder suggestions in form inputs.
+* **Stage-Gated Progressive Validation & Sequential Unlocking**:
+  1. **Tab 1 Baseline**: Tab 1 contains foundational identity fields. All mandatory fields in Tab 1 must be satisfied before saving the initial draft record.
+  2. **Sequential Stage Progression**: A user cannot advance to Tab $N+1$ or enter future-stage data until all mandatory fields of Tab $N$ are completely filled and valid.
+  3. **Stage-Scoped Validation on Save**: When saving from Tab $N$, validation only checks mandatory rules up to Tab $N$ (Tabs $1 \dots N$). Future stages ($N+1 \dots$) never block saving the current progress.
+  4. **Resuming Existing Records**: When editing an existing record, the system unlocks tabs up to the highest completed stage plus the next reachable stage.
+* **Clean Neutral Forms**: Zero intrusive grey sample/placeholder suggestions in form inputs across all modules.
 
 ### B. Standard User vs. Admin ("Creative Mode")
 * **Standard Users**: Strictly bound by business logic, monotonic progress constraints, write-once field freezing (Columns A–N, Z), and soft deletion.

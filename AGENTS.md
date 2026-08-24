@@ -21,3 +21,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 3. **TOKEN & EXECUTION CONCISION**:
    - Be concise and direct. Do not generate unnecessary filler text.
+
+4. **STAGE-GATED PROGRESSIVE VALIDATION & ENTRY FORMS**:
+   - Tab 1 contains foundational identity fields and is the baseline required to save initial drafts.
+   - Advance to Tab $N+1$ is strictly gated until all mandatory fields in Tab $N$ are completed.
+   - When saving from Tab $N$, validate only up to Tab $N$ without blocking on future stages.
+   - Zero grey placeholder suggestions across all forms.
