@@ -6,13 +6,16 @@ import {
   Save,
   Users,
   AlertCircle,
-  FileText,
+  Briefcase,
   Building,
   MapPin,
-  Briefcase,
   Phone,
   Mail,
   CheckCircle2,
+  ChevronRight,
+  ChevronLeft,
+  LockKeyhole,
+  Check,
 } from 'lucide-react';
 import { StaffMember, StaffMasterConfig } from './StaffTypes';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
@@ -24,18 +27,56 @@ interface StaffEntryFormProps {
   onCancel: () => void;
 }
 
+type StaffStageType =
+  | 'personal_identity'
+  | 'posting_hierarchy'
+  | 'contact_communications';
+
+interface StageDefinition {
+  id: StaffStageType;
+  label: string;
+  step: string;
+  subtitle: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const STAGES: StageDefinition[] = [
+  {
+    id: 'personal_identity',
+    label: 'Personnel Identity',
+    step: 'Stage 1',
+    subtitle: 'Officer full legal name & official engineering / administrative cadre',
+    icon: Briefcase,
+  },
+  {
+    id: 'posting_hierarchy',
+    label: 'Organizational Posting',
+    step: 'Stage 2',
+    subtitle: '6-tier departmental hierarchy from headquarters down to sub-sections',
+    icon: Building,
+  },
+  {
+    id: 'contact_communications',
+    label: 'Contact Information',
+    step: 'Stage 3',
+    subtitle: 'Official mobile contact phone number & departmental email id',
+    icon: Phone,
+  },
+];
+
 export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
   initialData,
   masterConfig,
   onSave,
   onCancel,
 }) => {
+  const [activeStageIndex, setActiveStageIndex] = useState<number>(0);
+
+  // Stage 1: Personnel Identity
   const [name, setName] = useState<string>(initialData?.name || '');
   const [designation, setDesignation] = useState<string>(initialData?.designation || '');
-  const [contactNo, setContactNo] = useState<string>(initialData?.contact_no || '');
-  const [emailId, setEmailId] = useState<string>(initialData?.emailid || '');
 
-  // 6-Tier Organizational Hierarchy
+  // Stage 2: 6-Tier Hierarchy
   const [office, setOffice] = useState<string>(initialData?.office || '');
   const [circle, setCircle] = useState<string>(initialData?.circle || '');
   const [division, setDivision] = useState<string>(initialData?.division || '');
@@ -43,24 +84,97 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
   const [section, setSection] = useState<string>(initialData?.section || '');
   const [subSection, setSubSection] = useState<string>(initialData?.sub_section || '');
 
+  // Stage 3: Contact & Communications
+  const [contactNo, setContactNo] = useState<string>(initialData?.contact_no || '');
+  const [emailId, setEmailId] = useState<string>(initialData?.emailid || '');
+
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
+  // -------------------------------------------------------------
+  // STAGE-GATED VALIDATION ENGINE
+  // -------------------------------------------------------------
+  const validateSingleStage = (stageIdx: number): Record<string, string> => {
+    const stageErrors: Record<string, string> = {};
 
-    if (!name.trim()) newErrors.name = 'Staff Member Name is required.';
-    if (emailId.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailId.trim())) {
-      newErrors.emailId = 'Please enter a valid email address.';
+    if (stageIdx === 0) {
+      // Stage 1: Personnel Identity (Baseline)
+      if (!name.trim()) {
+        stageErrors.name = 'Full Officer Name is required (Stage 1).';
+      }
+    } else if (stageIdx === 1) {
+      // Stage 2: Organizational Posting
+      // At least one organizational post is recommended, but non-blocking
+    } else if (stageIdx === 2) {
+      // Stage 3: Contact Details
+      if (emailId.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailId.trim())) {
+        stageErrors.emailId = 'Please enter a valid email address.';
+      }
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return stageErrors;
+  };
+
+  const isStageAccessible = (targetStageIdx: number): boolean => {
+    if (targetStageIdx === 0) return true;
+    for (let i = 0; i < targetStageIdx; i++) {
+      const stageErrs = validateSingleStage(i);
+      if (Object.keys(stageErrs).length > 0) return false;
+    }
+    return true;
+  };
+
+  const isStageCompleted = (stageIdx: number): boolean => {
+    if (stageIdx === 0) {
+      return Boolean(name.trim() && Object.keys(validateSingleStage(0)).length === 0);
+    }
+    if (stageIdx === 1) {
+      return Boolean(office || circle || division || subDivision || section || subSection);
+    }
+    if (stageIdx === 2) {
+      return Boolean((contactNo.trim() || emailId.trim()) && Object.keys(validateSingleStage(2)).length === 0);
+    }
+    return false;
+  };
+
+  const validateUpToStage = (maxStageIdx: number): boolean => {
+    const combinedErrors: Record<string, string> = {};
+    for (let i = 0; i <= maxStageIdx; i++) {
+      const stageErrs = validateSingleStage(i);
+      Object.assign(combinedErrors, stageErrs);
+    }
+    setErrors(combinedErrors);
+    return Object.keys(combinedErrors).length === 0;
+  };
+
+  const handleStageTabClick = (idx: number) => {
+    if (isStageAccessible(idx)) {
+      setErrors({});
+      setActiveStageIndex(idx);
+    } else {
+      validateUpToStage(activeStageIndex);
+    }
+  };
+
+  const handleNextStage = () => {
+    if (validateUpToStage(activeStageIndex)) {
+      if (activeStageIndex < STAGES.length - 1) {
+        setActiveStageIndex((prev) => prev + 1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  };
+
+  const handlePrevStage = () => {
+    if (activeStageIndex > 0) {
+      setActiveStageIndex((prev) => prev - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) {
+    if (!validateUpToStage(activeStageIndex)) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -87,6 +201,8 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
       setLoading(false);
     }
   };
+
+  const currentStage = STAGES[activeStageIndex];
 
   return (
     <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-6 pb-12">
@@ -124,8 +240,59 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
             disabled={loading}
             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
-            <Save className="w-4 h-4" /> {loading ? 'Saving Profile...' : 'Save Staff Profile'}
+            <Save className="w-4 h-4" /> {loading ? 'Saving Profile...' : `Save Progress (${currentStage.step})`}
           </button>
+        </div>
+      </div>
+
+      {/* 3-STAGE LIFECYCLE SUB-NAVIGATION STEPPER BAR */}
+      <div className="bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {STAGES.map((stage, idx) => {
+            const Icon = stage.icon;
+            const isActive = activeStageIndex === idx;
+            const accessible = isStageAccessible(idx);
+            const completed = isStageCompleted(idx);
+
+            return (
+              <button
+                key={stage.id}
+                type="button"
+                onClick={() => handleStageTabClick(idx)}
+                disabled={!accessible}
+                className={`flex flex-col items-start p-3.5 rounded-xl text-left transition-all border relative cursor-pointer disabled:cursor-not-allowed ${
+                  isActive
+                    ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-900 dark:text-blue-100 shadow-xs ring-1 ring-blue-500/20'
+                    : accessible
+                    ? 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    : 'bg-slate-100/50 dark:bg-slate-900/40 border-slate-200/50 dark:border-slate-800/50 text-slate-400 dark:text-slate-600 opacity-60'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full mb-1.5">
+                  <span
+                    className={`text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
+                      isActive
+                        ? 'bg-blue-600 text-white'
+                        : completed
+                        ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    {stage.step}
+                  </span>
+                  {completed ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  ) : !accessible ? (
+                    <LockKeyhole className="w-3.5 h-3.5 text-slate-400 dark:text-slate-600" />
+                  ) : (
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
+                  )}
+                </div>
+                <span className="text-xs font-bold truncate w-full">{stage.label}</span>
+                <span className="text-[11px] text-slate-400 dark:text-slate-500 truncate w-full mt-0.5">{stage.subtitle}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -146,203 +313,221 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
         </div>
       )}
 
-      {/* MODULE 1: Personal & Contact Information */}
+      {/* STAGE CONTENT PANELS */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 text-white flex items-center gap-3">
-          <Briefcase className="w-5 h-5 text-blue-300" />
-          <div>
-            <h3 className="font-bold text-sm uppercase tracking-wider text-white">
-              MODULE 1: Personnel Identity & Professional Designation
-            </h3>
-            <span className="text-xs text-blue-200">
-              Officer name, official designation, contact mobile number, and departmental email
-            </span>
+        {/* Stage Header Banner */}
+        <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 text-white flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {React.createElement(currentStage.icon, { className: 'w-5 h-5 text-blue-300' })}
+            <div>
+              <h3 className="font-bold text-sm uppercase tracking-wider text-white">
+                {currentStage.step}: {currentStage.label}
+              </h3>
+              <span className="text-xs text-blue-200">{currentStage.subtitle}</span>
+            </div>
           </div>
         </div>
 
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Full Officer Name <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  if (errors.name) setErrors((prev) => ({ ...prev, name: '' }));
-                }}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g. Er. M. Rajesh Kumar"
-                required
-              />
-              {errors.name && <p className="text-[11px] text-rose-500 mt-1">{errors.name}</p>}
-            </div>
+        <div className="p-6 space-y-6">
+          {/* ========================================================= */}
+          {/* STAGE 1: Personnel Identity */}
+          {/* ========================================================= */}
+          {activeStageIndex === 0 && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Full Officer Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (errors.name) setErrors((prev) => ({ ...prev, name: '' }));
+                    }}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  {errors.name && <p className="text-[11px] text-rose-500 mt-1">{errors.name}</p>}
+                </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Official Designation
-              </label>
-              <SearchableSelect
-                options={masterConfig.designations.length > 0 ? masterConfig.designations : ['Superintending Engineer', 'Divisional Engineer', 'Assistant Divisional Engineer', 'Assistant Engineer']}
-                value={designation}
-                onChange={setDesignation}
-                placeholder="Select Designation..."
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Contact Mobile Number
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={contactNo}
-                  onChange={(e) => setContactNo(e.target.value)}
-                  className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                  placeholder="e.g. 9443012345"
-                />
-                <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Official Cadre / Designation
+                  </label>
+                  <SearchableSelect
+                    options={masterConfig.designations || []}
+                    value={designation}
+                    onChange={setDesignation}
+                  />
+                </div>
               </div>
             </div>
+          )}
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Departmental / Official Email
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  value={emailId}
-                  onChange={(e) => {
-                    setEmailId(e.target.value);
-                    if (errors.emailId) setErrors((prev) => ({ ...prev, emailId: '' }));
-                  }}
-                  className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. de.salem.nh@tn.gov.in"
-                />
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+          {/* ========================================================= */}
+          {/* STAGE 2: 6-Tier Organizational Posting */}
+          {/* ========================================================= */}
+          {activeStageIndex === 1 && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    1. Office
+                  </label>
+                  <SearchableSelect
+                    options={masterConfig.offices || []}
+                    value={office}
+                    onChange={setOffice}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    2. Circle Jurisdiction
+                  </label>
+                  <SearchableSelect
+                    options={masterConfig.circles || []}
+                    value={circle}
+                    onChange={setCircle}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    3. Division Jurisdiction
+                  </label>
+                  <SearchableSelect
+                    options={masterConfig.divisions || []}
+                    value={division}
+                    onChange={setDivision}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    4. Sub-Division Unit
+                  </label>
+                  <SearchableSelect
+                    options={masterConfig.sub_divisions || []}
+                    value={subDivision}
+                    onChange={setSubDivision}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    5. Section Level
+                  </label>
+                  <SearchableSelect
+                    options={masterConfig.sections || []}
+                    value={section}
+                    onChange={setSection}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    6. Sub-Section Field Unit
+                  </label>
+                  <SearchableSelect
+                    options={masterConfig.sub_sections || []}
+                    value={subSection}
+                    onChange={setSubSection}
+                  />
+                </div>
               </div>
-              {errors.emailId && <p className="text-[11px] text-rose-500 mt-1">{errors.emailId}</p>}
             </div>
-          </div>
-        </div>
-      </div>
+          )}
 
-      {/* MODULE 2: 6-Tier Organizational Posting Hierarchy */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 px-6 py-4 text-white flex items-center gap-3">
-          <Building className="w-5 h-5 text-indigo-300" />
+          {/* ========================================================= */}
+          {/* STAGE 3: Contact & Communications */}
+          {/* ========================================================= */}
+          {activeStageIndex === 2 && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Official Mobile Contact Number
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                    <input
+                      type="tel"
+                      value={contactNo}
+                      onChange={(e) => setContactNo(e.target.value)}
+                      className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Departmental Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                    <input
+                      type="email"
+                      value={emailId}
+                      onChange={(e) => {
+                        setEmailId(e.target.value);
+                        if (errors.emailId) setErrors((prev) => ({ ...prev, emailId: '' }));
+                      }}
+                      className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {errors.emailId && <p className="text-[11px] text-rose-500 mt-1">{errors.emailId}</p>}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom Navigation & Save Action Footer */}
+        <div className="bg-slate-50 dark:bg-slate-800/60 px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h3 className="font-bold text-sm uppercase tracking-wider text-white">
-              MODULE 2: 6-Tier Organizational Unit & Field Hierarchy
-            </h3>
-            <span className="text-xs text-indigo-200">
-              Posting assignment across Office, Circle, Division, Sub-Division, Section, and Sub-Section
-            </span>
+            {activeStageIndex > 0 ? (
+              <button
+                type="button"
+                onClick={handlePrevStage}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" /> Previous: {STAGES[activeStageIndex - 1].label}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {activeStageIndex < STAGES.length - 1 && (
+              <button
+                type="button"
+                onClick={handleNextStage}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600 text-xs font-bold cursor-pointer transition-all"
+              >
+                <span>Next: {STAGES[activeStageIndex + 1].label}</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" /> {loading ? 'Saving Profile...' : `Save Progress (${currentStage.step})`}
+            </button>
           </div>
         </div>
-
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                1. Office Level
-              </label>
-              <SearchableSelect
-                options={masterConfig.offices.length > 0 ? masterConfig.offices : ['Headquarters', 'Circle Office', 'Division Office', 'Sub-Division Office']}
-                value={office}
-                onChange={setOffice}
-                placeholder="Select Office..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                2. Circle
-              </label>
-              <SearchableSelect
-                options={masterConfig.circles.length > 0 ? masterConfig.circles : ['Chennai', 'Salem', 'Madurai', 'Coimbatore', 'Tirunelveli', 'Villupuram']}
-                value={circle}
-                onChange={setCircle}
-                placeholder="Select Circle..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                3. Division
-              </label>
-              <SearchableSelect
-                options={masterConfig.divisions.length > 0 ? masterConfig.divisions : ['Salem', 'Madurai', 'Chennai', 'Dharapuram', 'Tirunelveli', 'Villupuram', 'Thanjavur']}
-                value={division}
-                onChange={setDivision}
-                placeholder="Select Division..."
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                4. Sub-Division
-              </label>
-              <SearchableSelect
-                options={masterConfig.sub_divisions}
-                value={subDivision}
-                onChange={setSubDivision}
-                placeholder="Select Sub-Division..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                5. Section
-              </label>
-              <SearchableSelect
-                options={masterConfig.sections}
-                value={section}
-                onChange={setSection}
-                placeholder="Select Section..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                6. Sub-Section / Wing
-              </label>
-              <SearchableSelect
-                options={masterConfig.sub_sections}
-                value={subSection}
-                onChange={setSubSection}
-                placeholder="Select Sub-Section..."
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Action Footer */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4" /> Cancel & Return
-        </button>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
-        >
-          <Save className="w-4 h-4" /> {loading ? 'Saving Profile...' : 'Save Complete Staff Profile'}
-        </button>
       </div>
     </form>
   );

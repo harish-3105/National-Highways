@@ -238,41 +238,113 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
     }));
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+  // -------------------------------------------------------------
+  // STAGE-GATED PROGRESSIVE VALIDATION ENGINE
+  // -------------------------------------------------------------
+  const validateSingleStage = (stageIdx: number): Record<string, string> => {
+    const stageErrors: Record<string, string> = {};
 
-    if (!formData.feeBillNumber.trim()) {
-      newErrors.feeBillNumber = 'Fee Bill Number is required (Stage 1).';
-    }
-    if (!formData.lawyerName.trim()) {
-      newErrors.lawyerName = 'Lawyer / Law Officer Name is required (Stage 2).';
-    }
-    if (!formData.caseNumber.trim()) {
-      newErrors.caseNumber = 'Case Number is required (Stage 2).';
+    if (stageIdx === 0) {
+      // Stage 1: Voucher & Office (Baseline)
+      if (!formData.feeBillNumber.trim()) {
+        stageErrors.feeBillNumber = 'Fee Bill Number is required (Stage 1).';
+      }
+      if (!formData.circle.trim()) {
+        stageErrors.circle = 'Circle Jurisdiction is required (Stage 1).';
+      }
+      if (!formData.division.trim()) {
+        stageErrors.division = 'Division Jurisdiction is required (Stage 1).';
+      }
+    } else if (stageIdx === 1) {
+      // Stage 2: Law Officer & Case
+      if (!formData.lawyerName.trim()) {
+        stageErrors.lawyerName = 'Lawyer / Law Officer Name is required (Stage 2).';
+      }
+      if (!formData.caseNumber.trim()) {
+        stageErrors.caseNumber = 'Case Number is required (Stage 2).';
+      }
+    } else if (stageIdx === 2) {
+      // Stage 3: Fee Breakdown
+      if (formData.appearanceAmount < 0) stageErrors.appearanceAmount = 'Appearance Amount cannot be negative.';
+      if (formData.conferenceAmount < 0) stageErrors.conferenceAmount = 'Conference Amount cannot be negative.';
+      if (formData.verifyingAmount < 0) stageErrors.verifyingAmount = 'Verifying Amount cannot be negative.';
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return stageErrors;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (validateForm()) {
-      onSave(formData);
+  const isStageAccessible = (targetStageIdx: number): boolean => {
+    if (targetStageIdx === 0) return true;
+    for (let i = 0; i < targetStageIdx; i++) {
+      const stageErrs = validateSingleStage(i);
+      if (Object.keys(stageErrs).length > 0) return false;
+    }
+    return true;
+  };
+
+  const isStageCompleted = (stageIdx: number): boolean => {
+    if (stageIdx === 0) {
+      return Boolean(formData.feeBillNumber.trim() && formData.circle && formData.division && Object.keys(validateSingleStage(0)).length === 0);
+    }
+    if (stageIdx === 1) {
+      return Boolean(formData.lawyerName.trim() && formData.caseNumber.trim() && Object.keys(validateSingleStage(1)).length === 0);
+    }
+    if (stageIdx === 2) {
+      return Boolean(formData.totalFeeAmount > 0);
+    }
+    if (stageIdx === 3) {
+      return Boolean(formData.goStatus === 'Not Required' || formData.goNumber || formData.statusOfObtainingGo);
+    }
+    if (stageIdx === 4) {
+      return Boolean(formData.paymentStatus === 'Settled' || formData.statusOfPaymentProposal);
+    }
+    return false;
+  };
+
+  const validateUpToStage = (maxStageIdx: number): boolean => {
+    const combinedErrors: Record<string, string> = {};
+    for (let i = 0; i <= maxStageIdx; i++) {
+      const stageErrs = validateSingleStage(i);
+      Object.assign(combinedErrors, stageErrs);
+    }
+    setErrors(combinedErrors);
+    return Object.keys(combinedErrors).length === 0;
+  };
+
+  const currentTabIndex = TABS.findIndex((t) => t.id === activeTab);
+
+  const handleTabClick = (targetTabId: FormTabType) => {
+    const targetIdx = TABS.findIndex((t) => t.id === targetTabId);
+    if (isStageAccessible(targetIdx)) {
+      setErrors({});
+      setActiveTab(targetTabId);
     } else {
+      validateUpToStage(currentTabIndex);
+    }
+  };
+
+  const goToNextTab = () => {
+    if (validateUpToStage(currentTabIndex)) {
+      if (currentTabIndex < TABS.length - 1) {
+        setActiveTab(TABS[currentTabIndex + 1].id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  };
+
+  const goToPrevTab = () => {
+    if (currentTabIndex > 0) {
+      setActiveTab(TABS[currentTabIndex - 1].id);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
-  const currentTabIndex = TABS.findIndex((t) => t.id === activeTab);
-  const goToNextTab = () => {
-    if (currentTabIndex < TABS.length - 1) {
-      setActiveTab(TABS[currentTabIndex + 1].id);
-    }
-  };
-  const goToPrevTab = () => {
-    if (currentTabIndex > 0) {
-      setActiveTab(TABS[currentTabIndex - 1].id);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateUpToStage(currentTabIndex)) {
+      onSave(formData);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -328,32 +400,31 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
       {/* Sub-Navigation Lifecycle Tab Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-1.5 shadow-xs">
         <nav className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5" aria-label="Lifecycle Stages">
-          {TABS.map((tab) => {
+          {TABS.map((tab, idx) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            const isCompleted =
-              (tab.id === 'voucher' && formData.feeBillNumber && formData.circle) ||
-              (tab.id === 'lawyer' && formData.lawyerName && formData.caseNumber) ||
-              (tab.id === 'breakdown' && formData.totalFeeAmount > 0) ||
-              (tab.id === 'go' && (formData.goStatus === 'Not Required' || formData.goNumber || formData.statusOfObtainingGo)) ||
-              (tab.id === 'payment' && (formData.paymentStatus === 'Settled' || formData.statusOfPaymentProposal));
+            const accessible = isStageAccessible(idx);
+            const completed = isStageCompleted(idx);
 
             return (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all text-left cursor-pointer ${
+                onClick={() => handleTabClick(tab.id)}
+                disabled={!accessible}
+                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all text-left cursor-pointer disabled:cursor-not-allowed ${
                   isActive
                     ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80'
+                    : accessible
+                    ? 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80'
+                    : 'text-slate-400 dark:text-slate-600 opacity-60'
                 }`}
               >
                 <div
                   className={`p-1.5 rounded-lg shrink-0 ${
                     isActive
                       ? 'bg-blue-700 text-white'
-                      : isCompleted
+                      : completed
                       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
                       : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
                   }`}
@@ -365,7 +436,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                     <span className={`text-[10px] uppercase tracking-wider block ${isActive ? 'text-blue-200' : 'text-slate-400'}`}>
                       {tab.step}
                     </span>
-                    {isCompleted && !isActive && <span className="text-emerald-600 text-[10px] font-black">✓</span>}
+                    {completed && !isActive && <span className="text-emerald-600 text-[10px] font-black">✓</span>}
                   </div>
                   <span className="block truncate">{tab.label}</span>
                 </div>
@@ -446,7 +517,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={activeCircles.map((c) => c.name)}
                 value={formData.circle}
                 onChange={handleCircleChange}
-                placeholder=""
                 required
               />
             </div>
@@ -459,7 +529,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={availableDivisions.map((d) => d.name)}
                 value={formData.division}
                 onChange={(val) => setFormData((prev) => ({ ...prev, division: val }))}
-                placeholder=""
                 required
               />
             </div>
@@ -508,7 +577,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={lawyerDesignations}
                 value={formData.lawyerDesignation}
                 onChange={(val) => setFormData((prev) => ({ ...prev, lawyerDesignation: val }))}
-                placeholder=""
               />
             </div>
 
@@ -520,7 +588,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={caseTypes}
                 value={formData.caseType}
                 onChange={(val) => setFormData((prev) => ({ ...prev, caseType: val }))}
-                placeholder=""
               />
             </div>
 
@@ -532,7 +599,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={casePertainsToOptions}
                 value={formData.casePertainsTo}
                 onChange={(val) => setFormData((prev) => ({ ...prev, casePertainsTo: val as any }))}
-                placeholder=""
               />
             </div>
 
@@ -606,7 +672,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                       options={lawyerDesignations}
                       value={formData.assistantDesignation || ''}
                       onChange={(val) => setFormData((prev) => ({ ...prev, assistantDesignation: val }))}
-                      placeholder=""
                     />
                   </div>
                 </div>
@@ -756,7 +821,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={goStatusOptions}
                 value={formData.goStatus || ''}
                 onChange={(val) => setFormData((prev) => ({ ...prev, goStatus: val as GOStatusType }))}
-                placeholder="Select G.O. Status..."
               />
             </div>
 
@@ -769,7 +833,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   options={statusOfObtainingGoOptions}
                   value={formData.statusOfObtainingGo || ''}
                   onChange={(val) => setFormData((prev) => ({ ...prev, statusOfObtainingGo: val }))}
-                  placeholder=""
                 />
               </div>
             )}
@@ -860,7 +923,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={statusOfPaymentProposalOptions}
                 value={formData.statusOfPaymentProposal || ''}
                 onChange={(val) => setFormData((prev) => ({ ...prev, statusOfPaymentProposal: val }))}
-                placeholder=""
               />
             </div>
 
@@ -872,7 +934,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 options={paymentStatuses}
                 value={formData.paymentStatus || ''}
                 onChange={(val) => setFormData((prev) => ({ ...prev, paymentStatus: val as any }))}
-                placeholder="Select Payment Status..."
               />
             </div>
           </div>
@@ -929,7 +990,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                     options={yesNoOptions}
                     value={formData.isSanctioned || ''}
                     onChange={(val) => setFormData((prev) => ({ ...prev, isSanctioned: val as YesNoType }))}
-                    placeholder="Select Option..."
                   />
                 </div>
               </div>
