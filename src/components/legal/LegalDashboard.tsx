@@ -26,7 +26,6 @@ import {
   AlertTriangle,
   Sparkles,
 } from 'lucide-react';
-import { CIRCLE_DIVISION_MAP } from '@/lib/legal/masterData';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 export const LegalDashboard: React.FC = () => {
@@ -249,8 +248,6 @@ export const LegalDashboard: React.FC = () => {
     setFilterComplianceDueOnly(false);
     setFilterDisposedOnly(false);
   };
-
-  const divisionOptions = filterCircle ? (CIRCLE_DIVISION_MAP[filterCircle] || masterData?.divisions || []) : [];
 
   if (uiMode === 'FORM') {
     return (

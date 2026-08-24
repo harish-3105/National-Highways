@@ -9,7 +9,7 @@ import {
   GPOpinionType,
   ComplianceStatusType,
 } from '@/types/legal';
-import { CIRCLE_DIVISION_MAP, calculateAppealDelay } from '@/lib/legal/masterData';
+import { calculateAppealDelay } from '@/lib/legal/masterData';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { LegalMasterData } from '@/app/api/legal/master-data/route';
@@ -193,11 +193,8 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   const complianceStatuses = masterData?.complianceStatuses || [];
 
   const divisions = useMemo(() => {
-    if (formData.circle && CIRCLE_DIVISION_MAP[formData.circle]) {
-      return CIRCLE_DIVISION_MAP[formData.circle];
-    }
     return masterData?.divisions || [];
-  }, [formData.circle, masterData?.divisions]);
+  }, [masterData?.divisions]);
 
   // Auto-calculate Appeal Delay
   useEffect(() => {
@@ -550,7 +547,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     <div>
                       <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Appeal Level</label>
                       <SearchableSelect
-                        options={appealLevels.length > 0 ? appealLevels : ['High Court Division Bench', 'Supreme Court SLP', 'District Court Appeal', 'Tribunal Appeal']}
+                        options={appealLevels}
                         value={formData.appealInfo?.appealLevel || ''}
                         onChange={(val) => handleAppealInfoChange('appealLevel', val)}
                       />
@@ -558,7 +555,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     <div>
                       <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Appeal Case Type</label>
                       <SearchableSelect
-                        options={appealCaseTypes.length > 0 ? appealCaseTypes : ['WA', 'OSA', 'SLP(C)', 'Review Petition', 'CMA']}
+                        options={appealCaseTypes}
                         value={formData.appealInfo?.appealCaseType || ''}
                         onChange={(val) => handleAppealInfoChange('appealCaseType', val)}
                       />
@@ -566,7 +563,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     <div>
                       <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Appellate Court</label>
                       <SearchableSelect
-                        options={appellateCourts.length > 0 ? appellateCourts : ['Madras High Court Principal Bench', 'Madurai Bench of Madras HC', 'Supreme Court of India']}
+                        options={appellateCourts}
                         value={formData.appealInfo?.appellateCourt || ''}
                         onChange={(val) => handleAppealInfoChange('appellateCourt', val)}
                       />
@@ -608,7 +605,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     <div>
                       <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Condonation of Delay</label>
                       <SearchableSelect
-                        options={condonationDelays.length > 0 ? condonationDelays : ['Pending', 'Allowed / Condoned', 'Dismissed', 'Not Applicable']}
+                        options={condonationDelays}
                         value={formData.appealInfo?.condonationOfDelay || ''}
                         onChange={(val) => handleAppealInfoChange('condonationOfDelay', val)}
                       />
@@ -636,7 +633,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     Circle Jurisdiction <span className="text-rose-500">*</span>
                   </label>
                   <SearchableSelect
-                    options={circles.length > 0 ? circles : Object.keys(CIRCLE_DIVISION_MAP)}
+                    options={circles}
                     value={formData.circle}
                     onChange={handleCircleChange}
                   />
@@ -660,7 +657,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     Name of Court / Forum <span className="text-rose-500">*</span>
                   </label>
                   <SearchableSelect
-                    options={courts.length > 0 ? courts : ['High Court Madras', 'Madurai Bench of Madras HC', 'Principal Sub Court', 'District Court', 'Supreme Court']}
+                    options={courts}
                     value={formData.nameOfCourt}
                     onChange={(val) => handleChange('nameOfCourt', val)}
                   />
@@ -675,7 +672,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     Case Type <span className="text-rose-500">*</span>
                   </label>
                   <SearchableSelect
-                    options={caseTypes.length > 0 ? caseTypes : ['WP', 'WA', 'OS', 'AS', 'CMA', 'CRP', 'EP', 'LAOP', 'SLP']}
+                    options={caseTypes}
                     value={formData.caseType}
                     onChange={(val) => handleChange('caseType', val)}
                   />
@@ -747,7 +744,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Category</label>
                   <SearchableSelect
-                    options={categories.length > 0 ? categories : ['Land Acquisition', 'Contractual Dispute', 'Service Matter', 'Encroachment', 'Tender Challenge']}
+                    options={categories}
                     value={formData.category}
                     onChange={(val) => handleChange('category', val)}
                   />
@@ -756,7 +753,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Nature of Case</label>
                   <SearchableSelect
-                    options={natureOfCasesList.length > 0 ? natureOfCasesList : ['Quash G.O.', 'Enhanced Compensation', 'Injunction', 'Payment of Bills', 'Declaration']}
+                    options={natureOfCasesList}
                     value={formData.natureOfCase}
                     onChange={(val) => handleChange('natureOfCase', val)}
                   />
@@ -765,7 +762,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Present Stage</label>
                   <SearchableSelect
-                    options={presentStages.length > 0 ? presentStages : ['Notice Issued', 'For Counter Affidavit', 'Interim Stay in Operation', 'Final Arguments', 'Orders Reserved', 'Disposed']}
+                    options={presentStages}
                     value={formData.presentStage}
                     onChange={(val) => handleChange('presentStage', val)}
                   />
@@ -774,7 +771,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Current Status</label>
                   <SearchableSelect
-                    options={currentStatuses.length > 0 ? currentStatuses : ['Pending', 'Disposed - In Favor of Dept', 'Disposed - Against Dept', 'Stay Granted']}
+                    options={currentStatuses}
                     value={formData.currentStatus}
                     onChange={(val) => handleChange('currentStatus', val)}
                   />
@@ -918,7 +915,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Compliance Status</label>
                   <SearchableSelect
-                    options={complianceStatuses.length > 0 ? complianceStatuses : ['Complied', 'Pending Action', 'Challenged in Appeal', 'Stayed by Appellate Court']}
+                    options={complianceStatuses}
                     value={formData.complianceStatus || ''}
                     onChange={(val) => handleChange('complianceStatus', val as any)}
                   />
@@ -974,7 +971,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">GP Opinion Received</label>
                   <SearchableSelect
-                    options={gpOpinions.length > 0 ? gpOpinions : ['Fit for Appeal', 'Not Fit for Appeal', 'Awaiting Opinion', 'Implement Order']}
+                    options={gpOpinions}
                     value={formData.gpOpinion || ''}
                     onChange={(val) => handleChange('gpOpinion', val as any)}
                   />
