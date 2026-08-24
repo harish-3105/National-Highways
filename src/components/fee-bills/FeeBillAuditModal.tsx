@@ -1,17 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FeeBillRecord, AuditLogEntry, PaymentStatusType } from '@/types/feeBill';
+import { FeeBillRecord, PaymentStatusType } from '@/types/feeBill';
 import { formatINR } from '@/lib/feeBillMasterData';
 import {
   X,
   ShieldCheck,
-  History,
-  User,
-  Clock,
   CheckCircle2,
-  AlertTriangle,
   FileCheck,
+  Percent,
 } from 'lucide-react';
 
 interface FeeBillAuditModalProps {
@@ -39,15 +36,19 @@ export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
 
   useEffect(() => {
     if (contract) {
+      const initSettled = contract.settledAmount || contract.totalFeeAmount || 0;
+      const initIt = contract.itCess !== undefined ? contract.itCess : Math.round(initSettled * 0.1);
       setSelectedStatus(contract.paymentStatus || paymentStatuses[0] || '');
-      setSettledAmount(contract.settledAmount || contract.totalFeeAmount || 0);
-      setItCess(contract.itCess || Math.round((contract.totalFeeAmount || 0) * 0.1));
+      setSettledAmount(initSettled);
+      setItCess(initIt);
       setUtrRbiReference(contract.utrRbiReference || '');
       setPaymentDate(contract.paymentDate || new Date().toISOString().split('T')[0]);
     }
-  }, [contract]);
+  }, [contract, paymentStatuses]);
 
   if (!isOpen || !contract) return null;
+
+  const netDeposited = Math.max(0, settledAmount - itCess);
 
   const handleUpdateStatus = async () => {
     try {
@@ -59,6 +60,7 @@ export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
         paymentStatus: selectedStatus as PaymentStatusType,
         settledAmount: selectedStatus === 'Settled' ? settledAmount : 0,
         itCess: selectedStatus === 'Settled' ? itCess : 0,
+        amountDeposited: selectedStatus === 'Settled' ? netDeposited : 0,
         utrRbiReference: selectedStatus === 'Settled' ? utrRbiReference : '',
         paymentDate: selectedStatus === 'Settled' ? paymentDate : '',
         currentPendency: selectedStatus === 'Settled' ? 'Settled' : contract.currentPendency,
@@ -108,7 +110,7 @@ export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -133,7 +135,7 @@ export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
               <FileCheck className="w-4 h-4 text-emerald-600" /> Update Disbursement Status
             </h4>
 
-            <div className={`grid grid-cols-${Math.min(paymentStatuses.length, 3)} gap-3`}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {paymentStatuses.map((st) => (
                 <button
                   key={st}
@@ -167,9 +169,18 @@ export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      IT Cess Deduction (₹)
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        IT Cess Deduction (₹)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setItCess(Math.round(settledAmount * 0.1))}
+                        className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 hover:underline cursor-pointer"
+                      >
+                        <Percent className="w-3 h-3" /> Apply 10% TDS
+                      </button>
+                    </div>
                     <input
                       type="number"
                       value={itCess}
@@ -177,6 +188,15 @@ export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
                       className="w-full py-1.5 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold"
                     />
                   </div>
+                </div>
+
+                <div className="p-2.5 bg-white/70 dark:bg-slate-900/70 border border-emerald-200 dark:border-emerald-800/80 rounded-lg flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                    Net Amount Deposited into Account:
+                  </span>
+                  <span className="text-sm font-black text-emerald-700 dark:text-emerald-300">
+                    {formatINR(netDeposited)}
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

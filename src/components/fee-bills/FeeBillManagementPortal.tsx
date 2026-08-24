@@ -225,6 +225,7 @@ export function FeeBillManagementPortal() {
   if (activeTab === 'create') {
     return (
       <FeeBillDataEntryForm
+        key={editingBill?.id || 'new-fee-bill'}
         initialData={editingBill || undefined}
         existingBills={bills}
         masterData={masterData}
@@ -483,7 +484,6 @@ export function FeeBillManagementPortal() {
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <input
                     type="text"
-                    placeholder="Search Voucher, Case, Advocate..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500"
@@ -508,7 +508,6 @@ export function FeeBillManagementPortal() {
                       setSelectedCircle(val === 'All Circles' ? '' : val);
                       setSelectedDivision('');
                     }}
-                    placeholder="Circle..."
                   />
                 </div>
 
@@ -518,7 +517,6 @@ export function FeeBillManagementPortal() {
                     options={['All Divisions', ...availableDivisions.map((d) => d.name)]}
                     value={selectedDivision ? `${selectedDivision}` : 'All Divisions'}
                     onChange={(val) => setSelectedDivision(val === 'All Divisions' ? '' : val)}
-                    placeholder="Division..."
                   />
                 </div>
 
