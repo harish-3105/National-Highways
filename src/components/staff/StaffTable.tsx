@@ -43,7 +43,7 @@ export const StaffTable: React.FC<StaffTableProps> = ({
             <th className="py-3.5 px-4">Staff Member</th>
             <th className="py-3.5 px-4">Designation</th>
             <th className="py-3.5 px-4">Office & Circle</th>
-            <th className="py-3.5 px-4">Division & Section</th>
+            <th className="py-3.5 px-4">Division & Sub-Division</th>
             <th className="py-3.5 px-4">Contact Details</th>
             <th className="py-3.5 px-4 text-right">Actions</th>
           </tr>
@@ -109,14 +109,14 @@ export const StaffTable: React.FC<StaffTableProps> = ({
                   </div>
                 </td>
 
-                {/* Division & Section */}
+                {/* Division & Sub-Division / Section */}
                 <td className="py-3.5 px-4">
                   <div className="space-y-0.5">
                     <span className="font-semibold text-slate-800 dark:text-slate-200 block">
                       {member.division || "—"}
                     </span>
-                    <span className="text-[10px] text-slate-400">
-                      {member.section ? `Sec: ${member.section}` : "—"}
+                    <span className="text-[10px] text-slate-400 block">
+                      {member.sub_division ? `${member.sub_division}` : member.section ? `Sec: ${member.section}` : "—"}
                     </span>
                   </div>
                 </td>
@@ -148,7 +148,7 @@ export const StaffTable: React.FC<StaffTableProps> = ({
                     <button
                       onClick={() => onView(member)}
                       title="View Staff Profile"
-                      className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                      className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
@@ -157,7 +157,7 @@ export const StaffTable: React.FC<StaffTableProps> = ({
                       <button
                         onClick={() => onRestore(member)}
                         title="Restore Staff Member"
-                        className="p-1.5 text-amber-600 dark:text-amber-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/60 transition"
+                        className="p-1.5 text-amber-600 dark:text-amber-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/60 transition cursor-pointer"
                       >
                         <RotateCcw className="w-4 h-4" />
                       </button>
@@ -166,14 +166,14 @@ export const StaffTable: React.FC<StaffTableProps> = ({
                         <button
                           onClick={() => onEdit(member)}
                           title="Edit Staff Member"
-                          className="p-1.5 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                          className="p-1.5 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => onDelete(member)}
                           title="Soft-Delete (Archive) Staff Record"
-                          className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                          className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -189,3 +189,5 @@ export const StaffTable: React.FC<StaffTableProps> = ({
     </div>
   );
 };
+
+export default StaffTable;

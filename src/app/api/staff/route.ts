@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+
 function getSupabaseClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "").replace(/^["']|["']$/g, "").trim();
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "").replace(/^["']|["']$/g, "").trim();
   if (!url || !key) {
-    throw new Error("Missing Supabase credentials");
+    return null;
   }
   return createClient(url, key);
 }
@@ -13,6 +15,10 @@ function getSupabaseClient() {
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json([]);
+    }
+
     const { searchParams } = new URL(request.url);
     const includeDeleted = searchParams.get("include_deleted") === "true";
 
@@ -39,6 +45,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Database service unavailable" }, { status: 500 });
+    }
+
     const body = await request.json();
 
     const {
@@ -112,6 +122,10 @@ export async function PUT(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Database service unavailable" }, { status: 500 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
@@ -136,6 +150,10 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Database service unavailable" }, { status: 500 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const permanent = searchParams.get("permanent") === "true";

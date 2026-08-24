@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import {
+  DEFAULT_OFFICES,
+  DEFAULT_CIRCLES,
+  DEFAULT_DESIGNATIONS,
+  DEFAULT_SECTIONS,
+  DEFAULT_SUB_SECTIONS,
+  DIVISION_SUBDIVISION_HIERARCHY,
+  CIRCLE_DIVISION_HIERARCHY,
+} from "@/lib/staff/masterData";
+
+export const dynamic = "force-dynamic";
 
 function getSupabaseClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "").replace(/^["']|["']$/g, "").trim();
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "").replace(/^["']|["']$/g, "").trim();
   if (!url || !key) {
-    throw new Error("Missing Supabase credentials");
+    return null;
   }
   return createClient(url, key);
 }
@@ -13,6 +24,10 @@ function getSupabaseClient() {
 export async function GET() {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json(groupMasterData([]));
+    }
+
     const { data, error } = await supabase
       .from("staff_master_config")
       .select("*")
@@ -34,6 +49,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
+    }
+
     const { category, value } = await request.json();
 
     if (!category || !value || typeof value !== "string" || value.trim() === "") {
@@ -66,6 +85,10 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
+    }
+
     const { id, category, oldValue, newValue } = await request.json();
 
     if (!newValue || typeof newValue !== "string" || newValue.trim() === "") {
@@ -75,7 +98,6 @@ export async function PUT(request: NextRequest) {
     const cleanNewValue = newValue.trim();
 
     if (id) {
-      // Get old item first
       const { data: existing } = await supabase.from("staff_master_config").select("*").eq("id", id).single();
       
       const { data, error } = await supabase
@@ -119,7 +141,6 @@ export async function PUT(request: NextRequest) {
         await (supabase.from("staff_members") as any).update({ [cleanCategory]: cleanNewValue }).eq(cleanCategory, cleanOldValue);
       }
 
-
       return NextResponse.json(data);
     } else {
       return NextResponse.json({ error: "Missing id or category/oldValue parameters" }, { status: 400 });
@@ -133,6 +154,10 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const category = searchParams.get("category");
@@ -167,13 +192,25 @@ export async function DELETE(request: NextRequest) {
 }
 
 function groupMasterData(items: any[]) {
-  const offices = Array.from(new Set(items.filter(i => i.category === "office").map(i => i.value)));
-  const circles = Array.from(new Set(items.filter(i => i.category === "circle").map(i => i.value)));
-  const divisions = Array.from(new Set(items.filter(i => i.category === "division").map(i => i.value)));
-  const sub_divisions = Array.from(new Set(items.filter(i => i.category === "sub_division").map(i => i.value)));
-  const sections = Array.from(new Set(items.filter(i => i.category === "section").map(i => i.value)));
-  const sub_sections = Array.from(new Set(items.filter(i => i.category === "sub_section").map(i => i.value)));
-  const designations = Array.from(new Set(items.filter(i => i.category === "designation").map(i => i.value)));
+  const dbOffices = items.filter(i => i.category === "office").map(i => i.value);
+  const dbCircles = items.filter(i => i.category === "circle").map(i => i.value);
+  const dbDivisions = items.filter(i => i.category === "division").map(i => i.value);
+  const dbSubDivisions = items.filter(i => i.category === "sub_division").map(i => i.value);
+  const dbSections = items.filter(i => i.category === "section").map(i => i.value);
+  const dbSubSections = items.filter(i => i.category === "sub_section").map(i => i.value);
+  const dbDesignations = items.filter(i => i.category === "designation").map(i => i.value);
+
+  // Union DB items with standard defaults so options are always rich and reliable
+  const defaultDivisions = Object.values(CIRCLE_DIVISION_HIERARCHY).flat();
+  const defaultSubDivisions = Object.values(DIVISION_SUBDIVISION_HIERARCHY).flat();
+
+  const offices = Array.from(new Set([...DEFAULT_OFFICES, ...dbOffices])).sort();
+  const circles = Array.from(new Set([...DEFAULT_CIRCLES, ...dbCircles])).sort();
+  const divisions = Array.from(new Set([...defaultDivisions, ...dbDivisions])).sort();
+  const sub_divisions = Array.from(new Set([...defaultSubDivisions, ...dbSubDivisions])).sort();
+  const sections = Array.from(new Set([...DEFAULT_SECTIONS, ...dbSections])).sort();
+  const sub_sections = Array.from(new Set([...DEFAULT_SUB_SECTIONS, ...dbSubSections])).sort();
+  const designations = Array.from(new Set([...DEFAULT_DESIGNATIONS, ...dbDesignations])).sort();
 
   return {
     rawItems: items,

@@ -378,7 +378,6 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
             <form onSubmit={handleAddOption} className="flex gap-2">
               <input
                 type="text"
-                placeholder={`Add new ${activeTabMeta?.label.toLowerCase()} option...`}
                 value={newValue}
                 onChange={(e) => setNewValue(e.target.value)}
                 className="flex-1 px-3.5 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
@@ -398,7 +397,6 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
               <input
                 type="text"
-                placeholder="Search options..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"

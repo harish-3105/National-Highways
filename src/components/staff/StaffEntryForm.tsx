@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ArrowLeft,
   Save,
@@ -17,6 +17,12 @@ import {
 } from 'lucide-react';
 import { StaffMember, StaffMasterConfig } from './StaffTypes';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
+import {
+  getCascadingDivisions,
+  getCascadingSubDivisions,
+  getCascadingSections,
+  getCascadingSubSections,
+} from '@/lib/staff/masterData';
 
 interface StaffEntryFormProps {
   initialData?: Partial<StaffMember>;
@@ -25,9 +31,7 @@ interface StaffEntryFormProps {
   onCancel: () => void;
 }
 
-type StaffStageType =
-  | 'identity_contact'
-  | 'posting_hierarchy';
+type StaffStageType = 'identity_contact' | 'posting_hierarchy';
 
 interface StageDefinition {
   id: StaffStageType;
@@ -80,6 +84,72 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // -------------------------------------------------------------
+  // DYNAMIC SMART CASCADING OPTIONS
+  // -------------------------------------------------------------
+  const availableDivisions = useMemo(() => {
+    return getCascadingDivisions(circle, masterConfig.divisions || []);
+  }, [circle, masterConfig.divisions]);
+
+  const availableSubDivisions = useMemo(() => {
+    return getCascadingSubDivisions(division, masterConfig.sub_divisions || []);
+  }, [division, masterConfig.sub_divisions]);
+
+  const availableSections = useMemo(() => {
+    return getCascadingSections(subDivision, masterConfig.sections || []);
+  }, [subDivision, masterConfig.sections]);
+
+  const availableSubSections = useMemo(() => {
+    return getCascadingSubSections(section, masterConfig.sub_sections || []);
+  }, [section, masterConfig.sub_sections]);
+
+  // Handlers with smart cascading auto-resets
+  const handleCircleChange = (newCircle: string) => {
+    setCircle(newCircle);
+    if (division) {
+      const validDivs = getCascadingDivisions(newCircle, masterConfig.divisions || []);
+      if (!validDivs.includes(division)) {
+        setDivision('');
+        setSubDivision('');
+        setSection('');
+        setSubSection('');
+      }
+    }
+  };
+
+  const handleDivisionChange = (newDivision: string) => {
+    setDivision(newDivision);
+    if (subDivision) {
+      const validSubDivs = getCascadingSubDivisions(newDivision, masterConfig.sub_divisions || []);
+      if (!validSubDivs.includes(subDivision)) {
+        setSubDivision('');
+        setSection('');
+        setSubSection('');
+      }
+    }
+  };
+
+  const handleSubDivisionChange = (newSubDivision: string) => {
+    setSubDivision(newSubDivision);
+    if (section) {
+      const validSecs = getCascadingSections(newSubDivision, masterConfig.sections || []);
+      if (!validSecs.includes(section)) {
+        setSection('');
+        setSubSection('');
+      }
+    }
+  };
+
+  const handleSectionChange = (newSection: string) => {
+    setSection(newSection);
+    if (subSection) {
+      const validSubSecs = getCascadingSubSections(newSection, masterConfig.sub_sections || []);
+      if (!validSubSecs.includes(subSection)) {
+        setSubSection('');
+      }
+    }
+  };
+
+  // -------------------------------------------------------------
   // STAGE-GATED VALIDATION ENGINE
   // -------------------------------------------------------------
   const validateSingleStage = (stageIdx: number): Record<string, string> => {
@@ -95,7 +165,7 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
       }
     } else if (stageIdx === 1) {
       // Stage 2: Organizational Posting
-      // Optional/recommended fields, non-blocking
+      // Non-blocking recommendations
     }
 
     return stageErrors;
@@ -409,49 +479,49 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
                   <SearchableSelect
                     options={masterConfig.circles || []}
                     value={circle}
-                    onChange={setCircle}
+                    onChange={handleCircleChange}
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    3. Division Jurisdiction
+                    3. Division Jurisdiction {circle && <span className="text-blue-600 dark:text-blue-400 font-normal">({circle})</span>}
                   </label>
                   <SearchableSelect
-                    options={masterConfig.divisions || []}
+                    options={availableDivisions}
                     value={division}
-                    onChange={setDivision}
+                    onChange={handleDivisionChange}
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    4. Sub-Division Unit
+                    4. Sub-Division Unit {division && <span className="text-blue-600 dark:text-blue-400 font-normal">({division})</span>}
                   </label>
                   <SearchableSelect
-                    options={masterConfig.sub_divisions || []}
+                    options={availableSubDivisions}
                     value={subDivision}
-                    onChange={setSubDivision}
+                    onChange={handleSubDivisionChange}
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    5. Section Level
+                    5. Section Level {subDivision && <span className="text-blue-600 dark:text-blue-400 font-normal">({subDivision})</span>}
                   </label>
                   <SearchableSelect
-                    options={masterConfig.sections || []}
+                    options={availableSections}
                     value={section}
-                    onChange={setSection}
+                    onChange={handleSectionChange}
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    6. Sub-Section Field Unit
+                    6. Sub-Section Field Unit {section && <span className="text-blue-600 dark:text-blue-400 font-normal">({section})</span>}
                   </label>
                   <SearchableSelect
-                    options={masterConfig.sub_sections || []}
+                    options={availableSubSections}
                     value={subSection}
                     onChange={setSubSection}
                   />

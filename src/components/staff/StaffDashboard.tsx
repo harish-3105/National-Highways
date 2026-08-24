@@ -18,16 +18,23 @@ import {
   RotateCcw,
   Building2,
   CheckCircle2,
+  AlertCircle,
+  X,
 } from "lucide-react";
 import { NavigationHeader } from "@/components/NavigationHeader";
 import { StaffMember, StaffMasterConfig } from "./StaffTypes";
-
 import { StaffTable } from "./StaffTable";
 import { StaffEntryForm } from "./StaffEntryForm";
 import { ViewStaffModal } from "./ViewStaffModal";
 import { DeleteStaffModal } from "./DeleteStaffModal";
 import { StaffMasterDataModal } from "./StaffMasterDataModal";
 import { SearchableSelect } from "@/components/common/SearchableSelect";
+import {
+  getCascadingDivisions,
+  getCascadingSubDivisions,
+  getCascadingSections,
+  getCascadingSubSections,
+} from "@/lib/staff/masterData";
 
 export const StaffDashboard: React.FC = () => {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
@@ -44,6 +51,7 @@ export const StaffDashboard: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Screen state: 'LIST' | 'FORM'
   const [uiMode, setUiMode] = useState<'LIST' | 'FORM'>('LIST');
@@ -109,19 +117,94 @@ export const StaffDashboard: React.FC = () => {
   };
 
   const handleSaveStaff = async (staffData: Partial<StaffMember>) => {
+    setSaveError(null);
     try {
       const res = await fetch("/api/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(staffData),
       });
+      const data = await res.json();
       if (res.ok) {
         setUiMode("LIST");
         setSelectedStaffForEdit(null);
         fetchStaffData();
+      } else {
+        setSaveError(data.error || "Failed to save staff profile. Please try again.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to save staff member:", err);
+      setSaveError(err.message || "A network error occurred while saving.");
+    }
+  };
+
+  // -------------------------------------------------------------
+  // DYNAMIC CASCADING FOR DASHBOARD FILTER DROPDOWNS
+  // -------------------------------------------------------------
+  const availableFilterDivisions = useMemo(() => {
+    return getCascadingDivisions(selectedCircle, masterConfig.divisions || [], staffList);
+  }, [selectedCircle, masterConfig.divisions, staffList]);
+
+  const availableFilterSubDivisions = useMemo(() => {
+    return getCascadingSubDivisions(selectedDivision, masterConfig.sub_divisions || [], staffList);
+  }, [selectedDivision, masterConfig.sub_divisions, staffList]);
+
+  const availableFilterSections = useMemo(() => {
+    return getCascadingSections(selectedSubDivision, masterConfig.sections || [], staffList);
+  }, [selectedSubDivision, masterConfig.sections, staffList]);
+
+  const availableFilterSubSections = useMemo(() => {
+    return getCascadingSubSections(selectedSection, masterConfig.sub_sections || [], staffList);
+  }, [selectedSection, masterConfig.sub_sections, staffList]);
+
+  // Cascading Filter Handlers with Auto-Resets
+  const handleFilterCircleChange = (val: string) => {
+    const nextCircle = val === 'All Circles' ? '' : val;
+    setSelectedCircle(nextCircle);
+    if (selectedDivision) {
+      const validDivs = getCascadingDivisions(nextCircle, masterConfig.divisions || [], staffList);
+      if (!validDivs.includes(selectedDivision)) {
+        setSelectedDivision('');
+        setSelectedSubDivision('');
+        setSelectedSection('');
+        setSelectedSubSection('');
+      }
+    }
+  };
+
+  const handleFilterDivisionChange = (val: string) => {
+    const nextDivision = val === 'All Divisions' ? '' : val;
+    setSelectedDivision(nextDivision);
+    if (selectedSubDivision) {
+      const validSubDivs = getCascadingSubDivisions(nextDivision, masterConfig.sub_divisions || [], staffList);
+      if (!validSubDivs.includes(selectedSubDivision)) {
+        setSelectedSubDivision('');
+        setSelectedSection('');
+        setSelectedSubSection('');
+      }
+    }
+  };
+
+  const handleFilterSubDivisionChange = (val: string) => {
+    const nextSubDivision = val === 'All Sub-Divisions' ? '' : val;
+    setSelectedSubDivision(nextSubDivision);
+    if (selectedSection) {
+      const validSecs = getCascadingSections(nextSubDivision, masterConfig.sections || [], staffList);
+      if (!validSecs.includes(selectedSection)) {
+        setSelectedSection('');
+        setSelectedSubSection('');
+      }
+    }
+  };
+
+  const handleFilterSectionChange = (val: string) => {
+    const nextSection = val === 'All Sections' ? '' : val;
+    setSelectedSection(nextSection);
+    if (selectedSubSection) {
+      const validSubSecs = getCascadingSubSections(nextSection, masterConfig.sub_sections || [], staffList);
+      if (!validSubSecs.includes(selectedSubSection)) {
+        setSelectedSubSection('');
+      }
     }
   };
 
@@ -209,6 +292,18 @@ export const StaffDashboard: React.FC = () => {
 
       {/* Main Content Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {saveError && (
+          <div className="bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-2xl p-4 flex items-center justify-between text-rose-800 dark:text-rose-200 text-xs">
+            <div className="flex items-center gap-2 font-semibold">
+              <AlertCircle className="w-4 h-4 text-rose-600" />
+              <span>{saveError}</span>
+            </div>
+            <button onClick={() => setSaveError(null)} className="p-1 hover:bg-rose-100 dark:hover:bg-rose-900 rounded-lg cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {uiMode === "FORM" ? (
           <StaffEntryForm
             initialData={selectedStaffForEdit || undefined}
@@ -220,170 +315,125 @@ export const StaffDashboard: React.FC = () => {
             }}
           />
         ) : (
-          <>
-            {/* Header Banner */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="p-3.5 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/20">
-                  <Users className="w-7 h-7" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                    Staff Management Portal
-                  </h1>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Tamil Nadu National Highways Department Personnel & Engineering Directory
-                  </p>
+          <div className="space-y-6">
+            {/* Top Dashboard Title & Action Ribbon */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                      Staff Directory & Hierarchy
+                    </h1>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Personnel management across 6-tier departmental deployment structure
+                    </p>
+                  </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-2.5 flex-wrap">
-                {/* Show/Hide Archived Toggle Button */}
+                {/* Archived Records Toggle */}
                 <button
                   onClick={() => setShowArchived(!showArchived)}
-                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition cursor-pointer ${
                     showArchived
-                      ? "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800 shadow-sm"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      ? "bg-amber-500 text-white border-amber-600 shadow-sm"
+                      : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
-                  title={showArchived ? "Hide Archived Staff Records" : "Show Soft-Deleted/Archived Staff Records"}
                 >
-                  <Archive className="w-3.5 h-3.5" />
-                  <span>{showArchived ? "Hide Archived" : "Show Archived"}</span>
-                  {archivedStaffCount > 0 && (
-                    <span
-                      className={`px-1.5 py-0.2 text-[10px] font-extrabold rounded-full ${
-                        showArchived
-                          ? "bg-rose-200 dark:bg-rose-900 text-rose-800 dark:text-rose-200"
-                          : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
-                      }`}
-                    >
-                      {archivedStaffCount}
-                    </span>
-                  )}
+                  {showArchived ? <EyeOff className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+                  <span>{showArchived ? "Hide Archived" : `Archived (${archivedStaffCount})`}</span>
                 </button>
 
+                {/* Master Data Config Action */}
                 <button
                   onClick={() => setIsMasterDataOpen(true)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-2 transition cursor-pointer shadow-xs"
+                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold transition shadow-xs cursor-pointer"
                 >
-                  <Settings className="w-4 h-4 text-blue-500" />
+                  <Settings className="w-4 h-4 text-slate-500" />
                   <span>Master Config</span>
                 </button>
 
-                <button
-                  onClick={fetchStaffData}
-                  title="Refresh Data"
-                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer"
-                >
-                  <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-                </button>
-
+                {/* Add New Staff Button */}
                 <button
                   onClick={() => {
                     setSelectedStaffForEdit(null);
                     setUiMode("FORM");
                   }}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 flex items-center gap-2 transition cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-md shadow-blue-500/20 cursor-pointer"
                 >
                   <UserPlus className="w-4 h-4" />
-                  <span>Add Staff Member</span>
+                  <span>New Staff Officer</span>
                 </button>
               </div>
             </div>
 
-            {/* 4 KPI Quadrants (2x2 Grid) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Quadrant 1: Top-Left */}
-              <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Quadrant 1: Total Personnel
-                  </span>
-                  <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-700 dark:text-slate-300">
-                    <Users className="w-5 h-5" />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <div className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono">
-                    {activeStaffCount} <span className="text-sm font-semibold text-slate-500 font-sans">Active Staff</span>
-                  </div>
-                </div>
-                <div className="mt-2 text-xs text-slate-500 font-medium">
-                  {filteredStaff.length} matching current filter criteria
-                </div>
+            {/* KPI Statistics Summary Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
+                  Active Officers
+                </span>
+                <span className="text-xl font-bold text-slate-900 dark:text-slate-100">{activeStaffCount}</span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block mt-1 font-semibold">
+                  Deployable Roster
+                </span>
               </div>
 
-              {/* Quadrant 2: Top-Right */}
-              <div className="p-5 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-900/60 rounded-2xl shadow-xs flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                    Quadrant 2: Office Deployments
-                  </span>
-                  <div className="p-2.5 bg-blue-100 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400">
-                    <Building2 className="w-5 h-5" />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <div className="text-2xl font-black text-blue-700 dark:text-blue-300 font-mono">
-                    {uniqueOffices} <span className="text-sm font-semibold text-slate-500 font-sans">Offices</span>
-                  </div>
-                </div>
-                <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
-                  Active headquarters and field operational bases
-                </div>
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
+                  Designations
+                </span>
+                <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{uniqueDesignations}</span>
+                <span className="text-[10px] text-slate-400 block mt-1 font-medium">Distinct Cadres</span>
               </div>
 
-              {/* Quadrant 3: Bottom-Left */}
-              <div className="p-5 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-900/60 rounded-2xl shadow-xs flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                    Quadrant 3: Circles & Divisions
-                  </span>
-                  <div className="p-2.5 bg-indigo-100 dark:bg-indigo-950/60 rounded-xl text-indigo-600 dark:text-indigo-400">
-                    <MapPin className="w-5 h-5" />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <div className="text-2xl font-black text-indigo-700 dark:text-indigo-300 font-mono">
-                    {uniqueCircles} <span className="text-sm font-semibold text-slate-500 font-sans">Circles</span> &bull; {uniqueDivisions} <span className="text-sm font-semibold text-slate-500 font-sans">Divisions</span>
-                  </div>
-                </div>
-                <div className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-                  Regional jurisdictions & project coverage units
-                </div>
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
+                  Offices
+                </span>
+                <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{uniqueOffices}</span>
+                <span className="text-[10px] text-slate-400 block mt-1 font-medium">Field & Regional HQ</span>
               </div>
 
-              {/* Quadrant 4: Bottom-Right */}
-              <div className="p-5 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/60 rounded-2xl shadow-xs flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                    Quadrant 4: Roles & Designations
-                  </span>
-                  <div className="p-2.5 bg-emerald-100 dark:bg-emerald-950/60 rounded-xl text-emerald-600 dark:text-emerald-400">
-                    <Briefcase className="w-5 h-5" />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <div className="text-2xl font-black text-emerald-700 dark:text-emerald-300 font-mono">
-                    {uniqueDesignations} <span className="text-sm font-semibold text-slate-500 font-sans">Designations</span>
-                  </div>
-                </div>
-                <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                  Engineering cadre and administrative positions
-                </div>
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
+                  Circles
+                </span>
+                <span className="text-xl font-bold text-purple-600 dark:text-purple-400">{uniqueCircles}</span>
+                <span className="text-[10px] text-slate-400 block mt-1 font-medium">Jurisdictions</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
+                  Divisions
+                </span>
+                <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{uniqueDivisions}</span>
+                <span className="text-[10px] text-slate-400 block mt-1 font-medium">Territorial Units</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
+                  Archived
+                </span>
+                <span className="text-xl font-bold text-amber-600 dark:text-amber-400">{archivedStaffCount}</span>
+                <span className="text-[10px] text-amber-700 dark:text-amber-500 block mt-1 font-semibold">
+                  Soft Deleted
+                </span>
               </div>
             </div>
 
-            {/* Complete Toolbar & Filter Suite (All 7 Master Data Dropdowns) */}
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            {/* Smart Search & 7-Level Cascading Hierarchy Filters */}
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
               {/* Row 1: Search & Filter Summary */}
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="relative w-full sm:max-w-md">
                   <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Search name, phone, email, office, designation..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
@@ -406,7 +456,7 @@ export const StaffDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Row 2: All 7 Master Data Dropdowns Grid */}
+              {/* Row 2: All 7 Master Data Dropdowns Grid with Smart Cascading */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 pt-1">
                 {/* 1. Office Filter */}
                 <div>
@@ -417,7 +467,6 @@ export const StaffDashboard: React.FC = () => {
                     options={['All Offices', ...masterConfig.offices]}
                     value={selectedOffice ? `${selectedOffice}` : 'All Offices'}
                     onChange={(val) => setSelectedOffice(val === 'All Offices' ? '' : val)}
-                    placeholder="Office..."
                   />
                 </div>
 
@@ -429,60 +478,55 @@ export const StaffDashboard: React.FC = () => {
                   <SearchableSelect
                     options={['All Circles', ...masterConfig.circles]}
                     value={selectedCircle ? `${selectedCircle}` : 'All Circles'}
-                    onChange={(val) => setSelectedCircle(val === 'All Circles' ? '' : val)}
-                    placeholder="Circle..."
+                    onChange={handleFilterCircleChange}
                   />
                 </div>
 
                 {/* 3. Division Filter */}
                 <div>
                   <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
-                    Division
+                    Division {selectedCircle && <span className="text-blue-600 font-normal">({selectedCircle})</span>}
                   </label>
                   <SearchableSelect
-                    options={['All Divisions', ...masterConfig.divisions]}
+                    options={['All Divisions', ...availableFilterDivisions]}
                     value={selectedDivision ? `${selectedDivision}` : 'All Divisions'}
-                    onChange={(val) => setSelectedDivision(val === 'All Divisions' ? '' : val)}
-                    placeholder="Division..."
+                    onChange={handleFilterDivisionChange}
                   />
                 </div>
 
                 {/* 4. Sub-Division Filter */}
                 <div>
                   <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
-                    Sub-Division
+                    Sub-Division {selectedDivision && <span className="text-blue-600 font-normal">({selectedDivision})</span>}
                   </label>
                   <SearchableSelect
-                    options={['All Sub-Divisions', ...masterConfig.sub_divisions]}
+                    options={['All Sub-Divisions', ...availableFilterSubDivisions]}
                     value={selectedSubDivision ? `${selectedSubDivision}` : 'All Sub-Divisions'}
-                    onChange={(val) => setSelectedSubDivision(val === 'All Sub-Divisions' ? '' : val)}
-                    placeholder="Sub-Division..."
+                    onChange={handleFilterSubDivisionChange}
                   />
                 </div>
 
                 {/* 5. Section Filter */}
                 <div>
                   <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
-                    Section
+                    Section {selectedSubDivision && <span className="text-blue-600 font-normal">({selectedSubDivision})</span>}
                   </label>
                   <SearchableSelect
-                    options={['All Sections', ...masterConfig.sections]}
+                    options={['All Sections', ...availableFilterSections]}
                     value={selectedSection ? `${selectedSection}` : 'All Sections'}
-                    onChange={(val) => setSelectedSection(val === 'All Sections' ? '' : val)}
-                    placeholder="Section..."
+                    onChange={handleFilterSectionChange}
                   />
                 </div>
 
                 {/* 6. Sub-Section Filter */}
                 <div>
                   <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
-                    Sub-Section
+                    Sub-Section {selectedSection && <span className="text-blue-600 font-normal">({selectedSection})</span>}
                   </label>
                   <SearchableSelect
-                    options={['All Sub-Sections', ...masterConfig.sub_sections]}
+                    options={['All Sub-Sections', ...availableFilterSubSections]}
                     value={selectedSubSection ? `${selectedSubSection}` : 'All Sub-Sections'}
                     onChange={(val) => setSelectedSubSection(val === 'All Sub-Sections' ? '' : val)}
-                    placeholder="Sub-Section..."
                   />
                 </div>
 
@@ -495,7 +539,6 @@ export const StaffDashboard: React.FC = () => {
                     options={['All Designations', ...masterConfig.designations]}
                     value={selectedDesignation ? `${selectedDesignation}` : 'All Designations'}
                     onChange={(val) => setSelectedDesignation(val === 'All Designations' ? '' : val)}
-                    placeholder="Designation..."
                   />
                 </div>
               </div>
@@ -525,24 +568,36 @@ export const StaffDashboard: React.FC = () => {
                 onRestore={handleRestoreStaff}
               />
             )}
-          </>
+          </div>
         )}
       </main>
 
-      {/* Modals Suite */}
+      {/* View Staff Modal */}
       <ViewStaffModal
         isOpen={isViewOpen}
-        onClose={() => setIsViewOpen(false)}
+        onClose={() => {
+          setIsViewOpen(false);
+          setSelectedStaff(null);
+        }}
         staff={selectedStaff}
       />
 
+      {/* Delete Staff Modal */}
       <DeleteStaffModal
         isOpen={isDeleteOpen}
-        onClose={() => setIsDeleteOpen(false)}
-        onSuccess={fetchStaffData}
+        onClose={() => {
+          setIsDeleteOpen(false);
+          setSelectedStaff(null);
+        }}
         staff={selectedStaff}
+        onSuccess={() => {
+          fetchStaffData();
+          setIsDeleteOpen(false);
+          setSelectedStaff(null);
+        }}
       />
 
+      {/* Master Data Management Modal */}
       <StaffMasterDataModal
         isOpen={isMasterDataOpen}
         onClose={() => setIsMasterDataOpen(false)}
