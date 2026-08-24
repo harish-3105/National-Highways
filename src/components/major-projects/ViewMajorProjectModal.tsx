@@ -43,8 +43,7 @@ interface ViewMajorProjectModalProps {
 type StageTabType =
   | 'sanction_scope'
   | 'contract_award'
-  | 'physical_progress'
-  | 'financial_outlay'
+  | 'physical_financial_progress'
   | 'overruns_eot'
   | 'statutory_clearances'
   | 'col27_field_log';
@@ -73,37 +72,30 @@ const STAGES: StageDefinition[] = [
     icon: HardHat,
   },
   {
-    id: 'physical_progress',
-    label: 'Physical Progress',
+    id: 'physical_financial_progress',
+    label: 'Physical & Financial Progress',
     step: 'Stage 3',
-    subtitle: 'Stage classification, completed lengths & execution %',
-    icon: Activity,
-  },
-  {
-    id: 'financial_outlay',
-    label: 'Financial Outlay',
-    step: 'Stage 4',
-    subtitle: 'Cost sanctions, revisions & cumulative expenditure',
-    icon: IndianRupee,
+    subtitle: 'Stage classification, completed lengths & financial expenditure bars',
+    icon: TrendingUp,
   },
   {
     id: 'overruns_eot',
     label: 'Overruns & EOT',
-    step: 'Stage 5',
+    step: 'Stage 4',
     subtitle: 'Completion targets, delay metrics & extension of time',
     icon: Clock,
   },
   {
     id: 'statutory_clearances',
     label: 'Statutory Clearances',
-    step: 'Stage 6',
+    step: 'Stage 5',
     subtitle: 'Land, forest, utility, railways & statutory bottlenecks',
     icon: ShieldAlert,
   },
   {
     id: 'col27_field_log',
     label: 'Col 27 Execution Log',
-    step: 'Stage 7',
+    step: 'Stage 6',
     subtitle: 'Detailed stage status & division update ledger',
     icon: Building2,
   },
@@ -186,7 +178,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
 
   const handleNextStage = () => {
     if (activeStageIndex < STAGES.length - 1) {
-      setActiveStageIndex((prev) => prev + 1);
+      setActiveStageIndex((prev) => prev - 1);
     }
   };
 
@@ -348,9 +340,9 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
           </div>
         </div>
 
-        {/* 7-STAGE LIFECYCLE SUB-NAVIGATION BAR */}
+        {/* 6-STAGE LIFECYCLE SUB-NAVIGATION BAR */}
         <div className="bg-white dark:bg-slate-900 px-4 py-2 border-b border-slate-200 dark:border-slate-800 shrink-0 print:hidden">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
             {STAGES.map((stage, idx) => {
               const Icon = stage.icon;
               const isActive = activeStageIndex === idx;
@@ -577,67 +569,155 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 3: Physical Progress & Milestones */}
+          {/* STAGE 3: Combined Physical & Financial Progress */}
           {/* ========================================================= */}
           {activeStageIndex === 2 && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-                <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                  Stage 3: Physical Progress & Completed Lengths
+                  Stage 3: Physical & Financial Execution Metrics
                 </h3>
               </div>
 
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-emerald-600" />
-                    <span className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">
-                      Physical Progress Status ({project.work_stage})
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Card A: Physical Progress with Progress Bar */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-emerald-600" />
+                      <span className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">
+                        Physical Progress ({project.work_stage})
+                      </span>
+                    </div>
+                    <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-lg">
+                      {isTender ? 'Tender Stage' : `${project.progress_percent || 0}%`}
                     </span>
                   </div>
-                  <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-lg">
-                    {isTender ? 'Tender Stage' : `${project.progress_percent || 0}%`}
-                  </span>
+
+                  {!isTender && (
+                    <div className="space-y-1.5">
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 h-3 rounded-full overflow-hidden shadow-inner">
+                        <div
+                          className="bg-emerald-600 dark:bg-emerald-500 h-full rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(100, Math.max(0, project.progress_percent || 0))}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                        <span>0%</span>
+                        <span>Target: 100% ({project.length_km || 0} km)</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-200 dark:border-slate-700/60 font-mono">
+                    <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                      <span className="text-[9.5px] text-slate-400 block uppercase font-bold">Prior Completed</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 text-xs mt-0.5 block">
+                        {project.completed_length_prior_km || 0} km
+                      </span>
+                    </div>
+                    <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                      <span className="text-[9.5px] text-slate-400 block uppercase font-bold">Current FY</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 text-xs mt-0.5 block">
+                        {project.completed_length_current_fy_km || 0} km
+                      </span>
+                    </div>
+                    <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                      <span className="text-[9.5px] text-slate-400 block uppercase font-bold">Total Completed</span>
+                      <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs mt-0.5 block">
+                        {project.total_completed_length_km || 0} km
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                {!isTender && (
+                {/* Card B: Financial Progress with Progress Bar */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <IndianRupee className="w-4 h-4 text-blue-600" />
+                      <span className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">
+                        Financial Progress
+                      </span>
+                    </div>
+                    <span className="font-mono font-black text-blue-600 dark:text-blue-400 text-lg">
+                      {finProgress !== null ? `${finProgress}%` : '0%'}
+                    </span>
+                  </div>
+
                   <div className="space-y-1.5">
                     <div className="w-full bg-slate-200 dark:bg-slate-700 h-3 rounded-full overflow-hidden shadow-inner">
                       <div
-                        className="bg-emerald-600 dark:bg-emerald-500 h-full rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min(100, Math.max(0, project.progress_percent || 0))}%` }}
+                        className="bg-blue-600 dark:bg-blue-500 h-full rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, Math.max(0, finProgress || 0))}%` }}
                       />
                     </div>
                     <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                      <span>0%</span>
-                      <span>Target: 100% ({project.length_km || 0} km)</span>
+                      <span>Exp: ₹{Number(project.cumm_financial_expenditure_cr || project.expenditure_prior_cr || 0).toFixed(2)} Cr</span>
+                      <span>Budget: ₹{effectiveCost.toFixed(2)} Cr</span>
                     </div>
                   </div>
-                )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center pt-2 font-mono">
-                  <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Prior Completed</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200 text-sm mt-1 block">
-                      {project.completed_length_prior_km || 0} km
-                    </span>
-                  </div>
-                  <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Current FY</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200 text-sm mt-1 block">
-                      {project.completed_length_current_fy_km || 0} km
-                    </span>
-                  </div>
-                  <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Total Completed</span>
-                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm mt-1 block">
-                      {project.total_completed_length_km || 0} km
-                    </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center pt-2 border-t border-slate-200 dark:border-slate-700/60 font-mono">
+                    <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                      <span className="text-[9.5px] text-slate-400 block uppercase font-bold">Prior Exp</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 text-xs mt-0.5 block">
+                        ₹{Number(project.expenditure_prior_cr || 0).toFixed(2)} Cr
+                      </span>
+                    </div>
+                    <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                      <span className="text-[9.5px] text-slate-400 block uppercase font-bold">Current FY</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 text-xs mt-0.5 block">
+                        ₹{Number(project.expenditure_current_fy_cr || 0).toFixed(2)} Cr
+                      </span>
+                    </div>
+                    <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                      <span className="text-[9.5px] text-slate-400 block uppercase font-bold">Cumulative</span>
+                      <span className="font-extrabold text-blue-600 dark:text-blue-400 text-xs mt-0.5 block">
+                        ₹{Number(project.cumm_financial_expenditure_cr || project.expenditure_prior_cr || 0).toFixed(2)} Cr
+                      </span>
+                    </div>
+                    <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                      <span className="text-[9.5px] text-slate-400 block uppercase font-bold">Contract Exp</span>
+                      <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs mt-0.5 block">
+                        ₹{Number(project.contract_cum_expenditure_cr || 0).toFixed(2)} Cr
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
+              {/* Card C: Contract Value Progress Bar */}
+              {project.contract_value_cr && (
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-purple-200 dark:border-purple-900/50 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-purple-600" />
+                      <span className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">
+                        Contract Value Progress
+                      </span>
+                    </div>
+                    <span className="font-mono font-black text-purple-600 dark:text-purple-400 text-sm">
+                      {contractProgress !== null ? `${contractProgress}%` : '0%'}
+                    </span>
+                  </div>
+
+                  <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden shadow-inner">
+                    <div
+                      className="bg-purple-600 dark:bg-purple-500 h-full rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, Math.max(0, contractProgress || 0))}%` }}
+                    />
+                  </div>
+
+                  <div className="flex justify-between text-[11px] font-mono text-slate-500">
+                    <span>Contract Cumulative Exp: ₹{Number(project.contract_cum_expenditure_cr || 0).toFixed(2)} Cr</span>
+                    <span>Total Contract Value: ₹{Number(project.contract_value_cr).toFixed(2)} Cr</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Remarks */}
               {(project.stage_remarks || project.progress_remarks) && (
                 <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
                   <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
@@ -652,115 +732,14 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 4: Financial Outlay & Expenditure */}
+          {/* STAGE 4: Overruns, EOT & Target Dates */}
           {/* ========================================================= */}
           {activeStageIndex === 3 && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-                <IndianRupee className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                  Stage 4: Financial Outlay & Cumulative Expenditure
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
-                    Sanctioned Project Cost (TPC)
-                  </span>
-                  <p className="font-mono font-extrabold text-slate-900 dark:text-slate-100 text-sm">
-                    ₹ {Number(project.project_cost_cr || 0).toFixed(2)} Cr
-                  </p>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
-                    Revised Cost (RCE)
-                  </span>
-                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm">
-                    {project.revised_cost_cr ? `₹ ${Number(project.revised_cost_cr).toFixed(2)} Cr` : '—'}
-                  </p>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
-                    Cost Increase / Escalation
-                  </span>
-                  <p className="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm">
-                    {project.cost_increase_rce_cr ? `+ ₹ ${Number(project.cost_increase_rce_cr).toFixed(2)} Cr` : '—'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
-                    Expenditure Prior FY
-                  </span>
-                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    ₹ {Number(project.expenditure_prior_cr || 0).toFixed(2)} Cr
-                  </p>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
-                    Expenditure Current FY
-                  </span>
-                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    ₹ {Number(project.expenditure_current_fy_cr || 0).toFixed(2)} Cr
-                  </p>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
-                    Cumulative Financial Exp
-                  </span>
-                  <p className="font-mono font-extrabold text-blue-600 dark:text-blue-400 text-xs">
-                    ₹ {Number(project.cumm_financial_expenditure_cr || project.expenditure_prior_cr || 0).toFixed(2)} Cr
-                  </p>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
-                    Contract Cumulative Exp
-                  </span>
-                  <p className="font-mono font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">
-                    ₹ {Number(project.contract_cum_expenditure_cr || 0).toFixed(2)} Cr
-                  </p>
-                </div>
-              </div>
-
-              {/* Real-time Percentage Indicators */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
-                <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                    Financial Progress (Expenditure / Sanction Cost)
-                  </span>
-                  <div className="text-xl font-black text-blue-600 dark:text-blue-400 font-mono">
-                    {finProgress !== null ? `${finProgress}%` : 'N/A'}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                    Contract Expenditure Utilization
-                  </span>
-                  <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                    {contractProgress !== null ? `${contractProgress}%` : 'N/A'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================= */}
-          {/* STAGE 5: Overruns, EOT & Target Dates */}
-          {/* ========================================================= */}
-          {activeStageIndex === 4 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
                 <Clock className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                  Stage 5: Schedule Analysis, Delay & EOT
+                  Stage 4: Schedule Analysis, Delay & EOT
                 </h3>
               </div>
 
@@ -852,14 +831,14 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 6: Statutory Clearances & Bottlenecks */}
+          {/* STAGE 5: Statutory Clearances & Bottlenecks */}
           {/* ========================================================= */}
-          {activeStageIndex === 5 && (
+          {activeStageIndex === 4 && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
                 <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                 <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                  Stage 6: 5 Statutory Bottlenecks & Clearances
+                  Stage 5: 5 Statutory Bottlenecks & Clearances
                 </h3>
               </div>
 
@@ -913,15 +892,15 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 7: Column 27 Technical Execution Remarks */}
+          {/* STAGE 6: Column 27 Technical Execution Remarks */}
           {/* ========================================================= */}
-          {activeStageIndex === 6 && (
+          {activeStageIndex === 5 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
                 <div className="flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                    Stage 7: Column 27 Detailed Technical Execution Log
+                    Stage 6: Column 27 Detailed Technical Execution Log
                   </h3>
                 </div>
                 {project.detailed_stage_status && (

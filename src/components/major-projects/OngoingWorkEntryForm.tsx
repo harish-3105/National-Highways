@@ -19,8 +19,9 @@ import {
   ChevronLeft,
   LockKeyhole,
   Check,
+  TrendingUp,
 } from 'lucide-react';
-import { MajorProject, FROZEN_PROJECT_COLUMNS } from '@/app/api/major-projects/route';
+import { MajorProject } from '@/app/api/major-projects/route';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { calculateProjectDelay } from '@/lib/formatters';
@@ -38,8 +39,7 @@ interface OngoingWorkEntryFormProps {
 type StageTabType =
   | 'sanction_scope'
   | 'contract_award'
-  | 'physical_progress'
-  | 'financial_outlay'
+  | 'physical_financial_progress'
   | 'overruns_eot'
   | 'statutory_clearances'
   | 'col27_field_log';
@@ -68,37 +68,30 @@ const STAGES: StageDefinition[] = [
     icon: HardHat,
   },
   {
-    id: 'physical_progress',
-    label: 'Physical Progress',
+    id: 'physical_financial_progress',
+    label: 'Physical & Financial Progress',
     step: 'Stage 3',
-    subtitle: 'Stage classification, completed lengths & execution %',
-    icon: Activity,
-  },
-  {
-    id: 'financial_outlay',
-    label: 'Financial Outlay',
-    step: 'Stage 4',
-    subtitle: 'Cost sanctions, revisions & cumulative expenditure',
-    icon: IndianRupee,
+    subtitle: 'Stage %, completed lengths, cost sanctions & expenditure bars',
+    icon: TrendingUp,
   },
   {
     id: 'overruns_eot',
     label: 'Overruns & EOT',
-    step: 'Stage 5',
+    step: 'Stage 4',
     subtitle: 'Completion targets, delay metrics & extension of time',
     icon: Clock,
   },
   {
     id: 'statutory_clearances',
     label: 'Statutory Clearances',
-    step: 'Stage 6',
+    step: 'Stage 5',
     subtitle: 'Land, forest, utility, railways & statutory bottlenecks',
     icon: ShieldAlert,
   },
   {
     id: 'col27_field_log',
     label: 'Col 27 Execution Log',
-    step: 'Stage 7',
+    step: 'Stage 6',
     subtitle: 'Detailed stage status & division update ledger',
     icon: Building2,
   },
@@ -172,7 +165,8 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       : ''
   );
 
-  // Stage 3: Physical Progress & Lengths
+  // Stage 3: Combined Physical & Financial Progress
+  // Part A: Physical Progress
   const [workStage, setWorkStage] = useState<'IN_PROGRESS' | 'TENDER_STAGE' | 'COMPLETED'>(
     initialData?.work_stage === 'TENDER_STAGE'
       ? 'TENDER_STAGE'
@@ -203,7 +197,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   const [stageRemarks, setStageRemarks] = useState<string>(initialData?.stage_remarks || '');
   const [progressRemarks, setProgressRemarks] = useState<string>(initialData?.progress_remarks || '');
 
-  // Stage 4: Financial Outlay & Expenditure
+  // Part B: Financial Outlay & Expenditure
   const [projectCostCr, setProjectCostCr] = useState<string>(
     initialData?.project_cost_cr !== undefined && initialData?.project_cost_cr !== null
       ? String(initialData.project_cost_cr)
@@ -242,7 +236,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       : ''
   );
 
-  // Stage 5: Overruns, EOT & Target Dates
+  // Stage 4: Overruns, EOT & Target Dates
   const [likelyCompletionDate, setLikelyCompletionDate] = useState<string>(
     initialData?.likely_completion_date || ''
   );
@@ -258,14 +252,14 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   const [eotProposalAgency, setEotProposalAgency] = useState<string>(initialData?.eot_proposal_agency || '');
   const [cosDetails, setCosDetails] = useState<string>(initialData?.cos_details || '');
 
-  // Stage 6: 5 Statutory Clearance Issues
+  // Stage 5: 5 Statutory Clearance Issues
   const [issueLand, setIssueLand] = useState<string>(initialIssues.land);
   const [issueForest, setIssueForest] = useState<string>(initialIssues.forest);
   const [issueUtility, setIssueUtility] = useState<string>(initialIssues.utility);
   const [issueRailways, setIssueRailways] = useState<string>(initialIssues.railways);
   const [issueOthers, setIssueOthers] = useState<string>(initialIssues.others);
 
-  // Stage 7: Column 27 Technical Execution Remarks & Date
+  // Stage 6: Column 27 Technical Execution Remarks & Date
   const [detailedStageStatus, setDetailedStageStatus] = useState<string>(
     initialData?.detailed_stage_status || ''
   );
@@ -316,7 +310,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   }, [workStage, scheduledCompletionDate, probableCompletionDate, progressPercent]);
 
   // -------------------------------------------------------------
-  // STAGE-GATED VALIDATION ENGINE
+  // STAGE-GATED VALIDATION ENGINE (6 STAGES)
   // -------------------------------------------------------------
   const validateSingleStage = (stageIdx: number): Record<string, string> => {
     const stageErrors: Record<string, string> = {};
@@ -341,7 +335,8 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
         stageErrors.contractValueCr = 'Contract Value must be a valid non-negative number.';
       }
     } else if (stageIdx === 2) {
-      // Stage 3: Physical Progress
+      // Stage 3: Combined Physical & Financial Progress
+      // Physical checks
       if (workStage === 'IN_PROGRESS' || workStage === 'COMPLETED') {
         if (progressPercent !== '') {
           const p = Number(progressPercent);
@@ -365,8 +360,8 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       if (totalCompletedLengthKm && (isNaN(Number(totalCompletedLengthKm)) || Number(totalCompletedLengthKm) < 0)) {
         stageErrors.totalCompletedLengthKm = 'Total Completed Length must be a non-negative number.';
       }
-    } else if (stageIdx === 3) {
-      // Stage 4: Financial Outlay & Expenditure
+
+      // Financial checks
       if (projectCostCr && (isNaN(Number(projectCostCr)) || Number(projectCostCr) < 0)) {
         stageErrors.projectCostCr = 'Project Cost must be a valid non-negative number.';
       }
@@ -388,8 +383,8 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       if (contractCumExpenditureCr && (isNaN(Number(contractCumExpenditureCr)) || Number(contractCumExpenditureCr) < 0)) {
         stageErrors.contractCumExpenditureCr = 'Contract Cumulative Expenditure must be a valid non-negative number.';
       }
-    } else if (stageIdx === 4) {
-      // Stage 5: Overruns & EOT
+    } else if (stageIdx === 3) {
+      // Stage 4: Overruns & EOT
       if (timeOverrunYears && (isNaN(Number(timeOverrunYears)) || Number(timeOverrunYears) < 0)) {
         stageErrors.timeOverrunYears = 'Time Overrun (Years) must be a non-negative number.';
       }
@@ -398,7 +393,6 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
     return stageErrors;
   };
 
-  // Check if all stages prior to targetStage are satisfied
   const isStageAccessible = (targetStageIdx: number): boolean => {
     if (targetStageIdx === 0) return true;
     for (let i = 0; i < targetStageIdx; i++) {
@@ -408,7 +402,6 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
     return true;
   };
 
-  // Check whether a stage is completed
   const isStageCompleted = (stageIdx: number): boolean => {
     if (stageIdx === 0) {
       return Boolean(nameOfWork.trim() && division.trim() && scheme.trim() && Object.keys(validateSingleStage(0)).length === 0);
@@ -417,24 +410,20 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       return Boolean((contractorName.trim() || loaDate || agreementDate || contractValueCr) && Object.keys(validateSingleStage(1)).length === 0);
     }
     if (stageIdx === 2) {
-      return Boolean(progressPercent !== '' && Object.keys(validateSingleStage(2)).length === 0);
+      return Boolean((progressPercent !== '' || projectCostCr || expenditureCr) && Object.keys(validateSingleStage(2)).length === 0);
     }
     if (stageIdx === 3) {
-      return Boolean((projectCostCr || expenditureCr) && Object.keys(validateSingleStage(3)).length === 0);
+      return Boolean((likelyCompletionDate || probableCompletionDate || timeOverrunYears) && Object.keys(validateSingleStage(3)).length === 0);
     }
     if (stageIdx === 4) {
-      return Boolean((likelyCompletionDate || probableCompletionDate || timeOverrunYears) && Object.keys(validateSingleStage(4)).length === 0);
-    }
-    if (stageIdx === 5) {
       return Boolean(issueLand || issueForest || issueUtility || issueRailways || issueOthers);
     }
-    if (stageIdx === 6) {
+    if (stageIdx === 5) {
       return Boolean(detailedStageStatus.trim());
     }
     return false;
   };
 
-  // Validate only up to the specified stage
   const validateUpToStage = (maxStageIdx: number): boolean => {
     const combinedErrors: Record<string, string> = {};
     for (let i = 0; i <= maxStageIdx; i++) {
@@ -600,9 +589,9 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
         </div>
       </div>
 
-      {/* 7-STAGE LIFECYCLE SUB-NAVIGATION STEPPER BAR */}
+      {/* 6-STAGE LIFECYCLE SUB-NAVIGATION STEPPER BAR */}
       <div className="bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           {STAGES.map((stage, idx) => {
             const Icon = stage.icon;
             const isActive = activeStageIndex === idx;
@@ -936,258 +925,293 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 3: Physical Progress & Milestones */}
+          {/* STAGE 3: Physical & Financial Progress (Combined) */}
           {/* ========================================================= */}
           {activeStageIndex === 2 && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Execution Stage Classification
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'IN_PROGRESS', label: 'In Progress' },
-                      { id: 'TENDER_STAGE', label: 'Tender Stage' },
-                      { id: 'COMPLETED', label: 'Completed' },
-                    ].map((st) => (
-                      <button
-                        key={st.id}
-                        type="button"
-                        onClick={() => setWorkStage(st.id as any)}
-                        className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                          workStage === st.id
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                            : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
-                        }`}
-                      >
-                        {st.label}
-                      </button>
-                    ))}
+              {/* SECTION A: PHYSICAL EXECUTION & PROGRESS */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+                  <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-emerald-600" />
+                    Physical Execution & Milestone Tracking
+                  </span>
+                  {workStage !== 'TENDER_STAGE' && progressPercent !== '' && (
+                    <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-base">
+                      {progressPercent}% Physical
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Execution Stage Classification
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'IN_PROGRESS', label: 'In Progress' },
+                        { id: 'TENDER_STAGE', label: 'Tender Stage' },
+                        { id: 'COMPLETED', label: 'Completed' },
+                      ].map((st) => (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => setWorkStage(st.id as any)}
+                          className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                            workStage === st.id
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          {st.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {workStage !== 'TENDER_STAGE' ? (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Physical Progress (%)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          value={progressPercent}
+                          onChange={(e) => setProgressPercent(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                        />
+                        <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">%</span>
+                      </div>
+                      {errors.progressPercent && <p className="text-[11px] text-rose-500 mt-1">{errors.progressPercent}</p>}
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Project is in pre-construction / tendering stage. Physical execution metrics are deferred.</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Real-time Physical Progress Bar */}
+                {workStage !== 'TENDER_STAGE' && progressPercent !== '' && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                      <span>Physical Execution Track</span>
+                      <span className="font-mono text-emerald-600 dark:text-emerald-400">{progressPercent}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 dark:bg-slate-700 h-3 rounded-full overflow-hidden shadow-inner">
+                      <div
+                        className="bg-emerald-600 dark:bg-emerald-500 h-full rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, Math.max(0, Number(progressPercent) || 0))}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-200 dark:border-slate-700/60">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Completed Length Prior FY (Km)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={completedLengthPriorKm}
+                      onChange={(e) => setCompletedLengthPriorKm(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Completed Length Current FY (Km)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={completedLengthCurrentFyKm}
+                      onChange={(e) => setCompletedLengthCurrentFyKm(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Total Completed Length (Km)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={totalCompletedLengthKm}
+                      onChange={(e) => setTotalCompletedLengthKm(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
                 </div>
 
-                {workStage !== 'TENDER_STAGE' ? (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    {workStage === 'TENDER_STAGE' ? 'Tender Stage Remarks' : 'Physical Progress Remarks'}
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={workStage === 'TENDER_STAGE' ? stageRemarks : progressRemarks}
+                    onChange={(e) => {
+                      if (workStage === 'TENDER_STAGE') setStageRemarks(e.target.value);
+                      else setProgressRemarks(e.target.value);
+                    }}
+                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* SECTION B: FINANCIAL OUTLAY & EXPENDITURE */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+                  <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
+                    <IndianRupee className="w-4 h-4 text-blue-600" />
+                    Financial Outlay, Costs & Expenditure
+                  </span>
+                  {calculatedFinancialPercent !== null && (
+                    <span className="font-mono font-black text-blue-600 dark:text-blue-400 text-base">
+                      {calculatedFinancialPercent}% Financial
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Physical Progress (%)
+                      Sanctioned Project Cost (₹ Cr)
                     </label>
                     <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">₹</span>
                       <input
                         type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
-                        value={progressPercent}
-                        onChange={(e) => setProgressPercent(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                        step="0.01"
+                        value={projectCostCr}
+                        onChange={(e) => setProjectCostCr(e.target.value)}
+                        disabled={isFieldLocked('project_cost_cr')}
+                        className="w-full pl-7 pr-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
                       />
-                      <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">%</span>
                     </div>
-                    {errors.progressPercent && <p className="text-[11px] text-rose-500 mt-1">{errors.progressPercent}</p>}
                   </div>
-                ) : (
-                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-800 dark:text-amber-200 flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>Project is in pre-construction / tendering stage. Physical execution metrics are deferred.</span>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Revised Cost (₹ Cr)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">₹</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={revisedCostCr}
+                        onChange={(e) => setRevisedCostCr(e.target.value)}
+                        className="w-full pl-7 pr-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Cost Increase / RCE (₹ Cr)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">₹</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={costIncreaseRceCr}
+                        onChange={(e) => setCostIncreaseRceCr(e.target.value)}
+                        className="w-full pl-7 pr-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-slate-200 dark:border-slate-700/60">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Expenditure Prior FY (₹ Cr)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={expenditurePriorCr}
+                      onChange={(e) => setExpenditurePriorCr(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Expenditure Current FY (₹ Cr)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={expenditureCurrentFyCr}
+                      onChange={(e) => setExpenditureCurrentFyCr(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Cumm Financial Exp (₹ Cr)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={expenditureCr}
+                      onChange={(e) => setExpenditureCr(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Contract Cumm Exp (₹ Cr)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={contractCumExpenditureCr}
+                      onChange={(e) => setContractCumExpenditureCr(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Real-time Financial Progress Bar */}
+                {calculatedFinancialPercent !== null && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                      <span>Financial Outlay Utilization (Cumulative Expenditure / Budget)</span>
+                      <span className="font-mono text-blue-600 dark:text-blue-400">{calculatedFinancialPercent}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 dark:bg-slate-700 h-3 rounded-full overflow-hidden shadow-inner">
+                      <div
+                        className="bg-blue-600 dark:bg-blue-500 h-full rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, Math.max(0, calculatedFinancialPercent))}%` }}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Completed Length Prior FY (Km)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={completedLengthPriorKm}
-                    onChange={(e) => setCompletedLengthPriorKm(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Completed Length Current FY (Km)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={completedLengthCurrentFyKm}
-                    onChange={(e) => setCompletedLengthCurrentFyKm(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Total Completed Length (Km)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={totalCompletedLengthKm}
-                    onChange={(e) => setTotalCompletedLengthKm(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  {workStage === 'TENDER_STAGE' ? 'Tender Stage Remarks' : 'Physical Progress Remarks'}
-                </label>
-                <textarea
-                  rows={3}
-                  value={workStage === 'TENDER_STAGE' ? stageRemarks : progressRemarks}
-                  onChange={(e) => {
-                    if (workStage === 'TENDER_STAGE') setStageRemarks(e.target.value);
-                    else setProgressRemarks(e.target.value);
-                  }}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
             </div>
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 4: Financial Outlay & Expenditure */}
+          {/* STAGE 4: Overruns, EOT & Target Dates */}
           {/* ========================================================= */}
           {activeStageIndex === 3 && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Sanctioned Project Cost (₹ Cr)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">₹</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={projectCostCr}
-                      onChange={(e) => setProjectCostCr(e.target.value)}
-                      disabled={isFieldLocked('project_cost_cr')}
-                      className="w-full pl-7 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Revised Cost (₹ Cr)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">₹</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={revisedCostCr}
-                      onChange={(e) => setRevisedCostCr(e.target.value)}
-                      className="w-full pl-7 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Cost Increase / RCE (₹ Cr)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">₹</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={costIncreaseRceCr}
-                      onChange={(e) => setCostIncreaseRceCr(e.target.value)}
-                      className="w-full pl-7 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Expenditure Prior FY (₹ Cr)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={expenditurePriorCr}
-                    onChange={(e) => setExpenditurePriorCr(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Expenditure Current FY (₹ Cr)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={expenditureCurrentFyCr}
-                    onChange={(e) => setExpenditureCurrentFyCr(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Cumm Financial Expenditure (₹ Cr)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={expenditureCr}
-                    onChange={(e) => setExpenditureCr(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Contract Cumm Expenditure (₹ Cr)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={contractCumExpenditureCr}
-                    onChange={(e) => setContractCumExpenditureCr(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Real-time Percentage Indicators */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
-                <div>
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                    Financial Progress (Expenditure / Sanction Cost)
-                  </span>
-                  <div className="text-xl font-black text-blue-600 dark:text-blue-400 font-mono">
-                    {calculatedFinancialPercent !== null ? `${calculatedFinancialPercent}%` : 'N/A'}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
-                    Contract Expenditure Utilization
-                  </span>
-                  <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                    {calculatedContractPercent !== null ? `${calculatedContractPercent}%` : 'N/A'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================= */}
-          {/* STAGE 5: Overruns, EOT & Target Dates */}
-          {/* ========================================================= */}
-          {activeStageIndex === 4 && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
@@ -1279,9 +1303,9 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 6: Statutory Clearances & Bottlenecks */}
+          {/* STAGE 5: Statutory Clearances & Bottlenecks */}
           {/* ========================================================= */}
-          {activeStageIndex === 5 && (
+          {activeStageIndex === 4 && (
             <div className="space-y-4">
               <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-900 dark:text-amber-200">
                 <strong>Statutory & Clearances Monitoring:</strong> Record specific field bottlenecks across statutory departments. These entries remain independent and do not overwrite technical execution remarks.
@@ -1352,9 +1376,9 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 7: Column 27 Technical Execution Remarks & Date */}
+          {/* STAGE 6: Column 27 Technical Execution Remarks & Date */}
           {/* ========================================================= */}
-          {activeStageIndex === 6 && (
+          {activeStageIndex === 5 && (
             <div className="space-y-6">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -1420,7 +1444,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
             >
               <Save className="w-4 h-4" /> {loading ? 'Saving Work Entry...' : `Save Progress (${currentStage.step})`}
             </button>
