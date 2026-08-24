@@ -572,7 +572,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                     <div>
                       <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Appeal Case No *</label>
                       <input
@@ -605,7 +605,27 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                         onChange={(val) => handleAppealInfoChange('limitationDueDate', val)}
                       />
                     </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Condonation of Delay</label>
+                      <SearchableSelect
+                        options={condonationDelays.length > 0 ? condonationDelays : ['Pending', 'Allowed / Condoned', 'Dismissed', 'Not Applicable']}
+                        value={formData.appealInfo?.condonationOfDelay || ''}
+                        onChange={(val) => handleAppealInfoChange('condonationOfDelay', val)}
+                      />
+                    </div>
                   </div>
+
+                  {formData.appealInfo?.delayInFilingAppeal === 'Yes' && (
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center justify-between text-xs text-amber-800 dark:text-amber-200 animate-in fade-in">
+                      <div className="flex items-center gap-2 font-bold">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                        <span>Appeal Filing Overran Limitation by {formData.appealInfo.delayPeriodDays} Days</span>
+                      </div>
+                      <span className="text-[11px] font-medium bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-100 px-2.5 py-0.5 rounded-lg border border-amber-200 dark:border-amber-700">
+                        Condonation: {formData.appealInfo.condonationOfDelay || 'Required'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
 

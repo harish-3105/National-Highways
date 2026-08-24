@@ -256,6 +256,7 @@ export const LegalDashboard: React.FC = () => {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <CaseEntryForm
+          key={selectedCaseForEdit?.id || 'new-legal-case'}
           initialData={selectedCaseForEdit || undefined}
           masterData={masterData}
           onSave={handleSaveForm}
@@ -554,7 +555,6 @@ export const LegalDashboard: React.FC = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
             <input
               type="text"
-              placeholder="Search case no, court, petitioner, prayer..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
@@ -567,7 +567,6 @@ export const LegalDashboard: React.FC = () => {
               options={['All Classifications', 'Normal Case', 'Appeal Case']}
               value={filterClassification || 'All Classifications'}
               onChange={(val) => setFilterClassification(val === 'All Classifications' ? '' : val)}
-              placeholder="Classification..."
             />
           </div>
 
@@ -580,7 +579,6 @@ export const LegalDashboard: React.FC = () => {
                 setFilterCircle(val === 'All Circles' ? '' : val);
                 setFilterDivision('');
               }}
-              placeholder="Circle..."
             />
           </div>
 
@@ -600,7 +598,6 @@ export const LegalDashboard: React.FC = () => {
                 else if (val.includes('No')) setFilterCounterStatus('No');
                 else setFilterCounterStatus('');
               }}
-              placeholder="Counter Status..."
             />
           </div>
         </div>
