@@ -372,59 +372,123 @@ export const StaffDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* KPI Statistics Summary Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
-                  Active Officers
-                </span>
-                <span className="text-xl font-bold text-slate-900 dark:text-slate-100">{activeStaffCount}</span>
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block mt-1 font-semibold">
-                  Deployable Roster
-                </span>
+            {/* 4 Interactive KPI Quadrant Cards (2 Rows × 2 Columns) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Quadrant 1: Active Deployable Officers */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowArchived(false);
+                  handleClearAllFilters();
+                }}
+                className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+                  !showArchived && !hasActiveFilters
+                    ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/30 dark:bg-blue-950/20"
+                    : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    Active Deployable Officers
+                    {!showArchived && !hasActiveFilters && (
+                      <span className="normal-case text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-1.5 py-0.5 rounded-md border border-blue-200 dark:border-blue-800">
+                        Active Roster
+                      </span>
+                    )}
+                  </span>
+                  <div className="p-2.5 bg-blue-50 dark:bg-blue-950/50 rounded-xl text-blue-600 dark:text-blue-400">
+                    <Users className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono">
+                    {activeStaffCount} <span className="text-sm font-medium text-slate-500 font-sans">Active</span> &bull;{" "}
+                    <span className="text-base font-bold text-slate-700 dark:text-slate-300 font-sans">{staffList.length}</span>{" "}
+                    <span className="text-sm font-medium text-slate-500 font-sans">Total</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Level 1 Verified Departmental Directory &bull; Click to reset
+                </div>
+              </button>
+
+              {/* Quadrant 2: Jurisdictional Coverage */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Jurisdictional Scope
+                  </span>
+                  <div className="p-2.5 bg-purple-50 dark:bg-purple-950/50 rounded-xl text-purple-600 dark:text-purple-400">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-purple-700 dark:text-purple-300 font-mono">
+                    {uniqueCircles} <span className="text-sm font-medium text-slate-500 font-sans">Circles</span> &bull;{" "}
+                    <span className="text-base font-bold text-purple-600 dark:text-purple-400 font-sans">{uniqueDivisions}</span>{" "}
+                    <span className="text-sm font-medium text-slate-500 font-sans">Divisions</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-purple-600 dark:text-purple-400 font-semibold">
+                  Territorial Deployment Across Tamil Nadu State Network
+                </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
-                  Designations
-                </span>
-                <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{uniqueDesignations}</span>
-                <span className="text-[10px] text-slate-400 block mt-1 font-medium">Distinct Cadres</span>
+              {/* Quadrant 3: Administrative Cadres */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Administrative Cadres & Offices
+                  </span>
+                  <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/50 rounded-xl text-indigo-600 dark:text-indigo-400">
+                    <Briefcase className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-indigo-700 dark:text-indigo-300 font-mono">
+                    {uniqueDesignations} <span className="text-sm font-medium text-slate-500 font-sans">Cadres</span> &bull;{" "}
+                    <span className="text-base font-bold text-indigo-600 dark:text-indigo-400 font-sans">{uniqueOffices}</span>{" "}
+                    <span className="text-sm font-medium text-slate-500 font-sans">Offices</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 font-semibold">
+                  Chief Engineers down to Section Officers & Technical Staff
+                </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
-                  Offices
-                </span>
-                <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{uniqueOffices}</span>
-                <span className="text-[10px] text-slate-400 block mt-1 font-medium">Field & Regional HQ</span>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
-                  Circles
-                </span>
-                <span className="text-xl font-bold text-purple-600 dark:text-purple-400">{uniqueCircles}</span>
-                <span className="text-[10px] text-slate-400 block mt-1 font-medium">Jurisdictions</span>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
-                  Divisions
-                </span>
-                <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{uniqueDivisions}</span>
-                <span className="text-[10px] text-slate-400 block mt-1 font-medium">Territorial Units</span>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
-                  Archived
-                </span>
-                <span className="text-xl font-bold text-amber-600 dark:text-amber-400">{archivedStaffCount}</span>
-                <span className="text-[10px] text-amber-700 dark:text-amber-500 block mt-1 font-semibold">
-                  Soft Deleted
-                </span>
-              </div>
+              {/* Quadrant 4: Archived Records */}
+              <button
+                type="button"
+                onClick={() => setShowArchived(!showArchived)}
+                className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+                  showArchived
+                    ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/30 dark:bg-amber-950/20"
+                    : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    Archived Personnel
+                    {showArchived && (
+                      <span className="normal-case text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-1.5 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
+                        Archive Visible
+                      </span>
+                    )}
+                  </span>
+                  <div className="p-2.5 bg-amber-50 dark:bg-amber-950/50 rounded-xl text-amber-600 dark:text-amber-400">
+                    <Archive className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-amber-700 dark:text-amber-300 font-mono">
+                    {archivedStaffCount} <span className="text-sm font-medium text-slate-500 font-sans">Archived</span> &bull;{" "}
+                    <span className="text-base font-bold text-amber-600 dark:text-amber-400 font-sans">{showArchived ? "Visible" : "Hidden"}</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-semibold">
+                  Soft-Deleted Personnel &bull; Click to toggle archive view
+                </div>
+              </button>
             </div>
 
             {/* Smart Search & 7-Level Cascading Hierarchy Filters */}
