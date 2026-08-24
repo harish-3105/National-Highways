@@ -5,22 +5,33 @@ import {
   X,
   History,
   TrendingUp,
-  Activity,
-  IndianRupee,
-  Calendar,
-  Layers,
   FileSpreadsheet,
   Download,
-  AlertCircle,
-  Clock,
-  Sparkles,
 } from 'lucide-react';
 import { MajorProject, MajorProjectSnapshot } from '@/app/api/major-projects/route';
+import { parseDateString } from '@/lib/formatters';
 
 interface ProjectHistoryModalProps {
   project: MajorProject | null;
   isOpen: boolean;
   onClose: () => void;
+}
+
+function formatSnapshotDate(
+  dateStr: string | null | undefined,
+  options?: Intl.DateTimeFormatOptions
+): string {
+  if (!dateStr) return '';
+  const d = parseDateString(dateStr);
+  if (!d || isNaN(d.getTime())) return String(dateStr);
+  try {
+    return d.toLocaleDateString(
+      'en-IN',
+      options || { day: '2-digit', month: 'short', year: 'numeric' }
+    );
+  } catch {
+    return String(dateStr);
+  }
 }
 
 export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
@@ -35,54 +46,64 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
   useEffect(() => {
     if (!isOpen || !project) return;
 
+    const synthesizeSnapshots = (): MajorProjectSnapshot[] => {
+      const cost = Number(project.revised_cost_cr || project.project_cost_cr || 0);
+      const exp = Number(project.cumm_financial_expenditure_cr || 0);
+      const finPercent = cost > 0 ? Math.min(100, Math.round((exp / cost) * 100 * 10) / 10) : 0;
+
+      const initialDate = project.sanction_date || project.created_at || new Date().toISOString();
+      const currentDate = project.updated_at || new Date().toISOString();
+
+      return [
+        {
+          id: 'initial',
+          project_id: project.id,
+          snapshot_date: initialDate,
+          action_source: 'MANUAL_ADD',
+          progress_percent: 0,
+          financial_progress_percent: 0,
+          cumm_financial_expenditure_cr: 0,
+          contract_cum_expenditure_cr: 0,
+          progress_remarks: 'Project sanction / baseline creation',
+          full_snapshot: project,
+        },
+        {
+          id: 'current',
+          project_id: project.id,
+          snapshot_date: currentDate,
+          action_source: 'MANUAL_EDIT',
+          progress_percent: project.progress_percent || 0,
+          financial_progress_percent: finPercent,
+          cumm_financial_expenditure_cr: project.cumm_financial_expenditure_cr || 0,
+          contract_cum_expenditure_cr: project.contract_cum_expenditure_cr || 0,
+          progress_remarks: project.progress_remarks || project.stage_remarks,
+          issue_land: project.issue_land,
+          issue_forest: project.issue_forest,
+          issue_utility: project.issue_utility,
+          issue_railways: project.issue_railways,
+          issue_others: project.issue_others,
+          full_snapshot: project,
+        },
+      ];
+    };
+
     const fetchSnapshots = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/major-projects/snapshots?projectId=${project.id}`);
+        const res = await fetch(`/api/major-projects/snapshots?projectId=${encodeURIComponent(project.id)}`);
+        if (!res.ok) {
+          setSnapshots(synthesizeSnapshots());
+          return;
+        }
         const data = await res.json();
-        if (data.success && data.snapshots && data.snapshots.length > 0) {
+        if (data.success && Array.isArray(data.snapshots) && data.snapshots.length > 0) {
           setSnapshots(data.snapshots);
         } else {
-          // If no historical snapshots exist yet, synthesize initial baseline + current state
-          const cost = Number(project.revised_cost_cr || project.project_cost_cr || 0);
-          const exp = Number(project.cumm_financial_expenditure_cr || 0);
-          const finPercent = cost > 0 ? Math.min(100, Math.round((exp / cost) * 100 * 10) / 10) : 0;
-
-          const synthesized: MajorProjectSnapshot[] = [
-            {
-              id: 'initial',
-              project_id: project.id,
-              snapshot_date: project.sanction_date || project.created_at || new Date().toISOString(),
-              action_source: 'MANUAL_ADD',
-              progress_percent: 0,
-              financial_progress_percent: 0,
-              cumm_financial_expenditure_cr: 0,
-              contract_cum_expenditure_cr: 0,
-              progress_remarks: 'Project sanction / baseline creation',
-              full_snapshot: project,
-            },
-            {
-              id: 'current',
-              project_id: project.id,
-              snapshot_date: project.updated_at || new Date().toISOString(),
-              action_source: 'MANUAL_EDIT',
-              progress_percent: project.progress_percent || 0,
-              financial_progress_percent: finPercent,
-              cumm_financial_expenditure_cr: project.cumm_financial_expenditure_cr || 0,
-              contract_cum_expenditure_cr: project.contract_cum_expenditure_cr || 0,
-              progress_remarks: project.progress_remarks || project.stage_remarks,
-              issue_land: project.issue_land,
-              issue_forest: project.issue_forest,
-              issue_utility: project.issue_utility,
-              issue_railways: project.issue_railways,
-              issue_others: project.issue_others,
-              full_snapshot: project,
-            },
-          ];
-          setSnapshots(synthesized);
+          setSnapshots(synthesizeSnapshots());
         }
       } catch (err) {
         console.error('Failed to load project snapshots:', err);
+        setSnapshots(synthesizeSnapshots());
       } finally {
         setLoading(false);
       }
@@ -91,11 +112,11 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
     fetchSnapshots();
   }, [isOpen, project]);
 
-  if (!isOpen || !project) return null;
-
   // Chart coordinate calculations
   const chartPoints = useMemo(() => {
-    if (snapshots.length === 0) return { phyPoints: '', finPoints: '', items: [] };
+    if (!snapshots || snapshots.length === 0) {
+      return { phyPoints: '', finPoints: '', items: [], width: 800, height: 240, padding: { top: 30, right: 40, bottom: 40, left: 50 }, plotW: 710, plotH: 170 };
+    }
 
     const width = 800;
     const height = 240;
@@ -104,11 +125,13 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
     const plotW = width - padding.left - padding.right;
     const plotH = height - padding.top - padding.bottom;
 
+    const divisor = Math.max(1, snapshots.length - 1);
+
     const items = snapshots.map((s, idx) => {
       const x =
-        snapshots.length === 1
+        snapshots.length <= 1
           ? padding.left + plotW / 2
-          : padding.left + (idx / (snapshots.length - 1)) * plotW;
+          : padding.left + (idx / divisor) * plotW;
 
       const pPhy = Math.min(100, Math.max(0, Number(s.progress_percent || 0)));
       const pFin = Math.min(100, Math.max(0, Number(s.financial_progress_percent || 0)));
@@ -118,14 +141,16 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
 
       // Delta compared to previous snapshot
       const prev = idx > 0 ? snapshots[idx - 1] : null;
-      const deltaPhy = prev ? pPhy - Number(prev.progress_percent || 0) : 0;
-      const deltaFin = prev ? pFin - Number(prev.financial_progress_percent || 0) : 0;
+      const prevPhy = prev ? Number(prev.progress_percent || 0) : 0;
+      const prevFin = prev ? Number(prev.financial_progress_percent || 0) : 0;
+      const deltaPhy = prev ? pPhy - prevPhy : 0;
+      const deltaFin = prev ? pFin - prevFin : 0;
 
       return {
         ...s,
-        x,
-        yPhy,
-        yFin,
+        x: isNaN(x) ? padding.left : x,
+        yPhy: isNaN(yPhy) ? padding.top + plotH : yPhy,
+        yFin: isNaN(yFin) ? padding.top + plotH : yFin,
         pPhy,
         pFin,
         deltaPhy,
@@ -133,11 +158,13 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
       };
     });
 
-    const phyPoints = items.map((it) => `${it.x},${it.yPhy}`).join(' ');
-    const finPoints = items.map((it) => `${it.x},${it.yFin}`).join(' ');
+    const phyPoints = items.length > 1 ? items.map((it) => `${it.x},${it.yPhy}`).join(' ') : '';
+    const finPoints = items.length > 1 ? items.map((it) => `${it.x},${it.yFin}`).join(' ') : '';
 
     return { phyPoints, finPoints, items, width, height, padding, plotW, plotH };
   }, [snapshots]);
+
+  if (!isOpen || !project) return null;
 
   const handleExportCSV = () => {
     if (snapshots.length === 0) return;
@@ -157,7 +184,7 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
     ];
 
     const rows = snapshots.map((s) => [
-      `"${s.snapshot_date ? new Date(s.snapshot_date).toLocaleDateString('en-IN') : ''}"`,
+      `"${formatSnapshotDate(s.snapshot_date)}"`,
       `"${s.action_source || 'UPDATE'}"`,
       s.progress_percent || 0,
       s.financial_progress_percent || 0,
@@ -176,7 +203,7 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `Project_${project.s_no}_History_Snapshots.csv`);
+    link.setAttribute('download', `Project_${project.s_no || 'Work'}_History_Snapshots.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -345,12 +372,10 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
                       fontFamily="monospace"
                       textAnchor="middle"
                     >
-                      {it.snapshot_date
-                        ? new Date(it.snapshot_date).toLocaleDateString('en-IN', {
-                            month: 'short',
-                            year: '2-digit',
-                          })
-                        : `#${idx + 1}`}
+                      {formatSnapshotDate(it.snapshot_date, {
+                        month: 'short',
+                        year: '2-digit',
+                      }) || `#${idx + 1}`}
                     </text>
                   </g>
                 ))}
@@ -364,12 +389,10 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-white">
                       📅{' '}
-                      {chartPoints.items[hoveredIndex].snapshot_date
-                        ? new Date(chartPoints.items[hoveredIndex].snapshot_date).toLocaleDateString(
-                            'en-IN',
-                            { day: '2-digit', month: 'short', year: 'numeric' }
-                          )
-                        : `Snapshot #${hoveredIndex + 1}`}
+                      {formatSnapshotDate(
+                        chartPoints.items[hoveredIndex].snapshot_date,
+                        { day: '2-digit', month: 'short', year: 'numeric' }
+                      ) || `Snapshot #${hoveredIndex + 1}`}
                     </span>
                     <span className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded-md text-[10px] font-mono font-bold">
                       Source: {chartPoints.items[hoveredIndex].action_source || 'MANUAL'}
@@ -445,13 +468,11 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
                       >
                         <td className="py-2.5 px-3 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
                           📅{' '}
-                          {s.snapshot_date
-                            ? new Date(s.snapshot_date).toLocaleDateString('en-IN', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })
-                            : `Record #${idx + 1}`}
+                          {formatSnapshotDate(s.snapshot_date, {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          }) || `Record #${idx + 1}`}
                         </td>
                         <td className="py-2.5 px-3">
                           <span
