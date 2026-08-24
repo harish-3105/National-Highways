@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { LegalCaseData } from '@/types/legal';
 import {
   X,
@@ -14,6 +14,11 @@ import {
   Scale,
   Calendar,
   Building,
+  User,
+  ChevronRight,
+  ChevronLeft,
+  Edit,
+  IndianRupee,
 } from 'lucide-react';
 
 interface CaseViewModalProps {
@@ -22,12 +27,68 @@ interface CaseViewModalProps {
   onEdit?: (c: LegalCaseData) => void;
 }
 
+type LegalStageType =
+  | 'case_registry'
+  | 'counter_affidavit'
+  | 'hearing_listing'
+  | 'interim_compliance'
+  | 'disposal_appeal';
+
+interface StageDefinition {
+  id: LegalStageType;
+  label: string;
+  step: string;
+  subtitle: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const STAGES: StageDefinition[] = [
+  {
+    id: 'case_registry',
+    label: 'Case Registry & Scope',
+    step: 'Stage 1',
+    subtitle: 'Jurisdiction, court, case particulars, parties & prayer',
+    icon: Scale,
+  },
+  {
+    id: 'counter_affidavit',
+    label: 'Counter Affidavit (CA)',
+    step: 'Stage 2',
+    subtitle: 'CA filing mandate, due timeline & submission date',
+    icon: FileText,
+  },
+  {
+    id: 'hearing_listing',
+    label: 'Hearing Schedule',
+    step: 'Stage 3',
+    subtitle: 'Listing purpose, previous & upcoming court appearance dates',
+    icon: Calendar,
+  },
+  {
+    id: 'interim_compliance',
+    label: 'Interim Orders & Compliance',
+    step: 'Stage 4',
+    subtitle: 'Court interim directions, time limits & departmental actions taken',
+    icon: Clock,
+  },
+  {
+    id: 'disposal_appeal',
+    label: 'Disposal & Appeal Track',
+    step: 'Stage 5',
+    subtitle: 'Final judgment, adverse findings, GP opinion & appeal initiation',
+    icon: Gavel,
+  },
+];
+
 export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose, onEdit }) => {
+  const [activeStageIndex, setActiveStageIndex] = useState<number>(0);
+
   const handlePrint = () => {
     window.print();
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
+    setActiveStageIndex(0);
     document.body.style.overflow = 'hidden';
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -43,6 +104,20 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
 
   const isAppeal = caseData.caseClassification === 'Appeal Case';
 
+  const handlePrevStage = () => {
+    if (activeStageIndex > 0) {
+      setActiveStageIndex((prev) => prev - 1);
+    }
+  };
+
+  const handleNextStage = () => {
+    if (activeStageIndex < STAGES.length - 1) {
+      setActiveStageIndex((prev) => prev + 1);
+    }
+  };
+
+  const currentStage = STAGES[activeStageIndex];
+
   return (
     <div
       className="legal-print-modal-wrapper fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4"
@@ -53,22 +128,30 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Top Header */}
-        <div className="bg-blue-900 text-white px-6 py-4 flex items-center justify-between print:bg-blue-950 print:text-white">
+        <div className="bg-blue-900 text-white px-6 py-4 flex items-center justify-between shrink-0 print:bg-blue-950 print:text-white">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/10 rounded-xl shrink-0 print:hidden">
               {isAppeal ? <Gavel className="w-5 h-5 text-amber-300" /> : <Scale className="w-5 h-5 text-blue-300" />}
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-extrabold text-base text-white">
                   {caseData.caseNumber} ({caseData.caseYear})
                 </h3>
-                <span className="text-[10px] bg-blue-800 text-blue-200 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                <span className="text-[10px] bg-blue-800 text-blue-200 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
                   {caseData.caseClassification}
                 </span>
+                <span className="text-[10px] bg-white/10 text-white px-2 py-0.5 rounded-md font-bold uppercase">
+                  {caseData.caseType}
+                </span>
+                {caseData.currentStatus && (
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase ${caseData.currentStatus === 'Disposed' || caseData.finalResult === 'Yes' ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}`}>
+                    {caseData.currentStatus}
+                  </span>
+                )}
               </div>
-              <span className="text-xs text-blue-200 print:text-blue-100">
-                {caseData.circle} Circle &bull; {caseData.division} &bull; {caseData.nameOfCourt}
+              <span className="text-xs text-blue-200 print:text-blue-100 mt-0.5 block">
+                {caseData.circle} Circle &bull; {caseData.division} Division &bull; {caseData.nameOfCourt}
               </span>
             </div>
           </div>
@@ -82,7 +165,7 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 }}
                 className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
               >
-                Edit Case
+                <Edit className="w-3.5 h-3.5" /> Edit Case
               </button>
             )}
             <button
@@ -101,9 +184,46 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
           </div>
         </div>
 
+        {/* 5-STAGE LIFECYCLE SUB-NAVIGATION BAR */}
+        <div className="bg-white dark:bg-slate-900 px-4 py-2 border-b border-slate-200 dark:border-slate-800 shrink-0 print:hidden">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5">
+            {STAGES.map((stage, idx) => {
+              const Icon = stage.icon;
+              const isActive = activeStageIndex === idx;
+
+              return (
+                <button
+                  key={stage.id}
+                  type="button"
+                  onClick={() => setActiveStageIndex(idx)}
+                  className={`flex flex-col items-start p-2.5 rounded-xl text-left transition-all border cursor-pointer ${
+                    isActive
+                      ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-900 dark:text-blue-100 shadow-xs ring-1 ring-blue-500/20'
+                      : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <span
+                      className={`text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded-md ${
+                        isActive
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      {stage.step}
+                    </span>
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
+                  </div>
+                  <span className="text-xs font-bold truncate w-full">{stage.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Modal Scrollable Body */}
-        <div className="legal-print-scrollable p-6 overflow-y-auto space-y-6 text-xs text-slate-800 dark:text-slate-200 print:p-6 print:text-slate-900">
-          {/* Departmental Print Letterhead Header */}
+        <div className="legal-print-scrollable p-6 overflow-y-auto space-y-6 text-xs text-slate-800 dark:text-slate-200 print:p-6 print:text-slate-900 flex-1">
+          {/* Departmental Print Letterhead Header (Only in print) */}
           <div className="hidden print:block text-center border-b border-slate-300 pb-4 mb-4">
             <h2 className="font-extrabold text-base text-slate-950 uppercase tracking-wide">
               Highways Department &bull; Government of Tamil Nadu
@@ -116,377 +236,353 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
             </p>
           </div>
 
-          {/* Quick Status Badges Strip */}
-          <div className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 print:bg-slate-100 print:border-slate-300">
-            <span className="bg-blue-900 text-white px-3 py-1 rounded-lg font-bold text-xs">
-              {caseData.caseType}
-            </span>
-            <span className="bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-lg font-bold text-xs print:bg-blue-200 print:text-blue-950">
-              {caseData.category}
-            </span>
-            <span className="bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-1 rounded-lg font-bold text-xs print:bg-slate-300 print:text-slate-900">
-              Pertains to: {caseData.casePertainsTo}
-            </span>
-            <span
-              className={`px-3 py-1 rounded-lg font-bold text-xs ${
-                caseData.caFiled === 'Yes'
-                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 print:bg-emerald-200 print:text-emerald-950'
-                  : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 print:bg-amber-200 print:text-amber-950'
-              }`}
-            >
-              Counter Affidavit: {caseData.caFiled === 'Yes' ? 'Filed' : 'Pending'}
-            </span>
-            <span
-              className={`px-3 py-1 rounded-lg font-bold text-xs ${
-                caseData.currentStatus === 'Disposed'
-                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200'
-                  : 'bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-200'
-              }`}
-            >
-              Status: {caseData.currentStatus}
-            </span>
-            {caseData.adverseToDepartment === 'Yes' && (
-              <span className="bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200 px-3 py-1 rounded-lg font-bold text-xs">
-                ⚠️ Adverse to Dept
-              </span>
-            )}
-          </div>
-
-          {/* SECTION A: APPEAL CASE INFORMATION (If Appeal Case) */}
-          {isAppeal && caseData.appealInfo && (
-            <div className="bg-amber-50/40 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-700 rounded-xl p-5 space-y-4 print:border-amber-400 print:bg-amber-50">
-              <div className="flex items-center justify-between border-b border-amber-200 dark:border-amber-800 pb-2">
-                <div className="flex items-center gap-2">
-                  <Gavel className="w-4 h-4 text-amber-700 dark:text-amber-400" />
-                  <h4 className="font-extrabold text-xs text-amber-950 dark:text-amber-100 uppercase tracking-wider">
-                    A. Appeal Case Information
-                  </h4>
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 px-2 py-0.5 rounded">
-                  Appellate Track
-                </span>
+          {/* ========================================================= */}
+          {/* STAGE 1: Case Registry & Scope */}
+          {/* ========================================================= */}
+          {activeStageIndex === 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
+                <Scale className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                  Stage 1: Case Registry & Particulars
+                </h3>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-                <div>
-                  <strong className="text-slate-500 block">Appeal Level:</strong>
-                  <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.appealInfo.appealLevel}</span>
+              {/* Appeal Case Block */}
+              {isAppeal && caseData.appealInfo && (
+                <div className="p-4 bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/70 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between border-b border-indigo-200/80 dark:border-indigo-800/60 pb-2">
+                    <span className="font-extrabold text-xs text-indigo-950 dark:text-indigo-200 uppercase tracking-wide flex items-center gap-1.5">
+                      <Gavel className="w-3.5 h-3.5 text-indigo-600" /> Appellate Forum Details
+                    </span>
+                    <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200 px-2 py-0.5 rounded font-bold uppercase">
+                      {caseData.appealInfo.appealLevel || 'Appellate Tier'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-500 font-semibold uppercase block">Appeal Case Type & No</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100">
+                        {caseData.appealInfo.appealCaseType} {caseData.appealInfo.appealCaseNumber}/{caseData.appealInfo.appealYear}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 font-semibold uppercase block">Appellate Court</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.appealInfo.appellateCourt || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 font-semibold uppercase block">Filing Date</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">📅 {caseData.appealInfo.appealFilingDate || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 font-semibold uppercase block">Limitation Due Date</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">📅 {caseData.appealInfo.limitationDueDate || '—'}</span>
+                    </div>
+                  </div>
+                  {caseData.appealInfo.delayInFilingAppeal === 'Yes' && (
+                    <div className="p-2.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-lg flex items-center justify-between text-xs text-rose-800 dark:text-rose-200">
+                      <span className="font-bold flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                        Appeal Filing Delayed by {caseData.appealInfo.delayPeriodDays || 0} Days
+                      </span>
+                      <span className="font-medium">{caseData.appealInfo.condonationOfDelay || 'Condonation Application'}</span>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <strong className="text-slate-500 block">Appeal Case Type:</strong>
-                  <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.appealInfo.appealCaseType}</span>
+              )}
+
+              {/* Jurisdiction Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Circle</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.circle}</span>
                 </div>
-                <div>
-                  <strong className="text-slate-500 block">Appeal Case Number:</strong>
-                  <span className="font-bold text-amber-700 dark:text-amber-400 font-mono">{caseData.appealInfo.appealCaseNumber} ({caseData.appealInfo.appealYear})</span>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Division</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.division}</span>
                 </div>
-                <div className="sm:col-span-2">
-                  <strong className="text-slate-500 block">Appellate Court:</strong>
-                  <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.appealInfo.appellateCourt}</span>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Court Name</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.nameOfCourt}</span>
                 </div>
-                <div>
-                  <strong className="text-slate-500 block">Condonation of Delay:</strong>
-                  <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.appealInfo.condonationOfDelay}</span>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Category</span>
+                  <span className="font-bold text-purple-700 dark:text-purple-300 text-xs mt-0.5 block">{caseData.category}</span>
                 </div>
-                <div>
-                  <strong className="text-slate-500 block">Appeal Filing Date:</strong>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.appealInfo.appealFilingDate || 'N/A'}</span>
+              </div>
+
+              {/* Litigants */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Petitioner(s)</span>
+                  <p className="font-bold text-slate-900 dark:text-slate-100 text-xs leading-relaxed">{caseData.petitionerNames}</p>
                 </div>
-                <div>
-                  <strong className="text-slate-500 block">Limitation / Due Date:</strong>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.appealInfo.limitationDueDate || 'N/A'}</span>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Respondent(s)</span>
+                  <p className="font-bold text-slate-900 dark:text-slate-100 text-xs leading-relaxed">{caseData.respondentNames}</p>
                 </div>
-                <div>
-                  <strong className="text-slate-500 block">Delay Calculation:</strong>
-                  <span
-                    className={`inline-flex items-center gap-1 font-bold ${
-                      caseData.appealInfo.delayInFilingAppeal === 'Yes' ? 'text-rose-600' : 'text-emerald-600'
-                    }`}
-                  >
-                    {caseData.appealInfo.delayInFilingAppeal === 'Yes'
-                      ? `⚠️ Delayed by ${caseData.appealInfo.delayPeriodDays} days`
-                      : '✓ Filed in time (0 days delay)'}
+              </div>
+
+              {/* Nature, Pertains & Prayer */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Pertains To</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.casePertainsTo || '—'}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Nature of Case</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.natureOfCase || '—'}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Present Stage</span>
+                  <span className="font-bold text-blue-700 dark:text-blue-300 text-xs mt-0.5 block">{caseData.presentStage || '—'}</span>
+                </div>
+              </div>
+
+              {caseData.briefOfPrayer && (
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Brief of Prayer</span>
+                  <p className="text-slate-800 dark:text-slate-200 text-xs leading-relaxed">{caseData.briefOfPrayer}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* STAGE 2: Counter Affidavit (CA) */}
+          {/* ========================================================= */}
+          {activeStageIndex === 1 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
+                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                  Stage 2: Counter Affidavit (CA) Status
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">CA Required</span>
+                  <span className="font-extrabold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.caRequired || '—'}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">CA Due Date</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                    📅 {caseData.caDueDate || '—'}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">CA Filed</span>
+                  <span className={`font-extrabold text-xs mt-0.5 block ${caseData.caFiled === 'Yes' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {caseData.caFiled || '—'}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">CA Filed Date</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                    📅 {caseData.caFiledDate || '—'}
                   </span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* SECTION B.1: CASE INFORMATION */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4 print:border-slate-300 print:bg-white">
-            <h4 className="font-extrabold text-xs text-blue-900 dark:text-blue-400 uppercase tracking-wider">
-              B. Case Information
-            </h4>
+          {/* ========================================================= */}
+          {/* STAGE 3: Hearing Schedule */}
+          {/* ========================================================= */}
+          {activeStageIndex === 2 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
+                <Calendar className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                  Stage 3: Court Hearing Schedule & Listing
+                </h3>
+              </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-              <div>
-                <strong className="text-slate-500 block">Case Type:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.caseType}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Case Number & Year:</strong>
-                <span className="font-bold text-blue-600 dark:text-blue-400 font-mono text-sm">{caseData.caseNumber} ({caseData.caseYear})</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Category:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.category}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Circle Jurisdiction:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.circle} Circle</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Division Jurisdiction:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.division}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Name of Court:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.nameOfCourt}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Case Pertains To:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.casePertainsTo}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Nature of Case:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">
-                  {caseData.natureOfCase} {caseData.specifyNatureOfCase ? `(${caseData.specifyNatureOfCase})` : ''}
-                </span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Financial Implication:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.financialImplication || 'N/A'}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Present Stage:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.presentStage}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Current Status:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.currentStatus}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Last Hearing Date</span>
+                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
+                    📅 {caseData.lastHearingDate || '—'}
+                  </p>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Next Hearing Date</span>
+                  <p className="font-mono font-bold text-blue-700 dark:text-blue-300 text-xs">
+                    📅 {caseData.nextHearingDate || '—'}
+                  </p>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Next Listing Purpose</span>
+                  <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                    {caseData.nextListingPurpose || '—'}
+                  </p>
+                </div>
               </div>
             </div>
+          )}
 
-            {/* Parties */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
-                <strong className="text-slate-500 block mb-1">Name of Petitioner(s):</strong>
-                <p className="font-bold text-slate-900 dark:text-slate-100 whitespace-pre-wrap">{caseData.petitionerNames || 'N/A'}</p>
+          {/* ========================================================= */}
+          {/* STAGE 4: Interim Orders & Compliance */}
+          {/* ========================================================= */}
+          {activeStageIndex === 3 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
+                <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                  Stage 4: Interim Directions & Compliance Track
+                </h3>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
-                <strong className="text-slate-500 block mb-1">Name of Respondent(s):</strong>
-                <p className="font-bold text-slate-900 dark:text-slate-100 whitespace-pre-wrap">{caseData.respondentNames || 'N/A'}</p>
-              </div>
-            </div>
 
-            {/* Brief of Prayer */}
-            <div className="pt-2">
-              <strong className="text-slate-500 block mb-1">Brief of the Prayer:</strong>
-              <p className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap">
-                {caseData.briefOfPrayer || 'N/A'}
-              </p>
-            </div>
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Interim Order Direction</span>
+                  <p className="font-medium text-slate-900 dark:text-slate-100 text-xs leading-relaxed">
+                    {caseData.interimOrderDirection || 'No interim orders recorded'}
+                  </p>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Interim Order Date</span>
+                  <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
+                    📅 {caseData.interimOrderDate || '—'}
+                  </p>
+                </div>
+              </div>
 
-          {/* SECTION B.2: CA (COUNTER AFFIDAVIT) INFORMATION */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-3 print:border-slate-300 print:bg-white">
-            <h4 className="font-extrabold text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-              CA (Counter Affidavit) Information
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-              <div>
-                <strong className="text-slate-500 block">CA Required:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.caRequired}</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Compliance Required</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.complianceRequired || '—'}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Compliance End Date</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                    📅 {caseData.complianceEndDate || '—'}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 col-span-2">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Compliance Status</span>
+                  <span className={`font-extrabold text-xs mt-0.5 block ${caseData.complianceStatus === 'Complied' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {caseData.complianceStatus || '—'}
+                  </span>
+                </div>
               </div>
-              <div>
-                <strong className="text-slate-500 block">CA Filed:</strong>
-                <span className={`font-bold ${caseData.caFiled === 'Yes' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                  {caseData.caFiled}
-                </span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">CA Due Date:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.caDueDate || 'N/A'}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">CA Filed Date:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.caFiledDate || 'N/A'}</span>
-              </div>
-            </div>
-          </div>
 
-          {/* SECTION B.3: HEARING & ORDERS */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-3 print:border-slate-300 print:bg-white">
-            <h4 className="font-extrabold text-xs text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">
-              Hearing & Orders
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-              <div>
-                <strong className="text-slate-500 block">Last Hearing Date:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.lastHearingDate || 'N/A'}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Next Hearing Date:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.nextHearingDate || 'N/A'}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Next Listing Purpose:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.nextListingPurpose || 'N/A'}</span>
-              </div>
-              <div className="sm:col-span-2">
-                <strong className="text-slate-500 block">Interim Order / Direction:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.interimOrderDirection || 'N/A'}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Interim Order Date:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.interimOrderDate || 'N/A'}</span>
-              </div>
-              <div className="sm:col-span-2">
-                <strong className="text-slate-500 block">Latest Order / Final Order:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.latestOrderFinalOrder || 'N/A'}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Latest Order Date:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.latestOrderDate || 'N/A'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION B.4: COMPLIANCE (GENERAL / INTERIM) */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-3 print:border-slate-300 print:bg-white">
-            <h4 className="font-extrabold text-xs text-purple-700 dark:text-purple-400 uppercase tracking-wider">
-              Compliance (Interim Directions)
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-              <div>
-                <strong className="text-slate-500 block">Compliance Required:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.complianceRequired}</span>
-              </div>
-              <div className="sm:col-span-2">
-                <strong className="text-slate-500 block">Compliance Action:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.complianceAction || 'N/A'}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Compliance Period:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.compliancePeriod || 'N/A'}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Compliance End Date:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.complianceEndDate || 'N/A'}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Compliance Status:</strong>
-                <span className={`font-bold ${caseData.complianceStatus === 'Complied' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                  {caseData.complianceStatus || 'Pending'}
-                </span>
-              </div>
-              <div className="sm:col-span-3">
-                <strong className="text-slate-500 block">Action Taken Details for Compliance:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.actionTakenDetailsForCompliance || 'N/A'}</span>
-              </div>
-              {caseData.remarks && (
-                <div className="sm:col-span-3">
-                  <strong className="text-slate-500 block">Remarks:</strong>
-                  <span className="font-medium text-slate-700 dark:text-slate-300">{caseData.remarks}</span>
+              {caseData.actionTakenDetailsForCompliance && (
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Action Taken Details for Compliance</span>
+                  <p className="text-slate-800 dark:text-slate-200 text-xs leading-relaxed">{caseData.actionTakenDetailsForCompliance}</p>
                 </div>
               )}
             </div>
-          </div>
+          )}
 
-          {/* SECTION B.5 & B.6: FINAL RESULT, GP OPINION & APPEAL */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-3 print:border-slate-300 print:bg-white">
-            <h4 className="font-extrabold text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-              Final Result, GP Opinion & Appeal
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-              <div>
-                <strong className="text-slate-500 block">Final Result (Concluded?):</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.finalResult}</span>
+          {/* ========================================================= */}
+          {/* STAGE 5: Disposal & Appeal Track */}
+          {/* ========================================================= */}
+          {activeStageIndex === 4 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
+                <Gavel className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                  Stage 5: Final Disposal, Adverse Findings & Appeals
+                </h3>
               </div>
-              <div className="sm:col-span-2">
-                <strong className="text-slate-500 block">Final Result Order:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.finalResultOrder || 'N/A'}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Final Order Date:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.finalOrderDate || 'N/A'}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Adverse to Department:</strong>
-                <span className={`font-bold ${caseData.adverseToDepartment === 'Yes' ? 'text-rose-600' : 'text-emerald-600'}`}>
-                  {caseData.adverseToDepartment}
-                </span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">GP Opinion:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.gpOpinion}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Appeal Filed:</strong>
-                <span className={`font-bold ${caseData.appealFiled === 'Yes' ? 'text-amber-600' : 'text-slate-700'}`}>
-                  {caseData.appealFiled}
-                </span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Appeal Filed Date:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.appealFiledDate || 'N/A'}</span>
-              </div>
-            </div>
-          </div>
 
-          {/* SECTION B.7: FINAL-ORDER COMPLIANCE */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-3 print:border-slate-300 print:bg-white">
-            <h4 className="font-extrabold text-xs text-teal-700 dark:text-teal-400 uppercase tracking-wider">
-              Final-Order Compliance
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-              <div className="sm:col-span-2">
-                <strong className="text-slate-500 block">Compliance Action Given in Final Order:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.finalOrderComplianceActionGiven || 'N/A'}</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Concluded / Disposed?</span>
+                  <span className="font-extrabold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.finalResult || 'No'}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Final Order Date</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                    📅 {caseData.finalOrderDate || '—'}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Adverse to Department</span>
+                  <span className={`font-extrabold text-xs mt-0.5 block ${caseData.adverseToDepartment === 'Yes' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    {caseData.adverseToDepartment || 'No'}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">GP Opinion</span>
+                  <span className="font-bold text-blue-700 dark:text-blue-300 text-xs mt-0.5 block">{caseData.gpOpinion || '—'}</span>
+                </div>
               </div>
-              <div>
-                <strong className="text-slate-500 block">Compliance Action:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.finalOrderComplianceAction || 'No'}</span>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Appeal Filed?</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.appealFiled || 'No'}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Appeal Filed Date</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                    📅 {caseData.appealFiledDate || '—'}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Linked Appeal Case ID</span>
+                  <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-xs mt-0.5 block">
+                    {caseData.linkedAppealCaseId || '—'}
+                  </span>
+                </div>
               </div>
-              <div>
-                <strong className="text-slate-500 block">Compliance Period:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.finalOrderCompliancePeriod || 'N/A'}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Compliance End Date:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{caseData.finalOrderComplianceEndDate || 'N/A'}</span>
-              </div>
-              <div>
-                <strong className="text-slate-500 block">Compliance Status:</strong>
-                <span className={`font-bold ${caseData.finalOrderComplianceStatus === 'Complied' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                  {caseData.finalOrderComplianceStatus || 'Pending'}
-                </span>
-              </div>
-              <div className="sm:col-span-3">
-                <strong className="text-slate-500 block">Compliance Action Taken:</strong>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.finalOrderComplianceActionTaken || 'N/A'}</span>
-              </div>
+
               {caseData.finalOrderRemarks && (
-                <div className="sm:col-span-3">
-                  <strong className="text-slate-500 block">Compliance Remarks:</strong>
-                  <span className="font-medium text-slate-700 dark:text-slate-300">{caseData.finalOrderRemarks}</span>
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Final Judgment Summary & Remarks</span>
+                  <p className="text-slate-800 dark:text-slate-200 text-xs leading-relaxed">{caseData.finalOrderRemarks}</p>
                 </div>
               )}
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Modal Footer */}
-        <div className="bg-slate-50 dark:bg-slate-800/80 px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between print-hide">
-          <span className="text-xs text-slate-500">
-            Last Updated: {caseData.updatedAt ? new Date(caseData.updatedAt).toLocaleString('en-IN') : 'N/A'}
-          </span>
-          <button
-            onClick={onClose}
-            className="px-5 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-          >
-            Close
-          </button>
+        {/* Footer Navigation Bar */}
+        <div className="bg-slate-50 dark:bg-slate-800/60 px-6 py-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 print:hidden">
+          <div>
+            {activeStageIndex > 0 ? (
+              <button
+                type="button"
+                onClick={handlePrevStage}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" /> Previous: {STAGES[activeStageIndex - 1].label}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                Close Docket
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {activeStageIndex < STAGES.length - 1 ? (
+              <button
+                type="button"
+                onClick={handleNextStage}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600 text-xs font-bold cursor-pointer transition-all"
+              >
+                <span>Next: {STAGES[activeStageIndex + 1].label}</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer"
+              >
+                Done
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
