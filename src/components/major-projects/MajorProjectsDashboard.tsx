@@ -375,6 +375,7 @@ export const MajorProjectsDashboard: React.FC = () => {
   if (uiMode === 'FORM') {
     return (
       <OngoingWorkEntryForm
+        key={selectedProjectForEdit?.id || 'new-ongoing-work'}
         initialData={selectedProjectForEdit || undefined}
         nextSNo={nextSNo}
         masterDivisions={masterData.divisions}
@@ -695,15 +696,14 @@ export const MajorProjectsDashboard: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
         {/* Tier 1: Search Bar, Division Filter & 50Cr Button */}
         <div className="flex flex-col lg:flex-row items-center justify-between gap-3">
-          {/* Search Input */}
-          <div className="relative w-full lg:flex-1">
+          {/* Search Bar */}
+          <div className="relative flex-1 min-w-[240px]">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by work, NH, scheme, division, contractor..."
-              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
+              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
             />
           </div>
 
@@ -715,7 +715,6 @@ export const MajorProjectsDashboard: React.FC = () => {
                 options={['All Divisions', ...divisionsList]}
                 value={selectedDivision === 'ALL' || !selectedDivision ? 'All Divisions' : selectedDivision}
                 onChange={(val) => setSelectedDivision(val === 'All Divisions' ? 'ALL' : val)}
-                placeholder="Filter Division..."
               />
             </div>
 
@@ -757,7 +756,6 @@ export const MajorProjectsDashboard: React.FC = () => {
                   type="number"
                   step="0.1"
                   min="0"
-                  placeholder="From"
                   value={delayMin}
                   onChange={(e) => setDelayMin(e.target.value)}
                   className="w-16 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-rose-500"
@@ -767,7 +765,6 @@ export const MajorProjectsDashboard: React.FC = () => {
                   type="number"
                   step="0.1"
                   min="0"
-                  placeholder="To"
                   value={delayMax}
                   onChange={(e) => setDelayMax(e.target.value)}
                   className="w-16 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-rose-500"
@@ -799,7 +796,6 @@ export const MajorProjectsDashboard: React.FC = () => {
                   type="number"
                   min="0"
                   max="100"
-                  placeholder="Min"
                   value={progressMin}
                   onChange={(e) => setProgressMin(e.target.value)}
                   className="w-16 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-emerald-500"
@@ -809,7 +805,6 @@ export const MajorProjectsDashboard: React.FC = () => {
                   type="number"
                   min="0"
                   max="100"
-                  placeholder="Max"
                   value={progressMax}
                   onChange={(e) => setProgressMax(e.target.value)}
                   className="w-16 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-emerald-500"

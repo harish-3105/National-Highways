@@ -505,8 +505,8 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       eot_proposal_agency: eotProposalAgency.trim() || null,
       cos_details: cosDetails.trim() || null,
 
-      stage_remarks: workStage === 'TENDER_STAGE' ? stageRemarks.trim() || null : null,
-      progress_remarks: workStage !== 'TENDER_STAGE' ? progressRemarks.trim() || null : null,
+      stage_remarks: stageRemarks.trim() || null,
+      progress_remarks: progressRemarks.trim() || null,
       detailed_stage_status: detailedStageStatus.trim() || null,
 
       loa_date: loaDate.trim() || null,
