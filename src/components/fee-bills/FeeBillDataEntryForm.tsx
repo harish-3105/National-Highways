@@ -1049,18 +1049,9 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block font-bold text-slate-700 dark:text-slate-300">
-                      IT Cess Deduction (₹)
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => handleItCessChange(Math.round((formData.settledAmount || formData.totalFeeAmount) * 0.1))}
-                      className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 hover:underline cursor-pointer"
-                    >
-                      10% TDS
-                    </button>
-                  </div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    IT Cess Deduction (₹)
+                  </label>
                   <input
                     type="number"
                     value={formData.itCess || ''}

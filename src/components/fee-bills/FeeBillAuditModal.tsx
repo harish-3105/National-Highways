@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   CheckCircle2,
   FileCheck,
-  Percent,
 } from 'lucide-react';
 
 interface FeeBillAuditModalProps {
@@ -169,18 +168,9 @@ export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
                     />
                   </div>
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                        IT Cess Deduction (₹)
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setItCess(Math.round(settledAmount * 0.1))}
-                        className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 hover:underline cursor-pointer"
-                      >
-                        <Percent className="w-3 h-3" /> Apply 10% TDS
-                      </button>
-                    </div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      IT Cess Deduction (₹)
+                    </label>
                     <input
                       type="number"
                       value={itCess}
