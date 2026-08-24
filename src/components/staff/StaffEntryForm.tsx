@@ -8,10 +8,8 @@ import {
   AlertCircle,
   Briefcase,
   Building,
-  MapPin,
   Phone,
   Mail,
-  CheckCircle2,
   ChevronRight,
   ChevronLeft,
   LockKeyhole,
@@ -28,9 +26,8 @@ interface StaffEntryFormProps {
 }
 
 type StaffStageType =
-  | 'personal_identity'
-  | 'posting_hierarchy'
-  | 'contact_communications';
+  | 'identity_contact'
+  | 'posting_hierarchy';
 
 interface StageDefinition {
   id: StaffStageType;
@@ -42,10 +39,10 @@ interface StageDefinition {
 
 const STAGES: StageDefinition[] = [
   {
-    id: 'personal_identity',
-    label: 'Personnel Identity',
+    id: 'identity_contact',
+    label: 'Personnel & Contact Details',
     step: 'Stage 1',
-    subtitle: 'Officer full legal name & official engineering / administrative cadre',
+    subtitle: 'Officer full name, designation cadre, mobile phone & departmental email',
     icon: Briefcase,
   },
   {
@@ -54,13 +51,6 @@ const STAGES: StageDefinition[] = [
     step: 'Stage 2',
     subtitle: '6-tier departmental hierarchy from headquarters down to sub-sections',
     icon: Building,
-  },
-  {
-    id: 'contact_communications',
-    label: 'Contact Information',
-    step: 'Stage 3',
-    subtitle: 'Official mobile contact phone number & departmental email id',
-    icon: Phone,
   },
 ];
 
@@ -72,9 +62,11 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
 }) => {
   const [activeStageIndex, setActiveStageIndex] = useState<number>(0);
 
-  // Stage 1: Personnel Identity
+  // Stage 1: Personnel Identity & Contact Information
   const [name, setName] = useState<string>(initialData?.name || '');
   const [designation, setDesignation] = useState<string>(initialData?.designation || '');
+  const [contactNo, setContactNo] = useState<string>(initialData?.contact_no || '');
+  const [emailId, setEmailId] = useState<string>(initialData?.emailid || '');
 
   // Stage 2: 6-Tier Hierarchy
   const [office, setOffice] = useState<string>(initialData?.office || '');
@@ -83,10 +75,6 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
   const [subDivision, setSubDivision] = useState<string>(initialData?.sub_division || '');
   const [section, setSection] = useState<string>(initialData?.section || '');
   const [subSection, setSubSection] = useState<string>(initialData?.sub_section || '');
-
-  // Stage 3: Contact & Communications
-  const [contactNo, setContactNo] = useState<string>(initialData?.contact_no || '');
-  const [emailId, setEmailId] = useState<string>(initialData?.emailid || '');
 
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -98,18 +86,16 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
     const stageErrors: Record<string, string> = {};
 
     if (stageIdx === 0) {
-      // Stage 1: Personnel Identity (Baseline)
+      // Stage 1: Personnel Identity & Contact Details (Baseline)
       if (!name.trim()) {
         stageErrors.name = 'Full Officer Name is required (Stage 1).';
       }
-    } else if (stageIdx === 1) {
-      // Stage 2: Organizational Posting
-      // At least one organizational post is recommended, but non-blocking
-    } else if (stageIdx === 2) {
-      // Stage 3: Contact Details
       if (emailId.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailId.trim())) {
         stageErrors.emailId = 'Please enter a valid email address.';
       }
+    } else if (stageIdx === 1) {
+      // Stage 2: Organizational Posting
+      // Optional/recommended fields, non-blocking
     }
 
     return stageErrors;
@@ -130,9 +116,6 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
     }
     if (stageIdx === 1) {
       return Boolean(office || circle || division || subDivision || section || subSection);
-    }
-    if (stageIdx === 2) {
-      return Boolean((contactNo.trim() || emailId.trim()) && Object.keys(validateSingleStage(2)).length === 0);
     }
     return false;
   };
@@ -222,7 +205,7 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
               {initialData?.id ? 'Edit Department Staff Profile' : 'New Staff Officer Entry'}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Highways Personnel Portal &bull; Organizational Units & 6-Tier Posting Hierarchy
+              Highways Personnel Portal &bull; Identity, Contact & 6-Tier Posting Hierarchy
             </p>
           </div>
         </div>
@@ -245,9 +228,9 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
         </div>
       </div>
 
-      {/* 3-STAGE LIFECYCLE SUB-NAVIGATION STEPPER BAR */}
+      {/* 2-STAGE LIFECYCLE SUB-NAVIGATION STEPPER BAR */}
       <div className="bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {STAGES.map((stage, idx) => {
             const Icon = stage.icon;
             const isActive = activeStageIndex === idx;
@@ -330,7 +313,7 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
 
         <div className="p-6 space-y-6">
           {/* ========================================================= */}
-          {/* STAGE 1: Personnel Identity */}
+          {/* STAGE 1: Personnel Identity & Contact Details */}
           {/* ========================================================= */}
           {activeStageIndex === 0 && (
             <div className="space-y-6">
@@ -361,6 +344,42 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
                     value={designation}
                     onChange={setDesignation}
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Official Mobile Contact Number
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                    <input
+                      type="tel"
+                      value={contactNo}
+                      onChange={(e) => setContactNo(e.target.value)}
+                      className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Departmental Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                    <input
+                      type="email"
+                      value={emailId}
+                      onChange={(e) => {
+                        setEmailId(e.target.value);
+                        if (errors.emailId) setErrors((prev) => ({ ...prev, emailId: '' }));
+                      }}
+                      className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {errors.emailId && <p className="text-[11px] text-rose-500 mt-1">{errors.emailId}</p>}
                 </div>
               </div>
             </div>
@@ -436,49 +455,6 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
                     value={subSection}
                     onChange={setSubSection}
                   />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================= */}
-          {/* STAGE 3: Contact & Communications */}
-          {/* ========================================================= */}
-          {activeStageIndex === 2 && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Official Mobile Contact Number
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                    <input
-                      type="tel"
-                      value={contactNo}
-                      onChange={(e) => setContactNo(e.target.value)}
-                      className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Departmental Email Address
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                    <input
-                      type="email"
-                      value={emailId}
-                      onChange={(e) => {
-                        setEmailId(e.target.value);
-                        if (errors.emailId) setErrors((prev) => ({ ...prev, emailId: '' }));
-                      }}
-                      className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  {errors.emailId && <p className="text-[11px] text-rose-500 mt-1">{errors.emailId}</p>}
                 </div>
               </div>
             </div>
