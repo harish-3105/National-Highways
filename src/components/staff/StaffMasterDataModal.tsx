@@ -16,8 +16,9 @@ import {
   Briefcase,
   Search,
   CheckCircle2,
+  GitBranch,
 } from 'lucide-react';
-import { StaffMasterConfig } from './StaffTypes';
+import { StaffMasterConfig, StaffMasterItem } from './StaffTypes';
 
 interface StaffMasterDataModalProps {
   isOpen: boolean;
@@ -30,6 +31,8 @@ interface CategoryMeta {
   id: string;
   label: string;
   description: string;
+  parentCategory?: string;
+  parentLabel?: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
@@ -50,24 +53,32 @@ const CATEGORY_TABS: CategoryMeta[] = [
     id: 'division',
     label: 'Divisions',
     description: 'Operational territorial highway divisions',
+    parentCategory: 'circle',
+    parentLabel: 'Parent Circle',
     icon: Building,
   },
   {
     id: 'sub_division',
     label: 'Sub-Divisions',
     description: 'Sub-divisional engineer jurisdictions',
+    parentCategory: 'division',
+    parentLabel: 'Parent Division',
     icon: Layers,
   },
   {
     id: 'section',
     label: 'Sections',
     description: 'Engineering & Section Office units',
+    parentCategory: 'sub_division',
+    parentLabel: 'Parent Sub-Division',
     icon: Layers,
   },
   {
     id: 'sub_section',
     label: 'Sub-Sections',
     description: 'Sub-section field maintenance units',
+    parentCategory: 'section',
+    parentLabel: 'Parent Section',
     icon: Layers,
   },
   {
@@ -86,29 +97,44 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('office');
   const [newValue, setNewValue] = useState('');
+  const [selectedParentValue, setSelectedParentValue] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   // Edit Option State
-  const [editingItem, setEditingItem] = useState<{ id?: string; value: string } | null>(null);
+  const [editingItem, setEditingItem] = useState<StaffMasterItem | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
+  const [editingParentValue, setEditingParentValue] = useState<string>('');
 
   // Delete Confirm Popup State
-  const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ id?: string; value: string } | null>(null);
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<StaffMasterItem | null>(null);
 
   if (!isOpen) return null;
+
+  const activeTabMeta = CATEGORY_TABS.find((t) => t.id === activeCategory);
+
+  // Parent options list for hierarchical categories
+  const availableParentOptions: string[] =
+    activeTabMeta?.parentCategory === 'circle'
+      ? masterConfig.circles || []
+      : activeTabMeta?.parentCategory === 'division'
+      ? masterConfig.divisions || []
+      : activeTabMeta?.parentCategory === 'sub_division'
+      ? masterConfig.sub_divisions || []
+      : activeTabMeta?.parentCategory === 'section'
+      ? masterConfig.sections || []
+      : [];
 
   const displayItems = (masterConfig.rawItems || []).filter(
     (item) => item.category === activeCategory
   );
 
   const filteredItems = displayItems.filter((item) =>
-    (item.value || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (item.value || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.parent_value || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const activeTabMeta = CATEGORY_TABS.find((t) => t.id === activeCategory);
 
   const handleAddOption = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,16 +145,27 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
     setSuccess(null);
 
     try {
+      const payload: Record<string, any> = {
+        category: activeCategory,
+        value: newValue.trim(),
+      };
+
+      if (activeTabMeta?.parentCategory) {
+        payload.parent_category = activeTabMeta.parentCategory;
+        payload.parent_value = selectedParentValue.trim() || null;
+      }
+
       const res = await fetch('/api/staff/master-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category: activeCategory, value: newValue.trim() }),
+        body: JSON.stringify(payload),
       });
 
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Failed to add option');
 
       setNewValue('');
+      setSelectedParentValue('');
       setSuccess(`Added "${json.value}" successfully to ${activeTabMeta?.label}.`);
       onRefresh();
     } catch (err: unknown) {
@@ -139,8 +176,8 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
     }
   };
 
-  const handleSaveEdit = async (item: { id?: string; value: string }) => {
-    if (!editingValue.trim() || editingValue.trim() === item.value) {
+  const handleSaveEdit = async (item: StaffMasterItem) => {
+    if (!editingValue.trim()) {
       setEditingItem(null);
       return;
     }
@@ -150,9 +187,21 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
     setSuccess(null);
 
     try {
-      const payload = item.id
-        ? { id: item.id, newValue: editingValue.trim() }
-        : { category: activeCategory, oldValue: item.value, newValue: editingValue.trim() };
+      const payload: Record<string, any> = {
+        newValue: editingValue.trim(),
+      };
+
+      if (item.id) {
+        payload.id = item.id;
+      } else {
+        payload.category = activeCategory;
+        payload.oldValue = item.value;
+      }
+
+      if (activeTabMeta?.parentCategory) {
+        payload.parent_category = activeTabMeta.parentCategory;
+        payload.parent_value = editingParentValue.trim() || null;
+      }
 
       const res = await fetch('/api/staff/master-data', {
         method: 'PUT',
@@ -166,6 +215,7 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
       setSuccess(`Updated option to "${editingValue.trim()}".`);
       setEditingItem(null);
       setEditingValue('');
+      setEditingParentValue('');
       onRefresh();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -217,7 +267,7 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
                 Staff Master Data Configuration
               </h2>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Customize office names, circles, divisions, sub-divisions, sections, and staff designations
+                Manage relational 6-tier posting hierarchy, administrative units, and staff designations
               </p>
             </div>
           </div>
@@ -252,6 +302,7 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
                     setError(null);
                     setSuccess(null);
                     setEditingItem(null);
+                    setSelectedParentValue('');
                   }}
                   className={`w-full text-left p-3 rounded-2xl transition-all flex items-center justify-between cursor-pointer ${
                     isActive
@@ -323,17 +374,33 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
             )}
 
             {/* Add New Option Form */}
-            <form onSubmit={handleAddOption} className="flex gap-2">
+            <form onSubmit={handleAddOption} className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 value={newValue}
                 onChange={(e) => setNewValue(e.target.value)}
                 className="flex-1 px-3.5 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
               />
+
+              {activeTabMeta?.parentCategory && (
+                <select
+                  value={selectedParentValue}
+                  onChange={(e) => setSelectedParentValue(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Select {activeTabMeta.parentLabel} --</option>
+                  {availableParentOptions.map((parentOpt) => (
+                    <option key={parentOpt} value={parentOpt}>
+                      {parentOpt}
+                    </option>
+                  ))}
+                </select>
+              )}
+
               <button
                 type="submit"
                 disabled={loading || !newValue.trim()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Option</span>
@@ -360,7 +427,7 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
               ) : (
                 filteredItems.map((item) => {
                   const itemKey = item.id || `default-${item.value}`;
-                  const isEditingThis = editingItem?.value === item.value;
+                  const isEditingThis = editingItem?.value === item.value && editingItem?.category === item.category;
 
                   return (
                     <div
@@ -368,7 +435,7 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
                       className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl flex items-center justify-between gap-3 group transition-colors"
                     >
                       {isEditingThis ? (
-                        <div className="flex items-center gap-2 flex-1">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1">
                           <input
                             type="text"
                             value={editingValue}
@@ -380,26 +447,50 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
                             className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-blue-500 rounded-lg text-xs font-semibold outline-none"
                             autoFocus
                           />
-                          <button
-                            onClick={() => handleSaveEdit(item)}
-                            className="p-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 cursor-pointer"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setEditingItem(null)}
-                            className="p-1.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-300 cursor-pointer"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
+
+                          {activeTabMeta?.parentCategory && (
+                            <select
+                              value={editingParentValue}
+                              onChange={(e) => setEditingParentValue(e.target.value)}
+                              className="px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold outline-none"
+                            >
+                              <option value="">-- No Parent --</option>
+                              {availableParentOptions.map((parentOpt) => (
+                                <option key={parentOpt} value={parentOpt}>
+                                  {parentOpt}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleSaveEdit(item)}
+                              className="p-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setEditingItem(null)}
+                              className="p-1.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-300 cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <>
-                          <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex items-center gap-2.5 min-w-0">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
                             <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                               {item.value}
                             </span>
+                            {item.parent_value && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
+                                <GitBranch className="w-2.5 h-2.5" />
+                                {item.parent_value}
+                              </span>
+                            )}
                           </div>
 
                           <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity shrink-0">
@@ -407,6 +498,7 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
                               onClick={() => {
                                 setEditingItem(item);
                                 setEditingValue(item.value);
+                                setEditingParentValue(item.parent_value || '');
                               }}
                               className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-lg transition-colors cursor-pointer"
                               title="Edit option"

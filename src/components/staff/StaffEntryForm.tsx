@@ -87,26 +87,26 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
   // DYNAMIC SMART CASCADING OPTIONS
   // -------------------------------------------------------------
   const availableDivisions = useMemo(() => {
-    return getCascadingDivisions(circle, masterConfig.divisions || []);
-  }, [circle, masterConfig.divisions]);
+    return getCascadingDivisions(circle, masterConfig.rawItems || [], masterConfig.divisions || []);
+  }, [circle, masterConfig.rawItems, masterConfig.divisions]);
 
   const availableSubDivisions = useMemo(() => {
-    return getCascadingSubDivisions(division, masterConfig.sub_divisions || []);
-  }, [division, masterConfig.sub_divisions]);
+    return getCascadingSubDivisions(division, masterConfig.rawItems || [], masterConfig.sub_divisions || []);
+  }, [division, masterConfig.rawItems, masterConfig.sub_divisions]);
 
   const availableSections = useMemo(() => {
-    return getCascadingSections(subDivision, masterConfig.sections || []);
-  }, [subDivision, masterConfig.sections]);
+    return getCascadingSections(subDivision, masterConfig.rawItems || [], masterConfig.sections || []);
+  }, [subDivision, masterConfig.rawItems, masterConfig.sections]);
 
   const availableSubSections = useMemo(() => {
-    return getCascadingSubSections(section, masterConfig.sub_sections || []);
-  }, [section, masterConfig.sub_sections]);
+    return getCascadingSubSections(section, masterConfig.rawItems || [], masterConfig.sub_sections || []);
+  }, [section, masterConfig.rawItems, masterConfig.sub_sections]);
 
   // Handlers with smart cascading auto-resets
   const handleCircleChange = (newCircle: string) => {
     setCircle(newCircle);
     if (division) {
-      const validDivs = getCascadingDivisions(newCircle, masterConfig.divisions || []);
+      const validDivs = getCascadingDivisions(newCircle, masterConfig.rawItems || [], masterConfig.divisions || []);
       if (!validDivs.includes(division)) {
         setDivision('');
         setSubDivision('');
@@ -119,7 +119,7 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
   const handleDivisionChange = (newDivision: string) => {
     setDivision(newDivision);
     if (subDivision) {
-      const validSubDivs = getCascadingSubDivisions(newDivision, masterConfig.sub_divisions || []);
+      const validSubDivs = getCascadingSubDivisions(newDivision, masterConfig.rawItems || [], masterConfig.sub_divisions || []);
       if (!validSubDivs.includes(subDivision)) {
         setSubDivision('');
         setSection('');
@@ -131,7 +131,7 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
   const handleSubDivisionChange = (newSubDivision: string) => {
     setSubDivision(newSubDivision);
     if (section) {
-      const validSecs = getCascadingSections(newSubDivision, masterConfig.sections || []);
+      const validSecs = getCascadingSections(newSubDivision, masterConfig.rawItems || [], masterConfig.sections || []);
       if (!validSecs.includes(section)) {
         setSection('');
         setSubSection('');
@@ -142,7 +142,7 @@ export const StaffEntryForm: React.FC<StaffEntryFormProps> = ({
   const handleSectionChange = (newSection: string) => {
     setSection(newSection);
     if (subSection) {
-      const validSubSecs = getCascadingSubSections(newSection, masterConfig.sub_sections || []);
+      const validSubSecs = getCascadingSubSections(newSection, masterConfig.rawItems || [], masterConfig.sub_sections || []);
       if (!validSubSecs.includes(subSection)) {
         setSubSection('');
       }

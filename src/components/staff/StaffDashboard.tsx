@@ -142,27 +142,27 @@ export const StaffDashboard: React.FC = () => {
   // DYNAMIC CASCADING FOR DASHBOARD FILTER DROPDOWNS
   // -------------------------------------------------------------
   const availableFilterDivisions = useMemo(() => {
-    return getCascadingDivisions(selectedCircle, masterConfig.divisions || [], staffList);
-  }, [selectedCircle, masterConfig.divisions, staffList]);
+    return getCascadingDivisions(selectedCircle, masterConfig.rawItems || [], masterConfig.divisions || [], staffList);
+  }, [selectedCircle, masterConfig.rawItems, masterConfig.divisions, staffList]);
 
   const availableFilterSubDivisions = useMemo(() => {
-    return getCascadingSubDivisions(selectedDivision, masterConfig.sub_divisions || [], staffList);
-  }, [selectedDivision, masterConfig.sub_divisions, staffList]);
+    return getCascadingSubDivisions(selectedDivision, masterConfig.rawItems || [], masterConfig.sub_divisions || [], staffList);
+  }, [selectedDivision, masterConfig.rawItems, masterConfig.sub_divisions, staffList]);
 
   const availableFilterSections = useMemo(() => {
-    return getCascadingSections(selectedSubDivision, masterConfig.sections || [], staffList);
-  }, [selectedSubDivision, masterConfig.sections, staffList]);
+    return getCascadingSections(selectedSubDivision, masterConfig.rawItems || [], masterConfig.sections || [], staffList);
+  }, [selectedSubDivision, masterConfig.rawItems, masterConfig.sections, staffList]);
 
   const availableFilterSubSections = useMemo(() => {
-    return getCascadingSubSections(selectedSection, masterConfig.sub_sections || [], staffList);
-  }, [selectedSection, masterConfig.sub_sections, staffList]);
+    return getCascadingSubSections(selectedSection, masterConfig.rawItems || [], masterConfig.sub_sections || [], staffList);
+  }, [selectedSection, masterConfig.rawItems, masterConfig.sub_sections, staffList]);
 
   // Cascading Filter Handlers with Auto-Resets
   const handleFilterCircleChange = (val: string) => {
     const nextCircle = val === 'All Circles' ? '' : val;
     setSelectedCircle(nextCircle);
     if (selectedDivision) {
-      const validDivs = getCascadingDivisions(nextCircle, masterConfig.divisions || [], staffList);
+      const validDivs = getCascadingDivisions(nextCircle, masterConfig.rawItems || [], masterConfig.divisions || [], staffList);
       if (!validDivs.includes(selectedDivision)) {
         setSelectedDivision('');
         setSelectedSubDivision('');
@@ -176,7 +176,7 @@ export const StaffDashboard: React.FC = () => {
     const nextDivision = val === 'All Divisions' ? '' : val;
     setSelectedDivision(nextDivision);
     if (selectedSubDivision) {
-      const validSubDivs = getCascadingSubDivisions(nextDivision, masterConfig.sub_divisions || [], staffList);
+      const validSubDivs = getCascadingSubDivisions(nextDivision, masterConfig.rawItems || [], masterConfig.sub_divisions || [], staffList);
       if (!validSubDivs.includes(selectedSubDivision)) {
         setSelectedSubDivision('');
         setSelectedSection('');
@@ -189,7 +189,7 @@ export const StaffDashboard: React.FC = () => {
     const nextSubDivision = val === 'All Sub-Divisions' ? '' : val;
     setSelectedSubDivision(nextSubDivision);
     if (selectedSection) {
-      const validSecs = getCascadingSections(nextSubDivision, masterConfig.sections || [], staffList);
+      const validSecs = getCascadingSections(nextSubDivision, masterConfig.rawItems || [], masterConfig.sections || [], staffList);
       if (!validSecs.includes(selectedSection)) {
         setSelectedSection('');
         setSelectedSubSection('');
@@ -201,7 +201,7 @@ export const StaffDashboard: React.FC = () => {
     const nextSection = val === 'All Sections' ? '' : val;
     setSelectedSection(nextSection);
     if (selectedSubSection) {
-      const validSubSecs = getCascadingSubSections(nextSection, masterConfig.sub_sections || [], staffList);
+      const validSubSecs = getCascadingSubSections(nextSection, masterConfig.rawItems || [], masterConfig.sub_sections || [], staffList);
       if (!validSubSecs.includes(selectedSubSection)) {
         setSelectedSubSection('');
       }

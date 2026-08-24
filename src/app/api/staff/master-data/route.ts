@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import {
-  DEFAULT_OFFICES,
-  DEFAULT_CIRCLES,
-  DEFAULT_DESIGNATIONS,
-  DEFAULT_SECTIONS,
-  DEFAULT_SUB_SECTIONS,
-  DIVISION_SUBDIVISION_HIERARCHY,
-  CIRCLE_DIVISION_HIERARCHY,
-} from "@/lib/staff/masterData";
+import { StaffMasterItem } from "@/components/staff/StaffTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +45,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
     }
 
-    const { category, value } = await request.json();
+    const { category, value, parent_category, parent_value } = await request.json();
 
     if (!category || !value || typeof value !== "string" || value.trim() === "") {
       return NextResponse.json({ error: "Category and value are required" }, { status: 400 });
@@ -61,10 +53,17 @@ export async function POST(request: NextRequest) {
 
     const cleanCategory = category.trim().toLowerCase();
     const cleanValue = value.trim();
+    const cleanParentCategory = parent_category ? String(parent_category).trim().toLowerCase() : null;
+    const cleanParentValue = parent_value ? String(parent_value).trim() : null;
 
     const { data, error } = await supabase
       .from("staff_master_config")
-      .insert([{ category: cleanCategory, value: cleanValue }])
+      .insert([{
+        category: cleanCategory,
+        value: cleanValue,
+        parent_category: cleanParentCategory,
+        parent_value: cleanParentValue,
+      }])
       .select()
       .single();
 
@@ -89,20 +88,26 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
     }
 
-    const { id, category, oldValue, newValue } = await request.json();
+    const { id, category, oldValue, newValue, parent_category, parent_value } = await request.json();
 
     if (!newValue || typeof newValue !== "string" || newValue.trim() === "") {
       return NextResponse.json({ error: "New option value is required" }, { status: 400 });
     }
 
     const cleanNewValue = newValue.trim();
+    const cleanParentCategory = parent_category !== undefined ? (parent_category ? String(parent_category).trim().toLowerCase() : null) : undefined;
+    const cleanParentValue = parent_value !== undefined ? (parent_value ? String(parent_value).trim() : null) : undefined;
 
     if (id) {
       const { data: existing } = await supabase.from("staff_master_config").select("*").eq("id", id).single();
       
+      const updatePayload: Record<string, any> = { value: cleanNewValue };
+      if (cleanParentCategory !== undefined) updatePayload.parent_category = cleanParentCategory;
+      if (cleanParentValue !== undefined) updatePayload.parent_value = cleanParentValue;
+
       const { data, error } = await supabase
         .from("staff_master_config")
-        .update({ value: cleanNewValue })
+        .update(updatePayload)
         .eq("id", id)
         .select()
         .single();
@@ -114,12 +119,18 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
 
-      // Sync existing staff member records if category matches a column
+      // 1. Sync staff members table
       if (existing && existing.category && existing.value) {
         const catColumn = existing.category;
         if (["office", "circle", "division", "sub_division", "section", "sub_section", "designation"].includes(catColumn)) {
           await (supabase.from("staff_members") as any).update({ [catColumn]: cleanNewValue }).eq(catColumn, existing.value);
         }
+
+        // 2. Cascade rename to child master data options where parent_value matched old value
+        await (supabase.from("staff_master_config") as any)
+          .update({ parent_value: cleanNewValue })
+          .eq("parent_category", catColumn)
+          .eq("parent_value", existing.value);
       }
 
       return NextResponse.json(data);
@@ -127,28 +138,43 @@ export async function PUT(request: NextRequest) {
       const cleanCategory = category.trim().toLowerCase();
       const cleanOldValue = oldValue.trim();
 
+      const updatePayload: Record<string, any> = { value: cleanNewValue };
+      if (cleanParentCategory !== undefined) updatePayload.parent_category = cleanParentCategory;
+      if (cleanParentValue !== undefined) updatePayload.parent_value = cleanParentValue;
+
       let { data, error } = await supabase
         .from("staff_master_config")
-        .update({ value: cleanNewValue })
+        .update(updatePayload)
         .eq("category", cleanCategory)
         .eq("value", cleanOldValue)
         .select();
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-      // If option didn't exist as a DB row yet, insert it
+      // If not existed as row yet, insert it
       if (!data || data.length === 0) {
         const insertRes = await supabase
           .from("staff_master_config")
-          .upsert([{ category: cleanCategory, value: cleanNewValue }], { onConflict: "category,value" })
+          .insert([{
+            category: cleanCategory,
+            value: cleanNewValue,
+            parent_category: cleanParentCategory || null,
+            parent_value: cleanParentValue || null,
+          }])
           .select();
         data = insertRes.data;
       }
 
-      // Sync staff members
+      // 1. Sync staff members
       if (["office", "circle", "division", "sub_division", "section", "sub_section", "designation"].includes(cleanCategory)) {
         await (supabase.from("staff_members") as any).update({ [cleanCategory]: cleanNewValue }).eq(cleanCategory, cleanOldValue);
       }
+
+      // 2. Cascade rename to child master data options
+      await (supabase.from("staff_master_config") as any)
+        .update({ parent_value: cleanNewValue })
+        .eq("parent_category", cleanCategory)
+        .eq("parent_value", cleanOldValue);
 
       return NextResponse.json(data ? data[0] : { category: cleanCategory, value: cleanNewValue });
     } else {
@@ -200,57 +226,17 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-function groupMasterData(items: any[]) {
-  const dbOffices = items.filter(i => i.category === "office").map(i => i.value);
-  const dbCircles = items.filter(i => i.category === "circle").map(i => i.value);
-  const dbDivisions = items.filter(i => i.category === "division").map(i => i.value);
-  const dbSubDivisions = items.filter(i => i.category === "sub_division").map(i => i.value);
-  const dbSections = items.filter(i => i.category === "section").map(i => i.value);
-  const dbSubSections = items.filter(i => i.category === "sub_section").map(i => i.value);
-  const dbDesignations = items.filter(i => i.category === "designation").map(i => i.value);
-
-  const defaultDivisions = Object.values(CIRCLE_DIVISION_HIERARCHY).flat();
-  const defaultSubDivisions = Object.values(DIVISION_SUBDIVISION_HIERARCHY).flat();
-
-  const offices = Array.from(new Set([...DEFAULT_OFFICES, ...dbOffices])).sort();
-  const circles = Array.from(new Set([...DEFAULT_CIRCLES, ...dbCircles])).sort();
-  const divisions = Array.from(new Set([...defaultDivisions, ...dbDivisions])).sort();
-  const sub_divisions = Array.from(new Set([...defaultSubDivisions, ...dbSubDivisions])).sort();
-  const sections = Array.from(new Set([...DEFAULT_SECTIONS, ...dbSections])).sort();
-  const sub_sections = Array.from(new Set([...DEFAULT_SUB_SECTIONS, ...dbSubSections])).sort();
-  const designations = Array.from(new Set([...DEFAULT_DESIGNATIONS, ...dbDesignations])).sort();
-
-  const dbItemMap = new Map<string, string>();
-  items.forEach(i => {
-    if (i.category && i.value && i.id) {
-      dbItemMap.set(`${i.category}:${i.value}`, i.id);
-    }
-  });
-
-  const categories = [
-    { cat: 'office', list: offices },
-    { cat: 'circle', list: circles },
-    { cat: 'division', list: divisions },
-    { cat: 'sub_division', list: sub_divisions },
-    { cat: 'section', list: sections },
-    { cat: 'sub_section', list: sub_sections },
-    { cat: 'designation', list: designations },
-  ];
-
-  const fullRawItems: { id?: string; category: string; value: string }[] = [];
-  categories.forEach(({ cat, list }) => {
-    list.forEach(val => {
-      const id = dbItemMap.get(`${cat}:${val}`);
-      fullRawItems.push({
-        id: id || undefined,
-        category: cat,
-        value: val
-      });
-    });
-  });
+function groupMasterData(items: StaffMasterItem[]) {
+  const offices = Array.from(new Set(items.filter(i => i.category === "office").map(i => i.value))).sort();
+  const circles = Array.from(new Set(items.filter(i => i.category === "circle").map(i => i.value))).sort();
+  const divisions = Array.from(new Set(items.filter(i => i.category === "division").map(i => i.value))).sort();
+  const sub_divisions = Array.from(new Set(items.filter(i => i.category === "sub_division").map(i => i.value))).sort();
+  const sections = Array.from(new Set(items.filter(i => i.category === "section").map(i => i.value))).sort();
+  const sub_sections = Array.from(new Set(items.filter(i => i.category === "sub_section").map(i => i.value))).sort();
+  const designations = Array.from(new Set(items.filter(i => i.category === "designation").map(i => i.value))).sort();
 
   return {
-    rawItems: fullRawItems,
+    rawItems: items,
     offices,
     circles,
     divisions,

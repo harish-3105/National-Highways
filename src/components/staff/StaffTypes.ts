@@ -15,8 +15,16 @@ export interface StaffMember {
   updated_at?: string;
 }
 
+export interface StaffMasterItem {
+  id?: string;
+  category: string;
+  value: string;
+  parent_category?: string | null;
+  parent_value?: string | null;
+}
+
 export interface StaffMasterConfig {
-  rawItems: { id?: string; category: string; value: string }[];
+  rawItems: StaffMasterItem[];
   offices: string[];
   circles: string[];
   divisions: string[];
