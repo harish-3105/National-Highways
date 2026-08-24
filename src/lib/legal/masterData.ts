@@ -1,3 +1,5 @@
+import { parseDateString } from '@/lib/formatters';
+
 // Master data for Legal & Lawyer Portal (Circles, Divisions, Districts, and Court Complexes)
 
 export interface CircleDivisionMap {
@@ -435,10 +437,10 @@ export function calculateAppealDelay(
     return { isDelayed: 'No', delayDays: 0 };
   }
 
-  const filing = new Date(appealFilingDate);
-  const due = new Date(limitationDueDate);
+  const filing = parseDateString(appealFilingDate);
+  const due = parseDateString(limitationDueDate);
 
-  if (isNaN(filing.getTime()) || isNaN(due.getTime())) {
+  if (!filing || !due || isNaN(filing.getTime()) || isNaN(due.getTime())) {
     return { isDelayed: 'No', delayDays: 0 };
   }
 

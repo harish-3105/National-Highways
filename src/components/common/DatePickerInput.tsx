@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Calendar } from 'lucide-react';
+import { parseDateString } from '@/lib/formatters';
 
 interface DatePickerInputProps {
   label?: string;
-  value: string; // YYYY-MM-DD
+  value: string; // YYYY-MM-DD or DD.MM.YYYY
   onChange: (value: string) => void;
   required?: boolean;
   error?: string;
@@ -13,6 +14,18 @@ interface DatePickerInputProps {
   maxToday?: boolean;
   helpText?: string;
   placeholder?: string;
+}
+
+function normalizeToYmd(val: string | null | undefined): string {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = parseDateString(s);
+  if (!d || isNaN(d.getTime())) return s;
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 export const DatePickerInput: React.FC<DatePickerInputProps> = ({
@@ -25,7 +38,14 @@ export const DatePickerInput: React.FC<DatePickerInputProps> = ({
   maxToday = false,
   helpText,
 }) => {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const normalizedValue = useMemo(() => normalizeToYmd(value), [value]);
+  const todayStr = useMemo(() => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }, []);
 
   return (
     <div className="flex flex-col gap-1.5 w-full">
@@ -38,7 +58,7 @@ export const DatePickerInput: React.FC<DatePickerInputProps> = ({
       <div className="relative flex items-center">
         <input
           type="date"
-          value={value || ''}
+          value={normalizedValue || ''}
           max={maxToday ? todayStr : undefined}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}

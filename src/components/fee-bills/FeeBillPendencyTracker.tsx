@@ -56,8 +56,13 @@ export const FeeBillPendencyTracker: React.FC<FeeBillPendencyTrackerProps> = ({
       </div>
 
       {/* Stage Columns Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {pendencyStages.map((stage) => {
+      {pendencyStages.length === 0 ? (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center text-slate-400 text-xs font-semibold">
+          No pending voucher movement stages currently active.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {pendencyStages.map((stage) => {
           const stageBills = pendingBills.filter((b) => b.currentPendency === stage);
           const stageTotal = stageBills.reduce((acc, b) => acc + (b.totalFeeAmount || 0), 0);
 
@@ -106,6 +111,7 @@ export const FeeBillPendencyTracker: React.FC<FeeBillPendencyTrackerProps> = ({
           );
         })}
       </div>
+      )}
     </div>
   );
 };
