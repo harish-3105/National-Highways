@@ -127,7 +127,7 @@ export async function PUT(request: NextRequest) {
       const cleanCategory = category.trim().toLowerCase();
       const cleanOldValue = oldValue.trim();
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("staff_master_config")
         .update({ value: cleanNewValue })
         .eq("category", cleanCategory)
@@ -136,12 +136,21 @@ export async function PUT(request: NextRequest) {
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+      // If option didn't exist as a DB row yet, insert it
+      if (!data || data.length === 0) {
+        const insertRes = await supabase
+          .from("staff_master_config")
+          .upsert([{ category: cleanCategory, value: cleanNewValue }], { onConflict: "category,value" })
+          .select();
+        data = insertRes.data;
+      }
+
       // Sync staff members
       if (["office", "circle", "division", "sub_division", "section", "sub_section", "designation"].includes(cleanCategory)) {
         await (supabase.from("staff_members") as any).update({ [cleanCategory]: cleanNewValue }).eq(cleanCategory, cleanOldValue);
       }
 
-      return NextResponse.json(data);
+      return NextResponse.json(data ? data[0] : { category: cleanCategory, value: cleanNewValue });
     } else {
       return NextResponse.json({ error: "Missing id or category/oldValue parameters" }, { status: 400 });
     }
@@ -200,7 +209,6 @@ function groupMasterData(items: any[]) {
   const dbSubSections = items.filter(i => i.category === "sub_section").map(i => i.value);
   const dbDesignations = items.filter(i => i.category === "designation").map(i => i.value);
 
-  // Union DB items with standard defaults so options are always rich and reliable
   const defaultDivisions = Object.values(CIRCLE_DIVISION_HIERARCHY).flat();
   const defaultSubDivisions = Object.values(DIVISION_SUBDIVISION_HIERARCHY).flat();
 
@@ -212,8 +220,37 @@ function groupMasterData(items: any[]) {
   const sub_sections = Array.from(new Set([...DEFAULT_SUB_SECTIONS, ...dbSubSections])).sort();
   const designations = Array.from(new Set([...DEFAULT_DESIGNATIONS, ...dbDesignations])).sort();
 
+  const dbItemMap = new Map<string, string>();
+  items.forEach(i => {
+    if (i.category && i.value && i.id) {
+      dbItemMap.set(`${i.category}:${i.value}`, i.id);
+    }
+  });
+
+  const categories = [
+    { cat: 'office', list: offices },
+    { cat: 'circle', list: circles },
+    { cat: 'division', list: divisions },
+    { cat: 'sub_division', list: sub_divisions },
+    { cat: 'section', list: sections },
+    { cat: 'sub_section', list: sub_sections },
+    { cat: 'designation', list: designations },
+  ];
+
+  const fullRawItems: { id?: string; category: string; value: string }[] = [];
+  categories.forEach(({ cat, list }) => {
+    list.forEach(val => {
+      const id = dbItemMap.get(`${cat}:${val}`);
+      fullRawItems.push({
+        id: id || undefined,
+        category: cat,
+        value: val
+      });
+    });
+  });
+
   return {
-    rawItems: items,
+    rawItems: fullRawItems,
     offices,
     circles,
     divisions,

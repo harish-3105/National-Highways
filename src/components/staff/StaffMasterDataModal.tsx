@@ -8,14 +8,12 @@ import {
   Edit2,
   Settings,
   Check,
-  AlertCircle,
   AlertTriangle,
   Building,
   MapPin,
   Building2,
   Layers,
   Briefcase,
-  Users,
   Search,
   CheckCircle2,
 } from 'lucide-react';
@@ -94,7 +92,7 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
   const [success, setSuccess] = useState<string | null>(null);
 
   // Edit Option State
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<{ id?: string; value: string } | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
 
   // Delete Confirm Popup State
@@ -102,33 +100,9 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentCategoryItems = (masterConfig.rawItems || []).filter(
+  const displayItems = (masterConfig.rawItems || []).filter(
     (item) => item.category === activeCategory
   );
-
-  const fallbackArray: string[] =
-    activeCategory === 'office'
-      ? masterConfig.offices || []
-      : activeCategory === 'circle'
-      ? masterConfig.circles || []
-      : activeCategory === 'division'
-      ? masterConfig.divisions || []
-      : activeCategory === 'sub_division'
-      ? masterConfig.sub_divisions || []
-      : activeCategory === 'section'
-      ? masterConfig.sections || []
-      : activeCategory === 'sub_section'
-      ? masterConfig.sub_sections || []
-      : masterConfig.designations || [];
-
-  const displayItems: { id: string; category: string; value: string }[] =
-    currentCategoryItems.length > 0
-      ? currentCategoryItems.map((item) => ({ id: item.id || `raw-${item.value}`, category: item.category, value: item.value }))
-      : fallbackArray.map((val, idx) => ({
-          id: `db-${idx}`,
-          category: activeCategory,
-          value: val,
-        }));
 
   const filteredItems = displayItems.filter((item) =>
     (item.value || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -165,9 +139,9 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
     }
   };
 
-  const handleSaveEdit = async (id: string, oldValue: string) => {
-    if (!editingValue.trim() || editingValue.trim() === oldValue) {
-      setEditingId(null);
+  const handleSaveEdit = async (item: { id?: string; value: string }) => {
+    if (!editingValue.trim() || editingValue.trim() === item.value) {
+      setEditingItem(null);
       return;
     }
 
@@ -176,33 +150,21 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
     setSuccess(null);
 
     try {
-      if (id.startsWith('db-')) {
-        const res = await fetch('/api/staff/master-data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            category: activeCategory,
-            value: editingValue.trim(),
-          }),
-        });
-        if (!res.ok) {
-          const json = await res.json();
-          throw new Error(json.error || 'Failed to save updated option');
-        }
-      } else {
-        const res = await fetch('/api/staff/master-data', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, newValue: editingValue.trim() }),
-        });
-        if (!res.ok) {
-          const json = await res.json();
-          throw new Error(json.error || 'Failed to update option');
-        }
-      }
+      const payload = item.id
+        ? { id: item.id, newValue: editingValue.trim() }
+        : { category: activeCategory, oldValue: item.value, newValue: editingValue.trim() };
+
+      const res = await fetch('/api/staff/master-data', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to update option');
 
       setSuccess(`Updated option to "${editingValue.trim()}".`);
-      setEditingId(null);
+      setEditingItem(null);
       setEditingValue('');
       onRefresh();
     } catch (err: unknown) {
@@ -221,7 +183,7 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
     setSuccess(null);
 
     try {
-      const url = deleteConfirmItem.id && !deleteConfirmItem.id.startsWith('db-')
+      const url = deleteConfirmItem.id
         ? `/api/staff/master-data?id=${deleteConfirmItem.id}`
         : `/api/staff/master-data?category=${activeCategory}&value=${encodeURIComponent(deleteConfirmItem.value)}`;
 
@@ -267,7 +229,7 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
           </button>
         </div>
 
-        {/* Chat App Two-Column Layout */}
+        {/* Two-Column Layout */}
         <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12">
           {/* Left Sidebar (Categories) */}
           <div className="md:col-span-4 border-r border-slate-100 dark:border-slate-800 overflow-y-auto p-4 space-y-1.5 bg-slate-50/30 dark:bg-slate-900/40">
@@ -277,21 +239,7 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
             {CATEGORY_TABS.map((tab) => {
               const Icon = tab.icon;
               const count = (
-                masterConfig.rawItems?.filter((i) => i.category === tab.id) ||
-                (tab.id === 'office'
-                  ? masterConfig.offices
-                  : tab.id === 'circle'
-                  ? masterConfig.circles
-                  : tab.id === 'division'
-                  ? masterConfig.divisions
-                  : tab.id === 'sub_division'
-                  ? masterConfig.sub_divisions
-                  : tab.id === 'section'
-                  ? masterConfig.sections
-                  : tab.id === 'sub_section'
-                  ? masterConfig.sub_sections
-                  : masterConfig.designations) ||
-                []
+                masterConfig.rawItems?.filter((i) => i.category === tab.id) || []
               ).length;
 
               const isActive = activeCategory === tab.id;
@@ -303,7 +251,7 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
                     setSearchTerm('');
                     setError(null);
                     setSuccess(null);
-                    setEditingId(null);
+                    setEditingItem(null);
                   }}
                   className={`w-full text-left p-3 rounded-2xl transition-all flex items-center justify-between cursor-pointer ${
                     isActive
@@ -410,69 +358,74 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
                   No options found. Add one above.
                 </div>
               ) : (
-                filteredItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl flex items-center justify-between gap-3 group transition-colors"
-                  >
-                    {editingId === item.id ? (
-                      <div className="flex items-center gap-2 flex-1">
-                        <input
-                          type="text"
-                          value={editingValue}
-                          onChange={(e) => setEditingValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveEdit(item.id, item.value);
-                            if (e.key === 'Escape') setEditingId(null);
-                          }}
-                          className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-blue-500 rounded-lg text-xs font-semibold outline-none"
-                          autoFocus
-                        />
-                        <button
-                          onClick={() => handleSaveEdit(item.id, item.value)}
-                          className="p-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 cursor-pointer"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="p-1.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-300 cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
-                            {item.value}
-                          </span>
-                        </div>
+                filteredItems.map((item) => {
+                  const itemKey = item.id || `default-${item.value}`;
+                  const isEditingThis = editingItem?.value === item.value;
 
-                        <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => {
-                              setEditingId(item.id);
-                              setEditingValue(item.value);
+                  return (
+                    <div
+                      key={itemKey}
+                      className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl flex items-center justify-between gap-3 group transition-colors"
+                    >
+                      {isEditingThis ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="text"
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveEdit(item);
+                              if (e.key === 'Escape') setEditingItem(null);
                             }}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors cursor-pointer"
-                            title="Edit Option"
+                            className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-blue-500 rounded-lg text-xs font-semibold outline-none"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => handleSaveEdit(item)}
+                            className="p-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 cursor-pointer"
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
+                            <Check className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => setDeleteConfirmItem(item)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors cursor-pointer"
-                            title="Delete Option"
+                            onClick={() => setEditingItem(null)}
+                            className="p-1.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-300 cursor-pointer"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                      </>
-                    )}
-                  </div>
-                ))
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                              {item.value}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity shrink-0">
+                            <button
+                              onClick={() => {
+                                setEditingItem(item);
+                                setEditingValue(item.value);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-lg transition-colors cursor-pointer"
+                              title="Edit option"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmItem(item)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg transition-colors cursor-pointer"
+                              title="Delete option"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
@@ -481,30 +434,29 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
         {/* Delete Confirmation Modal */}
         {deleteConfirmItem && (
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-sm w-full space-y-4">
               <div className="flex items-center gap-3 text-rose-600">
                 <AlertTriangle className="w-6 h-6 shrink-0" />
-                <h4 className="text-sm font-extrabold">Confirm Removal</h4>
+                <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                  Confirm Deletion
+                </h4>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                Are you sure you want to remove <strong>"{deleteConfirmItem.value}"</strong> from{' '}
-                {activeTabMeta?.label}?
+              <p className="text-xs text-slate-500 font-medium">
+                Are you sure you want to remove <strong className="text-slate-800 dark:text-slate-200 font-bold">&quot;{deleteConfirmItem.value}&quot;</strong> from {activeTabMeta?.label}?
               </p>
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
-                  type="button"
                   onClick={() => setDeleteConfirmItem(null)}
-                  className="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
+                  className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
-                  type="button"
                   onClick={handleConfirmDelete}
                   disabled={loading}
-                  className="px-3.5 py-1.5 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-xs cursor-pointer"
+                  className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer disabled:opacity-50"
                 >
-                  Delete Option
+                  {loading ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </div>

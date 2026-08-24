@@ -306,6 +306,7 @@ export const StaffDashboard: React.FC = () => {
 
         {uiMode === "FORM" ? (
           <StaffEntryForm
+            key={selectedStaffForEdit?.id || "new-staff"}
             initialData={selectedStaffForEdit || undefined}
             masterConfig={masterConfig}
             onSave={handleSaveStaff}
