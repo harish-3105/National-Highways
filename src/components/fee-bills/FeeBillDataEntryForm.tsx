@@ -14,6 +14,7 @@ import {
   formatINR,
 } from '@/lib/feeBillMasterData';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { DatePickerInput } from '@/components/common/DatePickerInput';
 import {
   Save,
   ArrowLeft,
@@ -499,14 +500,12 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Fee Bill Date (DD/MM/YYYY) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
+              <DatePickerInput
+                label="Fee Bill Date"
+                required
                 value={formData.feeBillDate}
-                onChange={(e) => setFormData((prev) => ({ ...prev, feeBillDate: e.target.value }))}
-                className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold"
+                onChange={(val) => setFormData((prev) => ({ ...prev, feeBillDate: val }))}
+                error={errors.feeBillDate}
               />
             </div>
 
@@ -716,12 +715,10 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 onChange={(e) => setFormData((prev) => ({ ...prev, appearanceAmount: Number(e.target.value) }))}
                 className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
               />
-              <label className="block text-[11px] font-semibold text-slate-500">Appearance Date (DD/MM/YYYY)</label>
-              <input
-                type="date"
+              <DatePickerInput
+                label="Appearance Date"
                 value={formData.appearanceDate}
-                onChange={(e) => setFormData((prev) => ({ ...prev, appearanceDate: e.target.value }))}
-                className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium"
+                onChange={(val) => setFormData((prev) => ({ ...prev, appearanceDate: val }))}
               />
             </div>
 
@@ -736,12 +733,10 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 onChange={(e) => setFormData((prev) => ({ ...prev, conferenceAmount: Number(e.target.value) }))}
                 className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
               />
-              <label className="block text-[11px] font-semibold text-slate-500">Conference Date (DD/MM/YYYY)</label>
-              <input
-                type="date"
+              <DatePickerInput
+                label="Conference Date"
                 value={formData.conferenceDate}
-                onChange={(e) => setFormData((prev) => ({ ...prev, conferenceDate: e.target.value }))}
-                className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium"
+                onChange={(val) => setFormData((prev) => ({ ...prev, conferenceDate: val }))}
               />
             </div>
 
@@ -756,12 +751,10 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 onChange={(e) => setFormData((prev) => ({ ...prev, verifyingAmount: Number(e.target.value) }))}
                 className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
               />
-              <label className="block text-[11px] font-semibold text-slate-500">Opinion / Vetting Date (DD/MM/YYYY)</label>
-              <input
-                type="date"
+              <DatePickerInput
+                label="Opinion / Vetting Date"
                 value={formData.verifyingDate}
-                onChange={(e) => setFormData((prev) => ({ ...prev, verifyingDate: e.target.value }))}
-                className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium"
+                onChange={(val) => setFormData((prev) => ({ ...prev, verifyingDate: val }))}
               />
             </div>
 
@@ -779,12 +772,10 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 value={formData.assistanceAmount || 0}
                 className="w-full h-10 px-3 bg-blue-100/80 dark:bg-blue-900/60 border border-blue-300 dark:border-blue-700 rounded-xl font-black text-blue-900 dark:text-blue-100 cursor-not-allowed"
               />
-              <label className="block text-[11px] font-semibold text-blue-700 dark:text-blue-400">Assistance Date (DD/MM/YYYY)</label>
-              <input
-                type="date"
+              <DatePickerInput
+                label="Assistance Date"
                 value={formData.assistanceDate}
-                onChange={(e) => setFormData((prev) => ({ ...prev, assistanceDate: e.target.value }))}
-                className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 rounded-xl font-medium"
+                onChange={(val) => setFormData((prev) => ({ ...prev, assistanceDate: val }))}
               />
             </div>
           </div>
@@ -862,14 +853,11 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    G.O. Date (DD/MM/YYYY) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
+                  <DatePickerInput
+                    label="G.O. Date"
+                    required
                     value={formData.goDate || ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, goDate: e.target.value }))}
-                    className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-semibold"
+                    onChange={(val) => setFormData((prev) => ({ ...prev, goDate: val }))}
                   />
                 </div>
               </div>
@@ -949,14 +937,11 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Reference Letter Date (DD/MM/YYYY) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
+                  <DatePickerInput
+                    label="Reference Letter Date"
+                    required
                     value={formData.letterDate || ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, letterDate: e.target.value }))}
-                    className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-semibold"
+                    onChange={(val) => setFormData((prev) => ({ ...prev, letterDate: val }))}
                   />
                 </div>
               </>
@@ -997,14 +982,10 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Proceeding / Letter Date (DD/MM/YYYY)
-                  </label>
-                  <input
-                    type="date"
+                  <DatePickerInput
+                    label="Proceeding / Letter Date"
                     value={formData.proceedingLetterDate || ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, proceedingLetterDate: e.target.value }))}
-                    className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+                    onChange={(val) => setFormData((prev) => ({ ...prev, proceedingLetterDate: val }))}
                   />
                 </div>
                 <div>
@@ -1121,14 +1102,10 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Reference / Payment Date (DD/MM/YYYY)
-                  </label>
-                  <input
-                    type="date"
+                  <DatePickerInput
+                    label="Reference / Payment Date"
                     value={formData.paymentDate || ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, paymentDate: e.target.value }))}
-                    className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-semibold"
+                    onChange={(val) => setFormData((prev) => ({ ...prev, paymentDate: val }))}
                   />
                 </div>
               </div>

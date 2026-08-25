@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   FileCheck,
 } from 'lucide-react';
+import { DatePickerInput } from '@/components/common/DatePickerInput';
 
 interface FeeBillAuditModalProps {
   contract: FeeBillRecord | null;
@@ -202,14 +203,10 @@ export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Payment Date (DD/MM/YYYY)
-                    </label>
-                    <input
-                      type="date"
+                    <DatePickerInput
+                      label="Payment Date"
                       value={paymentDate}
-                      onChange={(e) => setPaymentDate(e.target.value)}
-                      className="w-full py-1.5 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold"
+                      onChange={(val) => setPaymentDate(val)}
                     />
                   </div>
                 </div>
