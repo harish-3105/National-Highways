@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { LegalCaseData } from '@/types/legal';
 import {
   X,
@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Edit,
+  Link as LinkIcon,
 } from 'lucide-react';
 
 interface CaseViewModalProps {
@@ -24,6 +25,8 @@ interface CaseViewModalProps {
 
 type LegalStageType =
   | 'case_registry'
+  | 'appeal_registry'
+  | 'base_case_details'
   | 'counter_affidavit'
   | 'hearing_listing'
   | 'interim_compliance'
@@ -37,7 +40,7 @@ interface StageDefinition {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const STAGES: StageDefinition[] = [
+const NORMAL_CASE_STAGES: StageDefinition[] = [
   {
     id: 'case_registry',
     label: 'Case Registry & Scope',
@@ -75,8 +78,58 @@ const STAGES: StageDefinition[] = [
   },
 ];
 
+const APPEAL_CASE_STAGES: StageDefinition[] = [
+  {
+    id: 'appeal_registry',
+    label: 'Appeal Case Registry',
+    step: 'Stage 1',
+    subtitle: 'Appellate court, appeal particulars, parties & appeal prayer',
+    icon: Scale,
+  },
+  {
+    id: 'base_case_details',
+    label: 'Base / Original Case',
+    step: 'Stage 2',
+    subtitle: 'Original court, case type, case number, parties & original prayer',
+    icon: FileText,
+  },
+  {
+    id: 'counter_affidavit',
+    label: 'Counter Affidavit (CA)',
+    step: 'Stage 3',
+    subtitle: 'CA filing mandate, due timeline, submission date & financial implication',
+    icon: FileText,
+  },
+  {
+    id: 'hearing_listing',
+    label: 'Hearing Schedule & Status',
+    step: 'Stage 4',
+    subtitle: 'Present stage, current status & hearing dates',
+    icon: Calendar,
+  },
+  {
+    id: 'interim_compliance',
+    label: 'Interim Orders & Compliance',
+    step: 'Stage 5',
+    subtitle: 'Court interim directions, compliance period & departmental actions taken',
+    icon: Clock,
+  },
+  {
+    id: 'disposal_appeal',
+    label: 'Disposal & Higher Appeal',
+    step: 'Stage 6',
+    subtitle: 'Final judgment, adverse findings, GP opinion & higher appeal track',
+    icon: Gavel,
+  },
+];
+
 export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose, onEdit }) => {
   const [activeStageIndex, setActiveStageIndex] = useState<number>(0);
+
+  const isAppeal = caseData.caseClassification === 'Appeal Case';
+  const stages = useMemo(() => {
+    return isAppeal ? APPEAL_CASE_STAGES : NORMAL_CASE_STAGES;
+  }, [isAppeal]);
 
   const handlePrint = () => {
     window.print();
@@ -96,8 +149,6 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
     };
   }, [onClose]);
 
-  const isAppeal = caseData.caseClassification === 'Appeal Case';
-
   const handlePrevStage = () => {
     if (activeStageIndex > 0) {
       setActiveStageIndex((prev) => prev - 1);
@@ -105,10 +156,12 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
   };
 
   const handleNextStage = () => {
-    if (activeStageIndex < STAGES.length - 1) {
+    if (activeStageIndex < stages.length - 1) {
       setActiveStageIndex((prev) => prev + 1);
     }
   };
+
+  const currentStage = stages[activeStageIndex] || stages[0];
 
   return (
     <div
@@ -182,10 +235,16 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
           </div>
         </div>
 
-        {/* 5-STAGE LIFECYCLE SUB-NAVIGATION BAR */}
+        {/* STAGE LIFECYCLE SUB-NAVIGATION BAR */}
         <div className="bg-white dark:bg-slate-900 px-4 py-2 border-b border-slate-200 dark:border-slate-800 shrink-0 print:hidden">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5">
-            {STAGES.map((stage, idx) => {
+          <div
+            className={`grid gap-1.5 ${
+              isAppeal
+                ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6'
+                : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
+            }`}
+          >
+            {stages.map((stage, idx) => {
               const Icon = stage.icon;
               const isActive = activeStageIndex === idx;
 
@@ -235,9 +294,9 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
           </div>
 
           {/* ========================================================= */}
-          {/* STAGE 1: Case Registry & Scope */}
+          {/* STAGE 1: Case Registry & Scope (Normal Case) */}
           {/* ========================================================= */}
-          {activeStageIndex === 0 && (
+          {currentStage.id === 'case_registry' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
                 <Scale className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -245,46 +304,6 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                   Stage 1: Case Registry & Particulars
                 </h3>
               </div>
-
-              {/* Appeal Case Block */}
-              {isAppeal && caseData.appealInfo && (
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
-                    <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
-                      <Gavel className="w-3.5 h-3.5 text-blue-600" /> Appellate Forum Details
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Appeal Case Type & No</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100">
-                        {caseData.appealInfo.appealCaseType} {caseData.appealInfo.appealCaseNumber}/{caseData.appealInfo.appealYear}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Appellate Court</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.appealInfo.appellateCourt || '—'}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Filing Date</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">📅 {caseData.appealInfo.appealFilingDate || '—'}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Limitation Due Date</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">📅 {caseData.appealInfo.limitationDueDate || '—'}</span>
-                    </div>
-                  </div>
-                  {caseData.appealInfo.delayInFilingAppeal === 'Yes' && (
-                    <div className="p-2.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-lg flex items-center justify-between text-xs text-rose-800 dark:text-rose-200">
-                      <span className="font-bold flex items-center gap-1.5">
-                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                        Appeal Filing Delayed by {caseData.appealInfo.delayPeriodDays || 0} Days
-                      </span>
-                      <span className="font-medium">{caseData.appealInfo.condonationOfDelay || 'Condonation Application'}</span>
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Jurisdiction Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -339,14 +358,195 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 2: Counter Affidavit (CA) */}
+          {/* STAGE 1: Appeal Case Registry (Appeal Case) */}
           {/* ========================================================= */}
-          {activeStageIndex === 1 && (
+          {currentStage.id === 'appeal_registry' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
+                <Scale className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                  Stage 1: Appeal Case Particulars & Appellate Forum
+                </h3>
+              </div>
+
+              {caseData.appealInfo && (
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+                    <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
+                      <Gavel className="w-3.5 h-3.5 text-blue-600" /> Appellate Forum Details
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Appeal Case Type & No</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100">
+                        {caseData.appealInfo.appealCaseType} {caseData.appealInfo.appealCaseNumber}/{caseData.appealInfo.appealYear}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Appellate Court</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.appealInfo.appellateCourt || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Filing Date</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">📅 {caseData.appealInfo.appealFilingDate || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Limitation Due Date</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">📅 {caseData.appealInfo.limitationDueDate || '—'}</span>
+                    </div>
+                  </div>
+                  {caseData.appealInfo.delayInFilingAppeal === 'Yes' && (
+                    <div className="p-2.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-lg flex items-center justify-between text-xs text-rose-800 dark:text-rose-200">
+                      <span className="font-bold flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                        Appeal Filing Delayed by {caseData.appealInfo.delayPeriodDays || 0} Days
+                      </span>
+                      <span className="font-medium">{caseData.appealInfo.condonationOfDelay || 'Condonation Application'}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Appeal Jurisdiction Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Appeal Circle</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.circle}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Appeal Division</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.division}</span>
+                </div>
+              </div>
+
+              {/* Litigants */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Appellant / Petitioner(s)</span>
+                  <p className="font-bold text-slate-900 dark:text-slate-100 text-xs leading-relaxed">{caseData.petitionerNames}</p>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Respondent(s)</span>
+                  <p className="font-bold text-slate-900 dark:text-slate-100 text-xs leading-relaxed">{caseData.respondentNames}</p>
+                </div>
+              </div>
+
+              {/* Nature & Pertains */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Pertains To</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.casePertainsTo || '—'}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Nature of Case</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                    {caseData.natureOfCase}
+                    {caseData.specifyNatureOfCase ? ` (${caseData.specifyNatureOfCase})` : ''}
+                  </span>
+                </div>
+              </div>
+
+              {caseData.briefOfPrayer && (
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Appeal Grounds & Prayer</span>
+                  <p className="text-slate-800 dark:text-slate-200 text-xs leading-relaxed">{caseData.briefOfPrayer}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* STAGE 2: Base / Original Case Details (Appeal Case) */}
+          {/* ========================================================= */}
+          {currentStage.id === 'base_case_details' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                    Stage 2: Base / Original Lower Court Case Details
+                  </h3>
+                </div>
+                {caseData.linkedBaseCaseId && (
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/60 px-2 py-0.5 rounded-md">
+                    <LinkIcon className="w-3 h-3" /> Linked to Original Docket
+                  </span>
+                )}
+              </div>
+
+              {/* Base Case Particulars Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Case No & Year</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                    {caseData.baseCaseNumber ? `${caseData.baseCaseNumber} (${caseData.baseCaseYear || '—'})` : '—'}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Case Type</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.baseCaseType || '—'}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Court / Forum</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.baseCourtName || '—'}</span>
+                </div>
+              </div>
+
+              {/* Base Jurisdiction */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Circle</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.baseCircle || '—'}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Division</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.baseDivision || '—'}</span>
+                </div>
+              </div>
+
+              {/* Base Litigants */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Petitioner(s)</span>
+                  <p className="font-bold text-slate-900 dark:text-slate-100 text-xs leading-relaxed">{caseData.basePetitionerNames || '—'}</p>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Respondent(s)</span>
+                  <p className="font-bold text-slate-900 dark:text-slate-100 text-xs leading-relaxed">{caseData.baseRespondentNames || '—'}</p>
+                </div>
+              </div>
+
+              {/* Base Nature & Pertains */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Case Pertains To</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.baseCasePertainsTo || '—'}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Nature of Case</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.baseNatureOfCase || '—'}</span>
+                </div>
+              </div>
+
+              {caseData.baseBriefOfPrayer && (
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Brief of Prayer</span>
+                  <p className="text-slate-800 dark:text-slate-200 text-xs leading-relaxed">{caseData.baseBriefOfPrayer}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* STAGE: Counter Affidavit (CA) */}
+          {/* ========================================================= */}
+          {currentStage.id === 'counter_affidavit' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
                 <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                  Stage 2: Counter Affidavit (CA) Status & Financials
+                  {currentStage.step}: Counter Affidavit (CA) Status & Financials
                 </h3>
               </div>
 
@@ -387,14 +587,14 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 3: Hearing Schedule & Status */}
+          {/* STAGE: Hearing Schedule & Status */}
           {/* ========================================================= */}
-          {activeStageIndex === 2 && (
+          {currentStage.id === 'hearing_listing' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
                 <Calendar className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                  Stage 3: Present Status & Hearing Schedule
+                  {currentStage.step}: Present Status & Hearing Schedule
                 </h3>
               </div>
 
@@ -433,14 +633,14 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 4: Interim Orders & Compliance */}
+          {/* STAGE: Interim Orders & Compliance */}
           {/* ========================================================= */}
-          {activeStageIndex === 3 && (
+          {currentStage.id === 'interim_compliance' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
                 <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                  Stage 4: Interim Directions & Compliance Track
+                  {currentStage.step}: Interim Directions & Compliance Track
                 </h3>
               </div>
 
@@ -486,14 +686,14 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 5: Disposal & Appeal Track */}
+          {/* STAGE: Disposal & Appeal Track */}
           {/* ========================================================= */}
-          {activeStageIndex === 4 && (
+          {currentStage.id === 'disposal_appeal' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
                 <Gavel className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                  Stage 5: Final Disposal, Adverse Findings & Appeals
+                  {currentStage.step}: Final Disposal, Adverse Findings & Appeals
                 </h3>
               </div>
 
@@ -559,7 +759,7 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 onClick={handlePrevStage}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
               >
-                <ChevronLeft className="w-4 h-4" /> Previous: {STAGES[activeStageIndex - 1].label}
+                <ChevronLeft className="w-4 h-4" /> Previous: {stages[activeStageIndex - 1].label}
               </button>
             ) : (
               <button
@@ -573,13 +773,13 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
           </div>
 
           <div className="flex items-center gap-2">
-            {activeStageIndex < STAGES.length - 1 ? (
+            {activeStageIndex < stages.length - 1 ? (
               <button
                 type="button"
                 onClick={handleNextStage}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600 text-xs font-bold cursor-pointer transition-all"
               >
-                <span>Next: {STAGES[activeStageIndex + 1].label}</span>
+                <span>Next: {stages[activeStageIndex + 1].label}</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             ) : (

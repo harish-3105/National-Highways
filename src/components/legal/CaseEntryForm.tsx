@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   LegalCaseData,
   AppealCaseInformation,
@@ -23,6 +23,7 @@ import {
   ChevronRight,
   ChevronLeft,
   LockKeyhole,
+  Link as LinkIcon,
 } from 'lucide-react';
 
 interface CaseEntryFormProps {
@@ -35,6 +36,8 @@ interface CaseEntryFormProps {
 
 type LegalStageType =
   | 'case_registry'
+  | 'appeal_registry'
+  | 'base_case_details'
   | 'counter_affidavit'
   | 'hearing_listing'
   | 'interim_compliance'
@@ -48,7 +51,7 @@ interface StageDefinition {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const STAGES: StageDefinition[] = [
+const NORMAL_CASE_STAGES: StageDefinition[] = [
   {
     id: 'case_registry',
     label: 'Case Registry & Scope',
@@ -60,7 +63,7 @@ const STAGES: StageDefinition[] = [
     id: 'counter_affidavit',
     label: 'Counter Affidavit (CA)',
     step: 'Stage 2',
-    subtitle: 'CA filing mandate, due timeline & submission date',
+    subtitle: 'CA filing mandate, due timeline, submission date & financial implication',
     icon: FileText,
   },
   {
@@ -82,6 +85,51 @@ const STAGES: StageDefinition[] = [
     label: 'Disposal & Appeal Track',
     step: 'Stage 5',
     subtitle: 'Final judgment, adverse findings, GP opinion & appeal initiation',
+    icon: Gavel,
+  },
+];
+
+const APPEAL_CASE_STAGES: StageDefinition[] = [
+  {
+    id: 'appeal_registry',
+    label: 'Appeal Case Registry',
+    step: 'Stage 1',
+    subtitle: 'Appellate court, appeal particulars, parties & appeal prayer',
+    icon: Scale,
+  },
+  {
+    id: 'base_case_details',
+    label: 'Base / Original Case',
+    step: 'Stage 2',
+    subtitle: 'Original court, case type, case number, parties & original prayer',
+    icon: FileText,
+  },
+  {
+    id: 'counter_affidavit',
+    label: 'Counter Affidavit (CA)',
+    step: 'Stage 3',
+    subtitle: 'CA filing mandate, due timeline, submission date & financial implication',
+    icon: FileText,
+  },
+  {
+    id: 'hearing_listing',
+    label: 'Hearing Schedule & Status',
+    step: 'Stage 4',
+    subtitle: 'Present stage, current status & hearing schedule',
+    icon: Calendar,
+  },
+  {
+    id: 'interim_compliance',
+    label: 'Interim Orders & Compliance',
+    step: 'Stage 5',
+    subtitle: 'Court interim directions, compliance period & departmental actions',
+    icon: Clock,
+  },
+  {
+    id: 'disposal_appeal',
+    label: 'Disposal & Higher Appeal',
+    step: 'Stage 6',
+    subtitle: 'Final judgment, adverse findings, GP opinion & higher appeal track',
     icon: Gavel,
   },
 ];
@@ -115,6 +163,18 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     natureOfCase: initial?.natureOfCase || '',
     specifyNatureOfCase: initial?.specifyNatureOfCase || '',
     briefOfPrayer: initial?.briefOfPrayer || '',
+    baseCircle: initial?.baseCircle || '',
+    baseDivision: initial?.baseDivision || '',
+    baseCourtName: initial?.baseCourtName || '',
+    baseCaseType: initial?.baseCaseType || '',
+    baseCaseNumber: initial?.baseCaseNumber || '',
+    baseCaseYear: initial?.baseCaseYear || '',
+    basePetitionerNames: initial?.basePetitionerNames || '',
+    baseRespondentNames: initial?.baseRespondentNames || '',
+    baseCasePertainsTo: initial?.baseCasePertainsTo || '',
+    baseNatureOfCase: initial?.baseNatureOfCase || '',
+    baseBriefOfPrayer: initial?.baseBriefOfPrayer || '',
+    linkedBaseCaseId: initial?.linkedBaseCaseId || '',
     financialImplication: initial?.financialImplication || '',
     presentStage: initial?.presentStage || '',
     currentStatus: initial?.currentStatus || '',
@@ -165,6 +225,35 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<boolean>(false);
 
+  // Existing cases for auto-filling Base Case details
+  const [existingCases, setExistingCases] = useState<LegalCaseData[]>([]);
+  const [selectedExistingCaseId, setSelectedExistingCaseId] = useState<string>('');
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchExisting = async () => {
+      try {
+        const res = await fetch('/api/legal');
+        const data = await res.json();
+        if (isMounted && data.success && Array.isArray(data.cases)) {
+          setExistingCases(data.cases);
+        }
+      } catch (err) {
+        console.warn('Failed to load existing cases list:', err);
+      }
+    };
+    fetchExisting();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Dynamic stages based on classification
+  const isAppeal = formData.caseClassification === 'Appeal Case';
+  const stages = useMemo(() => {
+    return isAppeal ? APPEAL_CASE_STAGES : NORMAL_CASE_STAGES;
+  }, [isAppeal]);
+
   // Dynamic Master Data Options directly from database (zero hardcoded defaults)
   const circles = masterData?.circles || [];
   const caseTypes = masterData?.caseTypes || [];
@@ -198,6 +287,10 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
   const handleChange = <K extends keyof LegalCaseData>(field: K, value: LegalCaseData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    if (field === 'caseClassification') {
+      setActiveStageIndex(0);
+      setErrors({});
+    }
     if (errors[field as string]) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -254,65 +347,82 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     }
   };
 
+  const handleBaseCircleChange = (newCircle: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      baseCircle: newCircle,
+      baseDivision: '',
+    }));
+    if (errors.baseCircle) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.baseCircle;
+        return next;
+      });
+    }
+  };
+
+  // Handler for Auto-Filling Base Case from an existing docket
+  const handleAutoFillFromExisting = (caseId: string) => {
+    setSelectedExistingCaseId(caseId);
+    if (!caseId) return;
+
+    const matched = existingCases.find((c) => c.id === caseId);
+    if (matched) {
+      setFormData((prev) => ({
+        ...prev,
+        baseCircle: matched.circle || '',
+        baseDivision: matched.division || '',
+        baseCourtName: matched.nameOfCourt || '',
+        baseCaseType: matched.caseType || '',
+        baseCaseNumber: matched.caseNumber || '',
+        baseCaseYear: matched.caseYear || '',
+        basePetitionerNames: matched.petitionerNames || '',
+        baseRespondentNames: matched.respondentNames || '',
+        baseCasePertainsTo: matched.casePertainsTo || '',
+        baseNatureOfCase: matched.natureOfCase || '',
+        baseBriefOfPrayer: matched.briefOfPrayer || '',
+        linkedBaseCaseId: matched.id || '',
+      }));
+
+      // Clear base errors
+      setErrors((prev) => {
+        const next = { ...prev };
+        [
+          'baseCircle',
+          'baseDivision',
+          'baseCourtName',
+          'baseCaseType',
+          'baseCaseNumber',
+          'baseCaseYear',
+          'basePetitionerNames',
+          'baseRespondentNames',
+          'baseCasePertainsTo',
+          'baseNatureOfCase',
+          'baseBriefOfPrayer',
+        ].forEach((k) => delete next[k]);
+        return next;
+      });
+    }
+  };
+
   // -------------------------------------------------------------
   // STAGE-GATED PROGRESSIVE VALIDATION ENGINE
   // -------------------------------------------------------------
-  const validateSingleStage = (stageIdx: number): Record<string, string> => {
+  const validateSingleStage = useCallback((stageIdx: number): Record<string, string> => {
     const stageErrors: Record<string, string> = {};
+    const stageDef = stages[stageIdx];
+    if (!stageDef) return stageErrors;
 
-    if (stageIdx === 0) {
-      // Stage 1: Case Registry (Fully Mandatory)
-      if (!formData.caseClassification) {
-        stageErrors.caseClassification = 'Case Classification is required (Stage 1).';
-      }
-
-      if (formData.caseClassification === 'Appeal Case') {
-        if (!formData.appealInfo?.appealCaseType?.trim()) {
-          stageErrors.appealCaseType = 'Appeal Case Type is required (Stage 1).';
-        }
-        if (!formData.appealInfo?.appellateCourt?.trim()) {
-          stageErrors.appellateCourt = 'Appellate Court is required (Stage 1).';
-        }
-        if (!formData.appealInfo?.appealCaseNumber?.trim()) {
-          stageErrors.appealCaseNumber = 'Appeal Case Number is required (Stage 1).';
-        }
-        if (!formData.appealInfo?.appealYear?.trim()) {
-          stageErrors.appealYear = 'Appeal Year is required (Stage 1).';
-        } else {
-          const yr = Number(formData.appealInfo.appealYear);
-          const currentYear = new Date().getFullYear();
-          if (isNaN(yr) || yr < 1900 || yr > currentYear) {
-            stageErrors.appealYear = `Appeal Year must be a valid 4-digit year (up to ${currentYear}).`;
-          }
-        }
-        if (!formData.appealInfo?.appealFilingDate?.trim()) {
-          stageErrors.appealFilingDate = 'Appeal Filing Date is required (Stage 1).';
-        }
-        if (!formData.appealInfo?.limitationDueDate?.trim()) {
-          stageErrors.limitationDueDate = 'Limitation Due Date is required (Stage 1).';
-        }
-        if (!formData.appealInfo?.condonationOfDelay?.trim()) {
-          stageErrors.condonationOfDelay = 'Condonation of Delay is required (Stage 1).';
-        }
-      }
-
-      if (!formData.circle?.trim()) {
-        stageErrors.circle = 'Circle Jurisdiction is required (Stage 1).';
-      }
-      if (!formData.division?.trim()) {
-        stageErrors.division = 'Division Jurisdiction is required (Stage 1).';
-      }
-      if (!formData.nameOfCourt?.trim()) {
-        stageErrors.nameOfCourt = 'Name of Court / Forum is required (Stage 1).';
-      }
-      if (!formData.caseType?.trim()) {
-        stageErrors.caseType = 'Case Type is required (Stage 1).';
-      }
-      if (!formData.caseNumber?.trim()) {
-        stageErrors.caseNumber = 'Case Number is required (Stage 1).';
-      }
+    if (stageDef.id === 'case_registry') {
+      // Stage 1 for Normal Case (Fully Mandatory)
+      if (!formData.circle?.trim()) stageErrors.circle = 'Circle Jurisdiction is required.';
+      if (!formData.division?.trim()) stageErrors.division = 'Division Jurisdiction is required.';
+      if (!formData.nameOfCourt?.trim()) stageErrors.nameOfCourt = 'Name of Court / Forum is required.';
+      if (!formData.caseType?.trim()) stageErrors.caseType = 'Case Type is required.';
+      if (!formData.caseNumber?.trim()) stageErrors.caseNumber = 'Case Number is required.';
       if (!formData.caseYear?.trim()) {
-        stageErrors.caseYear = 'Case Filing Year is required (Stage 1).';
+        stageErrors.caseYear = 'Case Filing Year is required.';
       } else {
         const yr = Number(formData.caseYear);
         const currentYear = new Date().getFullYear();
@@ -320,39 +430,81 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
           stageErrors.caseYear = `Case Year must be a valid 4-digit year (up to ${currentYear}).`;
         }
       }
-      if (!formData.petitionerNames?.trim()) {
-        stageErrors.petitionerNames = 'Petitioner Name(s) is required (Stage 1).';
-      }
-      if (!formData.respondentNames?.trim()) {
-        stageErrors.respondentNames = 'Respondent Name(s) is required (Stage 1).';
-      }
-      if (!formData.casePertainsTo?.trim()) {
-        stageErrors.casePertainsTo = 'Case Pertains To is required (Stage 1).';
-      }
-      if (!formData.natureOfCase?.trim()) {
-        stageErrors.natureOfCase = 'Nature of Case is required (Stage 1).';
-      }
+      if (!formData.petitionerNames?.trim()) stageErrors.petitionerNames = 'Petitioner Name(s) is required.';
+      if (!formData.respondentNames?.trim()) stageErrors.respondentNames = 'Respondent Name(s) is required.';
+      if (!formData.casePertainsTo?.trim()) stageErrors.casePertainsTo = 'Case Pertains To is required.';
+      if (!formData.natureOfCase?.trim()) stageErrors.natureOfCase = 'Nature of Case is required.';
       const isNatureOther =
         formData.natureOfCase?.toLowerCase() === 'others' ||
         formData.natureOfCase?.toLowerCase() === 'other';
       if (isNatureOther && !formData.specifyNatureOfCase?.trim()) {
-        stageErrors.specifyNatureOfCase = 'Please specify the custom nature of case (Stage 1).';
+        stageErrors.specifyNatureOfCase = 'Please specify the custom nature of case.';
       }
-      if (!formData.briefOfPrayer?.trim()) {
-        stageErrors.briefOfPrayer = 'Brief of Prayer is required (Stage 1).';
+      if (!formData.briefOfPrayer?.trim()) stageErrors.briefOfPrayer = 'Brief of Prayer is required.';
+    } else if (stageDef.id === 'appeal_registry') {
+      // Stage 1 for Appeal Case (Fully Mandatory)
+      if (!formData.appealInfo?.appealCaseType?.trim()) stageErrors.appealCaseType = 'Appeal Case Type is required.';
+      if (!formData.appealInfo?.appellateCourt?.trim()) stageErrors.appellateCourt = 'Appellate Court is required.';
+      if (!formData.appealInfo?.appealCaseNumber?.trim()) stageErrors.appealCaseNumber = 'Appeal Case Number is required.';
+      if (!formData.appealInfo?.appealYear?.trim()) {
+        stageErrors.appealYear = 'Appeal Year is required.';
+      } else {
+        const yr = Number(formData.appealInfo.appealYear);
+        const currentYear = new Date().getFullYear();
+        if (isNaN(yr) || yr < 1900 || yr > currentYear) {
+          stageErrors.appealYear = `Appeal Year must be a valid 4-digit year (up to ${currentYear}).`;
+        }
       }
-    } else if (stageIdx === 1) {
-      // Stage 2: Counter Affidavit & Financial Implication
+      if (!formData.appealInfo?.appealFilingDate?.trim()) stageErrors.appealFilingDate = 'Appeal Filing Date is required.';
+      if (!formData.appealInfo?.limitationDueDate?.trim()) stageErrors.limitationDueDate = 'Limitation Due Date is required.';
+      if (!formData.appealInfo?.condonationOfDelay?.trim()) stageErrors.condonationOfDelay = 'Condonation of Delay is required.';
+
+      if (!formData.circle?.trim()) stageErrors.circle = 'Appeal Circle Jurisdiction is required.';
+      if (!formData.division?.trim()) stageErrors.division = 'Appeal Division Jurisdiction is required.';
+      if (!formData.petitionerNames?.trim()) stageErrors.petitionerNames = 'Appellant / Petitioner Name(s) is required.';
+      if (!formData.respondentNames?.trim()) stageErrors.respondentNames = 'Respondent Name(s) is required.';
+      if (!formData.casePertainsTo?.trim()) stageErrors.casePertainsTo = 'Case Pertains To is required.';
+      if (!formData.natureOfCase?.trim()) stageErrors.natureOfCase = 'Nature of Case is required.';
+      const isNatureOther =
+        formData.natureOfCase?.toLowerCase() === 'others' ||
+        formData.natureOfCase?.toLowerCase() === 'other';
+      if (isNatureOther && !formData.specifyNatureOfCase?.trim()) {
+        stageErrors.specifyNatureOfCase = 'Please specify the custom nature of case.';
+      }
+      if (!formData.briefOfPrayer?.trim()) stageErrors.briefOfPrayer = 'Appeal Prayer / Grounds is required.';
+    } else if (stageDef.id === 'base_case_details') {
+      // Stage 2 for Appeal Case (Base / Original Case Details - Fully Mandatory)
+      if (!formData.baseCircle?.trim()) stageErrors.baseCircle = 'Base Circle Jurisdiction is required.';
+      if (!formData.baseDivision?.trim()) stageErrors.baseDivision = 'Base Division Jurisdiction is required.';
+      if (!formData.baseCourtName?.trim()) stageErrors.baseCourtName = 'Base / Lower Court Name is required.';
+      if (!formData.baseCaseType?.trim()) stageErrors.baseCaseType = 'Base Case Type is required.';
+      if (!formData.baseCaseNumber?.trim()) stageErrors.baseCaseNumber = 'Base Case Number is required.';
+      if (!formData.baseCaseYear?.trim()) {
+        stageErrors.baseCaseYear = 'Base Case Filing Year is required.';
+      } else {
+        const yr = Number(formData.baseCaseYear);
+        const currentYear = new Date().getFullYear();
+        if (isNaN(yr) || yr < 1900 || yr > currentYear) {
+          stageErrors.baseCaseYear = `Base Case Year must be a valid 4-digit year (up to ${currentYear}).`;
+        }
+      }
+      if (!formData.basePetitionerNames?.trim()) stageErrors.basePetitionerNames = 'Base Petitioner Name(s) is required.';
+      if (!formData.baseRespondentNames?.trim()) stageErrors.baseRespondentNames = 'Base Respondent Name(s) is required.';
+      if (!formData.baseCasePertainsTo?.trim()) stageErrors.baseCasePertainsTo = 'Base Case Pertains To is required.';
+      if (!formData.baseNatureOfCase?.trim()) stageErrors.baseNatureOfCase = 'Base Nature of Case is required.';
+      if (!formData.baseBriefOfPrayer?.trim()) stageErrors.baseBriefOfPrayer = 'Base Brief of Prayer is required.';
+    } else if (stageDef.id === 'counter_affidavit') {
+      // Counter Affidavit (CA)
       if (formData.caRequired === 'Yes') {
         if (!formData.caFiled) {
-          stageErrors.caFiled = 'CA Filed status is required when CA is required (Stage 2).';
+          stageErrors.caFiled = 'CA Filed status is required when CA is required.';
         }
         if (formData.caFiled === 'Yes' && !formData.caFiledDate) {
-          stageErrors.caFiledDate = 'CA Filed Date is required when CA is filed (Stage 2).';
+          stageErrors.caFiledDate = 'CA Filed Date is required when CA is filed.';
         }
       }
-    } else if (stageIdx === 2) {
-      // Stage 3: Hearing Schedule & Status (Validation: Hearing Dates >= Filing Date)
+    } else if (stageDef.id === 'hearing_listing') {
+      // Hearing Schedule & Status (Validation: Hearing Dates >= Filing Date)
       const baseFilingDate =
         formData.caseClassification === 'Appeal Case'
           ? formData.appealInfo?.appealFilingDate
@@ -374,32 +526,32 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       ) {
         stageErrors.nextHearingDate = 'Next Hearing Date cannot be earlier than Last Hearing Date.';
       }
-    } else if (stageIdx === 3) {
-      // Stage 4: Interim Orders & Compliance
+    } else if (stageDef.id === 'interim_compliance') {
+      // Interim Orders & Compliance
       if (formData.complianceRequired === 'Yes') {
         if (!formData.complianceStatus) {
-          stageErrors.complianceStatus = 'Compliance Status is required when Compliance is required (Stage 4).';
+          stageErrors.complianceStatus = 'Compliance Status is required when Compliance is required.';
         }
       }
-    } else if (stageIdx === 4) {
-      // Stage 5: Final Disposal & Appeal Track
+    } else if (stageDef.id === 'disposal_appeal') {
+      // Final Disposal & Track
       if (formData.finalResult === 'Yes') {
         if (!formData.finalOrderDate) {
-          stageErrors.finalOrderDate = 'Final Order Date is required when Case is Concluded (Stage 5).';
+          stageErrors.finalOrderDate = 'Final Order Date is required when Case is Concluded.';
         }
         if (!formData.adverseToDepartment) {
-          stageErrors.adverseToDepartment = 'Adverse to Department selection is required (Stage 5).';
+          stageErrors.adverseToDepartment = 'Adverse to Department selection is required.';
         }
         if (formData.adverseToDepartment === 'Yes') {
           if (!formData.gpOpinion) {
-            stageErrors.gpOpinion = 'GP Opinion is required when order is Adverse to Department (Stage 5).';
+            stageErrors.gpOpinion = 'GP Opinion is required when order is Adverse to Department.';
           }
           if (isAppealRecommended(formData.gpOpinion)) {
             if (!formData.appealFiled) {
-              stageErrors.appealFiled = 'Appeal Filed selection is required (Stage 5).';
+              stageErrors.appealFiled = 'Appeal Filed selection is required.';
             }
             if (formData.appealFiled === 'Yes' && !formData.appealFiledDate) {
-              stageErrors.appealFiledDate = 'Appeal Filed Date is required when Appeal is Filed (Stage 5).';
+              stageErrors.appealFiledDate = 'Appeal Filed Date is required when Appeal is Filed.';
             }
           }
         }
@@ -407,7 +559,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     }
 
     return stageErrors;
-  };
+  }, [stages, formData]);
 
   const isStageAccessible = (targetStageIdx: number): boolean => {
     if (targetStageIdx === 0) return true;
@@ -419,7 +571,10 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   };
 
   const isStageCompleted = (stageIdx: number): boolean => {
-    if (stageIdx === 0) {
+    const stageDef = stages[stageIdx];
+    if (!stageDef) return false;
+
+    if (stageDef.id === 'case_registry') {
       return Boolean(
         formData.caseNumber.trim() &&
         formData.circle &&
@@ -429,19 +584,41 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
         formData.petitionerNames.trim() &&
         formData.respondentNames.trim() &&
         formData.briefOfPrayer.trim() &&
-        Object.keys(validateSingleStage(0)).length === 0
+        Object.keys(validateSingleStage(stageIdx)).length === 0
       );
     }
-    if (stageIdx === 1) {
+    if (stageDef.id === 'appeal_registry') {
+      return Boolean(
+        formData.appealInfo?.appealCaseNumber?.trim() &&
+        formData.appealInfo?.appealCaseType &&
+        formData.appealInfo?.appellateCourt &&
+        formData.petitionerNames.trim() &&
+        formData.respondentNames.trim() &&
+        formData.briefOfPrayer.trim() &&
+        Object.keys(validateSingleStage(stageIdx)).length === 0
+      );
+    }
+    if (stageDef.id === 'base_case_details') {
+      return Boolean(
+        formData.baseCaseNumber?.trim() &&
+        formData.baseCourtName &&
+        formData.baseCaseType &&
+        formData.basePetitionerNames?.trim() &&
+        formData.baseRespondentNames?.trim() &&
+        formData.baseBriefOfPrayer?.trim() &&
+        Object.keys(validateSingleStage(stageIdx)).length === 0
+      );
+    }
+    if (stageDef.id === 'counter_affidavit') {
       return Boolean(formData.caRequired || formData.caFiled || formData.financialImplication);
     }
-    if (stageIdx === 2) {
+    if (stageDef.id === 'hearing_listing') {
       return Boolean(formData.presentStage || formData.currentStatus || formData.lastHearingDate || formData.nextHearingDate);
     }
-    if (stageIdx === 3) {
+    if (stageDef.id === 'interim_compliance') {
       return Boolean(formData.interimOrderDirection || formData.complianceRequired);
     }
-    if (stageIdx === 4) {
+    if (stageDef.id === 'disposal_appeal') {
       return Boolean(formData.finalResult || formData.finalOrderDate);
     }
     return false;
@@ -468,7 +645,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
   const handleNextStage = () => {
     if (validateUpToStage(activeStageIndex)) {
-      if (activeStageIndex < STAGES.length - 1) {
+      if (activeStageIndex < stages.length - 1) {
         setActiveStageIndex((prev) => prev + 1);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -491,13 +668,21 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
     setLoading(true);
     try {
-      onSave(formData);
+      // Sync caseNumber and nameOfCourt for appeal cases if needed
+      const payloadToSave: LegalCaseData = { ...formData };
+      if (isAppeal && formData.appealInfo) {
+        payloadToSave.caseNumber = formData.appealInfo.appealCaseNumber || formData.caseNumber;
+        payloadToSave.caseYear = formData.appealInfo.appealYear || formData.caseYear;
+        payloadToSave.caseType = formData.appealInfo.appealCaseType || formData.caseType;
+        payloadToSave.nameOfCourt = formData.appealInfo.appellateCourt || formData.nameOfCourt;
+      }
+      onSave(payloadToSave);
     } finally {
       setLoading(false);
     }
   };
 
-  const currentStage = STAGES[activeStageIndex];
+  const currentStage = stages[activeStageIndex] || stages[0];
   const isNatureOther =
     formData.natureOfCase?.toLowerCase() === 'others' ||
     formData.natureOfCase?.toLowerCase() === 'other';
@@ -546,8 +731,15 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
       {/* Progressive Stage Stepper Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-xs">
-        <nav className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2" aria-label="Stages">
-          {STAGES.map((stg, idx) => {
+        <nav
+          className={`grid gap-2 ${
+            isAppeal
+              ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-6'
+              : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-5'
+          }`}
+          aria-label="Stages"
+        >
+          {stages.map((stg, idx) => {
             const Icon = stg.icon;
             const isActive = activeStageIndex === idx;
             const accessible = isStageAccessible(idx);
@@ -620,9 +812,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
         <div className="p-6 space-y-6">
           {/* ========================================================= */}
-          {/* STAGE 1: Case Registry & Scope (Fully Mandatory) */}
+          {/* STAGE 1: Case Registry (Normal Case) */}
           {/* ========================================================= */}
-          {activeStageIndex === 0 && (
+          {currentStage.id === 'case_registry' && (
             <div className="space-y-6">
               {/* Classification Selector */}
               <div>
@@ -646,116 +838,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                   ))}
                 </div>
               </div>
-
-              {/* Appeal Case Specific Fields (Rendered seamlessly without colored container) */}
-              {formData.caseClassification === 'Appeal Case' && (
-                <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Appellate Jurisdiction Particulars
-                  </h4>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Appeal Case Type <span className="text-rose-500">*</span>
-                      </label>
-                      <SearchableSelect
-                        options={appealCaseTypes}
-                        value={formData.appealInfo?.appealCaseType || ''}
-                        onChange={(val) => handleAppealInfoChange('appealCaseType', val)}
-                      />
-                      {errors.appealCaseType && <p className="text-[11px] text-rose-500 mt-1">{errors.appealCaseType}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Appellate Court <span className="text-rose-500">*</span>
-                      </label>
-                      <SearchableSelect
-                        options={appellateCourts}
-                        value={formData.appealInfo?.appellateCourt || ''}
-                        onChange={(val) => handleAppealInfoChange('appellateCourt', val)}
-                      />
-                      {errors.appellateCourt && <p className="text-[11px] text-rose-500 mt-1">{errors.appellateCourt}</p>}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Appeal Case No <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.appealInfo?.appealCaseNumber || ''}
-                        onChange={(e) => handleAppealInfoChange('appealCaseNumber', e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                        required
-                      />
-                      {errors.appealCaseNumber && <p className="text-[11px] text-rose-500 mt-1">{errors.appealCaseNumber}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Appeal Year <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.appealInfo?.appealYear || ''}
-                        onChange={(e) => handleAppealInfoChange('appealYear', e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                        required
-                      />
-                      {errors.appealYear && <p className="text-[11px] text-rose-500 mt-1">{errors.appealYear}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Appeal Filing Date <span className="text-rose-500">*</span>
-                      </label>
-                      <DatePickerInput
-                        value={formData.appealInfo?.appealFilingDate || ''}
-                        onChange={(val) => handleAppealInfoChange('appealFilingDate', val)}
-                      />
-                      {errors.appealFilingDate && <p className="text-[11px] text-rose-500 mt-1">{errors.appealFilingDate}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Limitation Due Date <span className="text-rose-500">*</span>
-                      </label>
-                      <DatePickerInput
-                        value={formData.appealInfo?.limitationDueDate || ''}
-                        onChange={(val) => handleAppealInfoChange('limitationDueDate', val)}
-                      />
-                      {errors.limitationDueDate && <p className="text-[11px] text-rose-500 mt-1">{errors.limitationDueDate}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Condonation of Delay <span className="text-rose-500">*</span>
-                      </label>
-                      <SearchableSelect
-                        options={condonationDelays}
-                        value={formData.appealInfo?.condonationOfDelay || ''}
-                        onChange={(val) => handleAppealInfoChange('condonationOfDelay', val)}
-                      />
-                      {errors.condonationOfDelay && <p className="text-[11px] text-rose-500 mt-1">{errors.condonationOfDelay}</p>}
-                    </div>
-                  </div>
-
-                  {formData.appealInfo?.delayInFilingAppeal === 'Yes' && (
-                    <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center justify-between text-xs text-amber-800 dark:text-amber-200 animate-in fade-in">
-                      <div className="flex items-center gap-2 font-bold">
-                        <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                        <span>Appeal Filing Overran Limitation by {formData.appealInfo.delayPeriodDays} Days</span>
-                      </div>
-                      <span className="text-[11px] font-medium bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-100 px-2.5 py-0.5 rounded-lg border border-amber-200 dark:border-amber-700">
-                        Condonation: {formData.appealInfo.condonationOfDelay || 'Required'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Administrative Jurisdiction */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -932,9 +1014,469 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 2: Counter Affidavit (CA) & Financial Implication */}
+          {/* STAGE 1: Appeal Case Registry (Appeal Case) */}
           {/* ========================================================= */}
-          {activeStageIndex === 1 && (
+          {currentStage.id === 'appeal_registry' && (
+            <div className="space-y-6">
+              {/* Classification Selector */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Case Classification <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {['Normal Case', 'Appeal Case'].map((cls) => (
+                    <button
+                      key={cls}
+                      type="button"
+                      onClick={() => handleChange('caseClassification', cls as CaseClassificationType)}
+                      className={`py-2.5 px-4 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                        formData.caseClassification === cls
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {cls}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Appellate Jurisdiction Particulars */}
+              <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Appellate Jurisdiction Particulars
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Appeal Case Type <span className="text-rose-500">*</span>
+                    </label>
+                    <SearchableSelect
+                      options={appealCaseTypes}
+                      value={formData.appealInfo?.appealCaseType || ''}
+                      onChange={(val) => handleAppealInfoChange('appealCaseType', val)}
+                    />
+                    {errors.appealCaseType && <p className="text-[11px] text-rose-500 mt-1">{errors.appealCaseType}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Appellate Court <span className="text-rose-500">*</span>
+                    </label>
+                    <SearchableSelect
+                      options={appellateCourts}
+                      value={formData.appealInfo?.appellateCourt || ''}
+                      onChange={(val) => handleAppealInfoChange('appellateCourt', val)}
+                    />
+                    {errors.appellateCourt && <p className="text-[11px] text-rose-500 mt-1">{errors.appellateCourt}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Appeal Case No <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.appealInfo?.appealCaseNumber || ''}
+                      onChange={(e) => handleAppealInfoChange('appealCaseNumber', e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                      required
+                    />
+                    {errors.appealCaseNumber && <p className="text-[11px] text-rose-500 mt-1">{errors.appealCaseNumber}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Appeal Year <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.appealInfo?.appealYear || ''}
+                      onChange={(e) => handleAppealInfoChange('appealYear', e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                      required
+                    />
+                    {errors.appealYear && <p className="text-[11px] text-rose-500 mt-1">{errors.appealYear}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Appeal Filing Date <span className="text-rose-500">*</span>
+                    </label>
+                    <DatePickerInput
+                      value={formData.appealInfo?.appealFilingDate || ''}
+                      onChange={(val) => handleAppealInfoChange('appealFilingDate', val)}
+                    />
+                    {errors.appealFilingDate && <p className="text-[11px] text-rose-500 mt-1">{errors.appealFilingDate}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Limitation Due Date <span className="text-rose-500">*</span>
+                    </label>
+                    <DatePickerInput
+                      value={formData.appealInfo?.limitationDueDate || ''}
+                      onChange={(val) => handleAppealInfoChange('limitationDueDate', val)}
+                    />
+                    {errors.limitationDueDate && <p className="text-[11px] text-rose-500 mt-1">{errors.limitationDueDate}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Condonation of Delay <span className="text-rose-500">*</span>
+                    </label>
+                    <SearchableSelect
+                      options={condonationDelays}
+                      value={formData.appealInfo?.condonationOfDelay || ''}
+                      onChange={(val) => handleAppealInfoChange('condonationOfDelay', val)}
+                    />
+                    {errors.condonationOfDelay && <p className="text-[11px] text-rose-500 mt-1">{errors.condonationOfDelay}</p>}
+                  </div>
+                </div>
+
+                {formData.appealInfo?.delayInFilingAppeal === 'Yes' && (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center justify-between text-xs text-amber-800 dark:text-amber-200 animate-in fade-in">
+                    <div className="flex items-center gap-2 font-bold">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span>Appeal Filing Overran Limitation by {formData.appealInfo.delayPeriodDays} Days</span>
+                    </div>
+                    <span className="text-[11px] font-medium bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-100 px-2.5 py-0.5 rounded-lg border border-amber-200 dark:border-amber-700">
+                      Condonation: {formData.appealInfo.condonationOfDelay || 'Required'}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Appeal Administrative Jurisdiction */}
+              <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Appeal Administrative Jurisdiction & Litigants
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Circle Jurisdiction <span className="text-rose-500">*</span>
+                    </label>
+                    <SearchableSelect
+                      options={circles}
+                      value={formData.circle}
+                      onChange={handleCircleChange}
+                    />
+                    {errors.circle && <p className="text-[11px] text-rose-500 mt-1">{errors.circle}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Division Jurisdiction <span className="text-rose-500">*</span>
+                    </label>
+                    <SearchableSelect
+                      options={divisions}
+                      value={formData.division}
+                      onChange={(val) => handleChange('division', val)}
+                    />
+                    {errors.division && <p className="text-[11px] text-rose-500 mt-1">{errors.division}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Appellant / Petitioner Name(s) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.petitionerNames}
+                      onChange={(e) => handleChange('petitionerNames', e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                      required
+                    />
+                    {errors.petitionerNames && <p className="text-[11px] text-rose-500 mt-1">{errors.petitionerNames}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Respondent Name(s) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.respondentNames}
+                      onChange={(e) => handleChange('respondentNames', e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                      required
+                    />
+                    {errors.respondentNames && <p className="text-[11px] text-rose-500 mt-1">{errors.respondentNames}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Case Pertains To <span className="text-rose-500">*</span>
+                    </label>
+                    <SearchableSelect
+                      options={casePertainsToList}
+                      value={formData.casePertainsTo}
+                      onChange={(val) => handleChange('casePertainsTo', val)}
+                    />
+                    {errors.casePertainsTo && <p className="text-[11px] text-rose-500 mt-1">{errors.casePertainsTo}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Nature of Case <span className="text-rose-500">*</span>
+                    </label>
+                    <SearchableSelect
+                      options={natureOfCasesList}
+                      value={formData.natureOfCase}
+                      onChange={(val) => handleChange('natureOfCase', val)}
+                    />
+                    {errors.natureOfCase && <p className="text-[11px] text-rose-500 mt-1">{errors.natureOfCase}</p>}
+                  </div>
+                </div>
+
+                {isNatureOther && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Specify Nature of Case <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.specifyNatureOfCase || ''}
+                      onChange={(e) => handleChange('specifyNatureOfCase', e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                      required
+                    />
+                    {errors.specifyNatureOfCase && <p className="text-[11px] text-rose-500 mt-1">{errors.specifyNatureOfCase}</p>}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Appeal Prayer / Grounds <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={formData.briefOfPrayer}
+                    onChange={(e) => handleChange('briefOfPrayer', e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                    required
+                  />
+                  {errors.briefOfPrayer && <p className="text-[11px] text-rose-500 mt-1">{errors.briefOfPrayer}</p>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* STAGE 2: Base / Original Case Details (Appeal Case) */}
+          {/* ========================================================= */}
+          {currentStage.id === 'base_case_details' && (
+            <div className="space-y-6">
+              {/* Optional Quick Auto-Fill from Existing Case */}
+              <div className="bg-slate-50 dark:bg-slate-800/60 border border-blue-200 dark:border-blue-900/60 p-4 rounded-xl space-y-2">
+                <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 font-bold text-xs">
+                  <LinkIcon className="w-4 h-4" />
+                  <span>Auto-Fill from Existing Case Docket (Optional)</span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Select an existing case in the system to auto-populate all original case fields below, or enter them manually.
+                </p>
+                <div className="pt-1">
+                  <SearchableSelect
+                    options={[
+                      '-- Select Existing Case to Auto-Fill --',
+                      ...existingCases.map(
+                        (c) => `${c.caseNumber} (${c.caseYear}) - ${c.nameOfCourt || 'Court'} - ${c.petitionerNames || ''}`
+                      ),
+                    ]}
+                    value={
+                      selectedExistingCaseId
+                        ? (() => {
+                            const match = existingCases.find((c) => c.id === selectedExistingCaseId);
+                            return match
+                              ? `${match.caseNumber} (${match.caseYear}) - ${match.nameOfCourt || 'Court'} - ${match.petitionerNames || ''}`
+                              : '-- Select Existing Case to Auto-Fill --';
+                          })()
+                        : '-- Select Existing Case to Auto-Fill --'
+                    }
+                    onChange={(val) => {
+                      if (val.startsWith('--')) {
+                        setSelectedExistingCaseId('');
+                      } else {
+                        const match = existingCases.find(
+                          (c) => `${c.caseNumber} (${c.caseYear}) - ${c.nameOfCourt || 'Court'} - ${c.petitionerNames || ''}` === val
+                        );
+                        if (match?.id) handleAutoFillFromExisting(match.id);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Base Administrative Jurisdiction */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Base Circle Jurisdiction <span className="text-rose-500">*</span>
+                  </label>
+                  <SearchableSelect
+                    options={circles}
+                    value={formData.baseCircle || ''}
+                    onChange={handleBaseCircleChange}
+                  />
+                  {errors.baseCircle && <p className="text-[11px] text-rose-500 mt-1">{errors.baseCircle}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Base Division Jurisdiction <span className="text-rose-500">*</span>
+                  </label>
+                  <SearchableSelect
+                    options={divisions}
+                    value={formData.baseDivision || ''}
+                    onChange={(val) => handleChange('baseDivision', val)}
+                  />
+                  {errors.baseDivision && <p className="text-[11px] text-rose-500 mt-1">{errors.baseDivision}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Base / Lower Court Name <span className="text-rose-500">*</span>
+                  </label>
+                  <SearchableSelect
+                    options={courts}
+                    value={formData.baseCourtName || ''}
+                    onChange={(val) => handleChange('baseCourtName', val)}
+                  />
+                  {errors.baseCourtName && <p className="text-[11px] text-rose-500 mt-1">{errors.baseCourtName}</p>}
+                </div>
+              </div>
+
+              {/* Base Case Specifics */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Base Case Type <span className="text-rose-500">*</span>
+                  </label>
+                  <SearchableSelect
+                    options={caseTypes}
+                    value={formData.baseCaseType || ''}
+                    onChange={(val) => handleChange('baseCaseType', val)}
+                  />
+                  {errors.baseCaseType && <p className="text-[11px] text-rose-500 mt-1">{errors.baseCaseType}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Base Case Number <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.baseCaseNumber || ''}
+                    onChange={(e) => handleChange('baseCaseNumber', e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                    required
+                  />
+                  {errors.baseCaseNumber && <p className="text-[11px] text-rose-500 mt-1">{errors.baseCaseNumber}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Base Case Filing Year <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.baseCaseYear || ''}
+                    onChange={(e) => handleChange('baseCaseYear', e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                    required
+                  />
+                  {errors.baseCaseYear && <p className="text-[11px] text-rose-500 mt-1">{errors.baseCaseYear}</p>}
+                </div>
+              </div>
+
+              {/* Base Litigant Parties */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Base Petitioner Name(s) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.basePetitionerNames || ''}
+                    onChange={(e) => handleChange('basePetitionerNames', e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                    required
+                  />
+                  {errors.basePetitionerNames && <p className="text-[11px] text-rose-500 mt-1">{errors.basePetitionerNames}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Base Respondent Name(s) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.baseRespondentNames || ''}
+                    onChange={(e) => handleChange('baseRespondentNames', e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                    required
+                  />
+                  {errors.baseRespondentNames && <p className="text-[11px] text-rose-500 mt-1">{errors.baseRespondentNames}</p>}
+                </div>
+              </div>
+
+              {/* Base Jurisdiction & Nature */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Base Case Pertains To <span className="text-rose-500">*</span>
+                  </label>
+                  <SearchableSelect
+                    options={casePertainsToList}
+                    value={formData.baseCasePertainsTo || ''}
+                    onChange={(val) => handleChange('baseCasePertainsTo', val)}
+                  />
+                  {errors.baseCasePertainsTo && <p className="text-[11px] text-rose-500 mt-1">{errors.baseCasePertainsTo}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Base Nature of Case <span className="text-rose-500">*</span>
+                  </label>
+                  <SearchableSelect
+                    options={natureOfCasesList}
+                    value={formData.baseNatureOfCase || ''}
+                    onChange={(val) => handleChange('baseNatureOfCase', val)}
+                  />
+                  {errors.baseNatureOfCase && <p className="text-[11px] text-rose-500 mt-1">{errors.baseNatureOfCase}</p>}
+                </div>
+              </div>
+
+              {/* Base Brief of Prayer */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Base Brief of Prayer <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={formData.baseBriefOfPrayer || ''}
+                  onChange={(e) => handleChange('baseBriefOfPrayer', e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                  required
+                />
+                {errors.baseBriefOfPrayer && <p className="text-[11px] text-rose-500 mt-1">{errors.baseBriefOfPrayer}</p>}
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* STAGE: Counter Affidavit (CA) & Financial Implication */}
+          {/* ========================================================= */}
+          {currentStage.id === 'counter_affidavit' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {/* Step 1: CA Required */}
@@ -1003,11 +1545,11 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 3: Hearing Schedule & Present Status */}
+          {/* STAGE: Hearing Schedule & Present Status */}
           {/* ========================================================= */}
-          {activeStageIndex === 2 && (
+          {currentStage.id === 'hearing_listing' && (
             <div className="space-y-6">
-              {/* Present Stage & Current Status moved to the TOP of Tab 3 */}
+              {/* Present Stage & Current Status moved to the TOP of Hearing Schedule */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Present Stage</label>
@@ -1062,9 +1604,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 4: Interim Orders & Compliance */}
+          {/* STAGE: Interim Orders & Compliance */}
           {/* ========================================================= */}
-          {activeStageIndex === 3 && (
+          {currentStage.id === 'interim_compliance' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -1150,9 +1692,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 5: Disposal & Appeal Track */}
+          {/* STAGE: Disposal & Appeal Track */}
           {/* ========================================================= */}
-          {activeStageIndex === 4 && (
+          {currentStage.id === 'disposal_appeal' && (
             <div className="space-y-6">
               {/* Step 1: Case Concluded / Disposed? */}
               <div className="max-w-xs">
@@ -1281,7 +1823,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
           </button>
 
           <div className="flex items-center gap-2">
-            {activeStageIndex < STAGES.length - 1 ? (
+            {activeStageIndex < stages.length - 1 ? (
               <button
                 type="button"
                 onClick={handleNextStage}

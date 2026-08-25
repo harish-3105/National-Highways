@@ -5,11 +5,16 @@
 The **Legal Cases & Court Proceedings Management Module** is the core judicial litigation tracking engine for the Tamil Nadu Highways Department. It tracks proceedings across all court tiers including the Madras High Court (Principal Seat & Madurai Bench), Subordinate Courts, Special Tribunals, National Green Tribunal (NGT), and the Supreme Court of India.
 
 Key architectural and functional principles:
-1. **5-Stage Progressive Entry Lifecycle**: Structured progression through *Case Registry & Scope*, *Counter Affidavit (CA)*, *Hearing Schedule & Status*, *Interim Orders & Compliance*, and *Disposal & Appeal Track*.
-2. **Strict Stage-Gating & Baseline Registry Mandate**: Stage 1 contains foundational identity fields and is 100% mandatory. Moving past Stage 1 or saving any case requires complete Stage 1 completion.
-3. **Dynamic Progressive Field Disclosure**: Strict cascaded visibility driven by judicial logic (e.g. Counter Affidavit prerequisites, Compliance action paths, Disposal adverse outcomes, and GP opinion appeal gates).
-4. **Zero Fallbacks & Pure Database-Driven Master Data**: 100% of dropdown selections are dynamically loaded from `public.legal_master_config` with zero mock arrays or hardcoded fallback lists.
-5. **Native PostgreSQL Column Mapping**: Direct 1:1 persistence without packing structured fields into JSON/JSONB blobs.
+1. **Dynamic Stage-Gated Entry Lifecycle**: 
+   - **5 Stages for Normal Cases**: *Case Registry & Scope*, *Counter Affidavit (CA)*, *Hearing Schedule & Status*, *Interim Orders & Compliance*, and *Disposal & Appeal Track*.
+   - **6 Stages for Appeal Cases**: *Appeal Case Registry*, *Base / Original Case Details*, *Counter Affidavit (CA)*, *Hearing Schedule & Status*, *Interim Orders & Compliance*, and *Disposal & Higher Appeal*.
+2. **Strict Stage-Gating & Baseline Registry Mandate**: 
+   - For Normal cases, Stage 1 is fully mandatory.
+   - For Appeal cases, both Stage 1 (Appeal Registry) and Stage 2 (Base Case Details) are fully mandatory baseline stages before advancing or saving.
+3. **Dedicated Base / Original Case Integration**: Auto-fill picker allows instant copying from an existing case docket in the database, with full manual override capability.
+4. **Dynamic Progressive Field Disclosure**: Strict cascaded visibility driven by judicial logic (Counter Affidavit prerequisites, Compliance action paths, Disposal adverse outcomes, and GP opinion appeal gates).
+5. **Zero Fallbacks & Pure Database-Driven Master Data**: 100% of dropdown selections are dynamically loaded from `public.legal_master_config` with zero mock arrays or hardcoded fallback lists.
+6. **Native PostgreSQL Column Mapping**: Direct 1:1 persistence without packing structured fields into JSON/JSONB blobs.
 
 ---
 
@@ -37,6 +42,18 @@ All legal cases are persisted in **Supabase PostgreSQL** within `public.legal_ca
 | `nature_of_case` | `VARCHAR(100)` | `NOT NULL` | Legal nature (e.g. `Work`, `Tender`, `Land Acquisition`, `Encroachment`, `Others`). |
 | `specify_nature_of_case`| `TEXT` | `NULL` | Custom descriptive text mandatory when `nature_of_case = 'Others'`. |
 | `brief_of_prayer` | `TEXT` | `NOT NULL` | Summary of prayer/pleadings sought before the court. |
+| `base_circle` | `VARCHAR(100)` | `NULL` | Administrative Circle of the original lower court case. |
+| `base_division` | `VARCHAR(100)` | `NULL` | Division office of the original lower court case. |
+| `base_court_name` | `VARCHAR(255)` | `NULL` | Lower / Original Court Name (e.g. Madras High Court Single Bench, Sub Court). |
+| `base_case_type` | `VARCHAR(100)` | `NULL` | Original Case Type (e.g. `WP`, `OS`, `LAOP`). |
+| `base_case_number` | `VARCHAR(100)` | `NULL` | Original Case Registration Number. |
+| `base_case_year` | `VARCHAR(10)` | `NULL` | Original Case Filing Year. |
+| `base_petitioner_names` | `TEXT` | `NULL` | Original Petitioner Name(s). |
+| `base_respondent_names` | `TEXT` | `NULL` | Original Respondent Name(s). |
+| `base_case_pertains_to` | `VARCHAR(50)` | `NULL` | Original Case Jurisdiction domain. |
+| `base_nature_of_case` | `VARCHAR(100)` | `NULL` | Original Case Nature of Case. |
+| `base_brief_of_prayer` | `TEXT` | `NULL` | Original Case Prayer / Pleadings. |
+| `linked_base_case_id` | `UUID` | `NULL` | Foreign key referencing original docket in `legal_cases` if linked. |
 | `financial_implication` | `VARCHAR(100)` | `NULL` | Numeric currency value (in ₹) representing financial stake or compensation claimed. |
 | `present_stage` | `VARCHAR(100)` | `NULL` | Current procedural stage (e.g. `Notice / Admission`, `Counter Affidavit Pending`, `Final Arguments`). |
 | `current_status` | `VARCHAR(100)` | `NULL` | High-level status (e.g. `Pending`, `Disposed`, `Stay Granted`, `Interim Order`). |
@@ -70,37 +87,22 @@ All legal cases are persisted in **Supabase PostgreSQL** within `public.legal_ca
 
 ## 3. Progressive Validation & Cascading Business Logic
 
-### Stage 1: Case Registry & Scope (Fully Mandatory)
-- Visual Container: Rendered cleanly with standard form styling and a subtle section header without colored purple boxes.
-- Removed Fields: `Appeal Level` and `Category` completely removed.
-- Condition for "Others": When `natureOfCase = 'Others'` (or `'Other'`), `specifyNatureOfCase` text input becomes visible and mandatory.
-- Blocking Gate: Next stage navigation and docket persistence are strictly blocked until all Stage 1 fields are filled.
+### Normal Cases (5 Stages)
+- **Stage 1 (Case Registry & Scope)**: Mandatory circle, division, court, caseType, caseNumber, caseYear, petitionerNames, respondentNames, casePertainsTo, natureOfCase, briefOfPrayer.
+- **Stage 2 (Counter Affidavit & Financials)**: `CA Required` &rarr; `CA Due Date` + `CA Filed` &rarr; `CA Filed Date` &rarr; `Financial Implication`.
+- **Stage 3 (Hearing Schedule & Status)**: Top row `Present Stage` and `Current Status`, with hearing dates validation ($D_{\text{hearing}} \ge D_{\text{filing}}$).
+- **Stage 4 (Interim Orders & Compliance)**: If `Compliance Required = 'Yes'` &rarr; reveals `Compliance Period`, `CED`, `Compliance Status`, `Action Taken`.
+- **Stage 5 (Disposal & Appeal Track)**: `Concluded = Yes` &rarr; `Final Order` + `Date` + `Adverse` &rarr; `Adverse = Yes` &rarr; `GP Opinion` &rarr; `Recommended / Not Required` &rarr; `Appeal Filed` &rarr; `Date` + `Remarks`.
 
-### Stage 2: Counter Affidavit & Financial Implication
-- Starts with `CA Required` (`'Yes'`, `'No'`, `'Not Required'`).
-- If `CA Required = 'Yes'` &rarr; reveal `CA Due Date` and `CA Filed` (`'Yes'`, `'No'`, `'Under Preparation'`).
-- If `CA Filed = 'Yes'` &rarr; reveal `CA Filed Date`.
-- Numeric `Financial Implication (₹)` is positioned directly after `CA Filed Date`.
-
-### Stage 3: Hearing Schedule & Status
-- `Present Stage` and `Current Status` are positioned at the very top of Tab 3.
-- Date Validation: Hearing dates (`lastHearingDate`, `nextHearingDate`) must be on or after the Filing Date ($D_{\text{hearing}} \ge D_{\text{filing}}$) and `nextHearingDate` $\ge$ `lastHearingDate`.
-
-### Stage 4: Interim Orders & Compliance
-- Starts with `Interim Order Direction`, `Interim Order Date`, and `Compliance Required`.
-- If `Compliance Required = 'No'` or `'Not Applicable'` &rarr; hide all further compliance fields.
-- If `Compliance Required = 'Yes'` &rarr; reveal `Compliance Period (Text)`, `Compliance End Date (CED)`, `Compliance Status`, and `Action Taken Details for Compliance`.
-
-### Stage 5: Disposal & Appeal Track
-- Starts with `Case Concluded / Disposed?` (`'Yes'`, `'No'`).
-- If `'No'` &rarr; hide all subsequent fields.
-- If `'Yes'` &rarr; reveal:
-  1. `Final Order` (text field)
-  2. `Final Order Date` (mandatory)
-  3. `Adverse to Department?` (`'Yes'`, `'No'`, `'Neutral'`)
-- If `Adverse to Department? = 'Yes'` &rarr; reveal ONLY `GP Opinion` (`'Opinion Pending'`, `'Recommended for Appeal'`, `'Not Recommended for Appeal'`, `'Not Required'`).
-- If `GP Opinion` is `'Recommended for Appeal'` (exact match, excluding 'Not Recommended') OR `'Not Required'` &rarr; reveal `Appeal Filed?` (`'Yes'`, `'No'`, `'Under Proposal'`).
-- If `Appeal Filed? = 'Yes'` &rarr; reveal `Appeal Filed Date` and `Final Judgment Summary & Remarks`.
+### Appeal Cases (6 Stages)
+- **Stage 1 (Appeal Case Registry)**: Mandatory appellateCourt, appealCaseType, appealCaseNumber, appealYear, appealFilingDate, limitationDueDate, condonationOfDelay, appeal Circle, Division, Appellants, Respondents, Case Pertains To, Nature of Case, Appeal Prayer.
+- **Stage 2 (Base / Original Case Details)**: 
+  - Optional quick auto-fill dropdown from existing cases.
+  - Mandatory Base Circle, Base Division, Base Court, Base Case Type, Base Case Number, Base Case Year, Base Petitioners, Base Respondents, Base Case Pertains To, Base Nature of Case, Base Brief of Prayer.
+- **Stage 3 (Counter Affidavit & Financials)**: Same progressive rules as normal cases.
+- **Stage 4 (Hearing Schedule & Status)**: Same hearing schedule rules as normal cases.
+- **Stage 5 (Interim Orders & Compliance)**: Same compliance rules as normal cases.
+- **Stage 6 (Disposal & Higher Appeal Track)**: Same disposal cascade rules.
 
 ---
 

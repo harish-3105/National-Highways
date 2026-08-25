@@ -47,7 +47,21 @@ export interface LegalCaseData {
   specifyNatureOfCase?: string; // Custom description when natureOfCase = 'Others'
   briefOfPrayer: string; // Textarea (Brief summary of prayer/pleadings)
 
-  // B.2. Counter Affidavit (CA) & Financial Implication (Stage 2)
+  // B.1.5. Base / Original Case Information (Stage 2 for Appeal Cases)
+  baseCircle?: CircleType; // Dropdown: Chennai, Salem, Madurai, etc.
+  baseDivision?: string; // Dropdown: Cascading division
+  baseCourtName?: string; // Dropdown / Text: Original Court Name
+  baseCaseType?: string; // Dropdown: WP, OS, LAOP, etc.
+  baseCaseNumber?: string; // Text field: Original Case Number
+  baseCaseYear?: string; // 4-digit Year string
+  basePetitionerNames?: string; // Text field: Original Petitioner(s)
+  baseRespondentNames?: string; // Text field: Original Respondent(s)
+  baseCasePertainsTo?: CasePertainsToType; // Dropdown: GOTN | MoRTH | Both | NHAI
+  baseNatureOfCase?: NatureOfCaseType; // Dropdown
+  baseBriefOfPrayer?: string; // Textarea: Original Prayer
+  linkedBaseCaseId?: string; // Foreign key / ID of the linked original case in legal_cases
+
+  // B.2. Counter Affidavit (CA) & Financial Implication
   caRequired: YesNoType; // Dropdown: Yes | No | Not Required
   caFiled: YesNoType; // Dropdown: Yes | No | Under Preparation
   caDueDate?: string; // Date field (YYYY-MM-DD)
