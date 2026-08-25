@@ -23,12 +23,10 @@ import {
   Archive,
   RefreshCw,
   Download,
-  Layers,
   DollarSign,
   CheckCircle2,
   Scale,
 } from 'lucide-react';
-import { generateFeeBillsExcel } from '@/lib/export/feeBillsExportGenerator';
 
 type PortalTab = 'workspace' | 'create' | 'settings';
 type WorkspaceViewMode = 'ledger' | 'analytics' | 'pendency';
@@ -134,20 +132,6 @@ export function FeeBillManagementPortal() {
     setPaymentStatusFilter('ALL');
     setActiveKpiCard('all');
     setShowArchived(false);
-  };
-
-  // Export handlers
-  const handleExportExcel = async () => {
-    const active = bills.filter((b) => !b.isDeleted && b.delete_status !== 'DELETED');
-    const blob = await generateFeeBillsExcel({ bills: active });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Legal_Fee_Bills_Ledger_${new Date().toISOString().split('T')[0]}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   // Persist updated master data centrally to database
@@ -679,7 +663,7 @@ export function FeeBillManagementPortal() {
               Voucher Ref: <strong>{deletingBill.feeBillNumber}</strong> ({deletingBill.lawyerName})
             </p>
             <p className="text-xs text-slate-400">
-              This action soft-deletes the record. Historical records remain preserved in PostgreSQL audit logs and can be restored using "Show Archived".
+              This action soft-deletes the record. Historical records remain preserved in PostgreSQL audit logs and can be restored using &quot;Show Archived&quot;.
             </p>
             <div className="flex items-center justify-center gap-3 pt-2">
               <button

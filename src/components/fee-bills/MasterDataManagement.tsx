@@ -611,7 +611,7 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
               <h4 className="text-sm font-extrabold">Confirm Removal</h4>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300">
-              Are you sure you want to remove <strong>"{deleteConfirmItem.name}"</strong> from{' '}
+              Are you sure you want to remove <strong>&ldquo;{deleteConfirmItem.name}&rdquo;</strong> from{' '}
               {activeTabMeta?.label}?
             </p>
             <div className="flex items-center justify-end gap-2 pt-2">

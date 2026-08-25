@@ -115,7 +115,6 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
     }
   };
 
-  const currentStage = STAGES[activeStageIndex];
   const lawyerClaim = calculateLawyerClaimAmount(
     contract.appearanceAmount || 0,
     contract.conferenceAmount || 0,
