@@ -27,3 +27,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
    - Advance to Tab $N+1$ is strictly gated until all mandatory fields in Tab $N$ are completed.
    - When saving from Tab $N$, validate only up to Tab $N$ without blocking on future stages.
    - Zero grey placeholder suggestions across all forms.
+
+5. **STRICT ZERO-WORKAROUND & DATABASE SCHEMA INTEGRITY**:
+   - Zero workarounds, zero shortcuts, zero stealth fallbacks, and zero JSON/JSONB packing of structured relational fields.
+   - All fields MUST map 1:1 directly to dedicated, strongly-typed native PostgreSQL columns.
+   - If a column or table is missing on the live database, NEVER bypass it with JSON or in-memory fallback objects. STOP immediately, provide the explicit SQL migration script (`ALTER TABLE ...`), and require it to be executed in the database first.
+   - Zero hardcoded mock or fallback lists across all modules and routes; default states must strictly be empty (`[]`, `''`, `0`, `null`).
+   - Surface all raw database errors immediately rather than silently catching, swallowing, or masking them.
