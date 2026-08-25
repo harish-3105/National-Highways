@@ -111,17 +111,9 @@ export const FeeBillPendencyTracker: React.FC<FeeBillPendencyTrackerProps> = ({
       {/* Top Header Summary & Category Switcher */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-extrabold text-[10px] tracking-wider uppercase">
-              Pendency & Movement
-            </span>
-            <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-amber-600" /> Inter-Office Fee Bill Pendency Tracker
-            </h3>
-          </div>
-          <p className="text-xs text-slate-500 font-medium mt-1">
-            Separately tracking <strong className="text-slate-700 dark:text-slate-300">Payment Proposal (PP)</strong> sanction stages and <strong className="text-slate-700 dark:text-slate-300">Government Order (G.O.)</strong> movement workflows
-          </p>
+          <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-amber-600" /> Fee Bill Pendency Tracker
+          </h3>
         </div>
 
         {/* View Switcher Controls */}
@@ -185,11 +177,8 @@ export const FeeBillPendencyTracker: React.FC<FeeBillPendencyTrackerProps> = ({
               </div>
               <div>
                 <h4 className="font-black text-sm uppercase tracking-wide">
-                  1. Payment Proposal (PP) Movement & Sanction Pipeline
+                  Payment Proposal Pipeline
                 </h4>
-                <p className="text-xs text-blue-200 font-medium">
-                  Inter-office proposal routing: Division (DE) &rarr; Circle (SE) &rarr; Chief Engineer (CE) &rarr; Government / MoRTH
-                </p>
               </div>
             </div>
 
@@ -286,11 +275,8 @@ export const FeeBillPendencyTracker: React.FC<FeeBillPendencyTrackerProps> = ({
               </div>
               <div>
                 <h4 className="font-black text-sm uppercase tracking-wide">
-                  2. Government Order (G.O.) Sanction & Scrutiny Pipeline
+                  Government Order Pipeline
                 </h4>
-                <p className="text-xs text-amber-200 font-medium">
-                  Secretariat workflow: Proposal submission &bull; Draft scrutiny &bull; Clarifications &bull; G.O. issuance
-                </p>
               </div>
             </div>
 
