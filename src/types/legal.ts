@@ -1,18 +1,16 @@
 // Comprehensive TypeScript definitions for Legal Cases & Court Proceedings Management System
 
 export type CaseClassificationType = 'Normal Case' | 'Appeal Case';
-export type YesNoType = 'Yes' | 'No';
-export type GPOpinionType = 'Pending' | 'Not Recommended' | 'Recommended' | 'Not Required';
-export type ComplianceStatusType = 'Complied' | 'Pending';
+export type YesNoType = 'Yes' | 'No' | string;
+export type GPOpinionType = 'Opinion Pending' | 'Recommended for Appeal' | 'Not Recommended for Appeal' | 'Not Required' | string;
+export type ComplianceStatusType = 'Complied' | 'Pending' | string;
 
-export type CircleType = 'Chennai' | 'Madurai' | 'Salem' | 'Coimbatore' | 'Tirunelveli' | 'Villupuram' | string;
-export type CategoryType = 'Filed Against Department' | 'Filed By Department' | string;
+export type CircleType = string;
 export type CasePertainsToType = 'GOTN' | 'MoRTH' | 'Both' | 'NHAI' | string;
-export type NatureOfCaseType = 'Work' | 'Tender' | 'Land Acquisition' | 'Encroachment' | 'Arbitration' | 'Service Matter' | 'Other' | string;
+export type NatureOfCaseType = string;
 
 // Section A: Appeal Case Information (Only when Case Type = 'Appeal Case')
 export interface AppealCaseInformation {
-  appealLevel: string; // e.g. Single Bench to Division Bench, District Court to High Court, High Court to Supreme Court
   appealCaseType: string; // e.g. WA, CMA, AS, SLP, Review Petition
   appealCaseNumber: string; // e.g. WA 123/2024
   appealYear: string; // 4-digit Year (e.g. 2024)
@@ -34,70 +32,66 @@ export interface LegalCaseData {
   // A. Appeal Case Information (Present only if caseClassification === 'Appeal Case')
   appealInfo?: AppealCaseInformation;
 
-  // B.1. Case Information
+  // B.1. Case Information (Stage 1: Registry)
   caseType: string; // Dropdown: WP, WA, CMA, OS, AS, CRP, Contempt, etc.
   circle: CircleType; // Dropdown: Chennai, Salem, Madurai, etc.
   division: string; // Dropdown: Cascading division
   caseNumber: string; // Text field (e.g. WP 1234/2023)
   caseYear: string; // 4-digit Year string (e.g. 2023)
-  category: CategoryType; // Dropdown: Filed Against Department | Filed By Department
+  category?: string; // Optional legacy column
   nameOfCourt: string; // Dropdown: High Court of Madras, Madurai Bench, District Court, etc.
   petitionerNames: string; // Text field (Name of Petitioner(s))
   respondentNames: string; // Text field (Name of Respondent(s))
   casePertainsTo: CasePertainsToType; // Dropdown: GOTN | MoRTH | Both | NHAI
-  natureOfCase: NatureOfCaseType; // Dropdown: Work | Tender | Land Acquisition | Encroachment | Other
-  specifyNatureOfCase?: string; // Optional custom description
+  natureOfCase: NatureOfCaseType; // Dropdown
+  specifyNatureOfCase?: string; // Custom description when natureOfCase = 'Others'
   briefOfPrayer: string; // Textarea (Brief summary of prayer/pleadings)
-  financialImplication?: string; // Text field (e.g. ₹ 4.5 Cr, Compensation amount)
-  presentStage: string; // Dropdown: Notice / Admission, Counter Affidavit Pending, Arguments, Disposed, etc.
-  currentStatus: string; // Dropdown: Pending | Disposed | Stay Granted | Interim Order
 
-  // B.2. Counter Affidavit (CA) Information
-  caRequired: YesNoType; // Dropdown: Yes | No
-  caFiled: YesNoType; // Dropdown: Yes | No
+  // B.2. Counter Affidavit (CA) & Financial Implication (Stage 2)
+  caRequired: YesNoType; // Dropdown: Yes | No | Not Required
+  caFiled: YesNoType; // Dropdown: Yes | No | Under Preparation
   caDueDate?: string; // Date field (YYYY-MM-DD)
-  caFiledDate?: string; // Date field (YYYY-MM-DD, Conditional: CA Filed = Yes)
+  caFiledDate?: string; // Date field (YYYY-MM-DD)
+  financialImplication?: string | number; // Numeric currency input (in ₹)
 
-  // B.3. Hearing & Orders
-  lastHearingDate?: string; // Date field (YYYY-MM-DD, Optional)
-  nextHearingDate?: string; // Date field (YYYY-MM-DD, Optional)
-  nextListingPurpose?: string; // Text field (Optional)
-  interimOrderDirection?: string; // Text field (Details of interim order/stay)
+  // B.3. Hearing Schedule & Present Status (Stage 3)
+  presentStage: string; // Dropdown: Notice / Admission, Arguments, Disposed, etc.
+  currentStatus: string; // Dropdown: Pending | Disposed | Stay Granted | Interim Order
+  lastHearingDate?: string; // Date field (YYYY-MM-DD)
+  nextHearingDate?: string; // Date field (YYYY-MM-DD)
+  nextListingPurpose?: string; // Text field
+
+  // B.4. Interim Orders & Compliance (Stage 4)
+  interimOrderDirection?: string; // Text field
   interimOrderDate?: string; // Date field (YYYY-MM-DD)
-  latestOrderFinalOrder?: string; // Text field (Details of latest/final order)
-  latestOrderDate?: string; // Date field (YYYY-MM-DD)
-
-  // B.4. Compliance (General / Interim)
-  complianceRequired: YesNoType; // Dropdown: Yes | No
+  complianceRequired: YesNoType; // Dropdown: Yes | No | Not Applicable
   complianceAction?: string; // Text field
   compliancePeriod?: string; // Text field (e.g. 8 weeks, 3 months)
-  complianceEndDate?: string; // Date field (YYYY-MM-DD, Optional)
+  complianceEndDate?: string; // Date field (YYYY-MM-DD)
   actionTakenDetailsForCompliance?: string; // Text field
   complianceStatus?: ComplianceStatusType; // Dropdown: Complied | Pending
-  remarks?: string; // Text field (Optional)
+  remarks?: string; // Text field
 
-  // B.5. Final Result
+  // B.5. Disposal & Appeal Track (Stage 5)
   finalResult: YesNoType; // Dropdown: Yes | No (Concluded / Disposed?)
-  finalResultOrder?: string; // Text field
+  finalResultOrder?: string; // Text field (Final Order details)
   finalOrderDate?: string; // Date field (YYYY-MM-DD)
-  adverseToDepartment: YesNoType; // Dropdown: Yes | No
-  gpOpinion: GPOpinionType; // Dropdown: Pending | Not Recommended | Recommended | Not Required
-
-  // B.6. Appeal
-  appealFiled: YesNoType; // Dropdown: Yes | No
-  appealFiledDate?: string; // Date field (YYYY-MM-DD, Conditional: Appeal Filed = Yes)
+  adverseToDepartment: YesNoType; // Dropdown: Yes | No | Neutral
+  gpOpinion: GPOpinionType; // Dropdown: Opinion Pending | Recommended for Appeal | Not Recommended for Appeal | Not Required
+  appealFiled: YesNoType; // Dropdown: Yes | No | Under Proposal
+  appealFiledDate?: string; // Date field (YYYY-MM-DD)
   linkedAppealCaseId?: string; // ID of the linked appeal case if generated
-
-  // B.7. Final-Order Compliance
-  finalOrderComplianceActionGiven?: string; // Text field: Compliance Action Given in Final Order
-  finalOrderComplianceAction?: YesNoType; // Dropdown: Yes | No
-  finalOrderCompliancePeriod?: string; // Text field: e.g. 12 weeks
-  finalOrderComplianceEndDate?: string; // Date field (YYYY-MM-DD, Optional)
-  finalOrderComplianceActionTaken?: string; // Text field: Details of compliance action taken
-  finalOrderComplianceStatus?: ComplianceStatusType; // Dropdown: Complied | Pending
-  finalOrderRemarks?: string; // Text field (Optional)
+  finalOrderRemarks?: string; // Text field (Final Judgment Summary & Remarks)
 
   // System & Audit Metadata
+  latestOrderFinalOrder?: string;
+  latestOrderDate?: string;
+  finalOrderComplianceActionGiven?: string;
+  finalOrderComplianceAction?: YesNoType;
+  finalOrderCompliancePeriod?: string;
+  finalOrderComplianceEndDate?: string;
+  finalOrderComplianceActionTaken?: string;
+  finalOrderComplianceStatus?: ComplianceStatusType;
   lawyerId?: string;
   lawyerName?: string;
   delete_status?: string;

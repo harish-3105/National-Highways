@@ -10,8 +10,6 @@ import { LegalMasterData } from '@/app/api/legal/master-data/route';
 import {
   Search,
   Plus,
-  FileText,
-  Gavel,
   Eye,
   Edit3,
   Trash2,
@@ -21,10 +19,11 @@ import {
   Archive,
   SlidersHorizontal,
   Scale,
-  Clock,
-  ShieldAlert,
-  AlertTriangle,
   Sparkles,
+  FileText,
+  Gavel,
+  AlertTriangle,
+  Clock,
 } from 'lucide-react';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 
@@ -44,7 +43,6 @@ export const LegalDashboard: React.FC = () => {
     rawItems: [],
     circles: [],
     divisions: [],
-    categories: [],
     caseTypes: [],
     caseStatuses: [],
     casePertainsTo: [],
@@ -53,7 +51,6 @@ export const LegalDashboard: React.FC = () => {
     lawOfficers: [],
     petitionTypes: [],
     convertedCategories: [],
-    appealLevels: [],
     appealCaseTypes: [],
     appellateCourts: [],
     condonationOfDelays: [],
@@ -62,7 +59,7 @@ export const LegalDashboard: React.FC = () => {
     complianceStatuses: [],
   });
 
-  const fetchMasterData = async () => {
+  const fetchMasterData = useCallback(async () => {
     try {
       const res = await fetch('/api/legal/master-data');
       const data = await res.json();
@@ -72,10 +69,25 @@ export const LegalDashboard: React.FC = () => {
     } catch (err) {
       console.warn('Legal master data fetch note:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchMasterData();
+    let isMounted = true;
+    const load = async () => {
+      try {
+        const res = await fetch('/api/legal/master-data');
+        const data = await res.json();
+        if (isMounted && data && Array.isArray(data.caseTypes)) {
+          setMasterData(data);
+        }
+      } catch (err) {
+        console.warn('Legal master data fetch note:', err);
+      }
+    };
+    load();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Search & Filter state
@@ -113,8 +125,33 @@ export const LegalDashboard: React.FC = () => {
   }, [filterCircle, filterDivision, filterClassification, filterCurrentStatus, searchTerm, showArchived]);
 
   useEffect(() => {
-    fetchCases();
-  }, [fetchCases]);
+    let isMounted = true;
+    const load = async () => {
+      try {
+        const params = new URLSearchParams();
+        if (filterCircle) params.set('circle', filterCircle);
+        if (filterDivision) params.set('division', filterDivision);
+        if (filterClassification) params.set('classification', filterClassification);
+        if (filterCurrentStatus) params.set('status', filterCurrentStatus);
+        if (searchTerm) params.set('search', searchTerm);
+        if (showArchived) params.set('includeDeleted', 'true');
+
+        const res = await fetch(`/api/legal?${params.toString()}`);
+        const data = await res.json();
+        if (isMounted && data.success && data.cases) {
+          setCases(data.cases);
+        }
+      } catch (err) {
+        console.error('Failed to fetch legal cases:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, [filterCircle, filterDivision, filterClassification, filterCurrentStatus, searchTerm, showArchived]);
 
   const handleCreateNew = () => {
     setSelectedCaseForEdit(null);
@@ -159,7 +196,6 @@ export const LegalDashboard: React.FC = () => {
       const appealCaseInit: Partial<LegalCaseData> = {
         caseClassification: 'Appeal Case',
         appealInfo: {
-          appealLevel: '',
           appealCaseType: '',
           appealCaseNumber: '',
           appealYear: '',
@@ -175,24 +211,23 @@ export const LegalDashboard: React.FC = () => {
         division: savedData.division || '',
         caseNumber: '',
         caseYear: '',
-        category: '',
         nameOfCourt: '',
-        petitionerNames: savedData.category === 'Filed Against Department' ? savedData.respondentNames : savedData.petitionerNames,
-        respondentNames: savedData.category === 'Filed Against Department' ? savedData.petitionerNames : savedData.respondentNames,
+        petitionerNames: savedData.respondentNames || '',
+        respondentNames: savedData.petitionerNames || '',
         casePertainsTo: savedData.casePertainsTo || '',
         natureOfCase: savedData.natureOfCase || '',
         briefOfPrayer: `Appeal in ${savedData.caseNumber}: ${savedData.briefOfPrayer}`,
         presentStage: '',
         currentStatus: '',
-        caRequired: '' as any,
-        caFiled: '' as any,
+        caRequired: '',
+        caFiled: '',
         caDueDate: '',
         caFiledDate: '',
-        complianceRequired: '' as any,
-        finalResult: '' as any,
-        adverseToDepartment: '' as any,
-        gpOpinion: '' as any,
-        appealFiled: '' as any,
+        complianceRequired: '',
+        finalResult: '',
+        adverseToDepartment: '',
+        gpOpinion: '',
+        appealFiled: '',
       };
 
       setSelectedCaseForEdit(appealCaseInit as LegalCaseData);
@@ -546,7 +581,7 @@ export const LegalDashboard: React.FC = () => {
 
       {/* FILTER CONTROLS */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3">
           {/* Search Input */}
           <div className="relative md:col-span-2">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -554,6 +589,7 @@ export const LegalDashboard: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by case no, court, petitioner, prayer..."
               className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -576,6 +612,15 @@ export const LegalDashboard: React.FC = () => {
                 setFilterCircle(val === 'All Circles' ? '' : val);
                 setFilterDivision('');
               }}
+            />
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <SearchableSelect
+              options={['All Statuses', ...(masterData?.caseStatuses || [])]}
+              value={filterCurrentStatus || 'All Statuses'}
+              onChange={(val) => setFilterCurrentStatus(val === 'All Statuses' ? '' : val)}
             />
           </div>
 

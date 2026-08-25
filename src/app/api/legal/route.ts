@@ -4,69 +4,78 @@ import { LegalCaseData } from '@/types/legal';
 
 export const dynamic = 'force-dynamic';
 
-// In-memory fallback store for dev resiliency
-let inMemoryLegalStore: LegalCaseData[] = [];
+// In-memory runtime cache for development
+const inMemoryLegalStore: LegalCaseData[] = [];
 
-function mapDbRowToLegalCase(item: any): LegalCaseData {
+function mapDbRowToLegalCase(item: Record<string, unknown>): LegalCaseData {
+  const appealInfo = (item.appeal_info as LegalCaseData['appealInfo']) || undefined;
+  const postHearing = (item.post_hearing_details as Record<string, unknown>) || undefined;
+  const caDetails = (item.counter_affidavit_details as Record<string, unknown>) || undefined;
+
+  const getStr = (val: unknown, fallback = ''): string => {
+    if (val === null || val === undefined) return fallback;
+    return String(val);
+  };
+
   return {
     id: item.id ? String(item.id) : `lc-${Date.now()}`,
-    caseClassification: item.case_classification || (item.appeal_info ? 'Appeal Case' : 'Normal Case'),
-    appealInfo: item.appeal_info || undefined,
-    caseType: item.case_type || 'Writ Petition (WP)',
-    circle: item.circle || 'Chennai',
-    division: item.division || 'Chennai City Division',
-    caseNumber: item.case_number || '',
-    caseYear: item.case_year || String(new Date().getFullYear()),
-    category: item.category || 'Filed Against Department',
-    nameOfCourt: item.name_of_court || 'High Court of Madras',
-    petitionerNames: item.petitioner_names || item.petitioner_name || item.name_of_petitioner || '',
-    respondentNames: item.respondent_names || item.name_of_respondent || item.respondent_name || 'Highways Department',
-    casePertainsTo: item.case_pertains_to || 'GOTN',
-    natureOfCase: item.nature_of_case || 'Work',
-    specifyNatureOfCase: item.specify_nature_of_case || '',
-    briefOfPrayer: item.brief_of_prayer || '',
-    financialImplication: item.financial_implication || '',
-    presentStage: item.present_stage || item.case_details_present_status || 'Notice / Admission',
-    currentStatus: item.current_status || item.status || 'Pending',
-    caRequired: item.ca_required || 'Yes',
-    caFiled: item.ca_filed || item.counter_affidavit_filed || 'No',
-    caDueDate: item.ca_due_date || '',
-    caFiledDate: item.ca_filed_date || item.counter_affidavit_details?.dateOfFiling || '',
-    lastHearingDate: item.last_hearing_date || item.counter_affidavit_details?.lastHearingDate || '',
-    nextHearingDate: item.next_hearing_date || item.counter_affidavit_details?.nextHearingDate || '',
-    nextListingPurpose: item.next_listing_purpose || '',
-    interimOrderDirection: item.interim_order_direction || item.post_hearing_details?.interimOrFinalOrder || '',
-    interimOrderDate: item.interim_order_date || item.post_hearing_details?.orderDate || '',
-    latestOrderFinalOrder: item.latest_order_final_order || '',
-    latestOrderDate: item.latest_order_date || '',
-    complianceRequired: item.compliance_required || 'No',
-    complianceAction: item.compliance_action || '',
-    compliancePeriod: item.compliance_period || item.post_hearing_details?.compliancePeriod || '',
-    complianceEndDate: item.compliance_end_date || item.post_hearing_details?.endDateForCompliance || '',
-    actionTakenDetailsForCompliance: item.action_taken_details_for_compliance || item.post_hearing_details?.statusOfActionTakenForCompliance || '',
-    complianceStatus: item.compliance_status || 'Pending',
-    remarks: item.remarks || '',
-    finalResult: item.final_result || 'No',
-    finalResultOrder: item.final_result_order || '',
-    finalOrderDate: item.final_order_date || '',
-    adverseToDepartment: item.adverse_to_department || 'No',
-    gpOpinion: item.gp_opinion || 'Pending',
-    appealFiled: item.appeal_filed || 'No',
-    appealFiledDate: item.appeal_filed_date || '',
-    linkedAppealCaseId: item.linked_appeal_case_id || '',
-    finalOrderComplianceActionGiven: item.final_order_compliance_action_given || '',
-    finalOrderComplianceAction: item.final_order_compliance_action || 'No',
-    finalOrderCompliancePeriod: item.final_order_compliance_period || '',
-    finalOrderComplianceEndDate: item.final_order_compliance_end_date || '',
-    finalOrderComplianceActionTaken: item.final_order_compliance_action_taken || '',
-    finalOrderComplianceStatus: item.final_order_compliance_status || 'Pending',
-    finalOrderRemarks: item.final_order_remarks || '',
-    delete_status: item.delete_status || 'ACTIVE',
+    caseClassification: getStr(item.case_classification, item.appeal_info ? 'Appeal Case' : 'Normal Case') as LegalCaseData['caseClassification'],
+    appealInfo,
+    caseType: getStr(item.case_type),
+    circle: getStr(item.circle),
+    division: getStr(item.division),
+    caseNumber: getStr(item.case_number),
+    caseYear: getStr(item.case_year),
+    category: getStr(item.category),
+    nameOfCourt: getStr(item.name_of_court),
+    petitionerNames: getStr(item.petitioner_names || item.petitioner_name || item.name_of_petitioner),
+    respondentNames: getStr(item.respondent_names || item.name_of_respondent || item.respondent_name),
+    casePertainsTo: getStr(item.case_pertains_to),
+    natureOfCase: getStr(item.nature_of_case),
+    specifyNatureOfCase: getStr(item.specify_nature_of_case),
+    briefOfPrayer: getStr(item.brief_of_prayer),
+    financialImplication: getStr(item.financial_implication),
+    presentStage: getStr(item.present_stage || item.case_details_present_status),
+    currentStatus: getStr(item.current_status || item.status),
+    caRequired: getStr(item.ca_required),
+    caFiled: getStr(item.ca_filed || item.counter_affidavit_filed),
+    caDueDate: getStr(item.ca_due_date),
+    caFiledDate: getStr(item.ca_filed_date || caDetails?.dateOfFiling),
+    lastHearingDate: getStr(item.last_hearing_date || caDetails?.lastHearingDate),
+    nextHearingDate: getStr(item.next_hearing_date || caDetails?.nextHearingDate),
+    nextListingPurpose: getStr(item.next_listing_purpose),
+    interimOrderDirection: getStr(item.interim_order_direction || postHearing?.interimOrFinalOrder),
+    interimOrderDate: getStr(item.interim_order_date || postHearing?.orderDate),
+    latestOrderFinalOrder: getStr(item.latest_order_final_order),
+    latestOrderDate: getStr(item.latest_order_date),
+    complianceRequired: getStr(item.compliance_required),
+    complianceAction: getStr(item.compliance_action),
+    compliancePeriod: getStr(item.compliance_period || postHearing?.compliancePeriod),
+    complianceEndDate: getStr(item.compliance_end_date || postHearing?.endDateForCompliance),
+    actionTakenDetailsForCompliance: getStr(item.action_taken_details_for_compliance || postHearing?.statusOfActionTakenForCompliance),
+    complianceStatus: getStr(item.compliance_status),
+    remarks: getStr(item.remarks),
+    finalResult: getStr(item.final_result),
+    finalResultOrder: getStr(item.final_result_order),
+    finalOrderDate: getStr(item.final_order_date),
+    adverseToDepartment: getStr(item.adverse_to_department),
+    gpOpinion: getStr(item.gp_opinion),
+    appealFiled: getStr(item.appeal_filed),
+    appealFiledDate: getStr(item.appeal_filed_date),
+    linkedAppealCaseId: getStr(item.linked_appeal_case_id),
+    finalOrderComplianceActionGiven: getStr(item.final_order_compliance_action_given),
+    finalOrderComplianceAction: getStr(item.final_order_compliance_action),
+    finalOrderCompliancePeriod: getStr(item.final_order_compliance_period),
+    finalOrderComplianceEndDate: getStr(item.final_order_compliance_end_date),
+    finalOrderComplianceActionTaken: getStr(item.final_order_compliance_action_taken),
+    finalOrderComplianceStatus: getStr(item.final_order_compliance_status),
+    finalOrderRemarks: getStr(item.final_order_remarks),
+    delete_status: getStr(item.delete_status, 'ACTIVE'),
     isDeleted: item.delete_status === 'DELETED' || item.is_deleted === true,
-    createdBy: item.created_by || '',
-    createdAt: item.created_at || new Date().toISOString(),
-    updatedBy: item.updated_by || '',
-    updatedAt: item.updated_at || new Date().toISOString(),
+    createdBy: getStr(item.created_by),
+    createdAt: getStr(item.created_at, new Date().toISOString()),
+    updatedBy: getStr(item.updated_by),
+    updatedAt: getStr(item.updated_at, new Date().toISOString()),
   };
 }
 
@@ -111,7 +120,7 @@ export async function GET(req: NextRequest) {
       if (!error && Array.isArray(data)) {
         casesList = data.map(mapDbRowToLegalCase);
       } else if (error) {
-        console.warn('Notice: Falling back to inMemory store for legal cases:', error.message);
+        console.warn('Notice: legal_cases DB read error:', error.message);
         casesList = [...inMemoryLegalStore];
       }
     } else {
@@ -175,15 +184,15 @@ export async function POST(req: NextRequest) {
         division: body.division,
         case_number: body.caseNumber,
         case_year: body.caseYear,
-        category: body.category,
+        category: body.category || '',
         name_of_court: body.nameOfCourt,
         petitioner_names: body.petitionerNames,
         respondent_names: body.respondentNames,
-        case_pertains_to: body.casePertainsTo,
+        case_pertains_to: body.casePertainsTo || 'GOTN',
         nature_of_case: body.natureOfCase,
         specify_nature_of_case: body.specifyNatureOfCase || null,
         brief_of_prayer: body.briefOfPrayer,
-        financial_implication: body.financialImplication || null,
+        financial_implication: body.financialImplication ? String(body.financialImplication) : null,
         present_stage: body.presentStage,
         current_status: body.currentStatus,
         ca_required: body.caRequired,
@@ -208,16 +217,16 @@ export async function POST(req: NextRequest) {
         final_result_order: body.finalResultOrder || null,
         final_order_date: body.finalOrderDate || null,
         adverse_to_department: body.adverseToDepartment,
-        gp_opinion: body.gpOpinion,
-        appeal_filed: body.appealFiled,
+        gp_opinion: body.gpOpinion || null,
+        appeal_filed: body.appealFiled || null,
         appeal_filed_date: body.appealFiledDate || null,
         linked_appeal_case_id: body.linkedAppealCaseId || null,
         final_order_compliance_action_given: body.finalOrderComplianceActionGiven || null,
-        final_order_compliance_action: body.finalOrderComplianceAction || 'No',
+        final_order_compliance_action: body.finalOrderComplianceAction || null,
         final_order_compliance_period: body.finalOrderCompliancePeriod || null,
         final_order_compliance_end_date: body.finalOrderComplianceEndDate || null,
         final_order_compliance_action_taken: body.finalOrderComplianceActionTaken || null,
-        final_order_compliance_status: body.finalOrderComplianceStatus || 'Pending',
+        final_order_compliance_status: body.finalOrderComplianceStatus || null,
         final_order_remarks: body.finalOrderRemarks || null,
         delete_status: body.delete_status || 'ACTIVE',
         updated_at: nowIso,
@@ -230,7 +239,12 @@ export async function POST(req: NextRequest) {
           .eq('id', body.id)
           .select();
 
-        if (!error && data && data[0]) {
+        if (error) {
+          console.error('Supabase legal_cases update error:', error);
+          return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        }
+
+        if (data && data[0]) {
           return NextResponse.json({ success: true, case: mapDbRowToLegalCase(data[0]), mode: 'UPDATE' });
         }
       } else {
@@ -239,7 +253,12 @@ export async function POST(req: NextRequest) {
           .insert([payload])
           .select();
 
-        if (!error && data && data[0]) {
+        if (error) {
+          console.error('Supabase legal_cases insert error:', error);
+          return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        }
+
+        if (data && data[0]) {
           return NextResponse.json({ success: true, case: mapDbRowToLegalCase(data[0]), mode: 'CREATE' });
         }
       }
@@ -271,20 +290,23 @@ export async function DELETE(req: NextRequest) {
 
     const supabase = await createClient();
     if (supabase && !id.startsWith('lc-')) {
-      await supabase
+      const { error } = await supabase
         .from('legal_cases')
         .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
         .eq('id', id);
+
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
     }
 
-    // In-memory update
     const idx = inMemoryLegalStore.findIndex((c) => c.id === id);
     if (idx >= 0) {
       inMemoryLegalStore[idx].delete_status = 'DELETED';
       inMemoryLegalStore[idx].isDeleted = true;
     }
 
-    return NextResponse.json({ success: true, message: `Case ${id} soft-deleted` });
+    return NextResponse.json({ success: true, message: 'Case marked as deleted' });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });

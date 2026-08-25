@@ -1,13 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   LegalCaseData,
   AppealCaseInformation,
   CaseClassificationType,
-  YesNoType,
-  GPOpinionType,
-  ComplianceStatusType,
 } from '@/types/legal';
 import { calculateAppealDelay } from '@/lib/legal/masterData';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
@@ -22,15 +19,10 @@ import {
   Clock,
   CheckCircle2,
   AlertTriangle,
-  Sparkles,
-  ShieldAlert,
   Calendar,
-  Building,
-  Check,
   ChevronRight,
   ChevronLeft,
   LockKeyhole,
-  AlertCircle,
 } from 'lucide-react';
 
 interface CaseEntryFormProps {
@@ -73,16 +65,16 @@ const STAGES: StageDefinition[] = [
   },
   {
     id: 'hearing_listing',
-    label: 'Hearing Schedule',
+    label: 'Hearing Schedule & Status',
     step: 'Stage 3',
-    subtitle: 'Listing purpose, previous & upcoming court appearance dates',
+    subtitle: 'Present stage, current status & hearing schedule',
     icon: Calendar,
   },
   {
     id: 'interim_compliance',
     label: 'Interim Orders & Compliance',
     step: 'Stage 4',
-    subtitle: 'Court interim directions, time limits & departmental actions taken',
+    subtitle: 'Court interim directions, compliance period & departmental actions',
     icon: Clock,
   },
   {
@@ -101,7 +93,6 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     appealInfo: initial?.appealInfo
       ? { ...initial.appealInfo }
       : {
-          appealLevel: '',
           appealCaseType: '',
           appealCaseNumber: '',
           appealYear: '',
@@ -117,7 +108,6 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     division: initial?.division || '',
     caseNumber: initial?.caseNumber || '',
     caseYear: initial?.caseYear || '',
-    category: initial?.category || '',
     nameOfCourt: initial?.nameOfCourt || '',
     petitionerNames: initial?.petitionerNames || '',
     respondentNames: initial?.respondentNames || '',
@@ -128,8 +118,8 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     financialImplication: initial?.financialImplication || '',
     presentStage: initial?.presentStage || '',
     currentStatus: initial?.currentStatus || '',
-    caRequired: initial?.caRequired || ('' as any),
-    caFiled: initial?.caFiled || ('' as any),
+    caRequired: initial?.caRequired || '',
+    caFiled: initial?.caFiled || '',
     caDueDate: initial?.caDueDate || '',
     caFiledDate: initial?.caFiledDate || '',
     lastHearingDate: initial?.lastHearingDate || '',
@@ -139,27 +129,27 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     interimOrderDate: initial?.interimOrderDate || '',
     latestOrderFinalOrder: initial?.latestOrderFinalOrder || '',
     latestOrderDate: initial?.latestOrderDate || '',
-    complianceRequired: initial?.complianceRequired || ('' as any),
+    complianceRequired: initial?.complianceRequired || '',
     complianceAction: initial?.complianceAction || '',
     compliancePeriod: initial?.compliancePeriod || '',
     complianceEndDate: initial?.complianceEndDate || '',
     actionTakenDetailsForCompliance: initial?.actionTakenDetailsForCompliance || '',
-    complianceStatus: initial?.complianceStatus || ('' as any),
+    complianceStatus: initial?.complianceStatus || '',
     remarks: initial?.remarks || '',
-    finalResult: initial?.finalResult || ('' as any),
+    finalResult: initial?.finalResult || '',
     finalResultOrder: initial?.finalResultOrder || '',
     finalOrderDate: initial?.finalOrderDate || '',
-    adverseToDepartment: initial?.adverseToDepartment || ('' as any),
-    gpOpinion: initial?.gpOpinion || ('' as any),
-    appealFiled: initial?.appealFiled || ('' as any),
+    adverseToDepartment: initial?.adverseToDepartment || '',
+    gpOpinion: initial?.gpOpinion || '',
+    appealFiled: initial?.appealFiled || '',
     appealFiledDate: initial?.appealFiledDate || '',
     linkedAppealCaseId: initial?.linkedAppealCaseId || '',
     finalOrderComplianceActionGiven: initial?.finalOrderComplianceActionGiven || '',
-    finalOrderComplianceAction: initial?.finalOrderComplianceAction || ('' as any),
+    finalOrderComplianceAction: initial?.finalOrderComplianceAction || '',
     finalOrderCompliancePeriod: initial?.finalOrderCompliancePeriod || '',
     finalOrderComplianceEndDate: initial?.finalOrderComplianceEndDate || '',
     finalOrderComplianceActionTaken: initial?.finalOrderComplianceActionTaken || '',
-    finalOrderComplianceStatus: initial?.finalOrderComplianceStatus || ('' as any),
+    finalOrderComplianceStatus: initial?.finalOrderComplianceStatus || '',
     finalOrderRemarks: initial?.finalOrderRemarks || '',
   };
 };
@@ -168,7 +158,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   initialData,
   masterData,
   onSave,
-  onSaveAndCreateAppeal,
   onCancel,
 }) => {
   const [activeStageIndex, setActiveStageIndex] = useState<number>(0);
@@ -176,16 +165,14 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Dynamic Master Data Options
+  // Dynamic Master Data Options directly from database (zero hardcoded defaults)
   const circles = masterData?.circles || [];
   const caseTypes = masterData?.caseTypes || [];
-  const categories = masterData?.categories || [];
   const courts = masterData?.courtNames || [];
   const casePertainsToList = masterData?.casePertainsTo || [];
   const natureOfCasesList = masterData?.natureOfCases || [];
   const presentStages = masterData?.presentStages || [];
   const currentStatuses = masterData?.caseStatuses || [];
-  const appealLevels = masterData?.appealLevels || [];
   const appealCaseTypes = masterData?.appealCaseTypes || [];
   const appellateCourts = masterData?.appellateCourts || [];
   const condonationDelays = masterData?.condonationOfDelays || [];
@@ -196,44 +183,25 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     return masterData?.divisions || [];
   }, [masterData?.divisions]);
 
-  // Auto-calculate Appeal Delay
-  useEffect(() => {
-    if (formData.caseClassification === 'Appeal Case' && formData.appealInfo) {
-      if (formData.appealInfo.appealFilingDate && formData.appealInfo.limitationDueDate) {
-        const { isDelayed, delayDays } = calculateAppealDelay(
-          formData.appealInfo.appealFilingDate,
-          formData.appealInfo.limitationDueDate
-        );
-
-        if (
-          formData.appealInfo.delayInFilingAppeal !== isDelayed ||
-          formData.appealInfo.delayPeriodDays !== delayDays
-        ) {
-          setFormData((prev) => ({
-            ...prev,
-            appealInfo: {
-              ...prev.appealInfo!,
-              delayInFilingAppeal: isDelayed,
-              delayPeriodDays: delayDays,
-            },
-          }));
-        }
-      }
-    }
-  }, [
-    formData.caseClassification,
-    formData.appealInfo?.appealFilingDate,
-    formData.appealInfo?.limitationDueDate,
-    formData.appealInfo?.delayInFilingAppeal,
-    formData.appealInfo?.delayPeriodDays,
-  ]);
+  // Helper to determine if GP Opinion qualifies for Appeal Filing
+  const isAppealRecommended = (opinion: string | undefined): boolean => {
+    if (!opinion) return false;
+    const clean = opinion.trim().toLowerCase();
+    if (clean.includes('not recommended')) return false;
+    return (
+      clean === 'recommended for appeal' ||
+      clean === 'recommended' ||
+      clean === 'not required' ||
+      clean === 'fit for appeal'
+    );
+  };
 
   const handleChange = <K extends keyof LegalCaseData>(field: K, value: LegalCaseData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
+    if (errors[field as string]) {
       setErrors((prev) => {
         const next = { ...prev };
-        delete next[field];
+        delete next[field as string];
         return next;
       });
     }
@@ -243,13 +211,32 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     field: K,
     value: AppealCaseInformation[K]
   ) => {
-    setFormData((prev) => ({
-      ...prev,
-      appealInfo: {
-        ...(prev.appealInfo || (getDefaultInitialState().appealInfo as AppealCaseInformation)),
-        [field]: value,
-      },
-    }));
+    setFormData((prev) => {
+      const currentAppeal = prev.appealInfo || (getDefaultInitialState().appealInfo as AppealCaseInformation);
+      const updatedAppeal = { ...currentAppeal, [field]: value };
+
+      if (updatedAppeal.appealFilingDate && updatedAppeal.limitationDueDate) {
+        const { isDelayed, delayDays } = calculateAppealDelay(
+          updatedAppeal.appealFilingDate,
+          updatedAppeal.limitationDueDate
+        );
+        updatedAppeal.delayInFilingAppeal = isDelayed;
+        updatedAppeal.delayPeriodDays = delayDays;
+      }
+
+      return {
+        ...prev,
+        appealInfo: updatedAppeal,
+      };
+    });
+
+    if (errors[field as string]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[field as string];
+        return next;
+      });
+    }
   };
 
   const handleCircleChange = (newCircle: string) => {
@@ -258,46 +245,164 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       circle: newCircle,
       division: '',
     }));
+    if (errors.circle) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.circle;
+        return next;
+      });
+    }
   };
 
   // -------------------------------------------------------------
-  // STAGE-GATED VALIDATION ENGINE
+  // STAGE-GATED PROGRESSIVE VALIDATION ENGINE
   // -------------------------------------------------------------
   const validateSingleStage = (stageIdx: number): Record<string, string> => {
     const stageErrors: Record<string, string> = {};
 
     if (stageIdx === 0) {
-      // Stage 1: Case Registry (Baseline)
-      if (!formData.caseClassification) stageErrors.caseClassification = 'Classification is required (Stage 1).';
-      if (formData.caseClassification === 'Appeal Case') {
-        if (!formData.appealInfo?.appealCaseNumber?.trim()) stageErrors.appealCaseNumber = 'Appeal Case Number is required (Stage 1).';
-        if (!formData.appealInfo?.appealYear?.trim()) stageErrors.appealYear = 'Appeal Year is required (Stage 1).';
+      // Stage 1: Case Registry (Fully Mandatory)
+      if (!formData.caseClassification) {
+        stageErrors.caseClassification = 'Case Classification is required (Stage 1).';
       }
-      if (!formData.caseType) stageErrors.caseType = 'Case Type is required (Stage 1).';
-      if (!formData.circle) stageErrors.circle = 'Circle is required (Stage 1).';
-      if (!formData.division) stageErrors.division = 'Division is required (Stage 1).';
-      if (!formData.caseNumber?.trim()) stageErrors.caseNumber = 'Case Number is required (Stage 1).';
-      if (!formData.caseYear?.trim()) stageErrors.caseYear = 'Case Year is required (Stage 1).';
-      if (!formData.nameOfCourt) stageErrors.nameOfCourt = 'Name of Court is required (Stage 1).';
-      if (!formData.petitionerNames?.trim()) stageErrors.petitionerNames = 'Petitioner Name(s) is required (Stage 1).';
-      if (!formData.respondentNames?.trim()) stageErrors.respondentNames = 'Respondent Name(s) is required (Stage 1).';
+
+      if (formData.caseClassification === 'Appeal Case') {
+        if (!formData.appealInfo?.appealCaseType?.trim()) {
+          stageErrors.appealCaseType = 'Appeal Case Type is required (Stage 1).';
+        }
+        if (!formData.appealInfo?.appellateCourt?.trim()) {
+          stageErrors.appellateCourt = 'Appellate Court is required (Stage 1).';
+        }
+        if (!formData.appealInfo?.appealCaseNumber?.trim()) {
+          stageErrors.appealCaseNumber = 'Appeal Case Number is required (Stage 1).';
+        }
+        if (!formData.appealInfo?.appealYear?.trim()) {
+          stageErrors.appealYear = 'Appeal Year is required (Stage 1).';
+        } else {
+          const yr = Number(formData.appealInfo.appealYear);
+          const currentYear = new Date().getFullYear();
+          if (isNaN(yr) || yr < 1900 || yr > currentYear) {
+            stageErrors.appealYear = `Appeal Year must be a valid 4-digit year (up to ${currentYear}).`;
+          }
+        }
+        if (!formData.appealInfo?.appealFilingDate?.trim()) {
+          stageErrors.appealFilingDate = 'Appeal Filing Date is required (Stage 1).';
+        }
+        if (!formData.appealInfo?.limitationDueDate?.trim()) {
+          stageErrors.limitationDueDate = 'Limitation Due Date is required (Stage 1).';
+        }
+        if (!formData.appealInfo?.condonationOfDelay?.trim()) {
+          stageErrors.condonationOfDelay = 'Condonation of Delay is required (Stage 1).';
+        }
+      }
+
+      if (!formData.circle?.trim()) {
+        stageErrors.circle = 'Circle Jurisdiction is required (Stage 1).';
+      }
+      if (!formData.division?.trim()) {
+        stageErrors.division = 'Division Jurisdiction is required (Stage 1).';
+      }
+      if (!formData.nameOfCourt?.trim()) {
+        stageErrors.nameOfCourt = 'Name of Court / Forum is required (Stage 1).';
+      }
+      if (!formData.caseType?.trim()) {
+        stageErrors.caseType = 'Case Type is required (Stage 1).';
+      }
+      if (!formData.caseNumber?.trim()) {
+        stageErrors.caseNumber = 'Case Number is required (Stage 1).';
+      }
+      if (!formData.caseYear?.trim()) {
+        stageErrors.caseYear = 'Case Filing Year is required (Stage 1).';
+      } else {
+        const yr = Number(formData.caseYear);
+        const currentYear = new Date().getFullYear();
+        if (isNaN(yr) || yr < 1900 || yr > currentYear) {
+          stageErrors.caseYear = `Case Year must be a valid 4-digit year (up to ${currentYear}).`;
+        }
+      }
+      if (!formData.petitionerNames?.trim()) {
+        stageErrors.petitionerNames = 'Petitioner Name(s) is required (Stage 1).';
+      }
+      if (!formData.respondentNames?.trim()) {
+        stageErrors.respondentNames = 'Respondent Name(s) is required (Stage 1).';
+      }
+      if (!formData.casePertainsTo?.trim()) {
+        stageErrors.casePertainsTo = 'Case Pertains To is required (Stage 1).';
+      }
+      if (!formData.natureOfCase?.trim()) {
+        stageErrors.natureOfCase = 'Nature of Case is required (Stage 1).';
+      }
+      const isNatureOther =
+        formData.natureOfCase?.toLowerCase() === 'others' ||
+        formData.natureOfCase?.toLowerCase() === 'other';
+      if (isNatureOther && !formData.specifyNatureOfCase?.trim()) {
+        stageErrors.specifyNatureOfCase = 'Please specify the custom nature of case (Stage 1).';
+      }
+      if (!formData.briefOfPrayer?.trim()) {
+        stageErrors.briefOfPrayer = 'Brief of Prayer is required (Stage 1).';
+      }
     } else if (stageIdx === 1) {
-      // Stage 2: CA Details
-      if (formData.caFiled === 'Yes' && !formData.caFiledDate) {
-        stageErrors.caFiledDate = 'CA Filed Date is required when CA Filed = Yes (Stage 2).';
+      // Stage 2: Counter Affidavit & Financial Implication
+      if (formData.caRequired === 'Yes') {
+        if (!formData.caFiled) {
+          stageErrors.caFiled = 'CA Filed status is required when CA is required (Stage 2).';
+        }
+        if (formData.caFiled === 'Yes' && !formData.caFiledDate) {
+          stageErrors.caFiledDate = 'CA Filed Date is required when CA is filed (Stage 2).';
+        }
       }
     } else if (stageIdx === 2) {
-      // Stage 3: Hearing details
+      // Stage 3: Hearing Schedule & Status (Validation: Hearing Dates >= Filing Date)
+      const baseFilingDate =
+        formData.caseClassification === 'Appeal Case'
+          ? formData.appealInfo?.appealFilingDate
+          : formData.caFiledDate || '';
+
+      if (baseFilingDate) {
+        if (formData.lastHearingDate && formData.lastHearingDate < baseFilingDate) {
+          stageErrors.lastHearingDate = `Last Hearing Date (${formData.lastHearingDate}) cannot be earlier than Filing Date (${baseFilingDate}).`;
+        }
+        if (formData.nextHearingDate && formData.nextHearingDate < baseFilingDate) {
+          stageErrors.nextHearingDate = `Next Hearing Date (${formData.nextHearingDate}) cannot be earlier than Filing Date (${baseFilingDate}).`;
+        }
+      }
+
+      if (
+        formData.lastHearingDate &&
+        formData.nextHearingDate &&
+        formData.nextHearingDate < formData.lastHearingDate
+      ) {
+        stageErrors.nextHearingDate = 'Next Hearing Date cannot be earlier than Last Hearing Date.';
+      }
     } else if (stageIdx === 3) {
       // Stage 4: Interim Orders & Compliance
       if (formData.complianceRequired === 'Yes') {
-        if (!formData.complianceAction?.trim()) stageErrors.complianceAction = 'Compliance Action is required (Stage 4).';
-        if (!formData.complianceStatus) stageErrors.complianceStatus = 'Compliance Status is required (Stage 4).';
+        if (!formData.complianceStatus) {
+          stageErrors.complianceStatus = 'Compliance Status is required when Compliance is required (Stage 4).';
+        }
       }
     } else if (stageIdx === 4) {
-      // Stage 5: Final disposal
+      // Stage 5: Final Disposal & Appeal Track
       if (formData.finalResult === 'Yes') {
-        if (!formData.finalOrderDate) stageErrors.finalOrderDate = 'Final Order Date is required when Final Result (Disposed) = Yes (Stage 5).';
+        if (!formData.finalOrderDate) {
+          stageErrors.finalOrderDate = 'Final Order Date is required when Case is Concluded (Stage 5).';
+        }
+        if (!formData.adverseToDepartment) {
+          stageErrors.adverseToDepartment = 'Adverse to Department selection is required (Stage 5).';
+        }
+        if (formData.adverseToDepartment === 'Yes') {
+          if (!formData.gpOpinion) {
+            stageErrors.gpOpinion = 'GP Opinion is required when order is Adverse to Department (Stage 5).';
+          }
+          if (isAppealRecommended(formData.gpOpinion)) {
+            if (!formData.appealFiled) {
+              stageErrors.appealFiled = 'Appeal Filed selection is required (Stage 5).';
+            }
+            if (formData.appealFiled === 'Yes' && !formData.appealFiledDate) {
+              stageErrors.appealFiledDate = 'Appeal Filed Date is required when Appeal is Filed (Stage 5).';
+            }
+          }
+        }
       }
     }
 
@@ -315,13 +420,23 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
   const isStageCompleted = (stageIdx: number): boolean => {
     if (stageIdx === 0) {
-      return Boolean(formData.caseNumber.trim() && formData.circle && formData.division && Object.keys(validateSingleStage(0)).length === 0);
+      return Boolean(
+        formData.caseNumber.trim() &&
+        formData.circle &&
+        formData.division &&
+        formData.nameOfCourt &&
+        formData.caseType &&
+        formData.petitionerNames.trim() &&
+        formData.respondentNames.trim() &&
+        formData.briefOfPrayer.trim() &&
+        Object.keys(validateSingleStage(0)).length === 0
+      );
     }
     if (stageIdx === 1) {
-      return Boolean(formData.caRequired || formData.caFiled);
+      return Boolean(formData.caRequired || formData.caFiled || formData.financialImplication);
     }
     if (stageIdx === 2) {
-      return Boolean(formData.lastHearingDate || formData.nextHearingDate);
+      return Boolean(formData.presentStage || formData.currentStatus || formData.lastHearingDate || formData.nextHearingDate);
     }
     if (stageIdx === 3) {
       return Boolean(formData.interimOrderDirection || formData.complianceRequired);
@@ -383,11 +498,14 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   };
 
   const currentStage = STAGES[activeStageIndex];
+  const isNatureOther =
+    formData.natureOfCase?.toLowerCase() === 'others' ||
+    formData.natureOfCase?.toLowerCase() === 'other';
 
   return (
     <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-6 pb-12">
       {/* Top Header Bar */}
-      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -399,10 +517,10 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
               <Scale className="w-5 h-5 text-blue-600" />
-              {initialData?.id ? 'Edit Legal Case Proceeding' : 'New Legal Case Registration'}
+              {initialData?.id ? 'Edit Legal Case Docket' : 'New Legal Case Registration'}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Highways Legal Cell &bull; High Court, District Courts & Tribunal Docket System
+              Highways Department Legal Proceedings Management System
             </p>
           </div>
         </div>
@@ -411,92 +529,84 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
-            <Save className="w-4 h-4" /> {loading ? 'Saving Docket...' : `Save Progress (${currentStage.step})`}
+            <Save className="w-4 h-4" />
+            {loading ? 'Saving...' : 'Save Legal Case'}
           </button>
         </div>
       </div>
 
-      {/* 5-STAGE LIFECYCLE SUB-NAVIGATION STEPPER BAR */}
-      <div className="bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-          {STAGES.map((stage, idx) => {
-            const Icon = stage.icon;
+      {/* Progressive Stage Stepper Bar */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-xs">
+        <nav className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2" aria-label="Stages">
+          {STAGES.map((stg, idx) => {
+            const Icon = stg.icon;
             const isActive = activeStageIndex === idx;
             const accessible = isStageAccessible(idx);
             const completed = isStageCompleted(idx);
 
             return (
               <button
-                key={stage.id}
+                key={stg.id}
                 type="button"
                 onClick={() => handleStageTabClick(idx)}
                 disabled={!accessible}
-                className={`flex flex-col items-start p-3 rounded-xl text-left transition-all border relative cursor-pointer disabled:cursor-not-allowed ${
+                className={`flex items-center gap-3 p-3 rounded-xl font-semibold text-xs transition-all text-left cursor-pointer disabled:cursor-not-allowed ${
                   isActive
-                    ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-900 dark:text-blue-100 shadow-xs ring-1 ring-blue-500/20'
+                    ? 'bg-blue-600 text-white shadow-xs'
                     : accessible
-                    ? 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    : 'bg-slate-100/50 dark:bg-slate-900/40 border-slate-200/50 dark:border-slate-800/50 text-slate-400 dark:text-slate-600 opacity-60'
+                    ? 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80'
+                    : 'text-slate-400 dark:text-slate-600 opacity-60'
                 }`}
               >
-                <div className="flex items-center justify-between w-full mb-1.5">
-                  <span
-                    className={`text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
-                      isActive
-                        ? 'bg-blue-600 text-white'
-                        : completed
-                        ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    {stage.step}
-                  </span>
-                  {completed ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <div
+                  className={`p-2 rounded-lg shrink-0 ${
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : completed
+                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                  }`}
+                >
+                  {completed && !isActive ? (
+                    <CheckCircle2 className="w-4 h-4" />
                   ) : !accessible ? (
-                    <LockKeyhole className="w-3.5 h-3.5 text-slate-400 dark:text-slate-600" />
+                    <LockKeyhole className="w-4 h-4" />
                   ) : (
-                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
+                    <Icon className="w-4 h-4" />
                   )}
                 </div>
-                <span className="text-xs font-bold truncate w-full">{stage.label}</span>
-                <span className="text-[11px] text-slate-400 dark:text-slate-500 truncate w-full mt-0.5">{stage.subtitle}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-wider font-extrabold opacity-80">
+                      {stg.step}
+                    </span>
+                    {completed && !isActive && (
+                      <span className="text-[9px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded font-bold">
+                        DONE
+                      </span>
+                    )}
+                  </div>
+                  <div className="font-bold truncate mt-0.5">{stg.label}</div>
+                </div>
               </button>
             );
           })}
-        </div>
+        </nav>
       </div>
 
-      {/* Validation Diagnostic Banner */}
-      {Object.keys(errors).length > 0 && (
-        <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl p-4 text-rose-800 dark:text-rose-200 flex items-start gap-3 animate-in fade-in">
-          <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 mt-0.5 shrink-0" />
-          <div className="text-xs">
-            <strong className="font-bold text-sm block mb-1">
-              Please resolve the following required fields ({Object.keys(errors).length}):
-            </strong>
-            <ul className="list-disc pl-5 space-y-0.5 font-medium">
-              {Object.entries(errors).map(([key, msg]) => (
-                <li key={key}>{msg}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
-
-      {/* STAGE CONTENT PANELS */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+      {/* Active Stage Content Card */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
         {/* Stage Header Banner */}
-        <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 text-white flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-4 sm:p-5 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
             {React.createElement(currentStage.icon, { className: 'w-5 h-5 text-blue-300' })}
             <div>
@@ -510,7 +620,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
         <div className="p-6 space-y-6">
           {/* ========================================================= */}
-          {/* STAGE 1: Case Registry & Scope */}
+          {/* STAGE 1: Case Registry & Scope (Fully Mandatory) */}
           {/* ========================================================= */}
           {activeStageIndex === 0 && (
             <div className="space-y-6">
@@ -537,78 +647,99 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
-              {/* Appeal Case Fields */}
+              {/* Appeal Case Specific Fields (Rendered seamlessly without colored container) */}
               {formData.caseClassification === 'Appeal Case' && (
-                <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/30 rounded-xl border border-indigo-200 dark:border-indigo-800/60 space-y-4">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 block">
+                <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Appellate Jurisdiction Particulars
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Appeal Level</label>
-                      <SearchableSelect
-                        options={appealLevels}
-                        value={formData.appealInfo?.appealLevel || ''}
-                        onChange={(val) => handleAppealInfoChange('appealLevel', val)}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Appeal Case Type</label>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Appeal Case Type <span className="text-rose-500">*</span>
+                      </label>
                       <SearchableSelect
                         options={appealCaseTypes}
                         value={formData.appealInfo?.appealCaseType || ''}
                         onChange={(val) => handleAppealInfoChange('appealCaseType', val)}
                       />
+                      {errors.appealCaseType && <p className="text-[11px] text-rose-500 mt-1">{errors.appealCaseType}</p>}
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Appellate Court</label>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Appellate Court <span className="text-rose-500">*</span>
+                      </label>
                       <SearchableSelect
                         options={appellateCourts}
                         value={formData.appealInfo?.appellateCourt || ''}
                         onChange={(val) => handleAppealInfoChange('appellateCourt', val)}
                       />
+                      {errors.appellateCourt && <p className="text-[11px] text-rose-500 mt-1">{errors.appellateCourt}</p>}
                     </div>
                   </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Appeal Case No *</label>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Appeal Case No <span className="text-rose-500">*</span>
+                      </label>
                       <input
                         type="text"
                         value={formData.appealInfo?.appealCaseNumber || ''}
                         onChange={(e) => handleAppealInfoChange('appealCaseNumber', e.target.value)}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                        required
                       />
+                      {errors.appealCaseNumber && <p className="text-[11px] text-rose-500 mt-1">{errors.appealCaseNumber}</p>}
                     </div>
+
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Appeal Year *</label>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Appeal Year <span className="text-rose-500">*</span>
+                      </label>
                       <input
                         type="text"
                         value={formData.appealInfo?.appealYear || ''}
                         onChange={(e) => handleAppealInfoChange('appealYear', e.target.value)}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                        required
                       />
+                      {errors.appealYear && <p className="text-[11px] text-rose-500 mt-1">{errors.appealYear}</p>}
                     </div>
+
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Appeal Filing Date</label>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Appeal Filing Date <span className="text-rose-500">*</span>
+                      </label>
                       <DatePickerInput
                         value={formData.appealInfo?.appealFilingDate || ''}
                         onChange={(val) => handleAppealInfoChange('appealFilingDate', val)}
                       />
+                      {errors.appealFilingDate && <p className="text-[11px] text-rose-500 mt-1">{errors.appealFilingDate}</p>}
                     </div>
+
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Limitation Due Date</label>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Limitation Due Date <span className="text-rose-500">*</span>
+                      </label>
                       <DatePickerInput
                         value={formData.appealInfo?.limitationDueDate || ''}
                         onChange={(val) => handleAppealInfoChange('limitationDueDate', val)}
                       />
+                      {errors.limitationDueDate && <p className="text-[11px] text-rose-500 mt-1">{errors.limitationDueDate}</p>}
                     </div>
+
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Condonation of Delay</label>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Condonation of Delay <span className="text-rose-500">*</span>
+                      </label>
                       <SearchableSelect
                         options={condonationDelays}
                         value={formData.appealInfo?.condonationOfDelay || ''}
                         onChange={(val) => handleAppealInfoChange('condonationOfDelay', val)}
                       />
+                      {errors.condonationOfDelay && <p className="text-[11px] text-rose-500 mt-1">{errors.condonationOfDelay}</p>}
                     </div>
                   </div>
 
@@ -739,26 +870,145 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
-              {/* Nature, Category & Status */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Jurisdiction & Nature of Case */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Category</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Case Pertains To <span className="text-rose-500">*</span>
+                  </label>
                   <SearchableSelect
-                    options={categories}
-                    value={formData.category}
-                    onChange={(val) => handleChange('category', val)}
+                    options={casePertainsToList}
+                    value={formData.casePertainsTo}
+                    onChange={(val) => handleChange('casePertainsTo', val)}
                   />
+                  {errors.casePertainsTo && <p className="text-[11px] text-rose-500 mt-1">{errors.casePertainsTo}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Nature of Case</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Nature of Case <span className="text-rose-500">*</span>
+                  </label>
                   <SearchableSelect
                     options={natureOfCasesList}
                     value={formData.natureOfCase}
                     onChange={(val) => handleChange('natureOfCase', val)}
                   />
+                  {errors.natureOfCase && <p className="text-[11px] text-rose-500 mt-1">{errors.natureOfCase}</p>}
+                </div>
+              </div>
+
+              {/* Conditional Specify Nature of Case for Others */}
+              {isNatureOther && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Specify Nature of Case <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.specifyNatureOfCase || ''}
+                    onChange={(e) => handleChange('specifyNatureOfCase', e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                    required
+                  />
+                  {errors.specifyNatureOfCase && <p className="text-[11px] text-rose-500 mt-1">{errors.specifyNatureOfCase}</p>}
+                </div>
+              )}
+
+              {/* Brief of Prayer */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Brief of Prayer <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={formData.briefOfPrayer}
+                  onChange={(e) => handleChange('briefOfPrayer', e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                  required
+                />
+                {errors.briefOfPrayer && <p className="text-[11px] text-rose-500 mt-1">{errors.briefOfPrayer}</p>}
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* STAGE 2: Counter Affidavit (CA) & Financial Implication */}
+          {/* ========================================================= */}
+          {activeStageIndex === 1 && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Step 1: CA Required */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">CA Required</label>
+                  <SearchableSelect
+                    options={['Yes', 'No', 'Not Required']}
+                    value={formData.caRequired || ''}
+                    onChange={(val) => handleChange('caRequired', val)}
+                  />
                 </div>
 
+                {/* Step 2: If CA Required = Yes -> Show CA Due Date & CA Filed */}
+                {formData.caRequired === 'Yes' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">CA Due Date</label>
+                      <DatePickerInput
+                        value={formData.caDueDate || ''}
+                        onChange={(val) => handleChange('caDueDate', val)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">CA Filed</label>
+                      <SearchableSelect
+                        options={['Yes', 'No', 'Under Preparation']}
+                        value={formData.caFiled || ''}
+                        onChange={(val) => handleChange('caFiled', val)}
+                      />
+                      {errors.caFiled && <p className="text-[11px] text-rose-500 mt-1">{errors.caFiled}</p>}
+                    </div>
+                  </>
+                )}
+
+                {/* Step 3: If CA Filed = Yes -> Show CA Filed Date */}
+                {formData.caRequired === 'Yes' && formData.caFiled === 'Yes' && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">CA Filed Date</label>
+                    <DatePickerInput
+                      value={formData.caFiledDate || ''}
+                      onChange={(val) => handleChange('caFiledDate', val)}
+                    />
+                    {errors.caFiledDate && <p className="text-[11px] text-rose-500 mt-1">{errors.caFiledDate}</p>}
+                  </div>
+                )}
+              </div>
+
+              {/* Financial Implication (in ₹) positioned after CA Filed Date */}
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="max-w-md">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Financial Implication (in ₹ / Numeric, if any)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={formData.financialImplication !== undefined ? formData.financialImplication : ''}
+                    onChange={(e) => handleChange('financialImplication', e.target.value ? Number(e.target.value) : '')}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* STAGE 3: Hearing Schedule & Present Status */}
+          {/* ========================================================= */}
+          {activeStageIndex === 2 && (
+            <div className="space-y-6">
+              {/* Present Stage & Current Status moved to the TOP of Tab 3 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Present Stage</label>
                   <SearchableSelect
@@ -778,67 +1028,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
-              {/* Brief of Prayer */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Brief of Prayer</label>
-                <textarea
-                  rows={3}
-                  value={formData.briefOfPrayer}
-                  onChange={(e) => handleChange('briefOfPrayer', e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================= */}
-          {/* STAGE 2: Counter Affidavit (CA) */}
-          {/* ========================================================= */}
-          {activeStageIndex === 1 && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">CA Required</label>
-                  <SearchableSelect
-                    options={['Yes', 'No', 'Not Required']}
-                    value={formData.caRequired || ''}
-                    onChange={(val) => handleChange('caRequired', val as any)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">CA Due Date</label>
-                  <DatePickerInput
-                    value={formData.caDueDate || ''}
-                    onChange={(val) => handleChange('caDueDate', val)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">CA Filed</label>
-                  <SearchableSelect
-                    options={['Yes', 'No', 'Under Preparation']}
-                    value={formData.caFiled || ''}
-                    onChange={(val) => handleChange('caFiled', val as any)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">CA Filed Date</label>
-                  <DatePickerInput
-                    value={formData.caFiledDate || ''}
-                    onChange={(val) => handleChange('caFiledDate', val)}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================= */}
-          {/* STAGE 3: Hearing Schedule */}
-          {/* ========================================================= */}
-          {activeStageIndex === 2 && (
-            <div className="space-y-6">
+              {/* Hearing Schedule Dates (Validation: Hearing Date >= Filing Date) */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Last Hearing Date</label>
@@ -846,6 +1036,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     value={formData.lastHearingDate || ''}
                     onChange={(val) => handleChange('lastHearingDate', val)}
                   />
+                  {errors.lastHearingDate && <p className="text-[11px] text-rose-500 mt-1">{errors.lastHearingDate}</p>}
                 </div>
 
                 <div>
@@ -854,6 +1045,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     value={formData.nextHearingDate || ''}
                     onChange={(val) => handleChange('nextHearingDate', val)}
                   />
+                  {errors.nextHearingDate && <p className="text-[11px] text-rose-500 mt-1">{errors.nextHearingDate}</p>}
                 </div>
 
                 <div>
@@ -894,43 +1086,66 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <div>
+              {/* Compliance Required */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div className="max-w-xs">
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Compliance Required</label>
                   <SearchableSelect
                     options={['Yes', 'No', 'Not Applicable']}
                     value={formData.complianceRequired || ''}
-                    onChange={(val) => handleChange('complianceRequired', val as any)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Compliance End Date</label>
-                  <DatePickerInput
-                    value={formData.complianceEndDate || ''}
-                    onChange={(val) => handleChange('complianceEndDate', val)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Compliance Status</label>
-                  <SearchableSelect
-                    options={complianceStatuses}
-                    value={formData.complianceStatus || ''}
-                    onChange={(val) => handleChange('complianceStatus', val as any)}
+                    onChange={(val) => handleChange('complianceRequired', val)}
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Action Taken Details for Compliance</label>
-                <textarea
-                  rows={2}
-                  value={formData.actionTakenDetailsForCompliance || ''}
-                  onChange={(e) => handleChange('actionTakenDetailsForCompliance', e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                />
-              </div>
+              {/* If Compliance Required = Yes -> reveal Compliance Period, Compliance End Date, Status & Action Taken */}
+              {formData.complianceRequired === 'Yes' && (
+                <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800 animate-in fade-in">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Compliance Period (Text)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.compliancePeriod || ''}
+                        onChange={(e) => handleChange('compliancePeriod', e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Compliance End Date (CED)</label>
+                      <DatePickerInput
+                        value={formData.complianceEndDate || ''}
+                        onChange={(val) => handleChange('complianceEndDate', val)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Compliance Status <span className="text-rose-500">*</span>
+                      </label>
+                      <SearchableSelect
+                        options={complianceStatuses}
+                        value={formData.complianceStatus || ''}
+                        onChange={(val) => handleChange('complianceStatus', val)}
+                      />
+                      {errors.complianceStatus && <p className="text-[11px] text-rose-500 mt-1">{errors.complianceStatus}</p>}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Action Taken Details for Compliance</label>
+                    <textarea
+                      rows={2}
+                      value={formData.actionTakenDetailsForCompliance || ''}
+                      onChange={(e) => handleChange('actionTakenDetailsForCompliance', e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -939,116 +1154,150 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
           {/* ========================================================= */}
           {activeStageIndex === 4 && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Case Concluded / Disposed? (Final Result)</label>
-                  <SearchableSelect
-                    options={['Yes', 'No']}
-                    value={formData.finalResult || ''}
-                    onChange={(val) => handleChange('finalResult', val as any)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Final Order Date</label>
-                  <DatePickerInput
-                    value={formData.finalOrderDate || ''}
-                    onChange={(val) => handleChange('finalOrderDate', val)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Adverse to Department?</label>
-                  <SearchableSelect
-                    options={['Yes', 'No', 'Neutral']}
-                    value={formData.adverseToDepartment || ''}
-                    onChange={(val) => handleChange('adverseToDepartment', val as any)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">GP Opinion Received</label>
-                  <SearchableSelect
-                    options={gpOpinions}
-                    value={formData.gpOpinion || ''}
-                    onChange={(val) => handleChange('gpOpinion', val as any)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Appeal Filed?</label>
-                  <SearchableSelect
-                    options={['Yes', 'No', 'Under Proposal']}
-                    value={formData.appealFiled || ''}
-                    onChange={(val) => handleChange('appealFiled', val as any)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Appeal Filed Date</label>
-                  <DatePickerInput
-                    value={formData.appealFiledDate || ''}
-                    onChange={(val) => handleChange('appealFiledDate', val)}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Final Judgment Summary & Remarks</label>
-                <textarea
-                  rows={3}
-                  value={formData.finalOrderRemarks || ''}
-                  onChange={(e) => handleChange('finalOrderRemarks', e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+              {/* Step 1: Case Concluded / Disposed? */}
+              <div className="max-w-xs">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Case Concluded / Disposed?</label>
+                <SearchableSelect
+                  options={['Yes', 'No']}
+                  value={formData.finalResult || ''}
+                  onChange={(val) => handleChange('finalResult', val)}
                 />
               </div>
+
+              {/* If Case Concluded = Yes -> show Final Order, Final Order Date, Adverse to Department? */}
+              {formData.finalResult === 'Yes' && (
+                <div className="space-y-6 pt-2 border-t border-slate-100 dark:border-slate-800 animate-in fade-in">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Final Order</label>
+                      <input
+                        type="text"
+                        value={formData.finalResultOrder || ''}
+                        onChange={(e) => handleChange('finalResultOrder', e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Final Order Date <span className="text-rose-500">*</span>
+                      </label>
+                      <DatePickerInput
+                        value={formData.finalOrderDate || ''}
+                        onChange={(val) => handleChange('finalOrderDate', val)}
+                      />
+                      {errors.finalOrderDate && <p className="text-[11px] text-rose-500 mt-1">{errors.finalOrderDate}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Adverse to Department? <span className="text-rose-500">*</span>
+                      </label>
+                      <SearchableSelect
+                        options={['Yes', 'No', 'Neutral']}
+                        value={formData.adverseToDepartment || ''}
+                        onChange={(val) => handleChange('adverseToDepartment', val)}
+                      />
+                      {errors.adverseToDepartment && <p className="text-[11px] text-rose-500 mt-1">{errors.adverseToDepartment}</p>}
+                    </div>
+                  </div>
+
+                  {/* Step 2: If Adverse to Department = Yes -> Reveal ONLY GP Opinion */}
+                  {formData.adverseToDepartment === 'Yes' && (
+                    <div className="space-y-6 pt-2 border-t border-slate-100 dark:border-slate-800 animate-in fade-in">
+                      <div className="max-w-md">
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          GP Opinion <span className="text-rose-500">*</span>
+                        </label>
+                        <SearchableSelect
+                          options={gpOpinions}
+                          value={formData.gpOpinion || ''}
+                          onChange={(val) => handleChange('gpOpinion', val)}
+                        />
+                        {errors.gpOpinion && <p className="text-[11px] text-rose-500 mt-1">{errors.gpOpinion}</p>}
+                      </div>
+
+                      {/* Step 3: If GP Opinion is Recommended or Not Required -> Reveal Appeal Filed? */}
+                      {isAppealRecommended(formData.gpOpinion) && (
+                        <div className="space-y-6 pt-2 border-t border-slate-100 dark:border-slate-800 animate-in fade-in">
+                          <div className="max-w-md">
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              Appeal Filed? <span className="text-rose-500">*</span>
+                            </label>
+                            <SearchableSelect
+                              options={['Yes', 'No', 'Under Proposal']}
+                              value={formData.appealFiled || ''}
+                              onChange={(val) => handleChange('appealFiled', val)}
+                            />
+                            {errors.appealFiled && <p className="text-[11px] text-rose-500 mt-1">{errors.appealFiled}</p>}
+                          </div>
+
+                          {/* Step 4: If Appeal Filed = Yes -> Reveal Appeal Filed Date & Final Judgment Summary */}
+                          {formData.appealFiled === 'Yes' && (
+                            <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800 animate-in fade-in">
+                              <div className="max-w-md">
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                  Appeal Filed Date <span className="text-rose-500">*</span>
+                                </label>
+                                <DatePickerInput
+                                  value={formData.appealFiledDate || ''}
+                                  onChange={(val) => handleChange('appealFiledDate', val)}
+                                />
+                                {errors.appealFiledDate && <p className="text-[11px] text-rose-500 mt-1">{errors.appealFiledDate}</p>}
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                  Final Judgment Summary & Remarks
+                                </label>
+                                <textarea
+                                  rows={3}
+                                  value={formData.finalOrderRemarks || ''}
+                                  onChange={(e) => handleChange('finalOrderRemarks', e.target.value)}
+                                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Bottom Navigation & Save Action Footer */}
-        <div className="bg-slate-50 dark:bg-slate-800/60 px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-3">
-          <div>
-            {activeStageIndex > 0 ? (
-              <button
-                type="button"
-                onClick={handlePrevStage}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
-              >
-                <ChevronLeft className="w-4 h-4" /> Previous: {STAGES[activeStageIndex - 1].label}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onCancel}
-                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
-              >
-                Cancel
-              </button>
-            )}
-          </div>
+        {/* Form Navigation Footer */}
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={handlePrevStage}
+            disabled={activeStageIndex === 0}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" /> Previous Stage
+          </button>
 
-          <div className="flex items-center gap-2.5">
-            {activeStageIndex < STAGES.length - 1 && (
+          <div className="flex items-center gap-2">
+            {activeStageIndex < STAGES.length - 1 ? (
               <button
                 type="button"
                 onClick={handleNextStage}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600 text-xs font-bold cursor-pointer transition-all"
+                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer"
               >
-                <span>Next: {STAGES[activeStageIndex + 1].label}</span>
-                <ChevronRight className="w-4 h-4" />
+                Next Stage <ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex items-center gap-1.5 px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                <CheckCircle2 className="w-4 h-4" /> Complete & Save Docket
               </button>
             )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" /> {loading ? 'Saving Docket...' : `Save Progress (${currentStage.step})`}
-            </button>
           </div>
         </div>
       </div>

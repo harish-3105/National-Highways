@@ -7,18 +7,13 @@ import {
   Printer,
   FileText,
   Gavel,
-  CheckCircle2,
   AlertTriangle,
   Clock,
-  ShieldAlert,
   Scale,
   Calendar,
-  Building,
-  User,
   ChevronRight,
   ChevronLeft,
   Edit,
-  IndianRupee,
 } from 'lucide-react';
 
 interface CaseViewModalProps {
@@ -54,21 +49,21 @@ const STAGES: StageDefinition[] = [
     id: 'counter_affidavit',
     label: 'Counter Affidavit (CA)',
     step: 'Stage 2',
-    subtitle: 'CA filing mandate, due timeline & submission date',
+    subtitle: 'CA filing mandate, due timeline, submission date & financial implication',
     icon: FileText,
   },
   {
     id: 'hearing_listing',
-    label: 'Hearing Schedule',
+    label: 'Hearing Schedule & Status',
     step: 'Stage 3',
-    subtitle: 'Listing purpose, previous & upcoming court appearance dates',
+    subtitle: 'Present stage, current status & hearing dates',
     icon: Calendar,
   },
   {
     id: 'interim_compliance',
     label: 'Interim Orders & Compliance',
     step: 'Stage 4',
-    subtitle: 'Court interim directions, time limits & departmental actions taken',
+    subtitle: 'Court interim directions, compliance period & departmental actions taken',
     icon: Clock,
   },
   {
@@ -88,7 +83,6 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
   };
 
   useEffect(() => {
-    setActiveStageIndex(0);
     document.body.style.overflow = 'hidden';
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -115,8 +109,6 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
       setActiveStageIndex((prev) => prev + 1);
     }
   };
-
-  const currentStage = STAGES[activeStageIndex];
 
   return (
     <div
@@ -145,7 +137,13 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                   {caseData.caseType}
                 </span>
                 {caseData.currentStatus && (
-                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase ${caseData.currentStatus === 'Disposed' || caseData.finalResult === 'Yes' ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}`}>
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase ${
+                      caseData.currentStatus === 'Disposed' || caseData.finalResult === 'Yes'
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-amber-500 text-white'
+                    }`}
+                  >
                     {caseData.currentStatus}
                   </span>
                 )}
@@ -156,7 +154,7 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
             </div>
           </div>
 
-          <div className="flex items-center gap-2 print-hide">
+          <div className="flex items-center gap-2 print:hidden">
             {onEdit && (
               <button
                 onClick={() => {
@@ -250,32 +248,29 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
 
               {/* Appeal Case Block */}
               {isAppeal && caseData.appealInfo && (
-                <div className="p-4 bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/70 rounded-xl space-y-3">
-                  <div className="flex items-center justify-between border-b border-indigo-200/80 dark:border-indigo-800/60 pb-2">
-                    <span className="font-extrabold text-xs text-indigo-950 dark:text-indigo-200 uppercase tracking-wide flex items-center gap-1.5">
-                      <Gavel className="w-3.5 h-3.5 text-indigo-600" /> Appellate Forum Details
-                    </span>
-                    <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200 px-2 py-0.5 rounded font-bold uppercase">
-                      {caseData.appealInfo.appealLevel || 'Appellate Tier'}
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+                    <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
+                      <Gavel className="w-3.5 h-3.5 text-blue-600" /> Appellate Forum Details
                     </span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div>
-                      <span className="text-[10px] text-slate-500 font-semibold uppercase block">Appeal Case Type & No</span>
+                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Appeal Case Type & No</span>
                       <span className="font-bold text-slate-900 dark:text-slate-100">
                         {caseData.appealInfo.appealCaseType} {caseData.appealInfo.appealCaseNumber}/{caseData.appealInfo.appealYear}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 font-semibold uppercase block">Appellate Court</span>
+                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Appellate Court</span>
                       <span className="font-bold text-slate-900 dark:text-slate-100">{caseData.appealInfo.appellateCourt || '—'}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 font-semibold uppercase block">Filing Date</span>
+                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Filing Date</span>
                       <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">📅 {caseData.appealInfo.appealFilingDate || '—'}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 font-semibold uppercase block">Limitation Due Date</span>
+                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Limitation Due Date</span>
                       <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">📅 {caseData.appealInfo.limitationDueDate || '—'}</span>
                     </div>
                   </div>
@@ -292,7 +287,7 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
               )}
 
               {/* Jurisdiction Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Circle</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.circle}</span>
@@ -304,10 +299,6 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Court Name</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.nameOfCourt}</span>
-                </div>
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Category</span>
-                  <span className="font-bold text-purple-700 dark:text-purple-300 text-xs mt-0.5 block">{caseData.category}</span>
                 </div>
               </div>
 
@@ -323,19 +314,18 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 </div>
               </div>
 
-              {/* Nature, Pertains & Prayer */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Nature & Pertains */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Pertains To</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.casePertainsTo || '—'}</span>
                 </div>
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Nature of Case</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.natureOfCase || '—'}</span>
-                </div>
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Present Stage</span>
-                  <span className="font-bold text-blue-700 dark:text-blue-300 text-xs mt-0.5 block">{caseData.presentStage || '—'}</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                    {caseData.natureOfCase}
+                    {caseData.specifyNatureOfCase ? ` (${caseData.specifyNatureOfCase})` : ''}
+                  </span>
                 </div>
               </div>
 
@@ -356,7 +346,7 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
                 <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                  Stage 2: Counter Affidavit (CA) Status
+                  Stage 2: Counter Affidavit (CA) Status & Financials
                 </h3>
               </div>
 
@@ -384,19 +374,39 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                   </span>
                 </div>
               </div>
+
+              {caseData.financialImplication && (
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Financial Implication</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs mt-0.5 block">
+                    ₹ {caseData.financialImplication}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
           {/* ========================================================= */}
-          {/* STAGE 3: Hearing Schedule */}
+          {/* STAGE 3: Hearing Schedule & Status */}
           {/* ========================================================= */}
           {activeStageIndex === 2 && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
                 <Calendar className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                  Stage 3: Court Hearing Schedule & Listing
+                  Stage 3: Present Status & Hearing Schedule
                 </h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Present Stage</span>
+                  <span className="font-bold text-blue-700 dark:text-blue-300 text-xs mt-0.5 block">{caseData.presentStage || '—'}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Current Status</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.currentStatus || '—'}</span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -449,21 +459,19 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Compliance Required</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.complianceRequired || '—'}</span>
                 </div>
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Compliance Period</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.compliancePeriod || '—'}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Compliance End Date</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
                     📅 {caseData.complianceEndDate || '—'}
-                  </span>
-                </div>
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 col-span-2">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Compliance Status</span>
-                  <span className={`font-extrabold text-xs mt-0.5 block ${caseData.complianceStatus === 'Complied' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {caseData.complianceStatus || '—'}
                   </span>
                 </div>
               </div>
@@ -489,10 +497,14 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 </h3>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Concluded / Disposed?</span>
                   <span className="font-extrabold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.finalResult || 'No'}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Final Order</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.finalResultOrder || '—'}</span>
                 </div>
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Final Order Date</span>
@@ -500,6 +512,9 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                     📅 {caseData.finalOrderDate || '—'}
                   </span>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Adverse to Department</span>
                   <span className={`font-extrabold text-xs mt-0.5 block ${caseData.adverseToDepartment === 'Yes' ? 'text-rose-600' : 'text-emerald-600'}`}>
@@ -510,26 +525,20 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">GP Opinion</span>
                   <span className="font-bold text-blue-700 dark:text-blue-300 text-xs mt-0.5 block">{caseData.gpOpinion || '—'}</span>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Appeal Filed?</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.appealFiled || 'No'}</span>
                 </div>
+              </div>
+
+              {caseData.appealFiledDate && (
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Appeal Filed Date</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {caseData.appealFiledDate || '—'}
+                    📅 {caseData.appealFiledDate}
                   </span>
                 </div>
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Linked Appeal Case ID</span>
-                  <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-xs mt-0.5 block">
-                    {caseData.linkedAppealCaseId || '—'}
-                  </span>
-                </div>
-              </div>
+              )}
 
               {caseData.finalOrderRemarks && (
                 <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
