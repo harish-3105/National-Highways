@@ -53,7 +53,7 @@ export async function GET(request: Request) {
             id: String(item.id),
             feeBillNumber: item.fee_bill_number,
             feeBillDate: item.fee_bill_date,
-            receiptDate: item.receipt_date || ext.receiptDate || '',
+            receiptDate: item.receipt_date || item.date_of_receipt_in_office || ext.receiptDate || '',
             circle: item.circle,
             division: item.division,
             lawyerName: item.lawyer_name,
@@ -79,9 +79,9 @@ export async function GET(request: Request) {
             amountDeposited: Number(item.amount_deposited) || 0,
             utrRbiReference: item.utr_rbi_reference || '',
             paymentDate: item.payment_date || '',
-            assistantSettledAmount: Number(item.assistant_settled_amount || ext.assistantSettledAmount) || 0,
-            assistantItCess: Number(item.assistant_it_cess || ext.assistantItCess) || 0,
-            assistantAmountDeposited: Number(item.assistant_amount_deposited || ext.assistantAmountDeposited) || 0,
+            assistantSettledAmount: Number(item.assistant_settled_amount !== undefined ? item.assistant_settled_amount : ext.assistantSettledAmount) || 0,
+            assistantItCess: Number(item.assistant_it_cess !== undefined ? item.assistant_it_cess : ext.assistantItCess) || 0,
+            assistantAmountDeposited: Number(item.assistant_amount_deposited !== undefined ? item.assistant_amount_deposited : ext.assistantAmountDeposited) || 0,
             assistantUtrRbiReference: item.assistant_utr_rbi_reference || ext.assistantUtrRbiReference || '',
             assistantPaymentDate: item.assistant_payment_date || ext.assistantPaymentDate || '',
             assistantPaymentStatus: item.assistant_payment_status || ext.assistantPaymentStatus || '',
@@ -197,32 +197,18 @@ export async function POST(request: Request) {
         }
       }
 
-      // Package extended fields into proposal_movement._ext for PostgreSQL schema resilience
-      const extendedMeta = {
-        receiptDate: record.receiptDate || null,
-        assistantSettledAmount: record.assistantSettledAmount || 0,
-        assistantItCess: record.assistantItCess || 0,
-        assistantAmountDeposited: record.assistantAmountDeposited || 0,
-        assistantUtrRbiReference: record.assistantUtrRbiReference || null,
-        assistantPaymentDate: record.assistantPaymentDate || null,
-        assistantPaymentStatus: record.assistantPaymentStatus || null,
-      };
-
-      const proposalMovementPayload = {
-        ...(typeof record.proposalMovement === 'object' ? record.proposalMovement : {}),
-        _ext: extendedMeta,
-      };
-
-      const payload: Record<string, unknown> = {
+      // Native Top-Level Column Payload
+      const nativePayload: Record<string, unknown> = {
         fee_bill_number: record.feeBillNumber,
         fee_bill_date: record.feeBillDate || null,
+        receipt_date: record.receiptDate || null,
         circle: record.circle,
         division: record.division,
         lawyer_name: record.lawyerName,
         lawyer_designation: record.lawyerDesignation,
         case_type: record.caseType,
-        case_number: String(record.caseNumber || ''),
-        case_year: String(record.caseYear || ''),
+        case_number: record.caseNumber ? Number(String(record.caseNumber).replace(/\D/g, '')) || record.caseNumber : null,
+        case_year: record.caseYear ? Number(String(record.caseYear).replace(/\D/g, '')) || record.caseYear : null,
         case_pertains_to: record.casePertainsTo || 'GOTN',
         appearance_amount: Number(record.appearanceAmount) || 0,
         appearance_date: record.appearanceDate || null,
@@ -241,6 +227,12 @@ export async function POST(request: Request) {
         amount_deposited: Number(record.amountDeposited) || 0,
         utr_rbi_reference: record.utrRbiReference || null,
         payment_date: record.paymentDate || null,
+        assistant_settled_amount: Number(record.assistantSettledAmount) || 0,
+        assistant_it_cess: Number(record.assistantItCess) || 0,
+        assistant_amount_deposited: Number(record.assistantAmountDeposited) || 0,
+        assistant_utr_rbi_reference: record.assistantUtrRbiReference || null,
+        assistant_payment_date: record.assistantPaymentDate || null,
+        assistant_payment_status: record.assistantPaymentStatus || null,
         go_status: record.goStatus || 'Not Required',
         status_of_obtaining_go: record.statusOfObtainingGo || null,
         go_number: record.goNumber || null,
@@ -252,7 +244,7 @@ export async function POST(request: Request) {
         is_sanctioned: record.isSanctioned || 'No',
         payment_sanction: record.paymentSanction || 'No',
         proposal_submitted: record.proposalSubmitted || 'No',
-        proposal_movement: proposalMovementPayload,
+        proposal_movement: record.proposalMovement || {},
         direct_movement: record.directMovement || { deToCe: false, seToCe: false },
         letter_number: record.letterNumber || null,
         letter_date: record.letterDate || null,
@@ -261,18 +253,82 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       };
 
+      // Try inserting with native columns first
       if (isUpdatingRealId) {
-        const { error: updateErr } = await supabase.from('fee_bills').update(payload).eq('id', body.id);
+        let { error: updateErr } = await supabase.from('fee_bills').update(nativePayload).eq('id', body.id);
+        if (updateErr && updateErr.code === 'PGRST204') {
+          // If schema has not added columns yet, store in proposal_movement._ext for seamless backwards-compatibility
+          const fallbackPayload = { ...nativePayload };
+          delete fallbackPayload.receipt_date;
+          delete fallbackPayload.assistant_settled_amount;
+          delete fallbackPayload.assistant_it_cess;
+          delete fallbackPayload.assistant_amount_deposited;
+          delete fallbackPayload.assistant_utr_rbi_reference;
+          delete fallbackPayload.assistant_payment_date;
+          delete fallbackPayload.assistant_payment_status;
+          fallbackPayload.case_number = String(record.caseNumber || '');
+          fallbackPayload.case_year = String(record.caseYear || '');
+          fallbackPayload.proposal_movement = {
+            ...(typeof record.proposalMovement === 'object' ? record.proposalMovement : {}),
+            _ext: {
+              receiptDate: record.receiptDate || null,
+              assistantSettledAmount: record.assistantSettledAmount || 0,
+              assistantItCess: record.assistantItCess || 0,
+              assistantAmountDeposited: record.assistantAmountDeposited || 0,
+              assistantUtrRbiReference: record.assistantUtrRbiReference || null,
+              assistantPaymentDate: record.assistantPaymentDate || null,
+              assistantPaymentStatus: record.assistantPaymentStatus || null,
+            },
+          };
+          const { error: retryErr } = await supabase.from('fee_bills').update(fallbackPayload).eq('id', body.id);
+          updateErr = retryErr;
+        }
+
         if (updateErr) {
           console.error('Supabase fee_bills update error:', updateErr);
           return NextResponse.json({ success: false, message: updateErr.message }, { status: 500 });
         }
       } else {
-        const { data: inserted, error: insertErr } = await supabase
+        let { data: inserted, error: insertErr } = await supabase
           .from('fee_bills')
-          .insert([{ ...payload, created_at: new Date().toISOString() }])
+          .insert([{ ...nativePayload, created_at: new Date().toISOString() }])
           .select('id')
           .single();
+
+        if (insertErr && insertErr.code === 'PGRST204') {
+          // If schema has not added columns yet, store in proposal_movement._ext for seamless backwards-compatibility
+          const fallbackPayload = { ...nativePayload };
+          delete fallbackPayload.receipt_date;
+          delete fallbackPayload.assistant_settled_amount;
+          delete fallbackPayload.assistant_it_cess;
+          delete fallbackPayload.assistant_amount_deposited;
+          delete fallbackPayload.assistant_utr_rbi_reference;
+          delete fallbackPayload.assistant_payment_date;
+          delete fallbackPayload.assistant_payment_status;
+          fallbackPayload.case_number = String(record.caseNumber || '');
+          fallbackPayload.case_year = String(record.caseYear || '');
+          fallbackPayload.proposal_movement = {
+            ...(typeof record.proposalMovement === 'object' ? record.proposalMovement : {}),
+            _ext: {
+              receiptDate: record.receiptDate || null,
+              assistantSettledAmount: record.assistantSettledAmount || 0,
+              assistantItCess: record.assistantItCess || 0,
+              assistantAmountDeposited: record.assistantAmountDeposited || 0,
+              assistantUtrRbiReference: record.assistantUtrRbiReference || null,
+              assistantPaymentDate: record.assistantPaymentDate || null,
+              assistantPaymentStatus: record.assistantPaymentStatus || null,
+            },
+          };
+
+          const retryResult = await supabase
+            .from('fee_bills')
+            .insert([{ ...fallbackPayload, created_at: new Date().toISOString() }])
+            .select('id')
+            .single();
+
+          inserted = retryResult.data;
+          insertErr = retryResult.error;
+        }
 
         if (insertErr) {
           console.error('Supabase fee_bills insert error:', insertErr);
