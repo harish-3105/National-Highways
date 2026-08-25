@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { DEFAULT_MASTER_DATA } from '@/lib/feeBillMasterData';
+import { EMPTY_MASTER_DATA } from '@/lib/feeBillMasterData';
 import { FeeBillMasterDataConfig } from '@/types/feeBill';
 
 export const dynamic = 'force-dynamic';
@@ -26,8 +26,8 @@ function getSupabaseClient() {
   }
 }
 
-// In-memory fallback
-let serverMasterData: FeeBillMasterDataConfig = { ...DEFAULT_MASTER_DATA };
+// In-memory runtime cache
+let serverMasterData: FeeBillMasterDataConfig = { ...EMPTY_MASTER_DATA };
 
 interface MasterItemRow {
   id: string;
@@ -86,29 +86,6 @@ function assembleConfigFromRows(rows: MasterItemRow[]): FeeBillMasterDataConfig 
       config.yesNoOptions?.push(r.name);
     }
   });
-
-  // Ensure default fallback if arrays are empty
-  if (config.circles.length === 0) config.circles = [...DEFAULT_MASTER_DATA.circles];
-  if (config.divisions.length === 0) config.divisions = [...DEFAULT_MASTER_DATA.divisions];
-  if (config.lawyerDesignations.length === 0) config.lawyerDesignations = [...DEFAULT_MASTER_DATA.lawyerDesignations];
-  if (!config.assistantDesignations || config.assistantDesignations.length === 0) {
-    config.assistantDesignations = [...(DEFAULT_MASTER_DATA.assistantDesignations || [])];
-  }
-  if (config.caseTypes.length === 0) config.caseTypes = [...DEFAULT_MASTER_DATA.caseTypes];
-  if (config.casePertainsTo.length === 0) config.casePertainsTo = [...DEFAULT_MASTER_DATA.casePertainsTo];
-  if (config.paymentStatuses.length === 0) config.paymentStatuses = [...DEFAULT_MASTER_DATA.paymentStatuses];
-  if (!config.statusOfObtainingGoOptions || config.statusOfObtainingGoOptions.length === 0) {
-    config.statusOfObtainingGoOptions = [...(DEFAULT_MASTER_DATA.statusOfObtainingGoOptions || [])];
-  }
-  if (!config.statusOfPaymentProposalOptions || config.statusOfPaymentProposalOptions.length === 0) {
-    config.statusOfPaymentProposalOptions = [...(DEFAULT_MASTER_DATA.statusOfPaymentProposalOptions || [])];
-  }
-  if (!config.goStatusOptions || config.goStatusOptions.length === 0) {
-    config.goStatusOptions = [...(DEFAULT_MASTER_DATA.goStatusOptions || [])];
-  }
-  if (!config.yesNoOptions || config.yesNoOptions.length === 0) {
-    config.yesNoOptions = [...(DEFAULT_MASTER_DATA.yesNoOptions || [])];
-  }
 
   return config;
 }
@@ -175,31 +152,24 @@ export async function GET() {
         .select('*')
         .order('created_at', { ascending: true });
 
-      if (!rowsError && rows && rows.length > 0) {
+      if (!rowsError && rows) {
         const assembled = assembleConfigFromRows(rows as MasterItemRow[]);
         serverMasterData = assembled;
         return NextResponse.json({ success: true, masterData: assembled });
       }
 
-      // 2. If table exists but is empty, check legacy single blob table or seed defaults
+      // 2. If table doesn't exist or query failed, check legacy single blob table
       const { data: legacyData, error: legacyError } = await supabase
         .from('fee_bill_master_config')
         .select('config')
         .eq('id', 'default')
         .single();
 
-      const sourceConfig: FeeBillMasterDataConfig = (!legacyError && legacyData?.config)
-        ? (legacyData.config as FeeBillMasterDataConfig)
-        : DEFAULT_MASTER_DATA;
-
-      // Seed rows into fee_bill_master_items table
-      if (!rowsError) {
-        const seedRows = flattenConfigToRows(sourceConfig);
-        await supabase.from('fee_bill_master_items').insert(seedRows);
+      if (!legacyError && legacyData?.config) {
+        const sourceConfig = legacyData.config as FeeBillMasterDataConfig;
+        serverMasterData = sourceConfig;
+        return NextResponse.json({ success: true, masterData: sourceConfig });
       }
-
-      serverMasterData = sourceConfig;
-      return NextResponse.json({ success: true, masterData: sourceConfig });
     }
 
     return NextResponse.json({ success: true, masterData: serverMasterData });
@@ -219,11 +189,9 @@ export async function POST(request: Request) {
       const { action, category, item } = body;
 
       if (action === 'reset') {
-        serverMasterData = { ...DEFAULT_MASTER_DATA };
+        serverMasterData = { ...EMPTY_MASTER_DATA };
         if (supabase) {
           await supabase.from('fee_bill_master_items').delete().neq('id', 'placeholder');
-          const seedRows = flattenConfigToRows(DEFAULT_MASTER_DATA);
-          await supabase.from('fee_bill_master_items').insert(seedRows);
         }
         return NextResponse.json({ success: true, masterData: serverMasterData });
       }
@@ -278,14 +246,14 @@ export async function POST(request: Request) {
         }
       }
 
-      // Re-fetch assembled config
+      // Re-fetch assembled config strictly from DB
       if (supabase) {
         const { data: rows } = await supabase
           .from('fee_bill_master_items')
           .select('*')
           .order('created_at', { ascending: true });
 
-        if (rows && rows.length > 0) {
+        if (rows) {
           serverMasterData = assembleConfigFromRows(rows as MasterItemRow[]);
         }
       }
@@ -293,7 +261,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, masterData: serverMasterData });
     }
 
-    // Full Config Sync (Backward-Compatible)
+    // Full Config Sync
     const configBody = body as FeeBillMasterDataConfig;
     if (!configBody || !Array.isArray(configBody.circles) || !Array.isArray(configBody.divisions)) {
       return NextResponse.json({ success: false, message: 'Invalid master data structure' }, { status: 400 });
@@ -305,9 +273,11 @@ export async function POST(request: Request) {
       // 1. Sync discrete rows in fee_bill_master_items
       const flattened = flattenConfigToRows(configBody);
       await supabase.from('fee_bill_master_items').delete().neq('id', 'placeholder');
-      await supabase.from('fee_bill_master_items').insert(flattened);
+      if (flattened.length > 0) {
+        await supabase.from('fee_bill_master_items').insert(flattened);
+      }
 
-      // 2. Backup to legacy fee_bill_master_config blob as safety replica
+      // 2. Backup to fee_bill_master_config blob
       await supabase
         .from('fee_bill_master_config')
         .upsert({
@@ -320,6 +290,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, masterData: serverMasterData });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ success: false, message: msg }, { status: 500 });
+    return NextResponse.json({ success: false, message: msg, masterData: serverMasterData }, { status: 500 });
   }
 }

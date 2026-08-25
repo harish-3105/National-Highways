@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FeeBillRecord, FeeBillMasterDataConfig } from '@/types/feeBill';
-import { DEFAULT_MASTER_DATA, formatINR } from '@/lib/feeBillMasterData';
+import { EMPTY_MASTER_DATA, formatINR } from '@/lib/feeBillMasterData';
 import { FeeBillListTable } from './FeeBillListTable';
 import { FeeBillDataEntryForm } from './FeeBillDataEntryForm';
 import { FeeBillPendencyTracker } from './FeeBillPendencyTracker';
@@ -42,7 +42,7 @@ export function FeeBillManagementPortal() {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
-  const [masterData, setMasterData] = useState<FeeBillMasterDataConfig>(DEFAULT_MASTER_DATA);
+  const [masterData, setMasterData] = useState<FeeBillMasterDataConfig>(EMPTY_MASTER_DATA);
 
   // Filters (Shared globally across all workspace views)
   const [searchTerm, setSearchTerm] = useState('');

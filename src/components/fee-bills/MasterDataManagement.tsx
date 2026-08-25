@@ -23,7 +23,7 @@ import {
   X,
 } from 'lucide-react';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
-import { DEFAULT_MASTER_DATA } from '@/lib/feeBillMasterData';
+import { EMPTY_MASTER_DATA } from '@/lib/feeBillMasterData';
 
 interface MasterDataManagementProps {
   masterData: FeeBillMasterDataConfig;
@@ -318,9 +318,9 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
   };
 
   const handleResetToDefaults = () => {
-    if (window.confirm('Reset all Fee Bill master configuration options back to defaults?')) {
-      onUpdateMasterData(DEFAULT_MASTER_DATA);
-      setSuccessMsg('Reset all configuration choices back to defaults.');
+    if (window.confirm('Clear all Fee Bill master configuration options?')) {
+      onUpdateMasterData(EMPTY_MASTER_DATA);
+      setSuccessMsg('Cleared master configuration options.');
       setTimeout(() => setSuccessMsg(null), 3000);
     }
   };

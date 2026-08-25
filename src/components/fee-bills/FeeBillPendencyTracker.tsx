@@ -47,22 +47,9 @@ export const FeeBillPendencyTracker: React.FC<FeeBillPendencyTrackerProps> = ({
     return activeUnsettledBills;
   }, [activeUnsettledBills]);
 
-  // Stages for Payment Proposal (PP)
+  // Stages for Payment Proposal (PP) - strictly from DB master data & live bill values
   const ppStages = useMemo(() => {
-    const defaultPPStages = [
-      'Pending with DE',
-      'Proposal Sent from DE to SE',
-      'Proposal Sent from SE to CE',
-      'Proposal Sent from CE to MoRTH',
-      'Proposal Sent from CE to Government',
-      'Proposal Under Preparation',
-      'Proposal Submitted to CE',
-      'Sanction Order Awaited',
-      'Payment Sanction',
-    ];
-    const configured = masterData?.statusOfPaymentProposalOptions?.length
-      ? masterData.statusOfPaymentProposalOptions
-      : defaultPPStages;
+    const configured = masterData?.statusOfPaymentProposalOptions || [];
     const billCustomStages = ppRelevantBills
       .map((b) => b.statusOfPaymentProposal)
       .filter((s): s is string => Boolean(s && !configured.includes(s)));
@@ -70,18 +57,9 @@ export const FeeBillPendencyTracker: React.FC<FeeBillPendencyTrackerProps> = ({
     return Array.from(new Set([...configured, ...billCustomStages]));
   }, [ppRelevantBills, masterData]);
 
-  // Stages for Government Order (G.O.)
+  // Stages for Government Order (G.O.) - strictly from DB master data & live bill values
   const goStages = useMemo(() => {
-    const defaultGOStages = [
-      'Proposal Submitted to CE',
-      'Proposal Submitted to Government',
-      'Draft G.O. Under Scrutiny',
-      'Clarification Sought',
-      'G.O. Obtained',
-    ];
-    const configured = masterData?.statusOfObtainingGoOptions?.length
-      ? masterData.statusOfObtainingGoOptions
-      : defaultGOStages;
+    const configured = masterData?.statusOfObtainingGoOptions || [];
     const billCustomStages = goRelevantBills
       .map((b) => b.statusOfObtainingGo)
       .filter((s): s is string => Boolean(s && !configured.includes(s)));
