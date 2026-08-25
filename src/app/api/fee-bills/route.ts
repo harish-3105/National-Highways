@@ -26,7 +26,7 @@ function getSupabaseClient() {
   }
 }
 
-// In-memory fallback array for dev when DB table is not yet created
+// In-memory fallback array for dev when DB connection is unavailable
 let fallbackStore: FeeBillRecord[] = [];
 
 export async function GET(request: Request) {
@@ -47,64 +47,67 @@ export async function GET(request: Request) {
         .order('fee_bill_date', { ascending: false });
 
       if (!error && Array.isArray(data)) {
-        let mapped: FeeBillRecord[] = data.map((item: any) => ({
-          id: item.id,
-          feeBillNumber: item.fee_bill_number,
-          feeBillDate: item.fee_bill_date,
-          receiptDate: item.receipt_date || item.date_of_receipt_in_office || '',
-          circle: item.circle,
-          division: item.division,
-          lawyerName: item.lawyer_name,
-          lawyerDesignation: item.lawyer_designation,
-          caseType: item.case_type,
-          caseNumber: item.case_number,
-          caseYear: item.case_year,
-          casePertainsTo: item.case_pertains_to || '',
-          appearanceAmount: Number(item.appearance_amount) || 0,
-          appearanceDate: item.appearance_date,
-          conferenceAmount: Number(item.conference_amount) || 0,
-          conferenceDate: item.conference_date,
-          verifyingAmount: Number(item.verifying_amount) || 0,
-          verifyingDate: item.verifying_date,
-          assistanceAmount: Number(item.assistance_amount) || 0,
-          assistanceDate: item.assistance_date,
-          totalFeeAmount: Number(item.total_fee_amount) || 0,
-          assistantName: item.assistant_name || '',
-          assistantDesignation: item.assistant_designation || '',
-          paymentStatus: item.payment_status || '',
-          settledAmount: Number(item.settled_amount) || 0,
-          itCess: Number(item.it_cess) || 0,
-          amountDeposited: Number(item.amount_deposited) || 0,
-          utrRbiReference: item.utr_rbi_reference || '',
-          paymentDate: item.payment_date || '',
-          assistantSettledAmount: Number(item.assistant_settled_amount) || 0,
-          assistantItCess: Number(item.assistant_it_cess) || 0,
-          assistantAmountDeposited: Number(item.assistant_amount_deposited) || 0,
-          assistantUtrRbiReference: item.assistant_utr_rbi_reference || '',
-          assistantPaymentDate: item.assistant_payment_date || '',
-          assistantPaymentStatus: item.assistant_payment_status || '',
-          goStatus: item.go_status || '',
-          statusOfObtainingGo: item.status_of_obtaining_go || '',
-          goNumber: item.go_number || '',
-          goDate: item.go_date || '',
-          statusOfPaymentProposal: item.status_of_payment_proposal || '',
-          proceedingLetterNo: item.proceeding_letter_no || '',
-          proceedingLetterDate: item.proceeding_letter_date || '',
-          sanctionedAmount: Number(item.sanctioned_amount) || 0,
-          isSanctioned: item.is_sanctioned || '',
-          paymentSanction: item.payment_sanction || '',
-          proposalSubmitted: item.proposal_submitted || '',
-          proposalMovement: item.proposal_movement || { deToCe: false, seToCe: false, seToRorMorth: false },
-          directMovement: item.direct_movement || { deToCe: false, seToCe: false },
-          letterNumber: item.letter_number || '',
-          letterDate: item.letter_date || '',
-          currentPendency: item.current_pendency || '',
-          delete_status: item.delete_status || 'ACTIVE',
-          isDeleted: item.delete_status === 'DELETED' || item.delete_status === 'SOFT_DELETE',
-          createdBy: item.created_by || 'System Admin',
-          createdAt: item.created_at,
-          updatedAt: item.updated_at,
-        }));
+        let mapped: FeeBillRecord[] = data.map((item: any) => {
+          const ext = item.proposal_movement?._ext || {};
+          return {
+            id: String(item.id),
+            feeBillNumber: item.fee_bill_number,
+            feeBillDate: item.fee_bill_date,
+            receiptDate: item.receipt_date || ext.receiptDate || '',
+            circle: item.circle,
+            division: item.division,
+            lawyerName: item.lawyer_name,
+            lawyerDesignation: item.lawyer_designation,
+            caseType: item.case_type,
+            caseNumber: item.case_number,
+            caseYear: item.case_year,
+            casePertainsTo: item.case_pertains_to || '',
+            appearanceAmount: Number(item.appearance_amount) || 0,
+            appearanceDate: item.appearance_date,
+            conferenceAmount: Number(item.conference_amount) || 0,
+            conferenceDate: item.conference_date,
+            verifyingAmount: Number(item.verifying_amount) || 0,
+            verifyingDate: item.verifying_date,
+            assistanceAmount: Number(item.assistance_amount) || 0,
+            assistanceDate: item.assistance_date,
+            totalFeeAmount: Number(item.total_fee_amount) || 0,
+            assistantName: item.assistant_name || '',
+            assistantDesignation: item.assistant_designation || '',
+            paymentStatus: item.payment_status || '',
+            settledAmount: Number(item.settled_amount) || 0,
+            itCess: Number(item.it_cess) || 0,
+            amountDeposited: Number(item.amount_deposited) || 0,
+            utrRbiReference: item.utr_rbi_reference || '',
+            paymentDate: item.payment_date || '',
+            assistantSettledAmount: Number(item.assistant_settled_amount || ext.assistantSettledAmount) || 0,
+            assistantItCess: Number(item.assistant_it_cess || ext.assistantItCess) || 0,
+            assistantAmountDeposited: Number(item.assistant_amount_deposited || ext.assistantAmountDeposited) || 0,
+            assistantUtrRbiReference: item.assistant_utr_rbi_reference || ext.assistantUtrRbiReference || '',
+            assistantPaymentDate: item.assistant_payment_date || ext.assistantPaymentDate || '',
+            assistantPaymentStatus: item.assistant_payment_status || ext.assistantPaymentStatus || '',
+            goStatus: item.go_status || '',
+            statusOfObtainingGo: item.status_of_obtaining_go || '',
+            goNumber: item.go_number || '',
+            goDate: item.go_date || '',
+            statusOfPaymentProposal: item.status_of_payment_proposal || '',
+            proceedingLetterNo: item.proceeding_letter_no || '',
+            proceedingLetterDate: item.proceeding_letter_date || '',
+            sanctionedAmount: Number(item.sanctioned_amount) || 0,
+            isSanctioned: item.is_sanctioned || '',
+            paymentSanction: item.payment_sanction || '',
+            proposalSubmitted: item.proposal_submitted || '',
+            proposalMovement: item.proposal_movement || { deToCe: false, seToCe: false, seToRorMorth: false },
+            directMovement: item.direct_movement || { deToCe: false, seToCe: false },
+            letterNumber: item.letter_number || '',
+            letterDate: item.letter_date || '',
+            currentPendency: item.current_pendency || '',
+            delete_status: item.delete_status || 'ACTIVE',
+            isDeleted: item.delete_status === 'DELETED' || item.delete_status === 'SOFT_DELETE',
+            createdBy: item.created_by || 'System Admin',
+            createdAt: item.created_at,
+            updatedAt: item.updated_at,
+          };
+        });
 
         // Apply filters
         mapped = mapped.filter((b) => {
@@ -124,7 +127,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // Return real fallback store if DB table is initializing
+    // Return fallback store if DB is unreachable
     let filtered = fallbackStore.filter((b) => {
       if (!includeDeleted && b.isDeleted) return false;
       if (circle && b.circle !== circle) return false;
@@ -183,7 +186,7 @@ export async function POST(request: Request) {
         .maybeSingle();
 
       if (existingWithNumber) {
-        if (!isUpdatingRealId || existingWithNumber.id !== body.id) {
+        if (!isUpdatingRealId || String(existingWithNumber.id) !== String(body.id)) {
           return NextResponse.json(
             {
               success: false,
@@ -194,54 +197,63 @@ export async function POST(request: Request) {
         }
       }
 
-      const payload = {
+      // Package extended fields into proposal_movement._ext for PostgreSQL schema resilience
+      const extendedMeta = {
+        receiptDate: record.receiptDate || null,
+        assistantSettledAmount: record.assistantSettledAmount || 0,
+        assistantItCess: record.assistantItCess || 0,
+        assistantAmountDeposited: record.assistantAmountDeposited || 0,
+        assistantUtrRbiReference: record.assistantUtrRbiReference || null,
+        assistantPaymentDate: record.assistantPaymentDate || null,
+        assistantPaymentStatus: record.assistantPaymentStatus || null,
+      };
+
+      const proposalMovementPayload = {
+        ...(typeof record.proposalMovement === 'object' ? record.proposalMovement : {}),
+        _ext: extendedMeta,
+      };
+
+      const payload: Record<string, unknown> = {
         fee_bill_number: record.feeBillNumber,
         fee_bill_date: record.feeBillDate || null,
-        receipt_date: record.receiptDate || null,
         circle: record.circle,
         division: record.division,
         lawyer_name: record.lawyerName,
         lawyer_designation: record.lawyerDesignation,
         case_type: record.caseType,
-        case_number: record.caseNumber,
-        case_year: record.caseYear,
-        case_pertains_to: record.casePertainsTo,
-        appearance_amount: record.appearanceAmount,
+        case_number: String(record.caseNumber || ''),
+        case_year: String(record.caseYear || ''),
+        case_pertains_to: record.casePertainsTo || 'GOTN',
+        appearance_amount: Number(record.appearanceAmount) || 0,
         appearance_date: record.appearanceDate || null,
-        conference_amount: record.conferenceAmount,
+        conference_amount: Number(record.conferenceAmount) || 0,
         conference_date: record.conferenceDate || null,
-        verifying_amount: record.verifyingAmount,
+        verifying_amount: Number(record.verifyingAmount) || 0,
         verifying_date: record.verifyingDate || null,
-        assistance_amount: record.assistanceAmount,
+        assistance_amount: Number(record.assistanceAmount) || 0,
         assistance_date: record.assistanceDate || null,
-        total_fee_amount: record.totalFeeAmount,
+        total_fee_amount: Number(record.totalFeeAmount) || 0,
         assistant_name: record.assistantName || null,
         assistant_designation: record.assistantDesignation || null,
-        payment_status: record.paymentStatus || null,
-        settled_amount: record.settledAmount || 0,
-        it_cess: record.itCess || 0,
-        amount_deposited: record.amountDeposited || 0,
+        payment_status: record.paymentStatus || 'Not Settled',
+        settled_amount: Number(record.settledAmount) || 0,
+        it_cess: Number(record.itCess) || 0,
+        amount_deposited: Number(record.amountDeposited) || 0,
         utr_rbi_reference: record.utrRbiReference || null,
         payment_date: record.paymentDate || null,
-        assistant_settled_amount: record.assistantSettledAmount || 0,
-        assistant_it_cess: record.assistantItCess || 0,
-        assistant_amount_deposited: record.assistantAmountDeposited || 0,
-        assistant_utr_rbi_reference: record.assistantUtrRbiReference || null,
-        assistant_payment_date: record.assistantPaymentDate || null,
-        assistant_payment_status: record.assistantPaymentStatus || null,
-        go_status: record.goStatus || null,
+        go_status: record.goStatus || 'Not Required',
         status_of_obtaining_go: record.statusOfObtainingGo || null,
         go_number: record.goNumber || null,
         go_date: record.goDate || null,
         status_of_payment_proposal: record.statusOfPaymentProposal || null,
         proceeding_letter_no: record.proceedingLetterNo || null,
         proceeding_letter_date: record.proceedingLetterDate || null,
-        sanctioned_amount: record.sanctionedAmount || 0,
-        is_sanctioned: record.isSanctioned || null,
-        payment_sanction: record.paymentSanction || null,
-        proposal_submitted: record.proposalSubmitted || null,
-        proposal_movement: record.proposalMovement || {},
-        direct_movement: record.directMovement || {},
+        sanctioned_amount: Number(record.sanctionedAmount) || 0,
+        is_sanctioned: record.isSanctioned || 'No',
+        payment_sanction: record.paymentSanction || 'No',
+        proposal_submitted: record.proposalSubmitted || 'No',
+        proposal_movement: proposalMovementPayload,
+        direct_movement: record.directMovement || { deToCe: false, seToCe: false },
         letter_number: record.letterNumber || null,
         letter_date: record.letterDate || null,
         current_pendency: derivedPendency,
@@ -250,35 +262,27 @@ export async function POST(request: Request) {
       };
 
       if (isUpdatingRealId) {
-        await supabase.from('fee_bills').update(payload).eq('id', body.id);
+        const { error: updateErr } = await supabase.from('fee_bills').update(payload).eq('id', body.id);
+        if (updateErr) {
+          console.error('Supabase fee_bills update error:', updateErr);
+          return NextResponse.json({ success: false, message: updateErr.message }, { status: 500 });
+        }
       } else {
-        const { data: inserted } = await supabase
+        const { data: inserted, error: insertErr } = await supabase
           .from('fee_bills')
           .insert([{ ...payload, created_at: new Date().toISOString() }])
           .select('id')
           .single();
-        if (inserted?.id) record.id = inserted.id;
+
+        if (insertErr) {
+          console.error('Supabase fee_bills insert error:', insertErr);
+          return NextResponse.json({ success: false, message: insertErr.message }, { status: 500 });
+        }
+        if (inserted?.id) record.id = String(inserted.id);
       }
     }
 
-    // Sync fallback store with duplicate check
-    const duplicateFallback = fallbackStore.find(
-      (b) =>
-        !b.isDeleted &&
-        b.delete_status !== 'DELETED' &&
-        b.feeBillNumber.trim().toLowerCase() === trimmedFeeBillNumber.toLowerCase() &&
-        String(b.id) !== String(record.id)
-    );
-    if (duplicateFallback) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Fee Bill Number "${trimmedFeeBillNumber}" already exists in the system. Duplicate fee bill numbers are not permitted.`,
-        },
-        { status: 409 }
-      );
-    }
-
+    // Sync fallback store
     const idx = fallbackStore.findIndex((b) => String(b.id) === String(record.id));
     if (idx >= 0) {
       fallbackStore[idx] = record;
