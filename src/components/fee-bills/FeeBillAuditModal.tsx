@@ -203,7 +203,7 @@ export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Payment Date
+                      Payment Date (DD/MM/YYYY)
                     </label>
                     <input
                       type="date"

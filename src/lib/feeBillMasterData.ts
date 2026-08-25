@@ -37,6 +37,14 @@ export const DEFAULT_MASTER_DATA: FeeBillMasterDataConfig = {
     'Standing Counsel',
     'Junior Counsel',
   ],
+  assistantDesignations: [
+    'Government Advocate',
+    'Assistant Government Pleader',
+    'Junior Counsel',
+    'Junior Standing Counsel',
+    'Law Officer Assistant',
+    'Advocate Clerk',
+  ],
   caseTypes: [
     'Writ Petition (WP)',
     'Writ Appeal (WA)',
@@ -57,6 +65,10 @@ export const DEFAULT_MASTER_DATA: FeeBillMasterDataConfig = {
     'G.O. Obtained',
   ],
   statusOfPaymentProposalOptions: [
+    'Proposal Sent from DE to SE',
+    'Proposal Sent from SE to CE',
+    'Proposal Sent from CE to MoRTH',
+    'Proposal Sent from CE to Government',
     'Proposal Under Preparation',
     'Pending with DE',
     'Proposal Submitted to CE',
@@ -138,3 +150,35 @@ export function formatINR(val: number | string | undefined): string {
     maximumFractionDigits: 0,
   }).format(num);
 }
+
+// Date Formatter helper (DD/MM/YYYY)
+export function formatDateDMY(val: string | null | undefined): string {
+  if (!val) return '—';
+  const s = String(val).trim();
+  if (!s || s === '-' || s === 'NA' || s === 'N/A' || s === '--') return '—';
+
+  // If already DD/MM/YYYY
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+
+  // Handle YYYY-MM-DD
+  const ymdMatch = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (ymdMatch) {
+    const [, y, m, d] = ymdMatch;
+    return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+  }
+
+  // Handle DD-MM-YYYY or DD.MM.YYYY
+  const dmyMatch = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+  if (dmyMatch) {
+    const [, d, m, y] = dmyMatch;
+    return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+  }
+
+  const dateObj = new Date(s);
+  if (isNaN(dateObj.getTime())) return s;
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const year = dateObj.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+

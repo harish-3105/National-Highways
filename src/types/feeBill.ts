@@ -128,6 +128,7 @@ export interface FeeBillMasterDataConfig {
   circles: MasterCircleItem[];
   divisions: MasterDivisionItem[];
   lawyerDesignations: string[];
+  assistantDesignations?: string[];
   caseTypes: string[];
   casePertainsTo: string[];
   paymentStatuses: string[];

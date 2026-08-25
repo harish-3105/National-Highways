@@ -136,6 +136,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
     : (masterData.divisions || []).filter((d) => d.active);
 
   const lawyerDesignations = masterData.lawyerDesignations || [];
+  const assistantDesignations = masterData.assistantDesignations || [];
   const caseTypes = masterData.caseTypes || [];
   const casePertainsToOptions = masterData.casePertainsTo || [];
   const paymentStatuses = masterData.paymentStatuses || [];
@@ -267,7 +268,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
       // Stage 3: Fee Breakdown
       if (formData.appearanceAmount < 0) stageErrors.appearanceAmount = 'Appearance Amount cannot be negative.';
       if (formData.conferenceAmount < 0) stageErrors.conferenceAmount = 'Conference Amount cannot be negative.';
-      if (formData.verifyingAmount < 0) stageErrors.verifyingAmount = 'Verifying Amount cannot be negative.';
+      if (formData.verifyingAmount < 0) stageErrors.verifyingAmount = 'Opinion / Vetting Amount cannot be negative.';
     }
 
     return stageErrors;
@@ -499,7 +500,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Fee Bill Date <span className="text-red-500">*</span>
+                Fee Bill Date (DD/MM/YYYY) <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
@@ -669,7 +670,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                       Assistant Designation
                     </label>
                     <SearchableSelect
-                      options={lawyerDesignations}
+                      options={assistantDesignations.length > 0 ? assistantDesignations : lawyerDesignations}
                       value={formData.assistantDesignation || ''}
                       onChange={(val) => setFormData((prev) => ({ ...prev, assistantDesignation: val }))}
                     />
@@ -715,7 +716,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 onChange={(e) => setFormData((prev) => ({ ...prev, appearanceAmount: Number(e.target.value) }))}
                 className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
               />
-              <label className="block text-[11px] font-semibold text-slate-500">Appearance Date</label>
+              <label className="block text-[11px] font-semibold text-slate-500">Appearance Date (DD/MM/YYYY)</label>
               <input
                 type="date"
                 value={formData.appearanceDate}
@@ -735,7 +736,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 onChange={(e) => setFormData((prev) => ({ ...prev, conferenceAmount: Number(e.target.value) }))}
                 className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
               />
-              <label className="block text-[11px] font-semibold text-slate-500">Conference Date</label>
+              <label className="block text-[11px] font-semibold text-slate-500">Conference Date (DD/MM/YYYY)</label>
               <input
                 type="date"
                 value={formData.conferenceDate}
@@ -744,10 +745,10 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               />
             </div>
 
-            {/* 3. Verifying */}
+            {/* 3. Opinion / Vetting */}
             <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
               <label className="block font-bold text-slate-700 dark:text-slate-300">
-                3. Verifying Fee (₹)
+                3. Opinion / Vetting Fee (₹)
               </label>
               <input
                 type="number"
@@ -755,7 +756,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 onChange={(e) => setFormData((prev) => ({ ...prev, verifyingAmount: Number(e.target.value) }))}
                 className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
               />
-              <label className="block text-[11px] font-semibold text-slate-500">Verifying Date</label>
+              <label className="block text-[11px] font-semibold text-slate-500">Opinion / Vetting Date (DD/MM/YYYY)</label>
               <input
                 type="date"
                 value={formData.verifyingDate}
@@ -778,7 +779,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 value={formData.assistanceAmount || 0}
                 className="w-full h-10 px-3 bg-blue-100/80 dark:bg-blue-900/60 border border-blue-300 dark:border-blue-700 rounded-xl font-black text-blue-900 dark:text-blue-100 cursor-not-allowed"
               />
-              <label className="block text-[11px] font-semibold text-blue-700 dark:text-blue-400">Assistance Date</label>
+              <label className="block text-[11px] font-semibold text-blue-700 dark:text-blue-400">Assistance Date (DD/MM/YYYY)</label>
               <input
                 type="date"
                 value={formData.assistanceDate}
@@ -815,7 +816,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                G.O. Required Status <span className="text-red-500">*</span>
+                Whether G.O. Required <span className="text-red-500">*</span>
               </label>
               <SearchableSelect
                 options={goStatusOptions}
@@ -862,7 +863,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    G.O. Date <span className="text-red-500">*</span>
+                    G.O. Date (DD/MM/YYYY) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
@@ -913,9 +914,9 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             </span>
           </div>
 
-          {/* Payment Proposal Stage & Payment Status Dropdowns */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
-            <div>
+          {/* Payment Proposal Stage, Reference Letter Fields, & Payment Status Dropdowns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+            <div className={formData.statusOfPaymentProposal?.toLowerCase().includes('proposal sent') ? 'sm:col-span-2 md:col-span-2' : 'sm:col-span-1 md:col-span-2'}>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Status of Payment Proposal
               </label>
@@ -926,7 +927,42 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               />
             </div>
 
-            <div>
+            {Boolean(
+              formData.statusOfPaymentProposal &&
+              (
+                formData.statusOfPaymentProposal.toLowerCase().includes('proposal sent from') ||
+                formData.statusOfPaymentProposal.toLowerCase().includes('proposal sent')
+              )
+            ) && (
+              <>
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Reference Letter Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.letterNumber || ''}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, letterNumber: e.target.value }))}
+                    placeholder="e.g. Lr. No. 4521/2026/A2"
+                    className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Reference Letter Date (DD/MM/YYYY) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.letterDate || ''}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, letterDate: e.target.value }))}
+                    className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-semibold"
+                  />
+                </div>
+              </>
+            )}
+
+            <div className={formData.statusOfPaymentProposal?.toLowerCase().includes('proposal sent') ? 'sm:col-span-2 md:col-span-4' : 'sm:col-span-1 md:col-span-2'}>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Payment Status
               </label>
@@ -962,7 +998,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Proceeding / Letter Date
+                    Proceeding / Letter Date (DD/MM/YYYY)
                   </label>
                   <input
                     type="date"
@@ -1086,7 +1122,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Reference / Payment Date
+                    Reference / Payment Date (DD/MM/YYYY)
                   </label>
                   <input
                     type="date"

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { FeeBillRecord, FeeBillMasterDataConfig } from '@/types/feeBill';
-import { formatINR } from '@/lib/feeBillMasterData';
+import { formatINR, formatDateDMY } from '@/lib/feeBillMasterData';
 import {
   Eye,
   Edit3,
@@ -90,7 +90,7 @@ export const FeeBillListTable: React.FC<FeeBillListTableProps> = ({
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">{item.feeBillDate}</div>
+                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">{formatDateDMY(item.feeBillDate)}</div>
                   </td>
 
                   <td className="py-3.5 px-4">

@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { FeeBillRecord } from '@/types/feeBill';
+import { formatDateDMY } from '@/lib/feeBillMasterData';
 
 export interface FeeBillsExportOptions {
   bills: FeeBillRecord[];
@@ -34,7 +35,7 @@ export const FEE_BILL_EXPORT_COLUMNS: FeeBillExportColumn[] = [
   // 3. Fee Claim Breakdown & Amounts
   { key: 'appearanceAmount', label: 'Appearance Fee (₹)', category: 'financial', defaultSelected: true },
   { key: 'conferenceAmount', label: 'Conference Fee (₹)', category: 'financial', defaultSelected: true },
-  { key: 'verifyingAmount', label: 'Verifying Fee (₹)', category: 'financial', defaultSelected: true },
+  { key: 'verifyingAmount', label: 'Opinion / Vetting Fee (₹)', category: 'financial', defaultSelected: true },
   { key: 'assistanceAmount', label: 'Assistance Fee 1/3 (₹)', category: 'financial', defaultSelected: true },
   { key: 'totalFeeAmount', label: 'Total Claim Amount (₹)', category: 'financial', defaultSelected: true },
   { key: 'sanctionedAmount', label: 'Sanctioned Amount (₹)', category: 'financial', defaultSelected: true },
@@ -43,11 +44,13 @@ export const FEE_BILL_EXPORT_COLUMNS: FeeBillExportColumn[] = [
   { key: 'amountDeposited', label: 'Net Amount Deposited (₹)', category: 'financial', defaultSelected: false },
 
   // 4. G.O., Sanction & Settlement Status
-  { key: 'goStatus', label: 'G.O. Required Status', category: 'settlement', defaultSelected: true },
+  { key: 'goStatus', label: 'Whether G.O. Required', category: 'settlement', defaultSelected: true },
   { key: 'statusOfObtainingGo', label: 'Status of Obtaining G.O.', category: 'settlement', defaultSelected: false },
   { key: 'goNumber', label: 'G.O. Number', category: 'settlement', defaultSelected: false },
   { key: 'goDate', label: 'G.O. Date', category: 'settlement', defaultSelected: false },
   { key: 'statusOfPaymentProposal', label: 'Status of Payment Proposal', category: 'settlement', defaultSelected: false },
+  { key: 'letterNumber', label: 'Reference Letter No.', category: 'settlement', defaultSelected: false },
+  { key: 'letterDate', label: 'Reference Letter Date', category: 'settlement', defaultSelected: false },
   { key: 'proceedingLetterNo', label: 'Proceeding / Letter No.', category: 'settlement', defaultSelected: false },
   { key: 'proceedingLetterDate', label: 'Proceeding Date', category: 'settlement', defaultSelected: false },
   { key: 'isSanctioned', label: 'Sanctioned Status', category: 'settlement', defaultSelected: true },
@@ -59,6 +62,13 @@ export const FEE_BILL_EXPORT_COLUMNS: FeeBillExportColumn[] = [
 
 export const ALL_FEE_BILL_COLUMNS = FEE_BILL_EXPORT_COLUMNS;
 
+const DATE_KEYS = new Set([
+  'feeBillDate',
+  'goDate',
+  'letterDate',
+  'proceedingLetterDate',
+  'paymentDate',
+]);
 
 export function generateFeeBillsExcel(options: FeeBillsExportOptions): Blob {
   const { bills, selectedColumns } = options;
@@ -75,6 +85,8 @@ export function generateFeeBillsExcel(options: FeeBillsExportOptions): Blob {
       let val: unknown = (bill as unknown as Record<string, unknown>)[col.key];
       if (val === null || val === undefined) {
         val = '';
+      } else if (DATE_KEYS.has(col.key)) {
+        val = formatDateDMY(String(val));
       }
       rowObj[col.label] = val;
     });
@@ -117,6 +129,8 @@ export function generateFeeBillsCSV(options: FeeBillsExportOptions): Blob {
       let val: unknown = (bill as unknown as Record<string, unknown>)[col.key];
       if (val === null || val === undefined) {
         val = '';
+      } else if (DATE_KEYS.has(col.key)) {
+        val = formatDateDMY(String(val));
       }
       rowObj[col.label] = val;
     });

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { FeeBillRecord, FeeBillMasterDataConfig } from '@/types/feeBill';
-import { formatINR } from '@/lib/feeBillMasterData';
+import { formatINR, formatDateDMY } from '@/lib/feeBillMasterData';
 import {
   TrendingUp,
   DollarSign,
@@ -71,7 +71,7 @@ const COL_DIMENSIONS: { key: PivotDimensionKey; label: string }[] = [
   { key: 'division', label: 'Division Jurisdiction' },
   { key: 'caseType', label: 'Case Type' },
   { key: 'currentPendency', label: 'Pendency Stage' },
-  { key: 'goStatus', label: 'G.O. Required Status' },
+  { key: 'goStatus', label: 'Whether G.O. Required' },
 ];
 
 const METRIC_OPTIONS: { key: PivotMetricKey; label: string; isCurrency: boolean }[] = [
@@ -934,7 +934,7 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
                         {formatINR(bill.totalFeeAmount)}
                       </div>
                       <div className="text-[10px] text-slate-400 font-semibold">
-                        {bill.feeBillDate || 'No Date'}
+                        {formatDateDMY(bill.feeBillDate)}
                       </div>
                     </div>
 

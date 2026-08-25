@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FeeBillRecord } from '@/types/feeBill';
-import { formatINR } from '@/lib/feeBillMasterData';
+import { formatINR, formatDateDMY } from '@/lib/feeBillMasterData';
 import {
   X,
   Printer,
@@ -220,7 +220,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
               Office of the Superintending Engineer / Executive Engineer &bull; {contract.circle} Circle ({contract.division})
             </p>
             <p className="text-[11px] text-slate-400 font-mono mt-1">
-              Lawyer Fee Claim Voucher &bull; Ref: {contract.feeBillNumber} &bull; Date: {contract.feeBillDate}
+              Lawyer Fee Claim Voucher &bull; Ref: {contract.feeBillNumber} &bull; Date: {formatDateDMY(contract.feeBillDate)}
             </p>
           </div>
 
@@ -245,7 +245,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Fee Bill Date</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {contract.feeBillDate || '—'}
+                    📅 {formatDateDMY(contract.feeBillDate)}
                   </span>
                 </div>
 
@@ -271,7 +271,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Letter Date</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {contract.letterDate || '—'}
+                    📅 {formatDateDMY(contract.letterDate)}
                   </span>
                 </div>
 
@@ -369,21 +369,21 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
                     <tr>
                       <td className="py-2.5 px-4 font-sans font-medium text-slate-800 dark:text-slate-200">1. Appearance Fee</td>
-                      <td className="py-2.5 px-4 text-slate-500">{contract.appearanceDate || '—'}</td>
+                      <td className="py-2.5 px-4 text-slate-500">{formatDateDMY(contract.appearanceDate)}</td>
                       <td className="py-2.5 px-4 text-right font-bold text-slate-900 dark:text-slate-100">
                         {formatINR(contract.appearanceAmount)}
                       </td>
                     </tr>
                     <tr>
                       <td className="py-2.5 px-4 font-sans font-medium text-slate-800 dark:text-slate-200">2. Conference Fee</td>
-                      <td className="py-2.5 px-4 text-slate-500">{contract.conferenceDate || '—'}</td>
+                      <td className="py-2.5 px-4 text-slate-500">{formatDateDMY(contract.conferenceDate)}</td>
                       <td className="py-2.5 px-4 text-right font-bold text-slate-900 dark:text-slate-100">
                         {formatINR(contract.conferenceAmount)}
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-2.5 px-4 font-sans font-medium text-slate-800 dark:text-slate-200">3. Verifying / Preparation Fee</td>
-                      <td className="py-2.5 px-4 text-slate-500">{contract.verifyingDate || '—'}</td>
+                      <td className="py-2.5 px-4 font-sans font-medium text-slate-800 dark:text-slate-200">3. Opinion / Vetting Fee</td>
+                      <td className="py-2.5 px-4 text-slate-500">{formatDateDMY(contract.verifyingDate)}</td>
                       <td className="py-2.5 px-4 text-right font-bold text-slate-900 dark:text-slate-100">
                         {formatINR(contract.verifyingAmount)}
                       </td>
@@ -425,7 +425,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">G.O. Required Status</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Whether G.O. Required</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{contract.goStatus || 'Not Required'}</span>
                 </div>
 
@@ -444,7 +444,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">G.O. Date</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {contract.goDate || '—'}
+                    📅 {formatDateDMY(contract.goDate)}
                   </span>
                 </div>
               </div>
@@ -469,6 +469,24 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{contract.statusOfPaymentProposal || '—'}</span>
                 </div>
 
+                {(contract.letterNumber || contract.letterDate) && (
+                  <>
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Reference Letter No</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                        {contract.letterNumber || '—'}
+                      </span>
+                    </div>
+
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Reference Letter Date</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                        📅 {formatDateDMY(contract.letterDate)}
+                      </span>
+                    </div>
+                  </>
+                )}
+
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Proceeding / Letter No</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
@@ -479,7 +497,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Proceeding Date</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {contract.proceedingLetterDate || '—'}
+                    📅 {formatDateDMY(contract.proceedingLetterDate)}
                   </span>
                 </div>
 
@@ -525,7 +543,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Payment Date</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {contract.paymentDate || '—'}
+                    📅 {formatDateDMY(contract.paymentDate)}
                   </span>
                 </div>
 

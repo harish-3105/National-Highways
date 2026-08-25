@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   FileCheck,
   FileText,
+  User,
   X,
 } from 'lucide-react';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
@@ -33,6 +34,7 @@ type TabType =
   | 'circles'
   | 'divisions'
   | 'lawyerDesignations'
+  | 'assistantDesignations'
   | 'caseTypes'
   | 'casePertainsTo'
   | 'goStatusOptions'
@@ -68,6 +70,12 @@ const CATEGORY_TABS: CategoryTab[] = [
     icon: Briefcase,
   },
   {
+    id: 'assistantDesignations',
+    label: 'Assistant Designations',
+    description: 'Government Advocate, Junior Counsel, Law Assistant...',
+    icon: User,
+  },
+  {
     id: 'caseTypes',
     label: 'Case Types',
     description: 'Writ Petition, Writ Appeal, Contempt, CMP...',
@@ -81,8 +89,8 @@ const CATEGORY_TABS: CategoryTab[] = [
   },
   {
     id: 'goStatusOptions',
-    label: 'G.O. Status',
-    description: 'Issued, Pending, Under Examination...',
+    label: 'Whether G.O. Required',
+    description: 'Yes, No, Not Required...',
     icon: FileCheck,
   },
   {
@@ -129,6 +137,7 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
   const circles = masterData.circles || [];
   const divisions = masterData.divisions || [];
   const lawyerDesignations = masterData.lawyerDesignations || [];
+  const assistantDesignations = masterData.assistantDesignations || [];
   const caseTypes = masterData.caseTypes || [];
   const casePertainsTo = masterData.casePertainsTo || [];
   const paymentStatuses = masterData.paymentStatuses || [];
@@ -142,6 +151,7 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
       case 'circles': return circles.length;
       case 'divisions': return divisions.length;
       case 'lawyerDesignations': return lawyerDesignations.length;
+      case 'assistantDesignations': return assistantDesignations.length;
       case 'caseTypes': return caseTypes.length;
       case 'casePertainsTo': return casePertainsTo.length;
       case 'goStatusOptions': return goStatusOptions.length;
@@ -171,6 +181,10 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
     } else if (activeTab === 'lawyerDesignations') {
       if (!lawyerDesignations.includes(clean)) {
         onUpdateMasterData({ ...masterData, lawyerDesignations: [...lawyerDesignations, clean] });
+      }
+    } else if (activeTab === 'assistantDesignations') {
+      if (!assistantDesignations.includes(clean)) {
+        onUpdateMasterData({ ...masterData, assistantDesignations: [...assistantDesignations, clean] });
       }
     } else if (activeTab === 'caseTypes') {
       if (!caseTypes.includes(clean)) {
@@ -234,6 +248,8 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
 
       if (activeTab === 'lawyerDesignations') {
         onUpdateMasterData({ ...masterData, lawyerDesignations: updateArray(lawyerDesignations) });
+      } else if (activeTab === 'assistantDesignations') {
+        onUpdateMasterData({ ...masterData, assistantDesignations: updateArray(assistantDesignations) });
       } else if (activeTab === 'caseTypes') {
         onUpdateMasterData({ ...masterData, caseTypes: updateArray(caseTypes) });
       } else if (activeTab === 'casePertainsTo') {
@@ -277,6 +293,8 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
 
       if (activeTab === 'lawyerDesignations') {
         onUpdateMasterData({ ...masterData, lawyerDesignations: removeIndex(lawyerDesignations) });
+      } else if (activeTab === 'assistantDesignations') {
+        onUpdateMasterData({ ...masterData, assistantDesignations: removeIndex(assistantDesignations) });
       } else if (activeTab === 'caseTypes') {
         onUpdateMasterData({ ...masterData, caseTypes: removeIndex(caseTypes) });
       } else if (activeTab === 'casePertainsTo') {
@@ -320,6 +338,8 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
     const arr =
       activeTab === 'lawyerDesignations'
         ? lawyerDesignations
+        : activeTab === 'assistantDesignations'
+        ? assistantDesignations
         : activeTab === 'caseTypes'
         ? caseTypes
         : activeTab === 'casePertainsTo'
