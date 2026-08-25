@@ -34,3 +34,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
    - If a column or table is missing on the live database, NEVER bypass it with JSON or in-memory fallback objects. STOP immediately, provide the explicit SQL migration script (`ALTER TABLE ...`), and require it to be executed in the database first.
    - Zero hardcoded mock or fallback lists across all modules and routes; default states must strictly be empty (`[]`, `''`, `0`, `null`).
    - Surface all raw database errors immediately rather than silently catching, swallowing, or masking them.
+
+6. **NO CHEAP TRICKS, NO FABRICATIONS & PROPER FIRST-TIME EXECUTION**:
+   - Strictly implement exactly what the user asks without inventing features, fabricating fields, hallucinating requirements, or improvising unsolicited logic.
+   - Zero cheap tricks, zero deceptive workarounds, zero hacky shortcuts, and zero stealth compatibility layers to fake functionality.
+   - Do every task properly and thoroughly from foundation to finish: real schemas, clean architecture, explicit validations, and zero headaches for the user.
