@@ -115,8 +115,8 @@ export interface AuditLogEntry {
   action: string; // 'Created' | 'Updated' | 'Soft Deleted' | 'Restored' | 'Status Changed'
   changes: {
     field: string;
-    oldVal: any;
-    newVal: any;
+    oldVal: unknown;
+    newVal: unknown;
   }[];
 }
 

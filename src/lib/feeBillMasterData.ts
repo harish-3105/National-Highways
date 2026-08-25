@@ -82,11 +82,7 @@ export const DEFAULT_MASTER_DATA: FeeBillMasterDataConfig = {
 export const SAMPLE_FEE_BILLS: FeeBillRecord[] = [];
 
 // Helper function to calculate assistance fee (1/3 of appearance fee only)
-export function calculateAssistanceAmount(
-  appearance: number,
-  _conference?: number,
-  _verifying?: number
-): number {
+export function calculateAssistanceAmount(appearance: number): number {
   const app = Number(appearance) || 0;
   if (app < 0) return 0;
   return Math.round((app / 3) * 100) / 100;
