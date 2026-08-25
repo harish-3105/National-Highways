@@ -90,7 +90,10 @@ export const FeeBillListTable: React.FC<FeeBillListTableProps> = ({
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">{formatDateDMY(item.feeBillDate)}</div>
+                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">Bill: {formatDateDMY(item.feeBillDate)}</div>
+                    {item.receiptDate && (
+                      <div className="text-[10px] text-slate-500 font-mono">Recd: {formatDateDMY(item.receiptDate)}</div>
+                    )}
                   </td>
 
                   <td className="py-3.5 px-4">
@@ -109,7 +112,9 @@ export const FeeBillListTable: React.FC<FeeBillListTableProps> = ({
                   </td>
 
                   <td className="py-3.5 px-4">
-                    <div className="font-bold text-slate-800 dark:text-slate-200">{item.caseNumber}</div>
+                    <div className="font-bold text-slate-800 dark:text-slate-200">
+                      Case {item.caseNumber} {item.caseYear ? `(${item.caseYear})` : ''}
+                    </div>
                     <div className="text-[11px] text-slate-500">{item.caseType} ({item.casePertainsTo})</div>
                   </td>
 

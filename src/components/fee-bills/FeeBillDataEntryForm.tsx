@@ -6,9 +6,11 @@ import {
   FeeBillMasterDataConfig,
   GOStatusType,
   YesNoType,
+  PaymentStatusType,
 } from '@/types/feeBill';
 import {
   calculateAssistanceAmount,
+  calculateLawyerClaimAmount,
   calculateTotalFeeAmount,
   derivePendencyStage,
   formatINR,
@@ -30,6 +32,8 @@ import {
   UserPlus,
   Trash2,
   Receipt,
+  CreditCard,
+  Scale,
 } from 'lucide-react';
 
 interface FeeBillDataEntryFormProps {
@@ -43,23 +47,24 @@ interface FeeBillDataEntryFormProps {
 const defaultFormState: FeeBillRecord = {
   id: '',
   feeBillNumber: '',
-  feeBillDate: new Date().toISOString().split('T')[0],
+  feeBillDate: '', // Zero default date
+  receiptDate: '', // Zero default date
   circle: '',
   division: '',
   lawyerName: '',
   lawyerDesignation: '',
   caseType: '',
   caseNumber: '',
-  caseYear: new Date().getFullYear().toString(),
+  caseYear: '',
   casePertainsTo: '' as any,
   appearanceAmount: 0,
-  appearanceDate: new Date().toISOString().split('T')[0],
+  appearanceDate: '', // Zero default date
   conferenceAmount: 0,
-  conferenceDate: new Date().toISOString().split('T')[0],
+  conferenceDate: '', // Zero default date
   verifyingAmount: 0,
-  verifyingDate: new Date().toISOString().split('T')[0],
+  verifyingDate: '', // Zero default date
   assistanceAmount: 0,
-  assistanceDate: new Date().toISOString().split('T')[0],
+  assistanceDate: '', // Zero default date
   totalFeeAmount: 0,
   assistantName: '',
   assistantDesignation: '',
@@ -69,6 +74,12 @@ const defaultFormState: FeeBillRecord = {
   amountDeposited: 0,
   utrRbiReference: '',
   paymentDate: '',
+  assistantSettledAmount: 0,
+  assistantItCess: 0,
+  assistantAmountDeposited: 0,
+  assistantUtrRbiReference: '',
+  assistantPaymentDate: '',
+  assistantPaymentStatus: '' as any,
   goStatus: '' as any,
   statusOfObtainingGo: '',
   goNumber: '',
@@ -120,14 +131,24 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
       initialData?.amountDeposited !== undefined
         ? initialData.amountDeposited
         : Math.max(0, (initialData?.settledAmount || 0) - (initialData?.itCess || 0)),
+    assistantAmountDeposited:
+      initialData?.assistantAmountDeposited !== undefined
+        ? initialData.assistantAmountDeposited
+        : Math.max(0, (initialData?.assistantSettledAmount || 0) - (initialData?.assistantItCess || 0)),
   }));
 
   const [hasAssistant, setHasAssistant] = useState<boolean>(
-    Boolean(initialData?.assistantName?.trim() || initialData?.assistantDesignation?.trim())
+    Boolean(
+      initialData?.assistantName?.trim() ||
+      initialData?.assistantDesignation?.trim() ||
+      (initialData?.assistanceAmount && initialData.assistanceAmount > 0)
+    )
   );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [duplicateWarning, setDuplicateWarning] = useState('');
+  const [duplicateError, setDuplicateError] = useState('');
+
+  const todayStr = new Date().toISOString().split('T')[0];
 
   const activeCircles = (masterData.circles || []).filter((c) => c.active);
   const availableDivisions = formData.circle
@@ -181,21 +202,39 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
     formData.utrRbiReference,
   ]);
 
-  const handleFeeBillNoChange = (val: string) => {
-    setFormData((prev) => ({ ...prev, feeBillNumber: val }));
-    if (!val.trim()) {
-      setDuplicateWarning('');
-      return;
-    }
-    const isDuplicate = existingBills.some(
+  // Check duplicate fee bill number
+  const checkDuplicateFeeBillNumber = (val: string): boolean => {
+    if (!val.trim()) return false;
+    return existingBills.some(
       (b) =>
         b.feeBillNumber.trim().toLowerCase() === val.trim().toLowerCase() &&
         String(b.id) !== String(formData.id)
     );
-    if (isDuplicate) {
-      setDuplicateWarning(`Fee Bill Number "${val}" already exists in system.`);
+  };
+
+  const handleFeeBillNoChange = (val: string) => {
+    setFormData((prev) => ({ ...prev, feeBillNumber: val }));
+    if (!val.trim()) {
+      setDuplicateError('');
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.feeBillNumber;
+        return next;
+      });
+      return;
+    }
+    const isDup = checkDuplicateFeeBillNumber(val);
+    if (isDup) {
+      const msg = `Fee Bill Number "${val.trim()}" already exists in the system. Duplicate fee bill numbers are not permitted.`;
+      setDuplicateError(msg);
+      setErrors((prev) => ({ ...prev, feeBillNumber: msg }));
     } else {
-      setDuplicateWarning('');
+      setDuplicateError('');
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.feeBillNumber;
+        return next;
+      });
     }
   };
 
@@ -211,6 +250,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
     }));
   };
 
+  // Lawyer settlement calculations
   const handleSettledAmountChange = (val: number) => {
     const it = Number(formData.itCess) || 0;
     setFormData((prev) => ({
@@ -240,6 +280,36 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
     }));
   };
 
+  // Assistant settlement calculations
+  const handleAssistantSettledAmountChange = (val: number) => {
+    const it = Number(formData.assistantItCess) || 0;
+    setFormData((prev) => ({
+      ...prev,
+      assistantSettledAmount: val,
+      assistantAmountDeposited: Math.max(0, val - it),
+      assistantPaymentStatus: val > 0 ? 'Settled' : prev.assistantPaymentStatus,
+    }));
+  };
+
+  const handleAssistantItCessChange = (val: number) => {
+    const settled = Number(formData.assistantSettledAmount) || 0;
+    setFormData((prev) => ({
+      ...prev,
+      assistantItCess: val,
+      assistantAmountDeposited: Math.max(0, settled - val),
+    }));
+  };
+
+  const handleAssistantAmountDepositedChange = (val: number) => {
+    const it = Number(formData.assistantItCess) || 0;
+    setFormData((prev) => ({
+      ...prev,
+      assistantAmountDeposited: val,
+      assistantSettledAmount: val + it,
+      assistantPaymentStatus: (val + it) > 0 ? 'Settled' : prev.assistantPaymentStatus,
+    }));
+  };
+
   // -------------------------------------------------------------
   // STAGE-GATED PROGRESSIVE VALIDATION ENGINE
   // -------------------------------------------------------------
@@ -248,28 +318,110 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
     if (stageIdx === 0) {
       // Stage 1: Voucher & Office (Baseline)
-      if (!formData.feeBillNumber.trim()) {
-        stageErrors.feeBillNumber = 'Fee Bill Number is required (Stage 1).';
-      }
       if (!formData.circle.trim()) {
         stageErrors.circle = 'Circle Jurisdiction is required (Stage 1).';
       }
       if (!formData.division.trim()) {
         stageErrors.division = 'Division Jurisdiction is required (Stage 1).';
       }
-    } else if (stageIdx === 1) {
-      // Stage 2: Law Officer & Case
-      if (!formData.lawyerName.trim()) {
-        stageErrors.lawyerName = 'Lawyer / Law Officer Name is required (Stage 2).';
+      if (!formData.feeBillNumber.trim()) {
+        stageErrors.feeBillNumber = 'Fee Bill Number is required (Stage 1).';
+      } else if (checkDuplicateFeeBillNumber(formData.feeBillNumber)) {
+        stageErrors.feeBillNumber = `Fee Bill Number "${formData.feeBillNumber.trim()}" already exists. Duplicate fee bill numbers are strictly blocked.`;
       }
-      if (!formData.caseNumber.trim()) {
+      if (!formData.feeBillDate || !formData.feeBillDate.trim()) {
+        stageErrors.feeBillDate = 'Fee Bill Date is required (Stage 1).';
+      } else if (formData.feeBillDate > todayStr) {
+        stageErrors.feeBillDate = 'Fee Bill Date cannot be a future date.';
+      }
+      if (!formData.receiptDate || !formData.receiptDate.trim()) {
+        stageErrors.receiptDate = 'Date of receipt in concerned office is required (Stage 1).';
+      } else if (formData.receiptDate > todayStr) {
+        stageErrors.receiptDate = 'Date of receipt in concerned office cannot be a future date.';
+      } else if (formData.feeBillDate && formData.receiptDate < formData.feeBillDate) {
+        stageErrors.receiptDate = 'Date of receipt in concerned office cannot be earlier than Fee Bill Date.';
+      }
+    } else if (stageIdx === 1) {
+      // Stage 2: Law Officer & Case (Fully Mandatory except assistant)
+      if (!formData.lawyerName.trim()) {
+        stageErrors.lawyerName = 'Lawyer / Advocate Name is required (Stage 2).';
+      }
+      if (!formData.lawyerDesignation?.trim()) {
+        stageErrors.lawyerDesignation = 'Lawyer Designation is required (Stage 2).';
+      }
+      if (!formData.casePertainsTo) {
+        stageErrors.casePertainsTo = 'Case Pertains To jurisdiction is required (Stage 2).';
+      }
+      if (!formData.caseType?.trim()) {
+        stageErrors.caseType = 'Case Type & Category is required (Stage 2).';
+      }
+      if (!formData.caseNumber || String(formData.caseNumber).trim() === '') {
         stageErrors.caseNumber = 'Case Number is required (Stage 2).';
+      } else if (isNaN(Number(formData.caseNumber)) || Number(formData.caseNumber) <= 0) {
+        stageErrors.caseNumber = 'Case Number must be a valid numeric value.';
+      }
+      if (!formData.caseYear || String(formData.caseYear).trim() === '') {
+        stageErrors.caseYear = 'Case Year is required (Stage 2).';
+      } else {
+        const yr = Number(formData.caseYear);
+        const currentYear = new Date().getFullYear();
+        if (isNaN(yr) || yr < 1900 || yr > currentYear) {
+          stageErrors.caseYear = `Case Year must be a valid 4-digit year (up to ${currentYear}).`;
+        }
+      }
+
+      // Assistant Law Officer Validation & Co-dependency
+      if (hasAssistant || formData.assistantName?.trim()) {
+        if (!formData.assistantName?.trim()) {
+          stageErrors.assistantName = 'Assistant Law Officer Name is required when assistant option is enabled.';
+        }
+      }
+      if (formData.appearanceAmount > 0 && (!hasAssistant || !formData.assistantName?.trim())) {
+        stageErrors.assistantName = 'Assistant Law Officer is required when Appearance Fee is claimed.';
       }
     } else if (stageIdx === 2) {
       // Stage 3: Fee Breakdown
       if (formData.appearanceAmount < 0) stageErrors.appearanceAmount = 'Appearance Amount cannot be negative.';
       if (formData.conferenceAmount < 0) stageErrors.conferenceAmount = 'Conference Amount cannot be negative.';
       if (formData.verifyingAmount < 0) stageErrors.verifyingAmount = 'Opinion / Vetting Amount cannot be negative.';
+
+      // Assistant co-dependency: If assistant is assigned, appearance fee is mandatory (> 0)
+      if ((hasAssistant || formData.assistantName?.trim()) && (!formData.appearanceAmount || formData.appearanceAmount <= 0)) {
+        stageErrors.appearanceAmount = 'Appearance Fee is required (> ₹0) when an Assistant Law Officer is assigned.';
+      }
+
+      // Date validations (no future dates)
+      if (formData.appearanceDate && formData.appearanceDate > todayStr) {
+        stageErrors.appearanceDate = 'Appearance Date cannot be a future date.';
+      }
+      if (formData.conferenceDate && formData.conferenceDate > todayStr) {
+        stageErrors.conferenceDate = 'Conference Date cannot be a future date.';
+      }
+      if (formData.verifyingDate && formData.verifyingDate > todayStr) {
+        stageErrors.verifyingDate = 'Opinion / Vetting Date cannot be a future date.';
+      }
+      if (formData.assistanceDate && formData.assistanceDate > todayStr) {
+        stageErrors.assistanceDate = 'Assistance Date cannot be a future date.';
+      }
+    } else if (stageIdx === 3) {
+      // Stage 4: G.O. Workflow
+      if (formData.goDate && formData.goDate > todayStr) {
+        stageErrors.goDate = 'G.O. Date cannot be a future date.';
+      }
+    } else if (stageIdx === 4) {
+      // Stage 5: Payment & Settlement
+      if (formData.letterDate && formData.letterDate > todayStr) {
+        stageErrors.letterDate = 'Reference Letter Date cannot be a future date.';
+      }
+      if (formData.proceedingLetterDate && formData.proceedingLetterDate > todayStr) {
+        stageErrors.proceedingLetterDate = 'Proceeding Date cannot be a future date.';
+      }
+      if (formData.paymentDate && formData.paymentDate > todayStr) {
+        stageErrors.paymentDate = 'Lawyer Payment Date cannot be a future date.';
+      }
+      if (formData.assistantPaymentDate && formData.assistantPaymentDate > todayStr) {
+        stageErrors.assistantPaymentDate = 'Assistant Payment Date cannot be a future date.';
+      }
     }
 
     return stageErrors;
@@ -286,13 +438,28 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
   const isStageCompleted = (stageIdx: number): boolean => {
     if (stageIdx === 0) {
-      return Boolean(formData.feeBillNumber.trim() && formData.circle && formData.division && Object.keys(validateSingleStage(0)).length === 0);
+      return Boolean(
+        formData.circle &&
+        formData.division &&
+        formData.feeBillNumber.trim() &&
+        formData.feeBillDate &&
+        formData.receiptDate &&
+        Object.keys(validateSingleStage(0)).length === 0
+      );
     }
     if (stageIdx === 1) {
-      return Boolean(formData.lawyerName.trim() && formData.caseNumber.trim() && Object.keys(validateSingleStage(1)).length === 0);
+      return Boolean(
+        formData.lawyerName.trim() &&
+        formData.lawyerDesignation &&
+        formData.casePertainsTo &&
+        formData.caseType &&
+        formData.caseNumber &&
+        formData.caseYear &&
+        Object.keys(validateSingleStage(1)).length === 0
+      );
     }
     if (stageIdx === 2) {
-      return Boolean(formData.totalFeeAmount > 0);
+      return Boolean(formData.totalFeeAmount > 0 && Object.keys(validateSingleStage(2)).length === 0);
     }
     if (stageIdx === 3) {
       return Boolean(formData.goStatus === 'Not Required' || formData.goNumber || formData.statusOfObtainingGo);
@@ -349,6 +516,12 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+
+  const lawyerClaimAmount = calculateLawyerClaimAmount(
+    formData.appearanceAmount,
+    formData.conferenceAmount,
+    formData.verifyingAmount
+  );
 
   return (
     <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-5 pb-16">
@@ -467,6 +640,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
       {/* ========================================================================= */}
       {/* STAGE 1: VOUCHER IDENTIFICATION & OFFICE JURISDICTION                      */}
+      {/* Order: Circle -> Division -> Fee Bill Number -> Fee Bill Date -> Receipt Date */}
       {/* ========================================================================= */}
       {activeTab === 'voucher' && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-6 animate-in fade-in duration-150">
@@ -475,40 +649,17 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               <Building className="w-5 h-5 text-blue-600" />
               <div>
                 <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100 uppercase tracking-wide">
-                  Stage 1: Voucher Identification & Office Jurisdiction
+                  Stage 1: Jurisdiction & Voucher Registration
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Initial registration details recorded upon voucher receipt from law officer
+                  Select field office jurisdiction, fee bill number, voucher date, and receipt date in office
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Fee Bill Number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.feeBillNumber}
-                onChange={(e) => handleFeeBillNoChange(e.target.value)}
-                className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-bold uppercase outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {errors.feeBillNumber && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.feeBillNumber}</p>}
-              {duplicateWarning && <p className="text-[11px] text-amber-600 font-semibold mt-1">{duplicateWarning}</p>}
-            </div>
-
-            <div>
-              <DatePickerInput
-                label="Fee Bill Date"
-                required
-                value={formData.feeBillDate}
-                onChange={(val) => setFormData((prev) => ({ ...prev, feeBillDate: val }))}
-                error={errors.feeBillDate}
-              />
-            </div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-xs">
+            {/* 1. Circle */}
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Circle Jurisdiction <span className="text-red-500">*</span>
@@ -519,8 +670,10 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 onChange={handleCircleChange}
                 required
               />
+              {errors.circle && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.circle}</p>}
             </div>
 
+            {/* 2. Division */}
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Division Jurisdiction <span className="text-red-500">*</span>
@@ -531,6 +684,53 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 onChange={(val) => setFormData((prev) => ({ ...prev, division: val }))}
                 required
               />
+              {errors.division && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.division}</p>}
+            </div>
+
+            {/* 3. Fee Bill Number */}
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Fee Bill Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.feeBillNumber}
+                onChange={(e) => handleFeeBillNoChange(e.target.value)}
+                className={`w-full h-10 px-3 bg-slate-50 dark:bg-slate-800/60 border rounded-xl font-bold uppercase outline-none focus:ring-2 ${
+                  errors.feeBillNumber || duplicateError
+                    ? 'border-red-500 focus:ring-red-500 bg-red-50/20'
+                    : 'border-slate-200 dark:border-slate-700 focus:ring-blue-500'
+                }`}
+              />
+              {errors.feeBillNumber && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.feeBillNumber}</p>}
+              {duplicateError && !errors.feeBillNumber && (
+                <p className="text-[11px] text-red-600 font-semibold mt-1">{duplicateError}</p>
+              )}
+            </div>
+
+            {/* 4. Fee Bill Date */}
+            <div>
+              <DatePickerInput
+                label="Fee Bill Date"
+                required
+                max={todayStr}
+                value={formData.feeBillDate}
+                onChange={(val) => setFormData((prev) => ({ ...prev, feeBillDate: val }))}
+                error={errors.feeBillDate}
+              />
+            </div>
+
+            {/* 5. Date of receipt in concerned office */}
+            <div>
+              <DatePickerInput
+                label="Receipt Date in Office"
+                required
+                min={formData.feeBillDate || undefined}
+                max={todayStr}
+                value={formData.receiptDate || ''}
+                onChange={(val) => setFormData((prev) => ({ ...prev, receiptDate: val }))}
+                error={errors.receiptDate}
+              />
             </div>
           </div>
         </div>
@@ -538,6 +738,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
       {/* ========================================================================= */}
       {/* STAGE 2: LAW OFFICER & COURT CASE PARAMETERS                              */}
+      {/* Order: Lawyer Name -> Lawyer Designation -> Case Pertains To -> Case Type -> Case Number & Year */}
       {/* ========================================================================= */}
       {activeTab === 'lawyer' && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-6 animate-in fade-in duration-150">
@@ -549,13 +750,14 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   Stage 2: Law Officer & Court Case Particulars
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Primary advocate, optional assistant law officer, and associated court case identification
+                  All fields are mandatory. Assistant law officer is optional unless appearance fee is claimed.
                 </p>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-xs">
+            {/* 1. Lawyer Name */}
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Lawyer / Advocate Name <span className="text-red-500">*</span>
@@ -569,62 +771,86 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               {errors.lawyerName && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.lawyerName}</p>}
             </div>
 
+            {/* 2. Lawyer Designation */}
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Lawyer Designation
+                Lawyer Designation <span className="text-red-500">*</span>
               </label>
               <SearchableSelect
                 options={lawyerDesignations}
                 value={formData.lawyerDesignation}
                 onChange={(val) => setFormData((prev) => ({ ...prev, lawyerDesignation: val }))}
+                required
               />
+              {errors.lawyerDesignation && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.lawyerDesignation}</p>}
             </div>
 
+            {/* 3. Case Pertains To (Swapped with Case Type) */}
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Case Type & Category
-              </label>
-              <SearchableSelect
-                options={caseTypes}
-                value={formData.caseType}
-                onChange={(val) => setFormData((prev) => ({ ...prev, caseType: val }))}
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Case Pertains To
+                Case Pertains To <span className="text-red-500">*</span>
               </label>
               <SearchableSelect
                 options={casePertainsToOptions}
                 value={formData.casePertainsTo}
                 onChange={(val) => setFormData((prev) => ({ ...prev, casePertainsTo: val as any }))}
+                required
               />
+              {errors.casePertainsTo && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.casePertainsTo}</p>}
             </div>
 
+            {/* 4. Case Type & Category (Swapped with Case Pertains To) */}
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Case Type & Category <span className="text-red-500">*</span>
+              </label>
+              <SearchableSelect
+                options={caseTypes}
+                value={formData.caseType}
+                onChange={(val) => setFormData((prev) => ({ ...prev, caseType: val }))}
+                required
+              />
+              {errors.caseType && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.caseType}</p>}
+            </div>
+
+            {/* 5. Case Number & Year (Numeric inputs) */}
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Case Number & Year <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-2">
                 <input
-                  type="text"
-                  value={formData.caseNumber}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, caseNumber: e.target.value }))}
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="No."
+                  value={formData.caseNumber || ''}
+                  onChange={(e) => {
+                    const cleanNum = e.target.value.replace(/\D/g, '');
+                    setFormData((prev) => ({ ...prev, caseNumber: cleanNum }));
+                  }}
                   className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
                 />
                 <input
-                  type="text"
-                  value={formData.caseYear}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, caseYear: e.target.value }))}
+                  type="number"
+                  min="1900"
+                  max={new Date().getFullYear()}
+                  step="1"
+                  placeholder="YYYY"
+                  value={formData.caseYear || ''}
+                  onChange={(e) => {
+                    const cleanYr = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setFormData((prev) => ({ ...prev, caseYear: cleanYr }));
+                  }}
                   className="w-24 h-10 px-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-center"
                 />
               </div>
               {errors.caseNumber && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.caseNumber}</p>}
+              {errors.caseYear && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.caseYear}</p>}
             </div>
           </div>
 
-          {/* Optional Assistant Law Officer Section */}
+          {/* Assistant Law Officer Section */}
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
             {!hasAssistant ? (
               <button
@@ -638,13 +864,18 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               <div className="p-4 bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800/60 rounded-xl space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-indigo-900 dark:text-indigo-300 text-xs">
-                    <User className="w-4 h-4 text-indigo-600" /> Assistant Law Officer Details
+                    <User className="w-4 h-4 text-indigo-600" /> Assistant Law Officer Particulars
                   </div>
                   <button
                     type="button"
                     onClick={() => {
                       setHasAssistant(false);
-                      setFormData((prev) => ({ ...prev, assistantName: '', assistantDesignation: '' }));
+                      setFormData((prev) => ({
+                        ...prev,
+                        assistantName: '',
+                        assistantDesignation: '',
+                        appearanceAmount: prev.appearanceAmount > 0 ? prev.appearanceAmount : 0,
+                      }));
                     }}
                     className="flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-700 cursor-pointer"
                   >
@@ -655,7 +886,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Assistant Law Officer Name
+                      Assistant Law Officer Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -663,10 +894,13 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                       onChange={(e) => setFormData((prev) => ({ ...prev, assistantName: e.target.value }))}
                       className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium"
                     />
+                    {errors.assistantName && (
+                      <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.assistantName}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Assistant Designation
+                      Assistant Designation (Optional)
                     </label>
                     <SearchableSelect
                       options={assistantDesignations.length > 0 ? assistantDesignations : lawyerDesignations}
@@ -694,31 +928,42 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   Stage 3: Itemized Fee Breakdown & Assistance Calculation
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Assistance fee is auto-computed as 1/3 of Appearance Fee only
+                  Assistance fee is auto-computed as 1/3 of Appearance Fee only and settled as a separate payment
                 </p>
               </div>
             </div>
-            <span className="px-3.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-extrabold text-xs rounded-xl border border-emerald-200 dark:border-emerald-800">
-              Total Claim: {formatINR(formData.totalFeeAmount)}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 font-bold text-xs rounded-xl border border-blue-200 dark:border-blue-800">
+                Lawyer Total: {formatINR(lawyerClaimAmount)}
+              </span>
+              <span className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-extrabold text-xs rounded-xl border border-emerald-200 dark:border-emerald-800">
+                Grand Total: {formatINR(formData.totalFeeAmount)}
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
             {/* 1. Appearance */}
             <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
               <label className="block font-bold text-slate-700 dark:text-slate-300">
-                1. Appearance Fee (₹)
+                1. Appearance Fee (₹) {hasAssistant && <span className="text-red-500">*</span>}
               </label>
               <input
                 type="number"
+                min="0"
                 value={formData.appearanceAmount || ''}
                 onChange={(e) => setFormData((prev) => ({ ...prev, appearanceAmount: Number(e.target.value) }))}
                 className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
               />
+              {errors.appearanceAmount && (
+                <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.appearanceAmount}</p>
+              )}
               <DatePickerInput
                 label="Appearance Date"
+                max={todayStr}
                 value={formData.appearanceDate}
                 onChange={(val) => setFormData((prev) => ({ ...prev, appearanceDate: val }))}
+                error={errors.appearanceDate}
               />
             </div>
 
@@ -729,14 +974,17 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               </label>
               <input
                 type="number"
+                min="0"
                 value={formData.conferenceAmount || ''}
                 onChange={(e) => setFormData((prev) => ({ ...prev, conferenceAmount: Number(e.target.value) }))}
                 className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
               />
               <DatePickerInput
                 label="Conference Date"
+                max={todayStr}
                 value={formData.conferenceDate}
                 onChange={(val) => setFormData((prev) => ({ ...prev, conferenceDate: val }))}
+                error={errors.conferenceDate}
               />
             </div>
 
@@ -747,14 +995,17 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               </label>
               <input
                 type="number"
+                min="0"
                 value={formData.verifyingAmount || ''}
                 onChange={(e) => setFormData((prev) => ({ ...prev, verifyingAmount: Number(e.target.value) }))}
                 className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
               />
               <DatePickerInput
                 label="Opinion / Vetting Date"
+                max={todayStr}
                 value={formData.verifyingDate}
                 onChange={(val) => setFormData((prev) => ({ ...prev, verifyingDate: val }))}
+                error={errors.verifyingDate}
               />
             </div>
 
@@ -762,9 +1013,9 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             <div className="p-4 bg-blue-50/60 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-800 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="block font-extrabold text-blue-900 dark:text-blue-300">
-                  4. Assistance Fee (₹)
+                  4. Assistant Fee (₹)
                 </label>
-                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">Auto (1/3 of App)</span>
+                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">Auto (1/3 App)</span>
               </div>
               <input
                 type="number"
@@ -774,8 +1025,10 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               />
               <DatePickerInput
                 label="Assistance Date"
+                max={todayStr}
                 value={formData.assistanceDate}
                 onChange={(val) => setFormData((prev) => ({ ...prev, assistanceDate: val }))}
+                error={errors.assistanceDate}
               />
             </div>
           </div>
@@ -856,8 +1109,10 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   <DatePickerInput
                     label="G.O. Date"
                     required
+                    max={todayStr}
                     value={formData.goDate || ''}
                     onChange={(val) => setFormData((prev) => ({ ...prev, goDate: val }))}
+                    error={errors.goDate}
                   />
                 </div>
               </div>
@@ -876,6 +1131,9 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
       {/* ========================================================================= */}
       {/* STAGE 5: PAYMENT PROPOSAL & SETTLEMENT DISBURSEMENT                       */}
+      {/* Swap Order: Payment Status first -> Status of Payment Proposal second     */}
+      {/* Conditional: If Pending -> show Status of Payment Proposal; If Settled -> Settlement forms */}
+      {/* Separate Payments: Lawyer Record + Assistant Record                       */}
       {/* ========================================================================= */}
       {activeTab === 'payment' && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-6 animate-in fade-in duration-150">
@@ -887,7 +1145,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   Stage 5: Payment Proposal & Settlement Disbursement
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Payment proposal status, proceeding orders, tax deductions, and bank UTR reference numbers
+                  Select payment status. When pending, track proposal movement. When settled, record individual disbursements.
                 </p>
               </div>
             </div>
@@ -902,211 +1160,349 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             </span>
           </div>
 
-          {/* Payment Proposal Stage, Reference Letter Fields, & Payment Status Dropdowns */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-            <div className={formData.statusOfPaymentProposal?.toLowerCase().includes('proposal sent') ? 'sm:col-span-2 md:col-span-2' : 'sm:col-span-1 md:col-span-2'}>
+          {/* Primary Field: Payment Status */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+            <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Status of Payment Proposal
-              </label>
-              <SearchableSelect
-                options={statusOfPaymentProposalOptions}
-                value={formData.statusOfPaymentProposal || ''}
-                onChange={(val) => setFormData((prev) => ({ ...prev, statusOfPaymentProposal: val }))}
-              />
-            </div>
-
-            {Boolean(
-              formData.statusOfPaymentProposal &&
-              (
-                formData.statusOfPaymentProposal.toLowerCase().includes('proposal sent from') ||
-                formData.statusOfPaymentProposal.toLowerCase().includes('proposal sent')
-              )
-            ) && (
-              <>
-                <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Reference Letter Number <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.letterNumber || ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, letterNumber: e.target.value }))}
-                    placeholder="e.g. Lr. No. 4521/2026/A2"
-                    className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
-                  />
-                </div>
-
-                <div>
-                  <DatePickerInput
-                    label="Reference Letter Date"
-                    required
-                    value={formData.letterDate || ''}
-                    onChange={(val) => setFormData((prev) => ({ ...prev, letterDate: val }))}
-                  />
-                </div>
-              </>
-            )}
-
-            <div className={formData.statusOfPaymentProposal?.toLowerCase().includes('proposal sent') ? 'sm:col-span-2 md:col-span-4' : 'sm:col-span-1 md:col-span-2'}>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Payment Status
+                Payment Status <span className="text-red-500">*</span>
               </label>
               <SearchableSelect
                 options={paymentStatuses}
-                value={formData.paymentStatus || ''}
-                onChange={(val) => setFormData((prev) => ({ ...prev, paymentStatus: val as any }))}
+                value={formData.paymentStatus || 'Not Settled'}
+                onChange={(val) => setFormData((prev) => ({ ...prev, paymentStatus: val as PaymentStatusType }))}
               />
             </div>
           </div>
 
-          {/* Conditional Branch 1: If Status == Payment Sanction */}
-          {(formData.statusOfPaymentProposal === 'Payment Sanction' ||
-            formData.statusOfPaymentProposal === 'Payment Sanctioned' ||
-            formData.statusOfPaymentProposal?.toLowerCase() === 'payment sanction' ||
-            formData.statusOfPaymentProposal?.toLowerCase() === 'payment sanctioned') && (
-            <div className="p-5 bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl space-y-4 text-xs animate-in fade-in">
-              <div className="font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
-                <FileText className="w-4 h-4 text-blue-600" /> Proceeding & Sanction Order Particulars
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Proceeding / Letter Number
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.proceedingLetterNo || ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, proceedingLetterNo: e.target.value }))}
-                    className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
-                  />
-                </div>
-                <div>
-                  <DatePickerInput
-                    label="Proceeding / Letter Date"
-                    value={formData.proceedingLetterDate || ''}
-                    onChange={(val) => setFormData((prev) => ({ ...prev, proceedingLetterDate: val }))}
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Sanctioned Amount (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.sanctionedAmount || ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, sanctionedAmount: Number(e.target.value) }))}
-                    className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Sanctioned? (Yes / No)
+          {/* ========================================================================= */}
+          {/* BRANCH A: IF PAYMENT STATUS IS PENDING / NOT SETTLED                       */}
+          {/* ========================================================================= */}
+          {formData.paymentStatus !== 'Settled' && (
+            <div className="space-y-5 animate-in fade-in">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                {/* 2. Status of Payment Proposal */}
+                <div className={formData.statusOfPaymentProposal?.toLowerCase().includes('proposal sent') ? 'sm:col-span-2 md:col-span-2' : 'sm:col-span-1 md:col-span-3'}>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Status of Payment Proposal
                   </label>
                   <SearchableSelect
-                    options={yesNoOptions}
-                    value={formData.isSanctioned || ''}
-                    onChange={(val) => setFormData((prev) => ({ ...prev, isSanctioned: val as YesNoType }))}
+                    options={statusOfPaymentProposalOptions}
+                    value={formData.statusOfPaymentProposal || ''}
+                    onChange={(val) => setFormData((prev) => ({ ...prev, statusOfPaymentProposal: val }))}
                   />
                 </div>
+
+                {/* If proposal sent from... reveal reference letter number and date */}
+                {Boolean(
+                  formData.statusOfPaymentProposal &&
+                  (
+                    formData.statusOfPaymentProposal.toLowerCase().includes('proposal sent from') ||
+                    formData.statusOfPaymentProposal.toLowerCase().includes('proposal sent')
+                  )
+                ) && (
+                  <>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Reference Letter Number <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.letterNumber || ''}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, letterNumber: e.target.value }))}
+                        placeholder="e.g. Lr. No. 4521/2026/A2"
+                        className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <DatePickerInput
+                        label="Reference Letter Date"
+                        required
+                        max={todayStr}
+                        value={formData.letterDate || ''}
+                        onChange={(val) => setFormData((prev) => ({ ...prev, letterDate: val }))}
+                        error={errors.letterDate}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
+
+              {/* If Status == Payment Sanction */}
+              {(formData.statusOfPaymentProposal === 'Payment Sanction' ||
+                formData.statusOfPaymentProposal === 'Payment Sanctioned' ||
+                formData.statusOfPaymentProposal?.toLowerCase() === 'payment sanction' ||
+                formData.statusOfPaymentProposal?.toLowerCase() === 'payment sanctioned') && (
+                <div className="p-5 bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl space-y-4 text-xs animate-in fade-in">
+                  <div className="font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-blue-600" /> Proceeding & Sanction Order Particulars
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Proceeding / Letter Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.proceedingLetterNo || ''}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, proceedingLetterNo: e.target.value }))}
+                        className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+                      />
+                    </div>
+                    <div>
+                      <DatePickerInput
+                        label="Proceeding / Letter Date"
+                        max={todayStr}
+                        value={formData.proceedingLetterDate || ''}
+                        onChange={(val) => setFormData((prev) => ({ ...prev, proceedingLetterDate: val }))}
+                        error={errors.proceedingLetterDate}
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Sanctioned Amount (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.sanctionedAmount || ''}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, sanctionedAmount: Number(e.target.value) }))}
+                        className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Sanctioned? (Yes / No)
+                      </label>
+                      <SearchableSelect
+                        options={yesNoOptions}
+                        value={formData.isSanctioned || ''}
+                        onChange={(val) => setFormData((prev) => ({ ...prev, isSanctioned: val as YesNoType }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Conditional Branch 2: If Sanctioned == YES (Settlement & Disbursement Banking Fields) */}
-          {(formData.isSanctioned === 'Yes' ||
-            formData.isSanctioned?.toLowerCase() === 'yes' ||
-            formData.paymentStatus === 'Settled' ||
-            formData.paymentStatus?.toLowerCase() === 'settled') && (
-            <div className="p-5 bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl space-y-4 text-xs animate-in fade-in">
-              <div className="flex items-center justify-between">
-                <div className="font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Settlement Disbursement & Bank Transfer Record
+          {/* ========================================================================= */}
+          {/* BRANCH B: IF PAYMENT STATUS IS SETTLED (TWO SEPARATE DISBURSEMENTS)       */}
+          {/* ========================================================================= */}
+          {formData.paymentStatus === 'Settled' && (
+            <div className="space-y-6 animate-in fade-in">
+              {/* 1. Primary Lawyer Settlement Record */}
+              <div className="p-5 bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-2xl space-y-4 text-xs">
+                <div className="flex items-center justify-between border-b border-emerald-200/60 dark:border-emerald-800/60 pb-3">
+                  <div className="font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>1. Lawyer Settlement & Bank Transfer Record</span>
+                    <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                      ({formData.lawyerName || 'Primary Advocate'})
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+                    Net Deposited = Settled - IT Cess
+                  </span>
                 </div>
-                <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
-                  Settled = IT Cess + Net Deposited
-                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Lawyer Claim Amount (₹)
+                    </label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={formatINR(lawyerClaimAmount)}
+                      className="w-full h-10 px-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-black text-slate-700 dark:text-slate-300 cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Settled Amount (₹) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.settledAmount || ''}
+                      onChange={(e) => handleSettledAmountChange(Number(e.target.value))}
+                      className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-xl font-black text-emerald-700 dark:text-emerald-300"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      IT Cess (TDS ₹)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.itCess || ''}
+                      onChange={(e) => handleItCessChange(Number(e.target.value))}
+                      className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Net Deposited (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.amountDeposited || ''}
+                      onChange={(e) => handleAmountDepositedChange(Number(e.target.value))}
+                      className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-xl font-black text-emerald-700 dark:text-emerald-300"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Payment UTR / RBI Ref No.
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.utrRbiReference || ''}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, utrRbiReference: e.target.value }))}
+                      className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold uppercase"
+                    />
+                  </div>
+
+                  <div>
+                    <DatePickerInput
+                      label="Payment / Bank Date"
+                      max={todayStr}
+                      value={formData.paymentDate || ''}
+                      onChange={(val) => setFormData((prev) => ({ ...prev, paymentDate: val }))}
+                      error={errors.paymentDate}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Lawyer Name (Beneficiary)
-                  </label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={formData.lawyerName || 'Not Specified'}
-                    className="w-full h-10 px-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-slate-300 cursor-not-allowed"
-                  />
-                </div>
+              {/* 2. Separate Assistant Settlement Record (If Assistant Added) */}
+              {(hasAssistant || formData.assistantName?.trim() || (formData.assistanceAmount && formData.assistanceAmount > 0)) && (
+                <div className="p-5 bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-2xl space-y-4 text-xs animate-in fade-in">
+                  <div className="flex items-center justify-between border-b border-indigo-200/60 dark:border-indigo-800/60 pb-3">
+                    <div className="font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-2 text-sm">
+                      <CreditCard className="w-4 h-4 text-indigo-600" />
+                      <span>2. Assistant Law Officer Settlement & Bank Transfer Record</span>
+                      <span className="text-[11px] font-medium text-indigo-700 dark:text-indigo-400">
+                        ({formData.assistantName || 'Assistant Counsel'})
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+                      Independent Assistant Disbursement
+                    </span>
+                  </div>
 
-                <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Claimed Amount (₹)
-                  </label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={formatINR(formData.totalFeeAmount)}
-                    className="w-full h-10 px-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-black text-slate-700 dark:text-slate-300 cursor-not-allowed"
-                  />
-                </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Assistant Claim (₹)
+                      </label>
+                      <input
+                        type="text"
+                        readOnly
+                        value={formatINR(formData.assistanceAmount)}
+                        className="w-full h-10 px-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-black text-slate-700 dark:text-slate-300 cursor-not-allowed"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Settled Amount (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.settledAmount || ''}
-                    onChange={(e) => handleSettledAmountChange(Number(e.target.value))}
-                    className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-xl font-black text-emerald-700 dark:text-emerald-300"
-                  />
-                </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Assistant Settled Amount (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.assistantSettledAmount || ''}
+                        onChange={(e) => handleAssistantSettledAmountChange(Number(e.target.value))}
+                        className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-xl font-black text-indigo-700 dark:text-indigo-300"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    IT Cess Deduction (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.itCess || ''}
-                    onChange={(e) => handleItCessChange(Number(e.target.value))}
-                    className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
-                  />
-                </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Assistant IT Cess (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.assistantItCess || ''}
+                        onChange={(e) => handleAssistantItCessChange(Number(e.target.value))}
+                        className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Amount Deposited in Account (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.amountDeposited || ''}
-                    onChange={(e) => handleAmountDepositedChange(Number(e.target.value))}
-                    className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-xl font-black text-emerald-700 dark:text-emerald-300"
-                  />
-                </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Assistant Net Deposited (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.assistantAmountDeposited || ''}
+                        onChange={(e) => handleAssistantAmountDepositedChange(Number(e.target.value))}
+                        className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-xl font-black text-indigo-700 dark:text-indigo-300"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Payment UTR / RBI Reference No.
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.utrRbiReference || ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, utrRbiReference: e.target.value }))}
-                    className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold uppercase"
-                  />
-                </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Assistant UTR / RBI Ref No.
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.assistantUtrRbiReference || ''}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, assistantUtrRbiReference: e.target.value }))}
+                        className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold uppercase"
+                      />
+                    </div>
 
-                <div>
-                  <DatePickerInput
-                    label="Reference / Payment Date"
-                    value={formData.paymentDate || ''}
-                    onChange={(val) => setFormData((prev) => ({ ...prev, paymentDate: val }))}
-                  />
+                    <div>
+                      <DatePickerInput
+                        label="Assistant Payment Date"
+                        max={todayStr}
+                        value={formData.assistantPaymentDate || ''}
+                        onChange={(val) => setFormData((prev) => ({ ...prev, assistantPaymentDate: val }))}
+                        error={errors.assistantPaymentDate}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Combined Settlement Voucher Summary Card */}
+              <div className="p-4 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-4 text-xs">
+                <div className="flex items-center gap-2">
+                  <Scale className="w-4 h-4 text-blue-600" />
+                  <span className="font-extrabold text-slate-800 dark:text-slate-200">
+                    Voucher Combined Disbursement Summary:
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">Total Settled:</span>
+                    <strong className="text-emerald-700 dark:text-emerald-300 font-extrabold">
+                      {formatINR((formData.settledAmount || 0) + (formData.assistantSettledAmount || 0))}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">Total IT Cess:</span>
+                    <strong className="text-rose-600 dark:text-rose-400 font-extrabold">
+                      - {formatINR((formData.itCess || 0) + (formData.assistantItCess || 0))}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">Total Net Deposited:</span>
+                    <strong className="text-emerald-600 dark:text-emerald-400 font-black text-sm">
+                      {formatINR((formData.amountDeposited || 0) + (formData.assistantAmountDeposited || 0))}
+                    </strong>
+                  </div>
                 </div>
               </div>
             </div>

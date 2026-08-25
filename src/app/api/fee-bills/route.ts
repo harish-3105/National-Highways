@@ -51,6 +51,7 @@ export async function GET(request: Request) {
           id: item.id,
           feeBillNumber: item.fee_bill_number,
           feeBillDate: item.fee_bill_date,
+          receiptDate: item.receipt_date || item.date_of_receipt_in_office || '',
           circle: item.circle,
           division: item.division,
           lawyerName: item.lawyer_name,
@@ -76,6 +77,12 @@ export async function GET(request: Request) {
           amountDeposited: Number(item.amount_deposited) || 0,
           utrRbiReference: item.utr_rbi_reference || '',
           paymentDate: item.payment_date || '',
+          assistantSettledAmount: Number(item.assistant_settled_amount) || 0,
+          assistantItCess: Number(item.assistant_it_cess) || 0,
+          assistantAmountDeposited: Number(item.assistant_amount_deposited) || 0,
+          assistantUtrRbiReference: item.assistant_utr_rbi_reference || '',
+          assistantPaymentDate: item.assistant_payment_date || '',
+          assistantPaymentStatus: item.assistant_payment_status || '',
           goStatus: item.go_status || '',
           statusOfObtainingGo: item.status_of_obtaining_go || '',
           goNumber: item.go_number || '',
@@ -107,7 +114,7 @@ export async function GET(request: Request) {
           if (paymentStatus && paymentStatus !== 'ALL' && b.paymentStatus !== paymentStatus) return false;
           if (pendencyStatus && pendencyStatus !== 'ALL' && b.currentPendency !== pendencyStatus) return false;
           if (search) {
-            const str = [b.feeBillNumber, b.lawyerName, b.caseNumber, b.division, b.circle].filter(Boolean).join(' ').toLowerCase();
+            const str = [b.feeBillNumber, b.lawyerName, String(b.caseNumber), b.division, b.circle].filter(Boolean).join(' ').toLowerCase();
             if (!str.includes(search)) return false;
           }
           return true;
@@ -125,7 +132,7 @@ export async function GET(request: Request) {
       if (paymentStatus && paymentStatus !== 'ALL' && b.paymentStatus !== paymentStatus) return false;
       if (pendencyStatus && pendencyStatus !== 'ALL' && b.currentPendency !== pendencyStatus) return false;
       if (search) {
-        const str = [b.feeBillNumber, b.lawyerName, b.caseNumber, b.division, b.circle].filter(Boolean).join(' ').toLowerCase();
+        const str = [b.feeBillNumber, b.lawyerName, String(b.caseNumber), b.division, b.circle].filter(Boolean).join(' ').toLowerCase();
         if (!str.includes(search)) return false;
       }
       return true;
@@ -143,11 +150,20 @@ export async function POST(request: Request) {
     const supabase = getSupabaseClient();
     const body: FeeBillRecord = await request.json();
 
+    if (!body.feeBillNumber || !body.feeBillNumber.trim()) {
+      return NextResponse.json(
+        { success: false, message: 'Fee Bill Number is required.' },
+        { status: 400 }
+      );
+    }
+
+    const trimmedFeeBillNumber = body.feeBillNumber.trim();
     const derivedPendency = derivePendencyStage(body);
     const isDel = body.delete_status === 'DELETED' || body.delete_status === 'SOFT_DELETE';
 
     const record: FeeBillRecord = {
       ...body,
+      feeBillNumber: trimmedFeeBillNumber,
       id: body.id && String(body.id).startsWith('fb-') ? body.id : (body.id || `fb-${Date.now()}`),
       currentPendency: derivedPendency,
       delete_status: body.delete_status || 'ACTIVE',
@@ -156,9 +172,32 @@ export async function POST(request: Request) {
     };
 
     if (supabase) {
+      // 1. Strict Duplicate Check: Block saving if fee_bill_number already exists on another record
+      const isUpdatingRealId = Boolean(body.id && !String(body.id).startsWith('fb-'));
+
+      const { data: existingWithNumber } = await supabase
+        .from('fee_bills')
+        .select('id, fee_bill_number, delete_status')
+        .eq('fee_bill_number', trimmedFeeBillNumber)
+        .neq('delete_status', 'DELETED')
+        .maybeSingle();
+
+      if (existingWithNumber) {
+        if (!isUpdatingRealId || existingWithNumber.id !== body.id) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `Fee Bill Number "${trimmedFeeBillNumber}" already exists in the system. Duplicate fee bill numbers are not permitted.`,
+            },
+            { status: 409 }
+          );
+        }
+      }
+
       const payload = {
         fee_bill_number: record.feeBillNumber,
-        fee_bill_date: record.feeBillDate,
+        fee_bill_date: record.feeBillDate || null,
+        receipt_date: record.receiptDate || null,
         circle: record.circle,
         division: record.division,
         lawyer_name: record.lawyerName,
@@ -184,6 +223,12 @@ export async function POST(request: Request) {
         amount_deposited: record.amountDeposited || 0,
         utr_rbi_reference: record.utrRbiReference || null,
         payment_date: record.paymentDate || null,
+        assistant_settled_amount: record.assistantSettledAmount || 0,
+        assistant_it_cess: record.assistantItCess || 0,
+        assistant_amount_deposited: record.assistantAmountDeposited || 0,
+        assistant_utr_rbi_reference: record.assistantUtrRbiReference || null,
+        assistant_payment_date: record.assistantPaymentDate || null,
+        assistant_payment_status: record.assistantPaymentStatus || null,
         go_status: record.goStatus || null,
         status_of_obtaining_go: record.statusOfObtainingGo || null,
         go_number: record.goNumber || null,
@@ -204,16 +249,8 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       };
 
-      // Upsert into Supabase
-      const { data: existing } = await supabase
-        .from('fee_bills')
-        .select('id')
-        .eq('fee_bill_number', record.feeBillNumber)
-        .maybeSingle();
-
-      if (existing) {
-        await supabase.from('fee_bills').update(payload).eq('id', existing.id);
-        record.id = existing.id;
+      if (isUpdatingRealId) {
+        await supabase.from('fee_bills').update(payload).eq('id', body.id);
       } else {
         const { data: inserted } = await supabase
           .from('fee_bills')
@@ -224,8 +261,25 @@ export async function POST(request: Request) {
       }
     }
 
-    // Sync fallback store
-    const idx = fallbackStore.findIndex((b) => String(b.id) === String(record.id) || b.feeBillNumber === record.feeBillNumber);
+    // Sync fallback store with duplicate check
+    const duplicateFallback = fallbackStore.find(
+      (b) =>
+        !b.isDeleted &&
+        b.delete_status !== 'DELETED' &&
+        b.feeBillNumber.trim().toLowerCase() === trimmedFeeBillNumber.toLowerCase() &&
+        String(b.id) !== String(record.id)
+    );
+    if (duplicateFallback) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Fee Bill Number "${trimmedFeeBillNumber}" already exists in the system. Duplicate fee bill numbers are not permitted.`,
+        },
+        { status: 409 }
+      );
+    }
+
+    const idx = fallbackStore.findIndex((b) => String(b.id) === String(record.id));
     if (idx >= 0) {
       fallbackStore[idx] = record;
     } else {

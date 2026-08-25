@@ -22,6 +22,7 @@ export interface FeeBillRecord {
   // 1. Basic Fee Bill Information
   feeBillNumber: string;
   feeBillDate: string; // YYYY-MM-DD
+  receiptDate?: string; // Date of receipt of fee bill in concerned office (YYYY-MM-DD)
 
   // 2. Circle and Division
   circle: CircleType;
@@ -33,8 +34,8 @@ export interface FeeBillRecord {
 
   // 4. Case Information
   caseType: string;
-  caseNumber: string;
-  caseYear: string; // 4-digit string
+  caseNumber: string | number;
+  caseYear: string | number; // 4-digit number/string
   casePertainsTo: CasePertainsToType;
 
   // 5. Fee Bill Amount Details
@@ -44,7 +45,7 @@ export interface FeeBillRecord {
   conferenceDate: string;
   verifyingAmount: number;
   verifyingDate: string;
-  assistanceAmount: number; // Auto-calculated: (1/3)*(Appearance + Conference + Verifying)
+  assistanceAmount: number; // Auto-calculated: (1/3)*(Appearance)
   assistanceDate: string;
 
   // 6. Total Fee Amount
@@ -57,12 +58,20 @@ export interface FeeBillRecord {
   // 8. Payment Status
   paymentStatus: PaymentStatusType;
 
-  // 9. If Payment Status = SETTLED
+  // 9. If Payment Status = SETTLED (Main Lawyer Disbursement)
   settledAmount?: number;
   itCess?: number;
   amountDeposited?: number; // amountDeposited = settledAmount - itCess
   utrRbiReference?: string;
   paymentDate?: string;
+
+  // 9b. Assistant Payment & Settlement Record (Separate Payment for Assistant)
+  assistantSettledAmount?: number;
+  assistantItCess?: number;
+  assistantAmountDeposited?: number; // assistantAmountDeposited = assistantSettledAmount - assistantItCess
+  assistantUtrRbiReference?: string;
+  assistantPaymentDate?: string;
+  assistantPaymentStatus?: PaymentStatusType;
 
   // 10. G.O. Workflow
   goStatus?: GOStatusType;

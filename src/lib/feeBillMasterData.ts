@@ -92,6 +92,18 @@ export function calculateAssistanceAmount(
   return Math.round((app / 3) * 100) / 100;
 }
 
+// Helper function to calculate Lawyer-only fee (Excluding assistant fee)
+export function calculateLawyerClaimAmount(
+  appearance: number,
+  conference: number,
+  verifying: number
+): number {
+  const app = Number(appearance) || 0;
+  const conf = Number(conference) || 0;
+  const ver = Number(verifying) || 0;
+  return Math.round((app + conf + ver) * 100) / 100;
+}
+
 // Helper function to calculate total fee
 export function calculateTotalFeeAmount(
   appearance: number,

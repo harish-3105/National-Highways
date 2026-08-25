@@ -12,6 +12,8 @@ interface DatePickerInputProps {
   error?: string;
   disabled?: boolean;
   maxToday?: boolean;
+  min?: string;
+  max?: string;
   helpText?: string;
   placeholder?: string;
   className?: string;
@@ -58,6 +60,8 @@ export const DatePickerInput: React.FC<DatePickerInputProps> = ({
   error,
   disabled = false,
   maxToday = false,
+  min,
+  max,
   helpText,
   placeholder = 'DD/MM/YYYY',
   className = '',
@@ -154,7 +158,8 @@ export const DatePickerInput: React.FC<DatePickerInputProps> = ({
           tabIndex={-1}
           aria-hidden="true"
           value={normalizedYmd || ''}
-          max={maxToday ? todayYmd : undefined}
+          min={min ? normalizeToYmd(min) : undefined}
+          max={max ? normalizeToYmd(max) : maxToday ? todayYmd : undefined}
           onChange={handlePickerChange}
           disabled={disabled}
           className="absolute inset-0 opacity-0 pointer-events-none w-0 h-0"

@@ -19,6 +19,7 @@ export const FEE_BILL_EXPORT_COLUMNS: FeeBillExportColumn[] = [
   // 1. Voucher & Court Case Identification
   { key: 'feeBillNumber', label: 'Fee Bill Voucher No.', category: 'identification', defaultSelected: true },
   { key: 'feeBillDate', label: 'Fee Bill Date', category: 'identification', defaultSelected: true },
+  { key: 'receiptDate', label: 'Receipt Date in Office', category: 'identification', defaultSelected: true },
   { key: 'caseNumber', label: 'Court Case Number', category: 'identification', defaultSelected: true },
   { key: 'caseYear', label: 'Case Year', category: 'identification', defaultSelected: true },
   { key: 'caseType', label: 'Case Type (e.g. WP, WA, CMA)', category: 'identification', defaultSelected: true },
@@ -39,9 +40,12 @@ export const FEE_BILL_EXPORT_COLUMNS: FeeBillExportColumn[] = [
   { key: 'assistanceAmount', label: 'Assistance Fee 1/3 (₹)', category: 'financial', defaultSelected: true },
   { key: 'totalFeeAmount', label: 'Total Claim Amount (₹)', category: 'financial', defaultSelected: true },
   { key: 'sanctionedAmount', label: 'Sanctioned Amount (₹)', category: 'financial', defaultSelected: true },
-  { key: 'settledAmount', label: 'Settled Amount (₹)', category: 'financial', defaultSelected: true },
-  { key: 'itCess', label: 'IT Cess Deduction (₹)', category: 'financial', defaultSelected: false },
-  { key: 'amountDeposited', label: 'Net Amount Deposited (₹)', category: 'financial', defaultSelected: false },
+  { key: 'settledAmount', label: 'Lawyer Settled Amount (₹)', category: 'financial', defaultSelected: true },
+  { key: 'itCess', label: 'Lawyer IT Cess Deduction (₹)', category: 'financial', defaultSelected: false },
+  { key: 'amountDeposited', label: 'Lawyer Net Deposited (₹)', category: 'financial', defaultSelected: false },
+  { key: 'assistantSettledAmount', label: 'Assistant Settled Amount (₹)', category: 'financial', defaultSelected: false },
+  { key: 'assistantItCess', label: 'Assistant IT Cess (₹)', category: 'financial', defaultSelected: false },
+  { key: 'assistantAmountDeposited', label: 'Assistant Net Deposited (₹)', category: 'financial', defaultSelected: false },
 
   // 4. G.O., Sanction & Settlement Status
   { key: 'goStatus', label: 'Whether G.O. Required', category: 'settlement', defaultSelected: true },
@@ -55,8 +59,10 @@ export const FEE_BILL_EXPORT_COLUMNS: FeeBillExportColumn[] = [
   { key: 'proceedingLetterDate', label: 'Proceeding Date', category: 'settlement', defaultSelected: false },
   { key: 'isSanctioned', label: 'Sanctioned Status', category: 'settlement', defaultSelected: true },
   { key: 'paymentStatus', label: 'Payment Status (Settled / Not Settled)', category: 'settlement', defaultSelected: true },
-  { key: 'utrRbiReference', label: 'UTR / RBI Reference No.', category: 'settlement', defaultSelected: false },
-  { key: 'paymentDate', label: 'Payment / Settlement Date', category: 'settlement', defaultSelected: false },
+  { key: 'utrRbiReference', label: 'Lawyer UTR / RBI Ref No.', category: 'settlement', defaultSelected: false },
+  { key: 'paymentDate', label: 'Lawyer Payment Date', category: 'settlement', defaultSelected: false },
+  { key: 'assistantUtrRbiReference', label: 'Assistant UTR / RBI Ref No.', category: 'settlement', defaultSelected: false },
+  { key: 'assistantPaymentDate', label: 'Assistant Payment Date', category: 'settlement', defaultSelected: false },
   { key: 'currentPendency', label: 'Current Pendency Stage', category: 'settlement', defaultSelected: true },
 ];
 
@@ -64,10 +70,12 @@ export const ALL_FEE_BILL_COLUMNS = FEE_BILL_EXPORT_COLUMNS;
 
 const DATE_KEYS = new Set([
   'feeBillDate',
+  'receiptDate',
   'goDate',
   'letterDate',
   'proceedingLetterDate',
   'paymentDate',
+  'assistantPaymentDate',
 ]);
 
 export function generateFeeBillsExcel(options: FeeBillsExportOptions): Blob {

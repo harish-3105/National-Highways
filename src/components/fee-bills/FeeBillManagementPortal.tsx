@@ -116,7 +116,7 @@ export function FeeBillManagementPortal() {
   const unsettledAmount = unsettledBills.reduce((acc, b) => acc + (Number(b.totalFeeAmount) || 0), 0);
 
   const distinctCases = useMemo(() => {
-    return new Set(activeBills.map((b) => (b.caseNumber || '').trim().toUpperCase()).filter(Boolean)).size;
+    return new Set(activeBills.map((b) => String(b.caseNumber || '').trim().toUpperCase()).filter(Boolean)).size;
   }, [activeBills]);
 
   const distinctLawyers = useMemo(() => {
@@ -176,9 +176,12 @@ export function FeeBillManagementPortal() {
         setEditingBill(null);
         setActiveTab('workspace');
         fetchFeeBills();
+      } else {
+        alert(data.message || 'Error saving fee bill voucher.');
       }
-    } catch {
-      // error handling
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert('Error connecting to server: ' + msg);
     }
   };
 

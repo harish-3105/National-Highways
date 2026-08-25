@@ -65,7 +65,7 @@ const ROW_DIMENSIONS: { key: PivotDimensionKey; label: string }[] = [
 ];
 
 const COL_DIMENSIONS: { key: PivotDimensionKey; label: string }[] = [
-  { key: 'paymentStatus', label: 'Payment Status (Not Settled vs Settled)' },
+  { key: 'paymentStatus', label: 'Payment Status (Settled vs Unsettled)' },
   { key: 'none', label: 'None (Simple Summary)' },
   { key: 'circle', label: 'Circle Jurisdiction' },
   { key: 'division', label: 'Division Jurisdiction' },
@@ -131,7 +131,7 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
   const unsettledAmount = unsettledBills.reduce((acc, b) => acc + (Number(b.totalFeeAmount) || 0), 0);
 
   const distinctCases = useMemo(() => {
-    return new Set(activeBills.map((b) => (b.caseNumber || '').trim().toUpperCase()).filter(Boolean)).size;
+    return new Set(activeBills.map((b) => String(b.caseNumber || '').trim().toUpperCase()).filter(Boolean)).size;
   }, [activeBills]);
 
   const distinctLawyers = useMemo(() => {
@@ -141,9 +141,13 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
   // Helper to extract clean dimension values
   const getDimensionValue = (bill: FeeBillRecord, key: PivotDimensionKey): string => {
     if (key === 'none') return 'Total';
+    if (key === 'paymentStatus') {
+      return bill.paymentStatus === 'Settled' ? 'Settled' : 'Unsettled';
+    }
     const val = (bill as unknown as Record<string, unknown>)[key];
     if (val === null || val === undefined || String(val).trim() === '') {
-      return `Unspecified ${key.charAt(0).toUpperCase() + key.slice(1)}`;
+      const dimLabel = ROW_DIMENSIONS.find((d) => d.key === key)?.label || COL_DIMENSIONS.find((d) => d.key === key)?.label || key;
+      return `Unspecified ${dimLabel}`;
     }
     return String(val).trim();
   };
@@ -186,7 +190,7 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
     let columns = Array.from(colSet);
     // Sort columns sensibly
     if (colDimension === 'paymentStatus') {
-      columns.sort((a, b) => (a === 'Not Settled' ? -1 : 1));
+      columns.sort((a, b) => (a === 'Unsettled' ? -1 : 1));
     } else {
       columns.sort((a, b) => a.localeCompare(b));
     }
@@ -644,8 +648,8 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
                       {col === 'Settled' && (
                         <span className="w-2 h-2 rounded-full bg-emerald-500" title="Settled status" />
                       )}
-                      {col === 'Not Settled' && (
-                        <span className="w-2 h-2 rounded-full bg-amber-500" title="Pending status" />
+                      {col === 'Unsettled' && (
+                        <span className="w-2 h-2 rounded-full bg-amber-500" title="Unsettled status" />
                       )}
                     </div>
                   </th>
@@ -891,7 +895,7 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
                             : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
                         }`}
                       >
-                        {bill.paymentStatus || 'Not Settled'}
+                        {bill.paymentStatus === 'Settled' ? 'Settled' : 'Unsettled'}
                       </span>
                     </div>
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FeeBillRecord } from '@/types/feeBill';
-import { formatINR, formatDateDMY } from '@/lib/feeBillMasterData';
+import { formatINR, formatDateDMY, calculateLawyerClaimAmount } from '@/lib/feeBillMasterData';
 import {
   X,
   Printer,
@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   Calendar,
   Layers,
+  Scale,
 } from 'lucide-react';
 
 interface FeeBillDetailModalProps {
@@ -115,6 +116,11 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
   };
 
   const currentStage = STAGES[activeStageIndex];
+  const lawyerClaim = calculateLawyerClaimAmount(
+    contract.appearanceAmount || 0,
+    contract.conferenceAmount || 0,
+    contract.verifyingAmount || 0
+  );
 
   return (
     <div
@@ -150,7 +156,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 </span>
               </div>
               <h3 className="font-extrabold text-sm text-white mt-1">
-                Legal Fee Voucher Record &bull; Case {contract.caseNumber}
+                Legal Fee Voucher Record &bull; Case {contract.caseNumber} ({contract.caseYear || ''})
               </h3>
             </div>
           </div>
@@ -236,7 +242,17 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 </h3>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Circle Jurisdiction</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{contract.circle}</span>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Division Jurisdiction</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{contract.division}</span>
+                </div>
+
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Fee Bill Number</span>
                   <span className="font-extrabold text-blue-900 dark:text-blue-300 text-xs mt-0.5 block">{contract.feeBillNumber}</span>
@@ -250,13 +266,10 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 </div>
 
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Circle Jurisdiction</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{contract.circle}</span>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Division Jurisdiction</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{contract.division}</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Receipt Date in Office</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                    📅 {formatDateDMY(contract.receiptDate)}
+                  </span>
                 </div>
               </div>
 
@@ -307,8 +320,8 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 </div>
 
                 {contract.assistantName ? (
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl space-y-2">
+                    <span className="text-[10px] font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider block">
                       Assistant Law Officer
                     </span>
                     <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">{contract.assistantName}</p>
@@ -323,8 +336,8 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Number</span>
-                  <span className="font-extrabold text-blue-900 dark:text-blue-300 text-xs mt-0.5 block">{contract.caseNumber}</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Pertains To</span>
+                  <span className="font-bold text-purple-700 dark:text-purple-300 text-xs mt-0.5 block">{contract.casePertainsTo || '—'}</span>
                 </div>
 
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
@@ -333,13 +346,13 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 </div>
 
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Year</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{contract.caseYear || '—'}</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Number</span>
+                  <span className="font-extrabold text-blue-900 dark:text-blue-300 text-xs mt-0.5 block">{contract.caseNumber}</span>
                 </div>
 
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Pertains To</span>
-                  <span className="font-bold text-purple-700 dark:text-purple-300 text-xs mt-0.5 block">{contract.casePertainsTo || '—'}</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Year</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{contract.caseYear || '—'}</span>
                 </div>
               </div>
             </div>
@@ -350,11 +363,21 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
           {/* ========================================================= */}
           {activeStageIndex === 2 && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-                <Calculator className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                  Stage 3: Itemized Fee Claim Calculation
-                </h3>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <Calculator className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                    Stage 3: Itemized Fee Claim Calculation
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 font-bold text-xs rounded-xl border border-blue-200 dark:border-blue-800">
+                    Lawyer Claim: {formatINR(lawyerClaim)}
+                  </span>
+                  <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-extrabold text-xs rounded-xl border border-emerald-200 dark:border-emerald-800">
+                    Grand Total: {formatINR(contract.totalFeeAmount)}
+                  </span>
+                </div>
               </div>
 
               <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
@@ -362,6 +385,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                   <thead className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold uppercase text-[10px]">
                     <tr>
                       <th className="py-2.5 px-4">Fee Item Component</th>
+                      <th className="py-2.5 px-4">Beneficiary</th>
                       <th className="py-2.5 px-4">Date</th>
                       <th className="py-2.5 px-4 text-right">Claim Amount (₹)</th>
                     </tr>
@@ -369,6 +393,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
                     <tr>
                       <td className="py-2.5 px-4 font-sans font-medium text-slate-800 dark:text-slate-200">1. Appearance Fee</td>
+                      <td className="py-2.5 px-4 font-sans text-slate-500">{contract.lawyerName}</td>
                       <td className="py-2.5 px-4 text-slate-500">{formatDateDMY(contract.appearanceDate)}</td>
                       <td className="py-2.5 px-4 text-right font-bold text-slate-900 dark:text-slate-100">
                         {formatINR(contract.appearanceAmount)}
@@ -376,6 +401,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                     </tr>
                     <tr>
                       <td className="py-2.5 px-4 font-sans font-medium text-slate-800 dark:text-slate-200">2. Conference Fee</td>
+                      <td className="py-2.5 px-4 font-sans text-slate-500">{contract.lawyerName}</td>
                       <td className="py-2.5 px-4 text-slate-500">{formatDateDMY(contract.conferenceDate)}</td>
                       <td className="py-2.5 px-4 text-right font-bold text-slate-900 dark:text-slate-100">
                         {formatINR(contract.conferenceAmount)}
@@ -383,22 +409,26 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                     </tr>
                     <tr>
                       <td className="py-2.5 px-4 font-sans font-medium text-slate-800 dark:text-slate-200">3. Opinion / Vetting Fee</td>
+                      <td className="py-2.5 px-4 font-sans text-slate-500">{contract.lawyerName}</td>
                       <td className="py-2.5 px-4 text-slate-500">{formatDateDMY(contract.verifyingDate)}</td>
                       <td className="py-2.5 px-4 text-right font-bold text-slate-900 dark:text-slate-100">
                         {formatINR(contract.verifyingAmount)}
                       </td>
                     </tr>
-                    <tr>
-                      <td className="py-2.5 px-4 font-sans font-medium text-slate-800 dark:text-slate-200">
+                    <tr className="bg-indigo-50/30 dark:bg-indigo-950/20">
+                      <td className="py-2.5 px-4 font-sans font-medium text-indigo-900 dark:text-indigo-200">
                         4. Assistant Fee (1/3 of Appearance)
                       </td>
-                      <td className="py-2.5 px-4 text-slate-500">—</td>
-                      <td className="py-2.5 px-4 text-right font-bold text-slate-900 dark:text-slate-100">
+                      <td className="py-2.5 px-4 font-sans text-indigo-700 dark:text-indigo-400">
+                        {contract.assistantName || 'Assistant Counsel'}
+                      </td>
+                      <td className="py-2.5 px-4 text-slate-500">{formatDateDMY(contract.assistanceDate)}</td>
+                      <td className="py-2.5 px-4 text-right font-bold text-indigo-900 dark:text-indigo-200">
                         {formatINR(contract.assistanceAmount)}
                       </td>
                     </tr>
                     <tr className="bg-emerald-50/50 dark:bg-emerald-950/30 font-bold">
-                      <td colSpan={2} className="py-3 px-4 font-sans text-emerald-900 dark:text-emerald-300 uppercase text-[11px]">
+                      <td colSpan={3} className="py-3 px-4 font-sans text-emerald-900 dark:text-emerald-300 uppercase text-[11px]">
                         Total Live Voucher Claim Amount
                       </td>
                       <td className="py-3 px-4 text-right text-emerald-700 dark:text-emerald-400 font-extrabold text-sm">
@@ -455,7 +485,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
           {/* STAGE 5: Payment & Settlement */}
           {/* ========================================================= */}
           {activeStageIndex === 4 && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
                 <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
@@ -463,97 +493,168 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 </h3>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Payment Proposal Status</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{contract.statusOfPaymentProposal || '—'}</span>
+              {/* Status Header */}
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Payment Status</span>
+                  <span className={`font-extrabold text-sm ${contract.paymentStatus === 'Settled' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {contract.paymentStatus || 'Not Settled'}
+                  </span>
                 </div>
+                {contract.statusOfPaymentProposal && (
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Proposal Stage</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                      {contract.statusOfPaymentProposal}
+                    </span>
+                  </div>
+                )}
+              </div>
 
-                {(contract.letterNumber || contract.letterDate) && (
-                  <>
+              {/* If Proposal / Sanction Orders */}
+              {(contract.proceedingLetterNo || contract.letterNumber || contract.sanctionedAmount) && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {contract.letterNumber && (
                     <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                       <span className="text-[10px] text-slate-400 uppercase font-bold block">Reference Letter No</span>
                       <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                        {contract.letterNumber || '—'}
+                        {contract.letterNumber}
                       </span>
                     </div>
-
+                  )}
+                  {contract.letterDate && (
                     <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                       <span className="text-[10px] text-slate-400 uppercase font-bold block">Reference Letter Date</span>
                       <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
                         📅 {formatDateDMY(contract.letterDate)}
                       </span>
                     </div>
-                  </>
-                )}
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Proceeding / Letter No</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    {contract.proceedingLetterNo || '—'}
-                  </span>
+                  )}
+                  {contract.proceedingLetterNo && (
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Proceeding No</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                        {contract.proceedingLetterNo}
+                      </span>
+                    </div>
+                  )}
+                  {contract.sanctionedAmount ? (
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Sanctioned Amount</span>
+                      <span className="font-mono font-extrabold text-blue-600 dark:text-blue-400 text-xs mt-0.5 block">
+                        {formatINR(contract.sanctionedAmount)}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
+              )}
 
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Proceeding Date</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {formatDateDMY(contract.proceedingLetterDate)}
-                  </span>
-                </div>
+              {/* Settlement Records */}
+              {contract.paymentStatus === 'Settled' && (
+                <div className="space-y-4">
+                  {/* 1. Lawyer Settlement Record */}
+                  <div className="p-4 bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl space-y-3">
+                    <div className="font-bold text-emerald-900 dark:text-emerald-200 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>1. Primary Lawyer Settlement: {contract.lawyerName}</span>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400">
+                        Claimed: {formatINR(lawyerClaim)}
+                      </span>
+                    </div>
 
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Sanctioned Amount</span>
-                  <span className="font-mono font-extrabold text-blue-600 dark:text-blue-400 text-xs mt-0.5 block">
-                    {contract.sanctionedAmount ? formatINR(contract.sanctionedAmount) : '—'}
-                  </span>
-                </div>
-              </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Settled (Gross)</span>
+                        <span className="font-extrabold text-slate-900 dark:text-slate-100 font-mono block mt-0.5">
+                          {formatINR(contract.settledAmount || 0)}
+                        </span>
+                      </div>
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">IT Cess (TDS)</span>
+                        <span className="font-bold text-rose-600 dark:text-rose-400 font-mono block mt-0.5">
+                          - {formatINR(contract.itCess || 0)}
+                        </span>
+                      </div>
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <span className="text-[10px] text-emerald-700 uppercase font-bold block">Net Deposited</span>
+                        <span className="font-extrabold text-emerald-600 dark:text-emerald-400 font-mono block mt-0.5">
+                          {formatINR(contract.amountDeposited || 0)}
+                        </span>
+                      </div>
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">UTR Reference</span>
+                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-[11px] block mt-0.5 truncate">
+                          {contract.utrRbiReference || '—'}
+                        </span>
+                      </div>
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Payment Date</span>
+                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-[11px] block mt-0.5">
+                          📅 {formatDateDMY(contract.paymentDate)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 font-mono">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Settled Amount (Gross)</span>
-                  <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm mt-0.5 block">
-                    {formatINR(contract.settledAmount || 0)}
-                  </span>
-                </div>
+                  {/* 2. Assistant Settlement Record (if assistant is present) */}
+                  {(contract.assistantName || Boolean(contract.assistantSettledAmount && contract.assistantSettledAmount > 0)) && (
+                    <div className="p-4 bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-xl space-y-3">
+                      <div className="font-bold text-indigo-900 dark:text-indigo-200 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <CreditCard className="w-4 h-4 text-indigo-600" />
+                          <span>2. Assistant Law Officer Settlement: {contract.assistantName || 'Assistant Counsel'}</span>
+                        </div>
+                        <span className="text-[11px] font-mono text-indigo-700 dark:text-indigo-400">
+                          Claimed: {formatINR(contract.assistanceAmount || 0)}
+                        </span>
+                      </div>
 
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 font-mono">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">IT Cess (TDS Deduction)</span>
-                  <span className="font-bold text-rose-600 dark:text-rose-400 text-sm mt-0.5 block">
-                    - {formatINR(contract.itCess || 0)}
-                  </span>
-                </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+                        <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Assistant Settled</span>
+                          <span className="font-extrabold text-slate-900 dark:text-slate-100 font-mono block mt-0.5">
+                            {formatINR(contract.assistantSettledAmount || 0)}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Assistant IT Cess</span>
+                          <span className="font-bold text-rose-600 dark:text-rose-400 font-mono block mt-0.5">
+                            - {formatINR(contract.assistantItCess || 0)}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <span className="text-[10px] text-indigo-700 uppercase font-bold block">Net Deposited</span>
+                          <span className="font-extrabold text-indigo-600 dark:text-indigo-400 font-mono block mt-0.5">
+                            {formatINR(contract.assistantAmountDeposited || 0)}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Assistant UTR</span>
+                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-[11px] block mt-0.5 truncate">
+                            {contract.assistantUtrRbiReference || '—'}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Payment Date</span>
+                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-[11px] block mt-0.5">
+                            📅 {formatDateDMY(contract.assistantPaymentDate)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                <div className="p-3.5 bg-emerald-50/50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800 font-mono">
-                  <span className="text-[10px] text-emerald-800 dark:text-emerald-300 uppercase font-bold block">Net Amount Deposited</span>
-                  <span className="font-extrabold text-emerald-700 dark:text-emerald-400 text-sm mt-0.5 block">
-                    {formatINR(contract.amountDeposited || 0)}
-                  </span>
+                  {/* Combined Totals */}
+                  <div className="p-3.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <span className="font-bold text-slate-700 dark:text-slate-300">Voucher Total Net Disbursement:</span>
+                    <strong className="text-emerald-700 dark:text-emerald-400 font-black text-sm">
+                      {formatINR((contract.amountDeposited || 0) + (contract.assistantAmountDeposited || 0))}
+                    </strong>
+                  </div>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Payment Status</span>
-                  <span className={`font-extrabold text-xs mt-0.5 block ${contract.paymentStatus === 'Settled' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {contract.paymentStatus || 'Pending'}
-                  </span>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Payment Date</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {formatDateDMY(contract.paymentDate)}
-                  </span>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">UTR / RBI Reference</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    {contract.utrRbiReference || '—'}
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
           )}
         </div>
