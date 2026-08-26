@@ -216,7 +216,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     return Math.max(0.35, Math.round((1000 / totalW) * 100) / 100);
   }, [canvasWidthPxActual]);
 
-  // Helper for Excel bar height specs
+  // Helper for Excel bar height specs (Standard: 6px per meter width)
   const getLaneStyle = (laneConfig: string) => {
     const norm = (laneConfig || '').toLowerCase();
     const neutralStyle = {
@@ -228,7 +228,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         ...neutralStyle,
         border: 'border-y-2 border-y-purple-400 dark:border-y-purple-600',
         label: '6-Lane (6L)',
-        heightPx: 150,
+        heightPx: 120,
       };
     }
     if (norm.includes('4l') || norm.includes('4-lane')) {
@@ -236,7 +236,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         ...neutralStyle,
         border: 'border-y-2 border-y-blue-400 dark:border-y-blue-600',
         label: '4-Lane / 4L+PS',
-        heightPx: 110,
+        heightPx: 84,
       };
     }
     if (norm.includes('2l+ps') || norm.includes('paved')) {
@@ -244,7 +244,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         ...neutralStyle,
         border: 'border-y-2 border-y-emerald-400 dark:border-y-emerald-600',
         label: '2L + Paved Shoulder',
-        heightPx: 76,
+        heightPx: 60,
       };
     }
     if (norm.includes('2l') || norm.includes('2-lane')) {
@@ -252,7 +252,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         ...neutralStyle,
         border: 'border-y-2 border-y-amber-400 dark:border-y-amber-600',
         label: '2-Lane (2L)',
-        heightPx: 40,
+        heightPx: 42,
       };
     }
     return {
@@ -319,27 +319,13 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
   };
 
   // Converts lateral road width from centerline (in meters) to vertical pixel offset from centerline
-  // Aligns 1:1 with SLD Carriageway Gauge & Baseline Road Bar Heights:
-  // 2L (7m total width / 3.5m half-width) -> 20px offset (40px total height)
-  // 2L+PS (10m total width / 5.0m half-width) -> 38px offset (76px total height)
-  // 4L (14m total width / 7.0m half-width) -> 55px offset (110px total height)
-  // 6L (20m total width / 10.0m half-width) -> 75px offset (150px total height)
+  // Standard: Constant 6 pixels per meter (1m = 6px) across all road elements:
+  // 2L (7m total width / 3.5m half-width) -> 21px offset (42px total height)
+  // 2L+PS (10m total width / 5.0m half-width) -> 30px offset (60px total height)
+  // 4L (14m total width / 7.0m half-width) -> 42px offset (84px total height)
+  // 6L (20m total width / 10.0m half-width) -> 60px offset (120px total height)
   const getLateralOffsetPx = (metersFromCenterline: number): number => {
-    const m = Math.max(0, Number(metersFromCenterline || 0));
-    if (m === 0) return 0;
-    if (m <= 3.5) {
-      return (m / 3.5) * 20;
-    }
-    if (m <= 5.0) {
-      return 20 + ((m - 3.5) / (5.0 - 3.5)) * (38 - 20);
-    }
-    if (m <= 7.0) {
-      return 38 + ((m - 5.0) / (7.0 - 5.0)) * (55 - 38);
-    }
-    if (m <= 10.0) {
-      return 55 + ((m - 7.0) / (10.0 - 7.0)) * (75 - 55);
-    }
-    return 75 + (m - 10.0) * (20 / 3.0);
+    return Math.max(0, Number(metersFromCenterline || 0)) * 6;
   };
 
   // Continuous 2D DLP Position Calculator
@@ -657,10 +643,10 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {/* Right-Facing Caliper Docking Gauge */}
               <div className="absolute inset-0 flex items-center z-10 pointer-events-none">
                 {[
-                  { label: '6L', width: '20m', heightPx: 150, leftOffset: '12px', color: 'text-purple-400 dark:text-purple-600 border-purple-400 dark:border-purple-600' },
-                  { label: '4L / 4L+PS', width: '14m', heightPx: 110, leftOffset: '50px', color: 'text-blue-400 dark:text-blue-600 border-blue-400 dark:border-blue-600' },
-                  { label: '2L+PS', width: '10m', heightPx: 76, leftOffset: '115px', color: 'text-emerald-400 dark:text-emerald-600 border-emerald-400 dark:border-emerald-600' },
-                  { label: '2L', width: '7m', heightPx: 40, leftOffset: '165px', color: 'text-amber-400 dark:text-amber-600 border-amber-400 dark:border-amber-600' },
+                  { label: '6L', width: '20m', heightPx: 120, leftOffset: '12px', color: 'text-purple-400 dark:text-purple-600 border-purple-400 dark:border-purple-600' },
+                  { label: '4L / 4L+PS', width: '14m', heightPx: 84, leftOffset: '50px', color: 'text-blue-400 dark:text-blue-600 border-blue-400 dark:border-blue-600' },
+                  { label: '2L+PS', width: '10m', heightPx: 60, leftOffset: '115px', color: 'text-emerald-400 dark:text-emerald-600 border-emerald-400 dark:border-emerald-600' },
+                  { label: '2L', width: '7m', heightPx: 42, leftOffset: '165px', color: 'text-amber-400 dark:text-amber-600 border-amber-400 dark:border-amber-600' },
                 ].map((spec) => (
                   <React.Fragment key={spec.label}>
                     {/* 1. Vertical Line */}

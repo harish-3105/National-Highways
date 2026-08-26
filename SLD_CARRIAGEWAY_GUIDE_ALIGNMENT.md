@@ -20,14 +20,14 @@ When users scroll the diagram horizontally, the top and bottom horizontal border
 
 ---
 
-## 2. Specification & Color Mapping Matrix
+## 2. Specification & Color Mapping Matrix (Standard: 6px per meter width)
 
 | Lane Configuration | Standard Width | Bar Height (`heightPx`) | Center Offset ($\pm H/2$) | Border Color Class | Caliper Left Offset | Caliper Arrowhead |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **6-Lane (`6L`)** | 20m | **150px** | $\pm 75\text{px}$ | `border-y-purple-400` / `border-purple-400` | `12px` | `text-purple-400` |
-| **4-Lane / 4L+PS (`4L`)** | 14m | **110px** | $\pm 55\text{px}$ | `border-y-blue-400` / `border-blue-400` | `50px` | `text-blue-400` |
-| **2-Lane + Paved Shoulder (`2L+PS`)** | 10m | **76px** | $\pm 38\text{px}$ | `border-y-emerald-400` / `border-emerald-400` | `115px` | `text-emerald-400` |
-| **2-Lane (`2L`)** | 7m | **40px** | $\pm 20\text{px}$ | `border-y-amber-400` / `border-amber-400` | `165px` | `text-amber-400` |
+| **6-Lane (`6L`)** | 20m | **120px** | $\pm 60\text{px}$ | `border-y-purple-400` / `border-purple-400` | `12px` | `text-purple-400` |
+| **4-Lane / 4L+PS (`4L`)** | 14m | **84px** | $\pm 42\text{px}$ | `border-y-blue-400` / `border-blue-400` | `50px` | `text-blue-400` |
+| **2-Lane + Paved Shoulder (`2L+PS`)** | 10m | **60px** | $\pm 30\text{px}$ | `border-y-emerald-400` / `border-emerald-400` | `115px` | `text-emerald-400` |
+| **2-Lane (`2L`)** | 7m | **42px** | $\pm 21\text{px}$ | `border-y-amber-400` / `border-amber-400` | `165px` | `text-amber-400` |
 | **< 2-Lane** | < 7m | **22px** | $\pm 11\text{px}$ | `border-y-slate-400` / `border-slate-400` | — | — |
 
 ---
@@ -37,8 +37,7 @@ When users scroll the diagram horizontally, the top and bottom horizontal border
 During implementation, two subpixel rendering challenges were diagnosed and resolved:
 
 ### A. Subpixel Division Rounding on `2L+PS` (Odd vs Even Height)
-- **Issue**: `2L+PS` previously had an odd height of `75px`. When centered via `top-1/2 -translate-y-1/2`, $75 / 2 = 37.5\text{px}$. Because $37.5\text{px}$ is a non-integer, browser rendering engines rounded the top and bottom offsets differently ($37\text{px}$ vs $38\text{px}$), resulting in a $0.5\text{px}$ visual misalignment between the scrollable stretch bar and the left caliper arm.
-- **Fix**: Adjusted `2L+PS` height to `76px` ($76 / 2 = 38\text{px}$ exact integer). All lane configurations now use strictly even pixel heights ($150\text{px}$, $110\text{px}$, $76\text{px}$, $40\text{px}$, $22\text{px}$), eliminating subpixel fractional shifts.
+- **Even Integer Heights**: All lane configurations use strictly even pixel heights ($120\text{px}$, $84\text{px}$, $60\text{px}$, $42\text{px}$, $22\text{px}$), eliminating subpixel fractional shifts.
 
 ### B. Caliper Horizontal Arm Container Box-Sizing
 - **Issue**: Caliper horizontal arm containers contained an internal right-pointing arrow element (`w-1.5 h-1.5 rotate-45`). In flex containers, child dimensions can expand container height, pushing border lines off the intended vertical coordinates.
@@ -68,7 +67,7 @@ const getLaneStyle = (laneConfig: string) => {
       ...neutralStyle,
       border: 'border-y-2 border-y-purple-400',
       label: '6-Lane (6L)',
-      heightPx: 150,
+      heightPx: 120,
     };
   }
   if (norm.includes('4l') || norm.includes('4-lane')) {
@@ -76,7 +75,7 @@ const getLaneStyle = (laneConfig: string) => {
       ...neutralStyle,
       border: 'border-y-2 border-y-blue-400',
       label: '4-Lane / 4L+PS',
-      heightPx: 110,
+      heightPx: 84,
     };
   }
   if (norm.includes('2l+ps') || norm.includes('paved')) {
@@ -84,7 +83,7 @@ const getLaneStyle = (laneConfig: string) => {
       ...neutralStyle,
       border: 'border-y-2 border-y-emerald-400',
       label: '2L + Paved Shoulder',
-      heightPx: 76,
+      heightPx: 60,
     };
   }
   if (norm.includes('2l') || norm.includes('2-lane')) {
@@ -92,7 +91,7 @@ const getLaneStyle = (laneConfig: string) => {
       ...neutralStyle,
       border: 'border-y-2 border-y-amber-400',
       label: '2-Lane (2L)',
-      heightPx: 40,
+      heightPx: 42,
     };
   }
   return {
