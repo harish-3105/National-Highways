@@ -87,6 +87,25 @@ Symmetrical Cross-Sectional Expansion from Centerline (0):
 2. **Both Sides Widening Work** (`Width: 3.5 to 7.0m`):
    * LHS boundary $[-7.0\text{m}, -3.5\text{m}]$ and RHS boundary $[+3.5\text{m}, +7.0\text{m}]$ form **2 distinct parallel boundary strips** running along the outer flanks.
 
+### Exact 1:1 Lateral Boundary-to-Bar Ratio Alignment
+The vertical height and centerline offset in the boundary renderer match the SLD Carriageway Gauge and baseline road bar heights 1:1:
+
+| Road Configuration | Total Width ($W$) | Half-Width Offset ($m$) | Bar Height ($H$) | Centerline Offset ($\pm H/2$) |
+| :--- | :---: | :---: | :---: | :---: |
+| **2-Lane (`2L`)** | $7.0\text{m}$ | $3.5\text{m}$ | **$40\text{px}$** | $\pm 20\text{px}$ |
+| **2L + Paved Shoulder (`2L+PS`)** | $10.0\text{m}$ | $5.0\text{m}$ | **$76\text{px}$** | $\pm 38\text{px}$ |
+| **4-Lane / 4L+PS (`4L`)** | $14.0\text{m}$ | $7.0\text{m}$ | **$110\text{px}$** | $\pm 55\text{px}$ |
+| **6-Lane (`6L`)** | $20.0\text{m}$ | $10.0\text{m}$ | **$150\text{px}$** | $\pm 75\text{px}$ |
+
+Piecewise conversion formula:
+$$\text{offsetPx}(m) = \begin{cases}
+(m / 3.5) \times 20 & 0 \le m \le 3.5 \\
+20 + \frac{m - 3.5}{5.0 - 3.5} \times (38 - 20) & 3.5 < m \le 5.0 \\
+38 + \frac{m - 5.0}{7.0 - 5.0} \times (55 - 38) & 5.0 < m \le 7.0 \\
+55 + \frac{m - 7.0}{10.0 - 7.0} \times (75 - 55) & 7.0 < m \le 10.0 \\
+75 + (m - 10.0) \times \frac{20}{3.0} & m > 10.0
+\end{cases}$$
+
 ---
 
 ## 4. Straight-Line Diagram (SLD) Visual Integration

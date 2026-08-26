@@ -318,6 +318,30 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     return 'bg-red-50 dark:bg-red-950/70 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/50 font-bold';
   };
 
+  // Converts lateral road width from centerline (in meters) to vertical pixel offset from centerline
+  // Aligns 1:1 with SLD Carriageway Gauge & Baseline Road Bar Heights:
+  // 2L (7m total width / 3.5m half-width) -> 20px offset (40px total height)
+  // 2L+PS (10m total width / 5.0m half-width) -> 38px offset (76px total height)
+  // 4L (14m total width / 7.0m half-width) -> 55px offset (110px total height)
+  // 6L (20m total width / 10.0m half-width) -> 75px offset (150px total height)
+  const getLateralOffsetPx = (metersFromCenterline: number): number => {
+    const m = Math.max(0, Number(metersFromCenterline || 0));
+    if (m === 0) return 0;
+    if (m <= 3.5) {
+      return (m / 3.5) * 20;
+    }
+    if (m <= 5.0) {
+      return 20 + ((m - 3.5) / (5.0 - 3.5)) * (38 - 20);
+    }
+    if (m <= 7.0) {
+      return 38 + ((m - 5.0) / (7.0 - 5.0)) * (55 - 38);
+    }
+    if (m <= 10.0) {
+      return 55 + ((m - 7.0) / (10.0 - 7.0)) * (75 - 55);
+    }
+    return 75 + (m - 10.0) * (20 / 3.0);
+  };
+
   // Continuous 2D DLP Position Calculator
   const getDlpPosition = useCallback(
     (dlp: DlpWorkStretch) => {
@@ -818,8 +842,8 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
                       // Center Carriageway Work (0m to Width): 1 Continuous Symmetrical Central Band
                       if (wFrom === 0) {
-                        const totalWidthM = wTo * 2;
-                        const heightPx = Math.max(32, totalWidthM * 10);
+                        const offsetToPx = getLateralOffsetPx(wTo);
+                        const heightPx = Math.max(16, offsetToPx * 2);
 
                         return (
                           <div
@@ -846,9 +870,11 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                       }
 
                       // Widening Work: 2 Symmetrical Parallel Boundary Strips (LHS & RHS)
-                      const stripHeightPx = Math.max(16, (wTo - wFrom) * 10);
-                      const topUpperPx = `calc(50% - ${wTo * 10}px)`;
-                      const topLowerPx = `calc(50% + ${wFrom * 10}px)`;
+                      const offsetFromPx = getLateralOffsetPx(wFrom);
+                      const offsetToPx = getLateralOffsetPx(wTo);
+                      const stripHeightPx = Math.max(8, offsetToPx - offsetFromPx);
+                      const topUpperPx = `calc(50% - ${offsetToPx}px)`;
+                      const topLowerPx = `calc(50% + ${offsetFromPx}px)`;
 
                       return (
                         <React.Fragment key={dlp.id || dIdx}>
