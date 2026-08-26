@@ -1,28 +1,26 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   ArrowLeft,
   Save,
   ShieldCheck,
   AlertCircle,
-  FileText,
   MapPin,
   Layers,
-  Clock,
   Plus,
   Trash2,
   Calendar,
   Building2,
-  CheckCircle2,
-  ChevronRight,
-  ChevronLeft,
-  LockKeyhole,
   Check,
+  LockKeyhole,
+  CheckCircle2,
+  Clock,
   Briefcase,
+  ChevronDown,
+  Sparkles,
 } from 'lucide-react';
-import { DLPContractItem, DLPSubContract } from '@/app/dlp/page';
-import { DlpMasterData } from '@/app/api/dlp/master-data/route';
+import { DlpCorridor, DlpWorkStretch, DlpWorkCategory, DlpMasterData } from '@/types/dlp';
 import {
   DLP_CIRCLE_OPTIONS,
   DLP_CIRCLE_DIVISION_MAP,
@@ -32,56 +30,52 @@ import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 interface DlpContractEntryFormProps {
-  initialData?: Partial<DLPContractItem>;
+  initialData?: Partial<DlpCorridor>;
   masterData?: DlpMasterData;
-  onSave: (contractData: Partial<DLPContractItem>) => Promise<void> | void;
+  onSave: (corridorData: Partial<DlpCorridor>) => Promise<void> | void;
   onCancel: () => void;
 }
 
-type DlpStageType =
-  | 'corridor_jurisdiction'
-  | 'execution_terms'
-  | 'category_breakdown'
-  | 'child_subcontracts';
-
-interface StageDefinition {
-  id: DlpStageType;
-  label: string;
-  step: string;
-  subtitle: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-const STAGES: StageDefinition[] = [
-  {
-    id: 'corridor_jurisdiction',
-    label: 'Corridor & Jurisdiction',
-    step: 'Stage 1',
-    subtitle: 'Corridor code, administrative circle, division and chainage boundaries',
-    icon: MapPin,
+const CATEGORY_CONFIG: Record<
+  DlpWorkCategory,
+  { label: string; bgBadge: string; textBadge: string; borderCard: string; dotColor: string }
+> = {
+  DLP: {
+    label: 'Under DLP',
+    bgBadge: 'bg-emerald-100 dark:bg-emerald-950',
+    textBadge: 'text-emerald-800 dark:text-emerald-200',
+    borderCard: 'border-emerald-300 dark:border-emerald-800/60',
+    dotColor: 'bg-emerald-500',
   },
-  {
-    id: 'execution_terms',
-    label: 'Execution & Terms',
-    step: 'Stage 2',
-    subtitle: 'Contractor agency, procurement mode, DOC date and DLP guarantee expiry',
-    icon: Briefcase,
+  CONSTRUCTION: {
+    label: 'Under Construction',
+    bgBadge: 'bg-blue-100 dark:bg-blue-950',
+    textBadge: 'text-blue-800 dark:text-blue-200',
+    borderCard: 'border-blue-300 dark:border-blue-800/60',
+    dotColor: 'bg-blue-500',
   },
-  {
-    id: 'category_breakdown',
-    label: 'Category Breakdown',
-    step: 'Stage 3',
-    subtitle: 'Breakdown of DLP, STMC, PBMC, construction and uncontracted stretches',
-    icon: Layers,
+  STMC: {
+    label: 'Under STMC',
+    bgBadge: 'bg-amber-100 dark:bg-amber-950',
+    textBadge: 'text-amber-800 dark:text-amber-200',
+    borderCard: 'border-amber-300 dark:border-amber-800/60',
+    dotColor: 'bg-amber-500',
   },
-  {
-    id: 'child_subcontracts',
-    label: 'Child Sub-Contracts',
-    step: 'Stage 4',
-    subtitle: 'Granular 1-to-N child packages, contractor assignments and validity',
-    icon: ShieldCheck,
+  PBMC: {
+    label: 'Under PBMC',
+    bgBadge: 'bg-purple-100 dark:bg-purple-950',
+    textBadge: 'text-purple-800 dark:text-purple-200',
+    borderCard: 'border-purple-300 dark:border-purple-800/60',
+    dotColor: 'bg-purple-500',
   },
-];
+  NO_DLP: {
+    label: 'Under NO DLP',
+    bgBadge: 'bg-slate-200 dark:bg-slate-800',
+    textBadge: 'text-slate-800 dark:text-slate-200',
+    borderCard: 'border-slate-300 dark:border-slate-700',
+    dotColor: 'bg-slate-500',
+  },
+};
 
 export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
   initialData,
@@ -89,355 +83,140 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
   onSave,
   onCancel,
 }) => {
-  const [activeStageIndex, setActiveStageIndex] = useState<number>(0);
+  const [activeTab, setActiveTab] = useState<'IDENTITY' | 'STRETCHES'>('IDENTITY');
 
-  const initialCircle = (initialData?.division_name
-    ? getCircleForDivision(initialData.division_name)
-    : '') || '';
-
-  // Stage 1: Corridor & Jurisdiction
-  const [highwayCode, setHighwayCode] = useState<string>(initialData?.highway_code || '');
-  const [circleName, setCircleName] = useState<string>(initialCircle);
+  // Tab 1: Corridor & Jurisdiction
   const [divisionName, setDivisionName] = useState<string>(initialData?.division_name || '');
-  const [stretchName, setStretchName] = useState<string>(initialData?.stretch_name || '');
+  const [highwayCode, setHighwayCode] = useState<string>(initialData?.highway_code || '');
   const [fromKm, setFromKm] = useState<string>(
     initialData?.from_km !== undefined && initialData?.from_km !== null ? String(initialData.from_km) : ''
   );
   const [toKm, setToKm] = useState<string>(
     initialData?.to_km !== undefined && initialData?.to_km !== null ? String(initialData.to_km) : ''
   );
+  const [corridorRemarks, setCorridorRemarks] = useState<string>(initialData?.remarks || '');
 
-  // Stage 2: Primary Execution Contract & Terms
-  const [contractorName, setContractorName] = useState<string>(initialData?.contractor_name || '');
-  const [contractMode, setContractMode] = useState<string>(initialData?.contract_mode || '');
-  const [workDescription, setWorkDescription] = useState<string>(initialData?.work_description || '');
-  const [docDate, setDocDate] = useState<string>(initialData?.doc_date || '');
-  const [dlpExpiryDate, setDlpExpiryDate] = useState<string>(initialData?.dlp_expiry_date || '');
-
-  // Stage 3: Complete Breakdown Category Inputs
-  const [dlpContractCount, setDlpContractCount] = useState<string>(
-    initialData?.dlp_contract_count !== undefined ? String(initialData.dlp_contract_count) : '0'
-  );
-  const [dlpLengthKm, setDlpLengthKm] = useState<string>(
-    initialData?.dlp_length_km !== undefined ? String(initialData.dlp_length_km) : '0'
-  );
-  const [dlpChainage, setDlpChainage] = useState<string>(initialData?.dlp_chainage || '');
-
-  const [stmcContractCount, setStmcContractCount] = useState<string>(
-    initialData?.stmc_contract_count !== undefined ? String(initialData.stmc_contract_count) : '0'
-  );
-  const [stmcLengthKm, setStmcLengthKm] = useState<string>(
-    initialData?.stmc_length_km !== undefined ? String(initialData.stmc_length_km) : '0'
-  );
-  const [stmcChainage, setStmcChainage] = useState<string>(initialData?.stmc_chainage || '');
-  const [stmcExpiryDate, setStmcExpiryDate] = useState<string>(initialData?.stmc_expiry_date || '');
-
-  const [constructionProjectCount, setConstructionProjectCount] = useState<string>(
-    initialData?.construction_project_count !== undefined
-      ? String(initialData.construction_project_count)
-      : '0'
-  );
-  const [constructionLengthKm, setConstructionLengthKm] = useState<string>(
-    initialData?.construction_length_km !== undefined
-      ? String(initialData.construction_length_km)
-      : '0'
-  );
-  const [constructionChainage, setConstructionChainage] = useState<string>(
-    initialData?.construction_chainage || ''
+  // Tab 2: Dynamic Sub-Work Stretches
+  const [workStretches, setWorkStretches] = useState<DlpWorkStretch[]>(
+    initialData?.work_stretches || []
   );
 
-  const [pbmcProjectCount, setPbmcProjectCount] = useState<string>(
-    initialData?.pbmc_project_count !== undefined ? String(initialData.pbmc_project_count) : '0'
-  );
-  const [pbmcLengthKm, setPbmcLengthKm] = useState<string>(
-    initialData?.pbmc_length_km !== undefined ? String(initialData.pbmc_length_km) : '0'
-  );
-  const [pbmcChainage, setPbmcChainage] = useState<string>(initialData?.pbmc_chainage || '');
-  const [pbmcExpiryDate, setPbmcExpiryDate] = useState<string>(initialData?.pbmc_expiry_date || '');
-
-  const [noDlpLengthKm, setNoDlpLengthKm] = useState<string>(
-    initialData?.no_dlp_length_km !== undefined ? String(initialData.no_dlp_length_km) : '0'
-  );
-  const [noDlpChainage, setNoDlpChainage] = useState<string>(initialData?.no_dlp_chainage || '');
-  const [noDlpExpiryDate, setNoDlpExpiryDate] = useState<string>(initialData?.no_dlp_expiry_date || '');
-
-  const [uncontractedAfter2027Km, setUncontractedAfter2027Km] = useState<string>(
-    initialData?.uncontracted_after_2027_km !== undefined
-      ? String(initialData.uncontracted_after_2027_km)
-      : '0'
-  );
-
-  // Stage 4: 1-to-N Granular Child Sub-Contracts Dynamic Repeater List
-  const [subContracts, setSubContracts] = useState<DLPSubContract[]>(
-    initialData?.sub_contracts || []
-  );
-
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const circleOptions = masterData?.circles && masterData.circles.length > 0
-    ? masterData.circles
-    : DLP_CIRCLE_OPTIONS;
+  const divisionOptions = masterData?.divisions && masterData.divisions.length > 0
+    ? masterData.divisions
+    : Object.values(DLP_CIRCLE_DIVISION_MAP).flat();
 
-  const divisionOptions = circleName
-    ? (DLP_CIRCLE_DIVISION_MAP[circleName] || masterData?.divisions || [])
-    : (masterData?.divisions && masterData.divisions.length > 0 ? masterData.divisions : Object.values(DLP_CIRCLE_DIVISION_MAP).flat());
+  const totalLengthKm =
+    fromKm !== '' && toKm !== ''
+      ? Math.max(0, Math.round((Number(toKm) - Number(fromKm)) * 1000) / 1000)
+      : 0;
 
-  const contractModes = masterData?.contractModes && masterData.contractModes.length > 0
-    ? masterData.contractModes
-    : ['EPC', 'STMC', 'PBMC', 'BOT', 'HAM', 'Annual Plan', 'Special Repairs', 'Departmental'];
+  // Tab 1 Validation Check
+  const validateTab1 = (): boolean => {
+    const errs: Record<string, string> = {};
+    if (!divisionName.trim()) errs.divisionName = 'Division selection is required.';
+    if (!highwayCode.trim()) errs.highwayCode = 'Highway Code is required (e.g. NH-44, NH-179A).';
+    if (fromKm === '' || isNaN(Number(fromKm)) || Number(fromKm) < 0) {
+      errs.fromKm = 'Valid starting chainage (From Km) is required.';
+    }
+    if (toKm === '' || isNaN(Number(toKm))) {
+      errs.toKm = 'Valid ending chainage (To Km) is required.';
+    } else if (Number(toKm) < Number(fromKm)) {
+      errs.toKm = 'Ending chainage (To Km) cannot be less than starting chainage.';
+    }
 
-  const maintenanceTypes = masterData?.maintenanceTypes && masterData.maintenanceTypes.length > 0
-    ? masterData.maintenanceTypes
-    : ['DLP', 'STMC', 'PBMC', 'CONSTRUCTION', 'NO_DLP', 'UNCONTRACTED'];
-
-  const handleCircleChange = (c: string) => {
-    setCircleName(c);
-    setDivisionName('');
-    if (errors.circleName) setErrors((prev) => ({ ...prev, circleName: '' }));
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
-  const handleAddSubContract = () => {
-    const newSub: DLPSubContract = {
-      id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      maintenance_type: 'DLP',
-      sub_stretch_title: '',
-      from_km: 0,
-      to_km: 0,
-      length_km: 0,
-      contractor_name: contractorName || '',
-      expiry_date: dlpExpiryDate || '',
+  const isTab1Valid = Boolean(
+    divisionName.trim() &&
+    highwayCode.trim() &&
+    fromKm !== '' &&
+    toKm !== '' &&
+    Number(toKm) >= Number(fromKm)
+  );
+
+  const handleAddWorkStretch = (category: DlpWorkCategory) => {
+    const parentFrom = Number(fromKm) || 0;
+    const parentTo = Number(toKm) || 0;
+
+    const newStretch: DlpWorkStretch = {
+      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      category,
+      chainage_from_km: parentFrom,
+      chainage_to_km: parentTo,
+      length_km: Math.max(0, Math.round((parentTo - parentFrom) * 1000) / 1000),
+      road_width_from_m: 0.0,
+      road_width_to_m: 3.5,
+      contractor_name: '',
+      work_name: '',
+      commencement_date: new Date().toISOString().split('T')[0],
+      dlp_till_date: category === 'DLP' || category === 'STMC' || category === 'PBMC'
+        ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        : '',
+      physical_progress_pct: category === 'CONSTRUCTION' ? 0 : null,
+      actual_completion_date: null,
+      dlp_period_years: category === 'CONSTRUCTION' ? 5 : null,
+      scheme: category === 'NO_DLP' ? 'Proposed Special Repairs' : null,
+      dlp_ended_on_date: null,
       remarks: '',
+      status: 'ACTIVE',
     };
-    setSubContracts((prev) => [...prev, newSub]);
+
+    setWorkStretches((prev) => [...prev, newStretch]);
+    setIsAddMenuOpen(false);
   };
 
-  const handleRemoveSubContract = (index: number) => {
-    setSubContracts((prev) => prev.filter((_, idx) => idx !== index));
-  };
-
-  const handleUpdateSubContract = (index: number, field: keyof DLPSubContract, value: unknown) => {
-    setSubContracts((prev) => {
+  const handleUpdateStretch = (index: number, field: keyof DlpWorkStretch, value: any) => {
+    setWorkStretches((prev) => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      if (field === 'from_km' || field === 'to_km') {
-        const f = Number(field === 'from_km' ? value : updated[index].from_km) || 0;
-        const t = Number(field === 'to_km' ? value : updated[index].to_km) || 0;
-        updated[index].length_km = Math.max(0, Math.round((t - f) * 1000) / 1000);
+      const stretch = { ...updated[index], [field]: value };
+
+      // Auto-compute length when chainages change
+      if (field === 'chainage_from_km' || field === 'chainage_to_km') {
+        const f = Number(field === 'chainage_from_km' ? value : stretch.chainage_from_km) || 0;
+        const t = Number(field === 'chainage_to_km' ? value : stretch.chainage_to_km) || 0;
+        stretch.length_km = Math.max(0, Math.round((t - f) * 1000) / 1000);
       }
+
+      updated[index] = stretch;
       return updated;
     });
   };
 
-  const calculatedLength =
-    fromKm !== '' && toKm !== '' ? Math.max(0, Math.round((Number(toKm) - Number(fromKm)) * 1000) / 1000) : 0;
-
-  // -------------------------------------------------------------
-  // STAGE-GATED VALIDATION ENGINE
-  // -------------------------------------------------------------
-  const validateSingleStage = (stageIdx: number): Record<string, string> => {
-    const stageErrors: Record<string, string> = {};
-
-    if (stageIdx === 0) {
-      // Stage 1: Corridor & Jurisdiction (Baseline)
-      if (!highwayCode.trim()) {
-        stageErrors.highwayCode = 'Highway Code is required (Stage 1).';
-      }
-      if (!circleName.trim()) {
-        stageErrors.circleName = 'Circle selection is required (Stage 1).';
-      }
-      if (!divisionName.trim()) {
-        stageErrors.divisionName = 'Division selection is required (Stage 1).';
-      }
-      if (fromKm === '' || isNaN(Number(fromKm)) || Number(fromKm) < 0) {
-        stageErrors.fromKm = 'Valid From Km is required (Stage 1).';
-      }
-      if (toKm === '' || isNaN(Number(toKm))) {
-        stageErrors.toKm = 'Valid To Km is required (Stage 1).';
-      } else if (Number(toKm) < Number(fromKm)) {
-        stageErrors.toKm = 'To Km cannot be less than From Km (Stage 1).';
-      }
-    } else if (stageIdx === 1) {
-      // Stage 2: Execution Contract & Terms
-      if (!contractorName.trim()) {
-        stageErrors.contractorName = 'Contractor Name is required (Stage 2).';
-      }
-      if (!contractMode.trim()) {
-        stageErrors.contractMode = 'Contract Mode is required (Stage 2).';
-      }
-      if (!docDate) {
-        stageErrors.docDate = 'Date of Commencement (DOC) is required (Stage 2).';
-      }
-      if (!dlpExpiryDate) {
-        stageErrors.dlpExpiryDate = 'DLP Expiry Date is required (Stage 2).';
-      }
-    } else if (stageIdx === 2) {
-      // Stage 3: Breakdown Categories
-      if (dlpLengthKm && (isNaN(Number(dlpLengthKm)) || Number(dlpLengthKm) < 0)) {
-        stageErrors.dlpLengthKm = 'DLP Length must be a non-negative number.';
-      }
-      if (stmcLengthKm && (isNaN(Number(stmcLengthKm)) || Number(stmcLengthKm) < 0)) {
-        stageErrors.stmcLengthKm = 'STMC Length must be a non-negative number.';
-      }
-      if (constructionLengthKm && (isNaN(Number(constructionLengthKm)) || Number(constructionLengthKm) < 0)) {
-        stageErrors.constructionLengthKm = 'Construction Length must be a non-negative number.';
-      }
-      if (pbmcLengthKm && (isNaN(Number(pbmcLengthKm)) || Number(pbmcLengthKm) < 0)) {
-        stageErrors.pbmcLengthKm = 'PBMC Length must be a non-negative number.';
-      }
-      if (noDlpLengthKm && (isNaN(Number(noDlpLengthKm)) || Number(noDlpLengthKm) < 0)) {
-        stageErrors.noDlpLengthKm = 'Non-DLP Length must be a non-negative number.';
-      }
-      if (uncontractedAfter2027Km && (isNaN(Number(uncontractedAfter2027Km)) || Number(uncontractedAfter2027Km) < 0)) {
-        stageErrors.uncontractedAfter2027Km = 'Uncontracted Length must be a non-negative number.';
-      }
-    } else if (stageIdx === 3) {
-      // Stage 4: Sub-contracts row validations
-      subContracts.forEach((sub, idx) => {
-        if (!sub.sub_stretch_title.trim()) {
-          stageErrors[`sub_${idx}_title`] = `Sub-Contract #${idx + 1}: Package Title is required.`;
-        }
-        if (sub.from_km !== undefined && sub.to_km !== undefined && Number(sub.to_km) < Number(sub.from_km)) {
-          stageErrors[`sub_${idx}_km`] = `Sub-Contract #${idx + 1}: To Km cannot be less than From Km.`;
-        }
-      });
-    }
-
-    return stageErrors;
-  };
-
-  const isStageAccessible = (targetStageIdx: number): boolean => {
-    if (targetStageIdx === 0) return true;
-    for (let i = 0; i < targetStageIdx; i++) {
-      const stageErrs = validateSingleStage(i);
-      if (Object.keys(stageErrs).length > 0) return false;
-    }
-    return true;
-  };
-
-  const isStageCompleted = (stageIdx: number): boolean => {
-    if (stageIdx === 0) {
-      return Boolean(highwayCode.trim() && circleName.trim() && divisionName.trim() && fromKm !== '' && toKm !== '' && Number(toKm) >= Number(fromKm) && Object.keys(validateSingleStage(0)).length === 0);
-    }
-    if (stageIdx === 1) {
-      return Boolean(contractorName.trim() && contractMode.trim() && docDate && dlpExpiryDate && Object.keys(validateSingleStage(1)).length === 0);
-    }
-    if (stageIdx === 2) {
-      return Boolean((dlpLengthKm || stmcLengthKm || constructionLengthKm || pbmcLengthKm || noDlpLengthKm) && Object.keys(validateSingleStage(2)).length === 0);
-    }
-    if (stageIdx === 3) {
-      return Boolean(subContracts.length > 0 && Object.keys(validateSingleStage(3)).length === 0);
-    }
-    return false;
-  };
-
-  const validateUpToStage = (maxStageIdx: number): boolean => {
-    const combinedErrors: Record<string, string> = {};
-    for (let i = 0; i <= maxStageIdx; i++) {
-      const stageErrs = validateSingleStage(i);
-      Object.assign(combinedErrors, stageErrs);
-    }
-    setErrors(combinedErrors);
-    return Object.keys(combinedErrors).length === 0;
-  };
-
-  const handleStageTabClick = (idx: number) => {
-    if (isStageAccessible(idx)) {
-      setErrors({});
-      setActiveStageIndex(idx);
-    } else {
-      validateUpToStage(activeStageIndex);
-    }
-  };
-
-  const handleNextStage = () => {
-    if (validateUpToStage(activeStageIndex)) {
-      if (activeStageIndex < STAGES.length - 1) {
-        setActiveStageIndex((prev) => prev + 1);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }
-  };
-
-  const handlePrevStage = () => {
-    if (activeStageIndex > 0) {
-      setActiveStageIndex((prev) => prev - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+  const handleRemoveStretch = (index: number) => {
+    setWorkStretches((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateUpToStage(activeStageIndex)) {
+    if (!validateTab1()) {
+      setActiveTab('IDENTITY');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     setLoading(true);
 
-    const formattedHighwayCode = highwayCode.trim().toUpperCase();
-    const finalStretchName =
-      stretchName.trim() ||
-      `${divisionName} Division - ${formattedHighwayCode} (Km ${fromKm} to ${toKm})`;
-
-    const finalDocDate = docDate || new Date().toISOString().split('T')[0];
-    const finalExpiryDate = dlpExpiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    const today = new Date();
-    const expiry = new Date(finalExpiryDate);
-    const diffTime = expiry.getTime() - today.getTime();
-    const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    let status: 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' = 'ACTIVE';
-    if (daysRemaining < 0) status = 'EXPIRED';
-    else if (daysRemaining <= 90) status = 'EXPIRING_SOON';
-
-    const payload: Partial<DLPContractItem> = {
+    const payload: Partial<DlpCorridor> = {
       ...(initialData?.id ? { id: initialData.id } : {}),
-      highway_code: formattedHighwayCode,
-      division_name: divisionName,
-      stretch_name: finalStretchName,
+      division_name: divisionName.trim(),
+      highway_code: highwayCode.trim().toUpperCase(),
       from_km: parseFloat(fromKm) || 0,
       to_km: parseFloat(toKm) || 0,
-      length_km: calculatedLength,
-
-      dlp_contract_count: parseInt(dlpContractCount, 10) || 0,
-      dlp_length_km: parseFloat(dlpLengthKm) || 0,
-      dlp_chainage: dlpChainage.trim() || undefined,
-      dlp_expiry_date: finalExpiryDate,
-
-      construction_project_count: parseInt(constructionProjectCount, 10) || 0,
-      construction_length_km: parseFloat(constructionLengthKm) || 0,
-      construction_chainage: constructionChainage.trim() || undefined,
-
-      stmc_contract_count: parseInt(stmcContractCount, 10) || 0,
-      stmc_length_km: parseFloat(stmcLengthKm) || 0,
-      stmc_chainage: stmcChainage.trim() || undefined,
-      stmc_expiry_date: stmcExpiryDate.trim() || undefined,
-
-      pbmc_project_count: parseInt(pbmcProjectCount, 10) || 0,
-      pbmc_length_km: parseFloat(pbmcLengthKm) || 0,
-      pbmc_chainage: pbmcChainage.trim() || undefined,
-      pbmc_expiry_date: pbmcExpiryDate.trim() || undefined,
-
-      no_dlp_length_km: parseFloat(noDlpLengthKm) || 0,
-      no_dlp_chainage: noDlpChainage.trim() || undefined,
-      no_dlp_expiry_date: noDlpExpiryDate.trim() || undefined,
-
-      uncontracted_after_2027_km: parseFloat(uncontractedAfter2027Km) || 0,
-
-      contractor_name: contractorName.trim() || `${divisionName} Division (Contractor DLP)`,
-      contract_mode: contractMode.trim() || 'EPC',
-      work_description:
-        workDescription.trim() || `Maintenance & DLP period under ${divisionName} Division (${contractMode || 'EPC'})`,
-      doc_date: finalDocDate,
-      days_remaining: daysRemaining,
-      status: initialData?.status === 'DELETED' ? 'DELETED' : status,
-
-      sub_contracts: subContracts.map((s) => ({
+      total_length_km: totalLengthKm,
+      remarks: corridorRemarks.trim() || null,
+      status: initialData?.status || 'ACTIVE',
+      work_stretches: workStretches.map((s) => ({
         ...s,
-        contractor_name: s.contractor_name || contractorName.trim() || `${divisionName} Division Contractor`,
-        expiry_date: s.expiry_date || finalExpiryDate,
+        contractor_name: s.contractor_name?.trim() || null,
+        work_name: s.work_name?.trim() || null,
+        scheme: s.scheme?.trim() || null,
+        remarks: s.remarks?.trim() || null,
       })),
     };
 
@@ -448,12 +227,10 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
     }
   };
 
-  const currentStage = STAGES[activeStageIndex];
-
   return (
     <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-6 pb-12">
-      {/* Top Header Banner */}
-      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Sticky Header Banner */}
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -465,10 +242,10 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-blue-600" />
-              {initialData?.id ? 'Edit DLP Maintenance Contract' : 'New DLP Maintenance Contract Entry'}
+              {initialData?.id ? 'Edit DLP Corridor & Maintenance Works' : 'New DLP Corridor & Maintenance Master Entry'}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Highways Maintenance Portal &bull; Defect Liability Period & Multi-Stretch Registry
+              Tamil Nadu National Highways &bull; 2D Spatial Geometry &amp; Lifecycle Management
             </p>
           </div>
         </div>
@@ -486,59 +263,88 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
             disabled={loading}
             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
-            <Save className="w-4 h-4" /> {loading ? 'Saving Contract...' : `Save Progress (${currentStage.step})`}
+            <Save className="w-4 h-4" /> {loading ? 'Saving Master Record...' : 'Save Complete Record'}
           </button>
         </div>
       </div>
 
-      {/* 4-STAGE LIFECYCLE SUB-NAVIGATION STEPPER BAR */}
+      {/* 2-STAGE STAGE-GATED TAB NAVIGATION */}
       <div className="bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          {STAGES.map((stage, idx) => {
-            const Icon = stage.icon;
-            const isActive = activeStageIndex === idx;
-            const accessible = isStageAccessible(idx);
-            const completed = isStageCompleted(idx);
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Tab 1 Pill */}
+          <button
+            type="button"
+            onClick={() => {
+              setErrors({});
+              setActiveTab('IDENTITY');
+            }}
+            className={`flex items-center justify-between p-3.5 rounded-xl text-left transition-all border cursor-pointer ${
+              activeTab === 'IDENTITY'
+                ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-900 dark:text-blue-100 shadow-xs ring-1 ring-blue-500/20'
+                : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${activeTab === 'IDENTITY' ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'}`}>
+                <MapPin className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider block text-blue-600 dark:text-blue-400">
+                  Tab 1 &bull; Baseline Identity
+                </span>
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                  Corridor &amp; Jurisdiction
+                </span>
+              </div>
+            </div>
+            {isTab1Valid ? (
+              <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                <Check className="w-3.5 h-3.5" /> Valid
+              </span>
+            ) : null}
+          </button>
 
-            return (
-              <button
-                key={stage.id}
-                type="button"
-                onClick={() => handleStageTabClick(idx)}
-                disabled={!accessible}
-                className={`flex flex-col items-start p-3 rounded-xl text-left transition-all border relative cursor-pointer disabled:cursor-not-allowed ${
-                  isActive
-                    ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-900 dark:text-blue-100 shadow-xs ring-1 ring-blue-500/20'
-                    : accessible
-                    ? 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    : 'bg-slate-100/50 dark:bg-slate-900/40 border-slate-200/50 dark:border-slate-800/50 text-slate-400 dark:text-slate-600 opacity-60'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full mb-1.5">
-                  <span
-                    className={`text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
-                      isActive
-                        ? 'bg-blue-600 text-white'
-                        : completed
-                        ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    {stage.step}
-                  </span>
-                  {completed ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  ) : !accessible ? (
-                    <LockKeyhole className="w-3.5 h-3.5 text-slate-400 dark:text-slate-600" />
-                  ) : (
-                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
-                  )}
-                </div>
-                <span className="text-xs font-bold truncate w-full">{stage.label}</span>
-                <span className="text-[11px] text-slate-400 dark:text-slate-500 truncate w-full mt-0.5">{stage.subtitle}</span>
-              </button>
-            );
-          })}
+          {/* Tab 2 Pill */}
+          <button
+            type="button"
+            onClick={() => {
+              if (validateTab1()) {
+                setErrors({});
+                setActiveTab('STRETCHES');
+              }
+            }}
+            disabled={!isTab1Valid}
+            className={`flex items-center justify-between p-3.5 rounded-xl text-left transition-all border cursor-pointer disabled:cursor-not-allowed ${
+              activeTab === 'STRETCHES'
+                ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-900 dark:text-blue-100 shadow-xs ring-1 ring-blue-500/20'
+                : isTab1Valid
+                ? 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                : 'bg-slate-100/50 dark:bg-slate-900/40 border-slate-200/50 dark:border-slate-800/50 text-slate-400 dark:text-slate-600 opacity-60'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${activeTab === 'STRETCHES' ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'}`}>
+                <Layers className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider block text-blue-600 dark:text-blue-400">
+                  Tab 2 &bull; 2D Work Workspace
+                </span>
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                  Sub-Work Stretches ({workStretches.length} Works)
+                </span>
+              </div>
+            </div>
+            {!isTab1Valid ? (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-600 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                <LockKeyhole className="w-3 h-3" /> Locked
+              </span>
+            ) : workStretches.length > 0 ? (
+              <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-xs font-mono font-bold rounded-md">
+                {workStretches.length} added
+              </span>
+            ) : null}
+          </button>
         </div>
       </div>
 
@@ -548,7 +354,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
           <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 mt-0.5 shrink-0" />
           <div className="text-xs">
             <strong className="font-bold text-sm block mb-1">
-              Please resolve the following required fields ({Object.keys(errors).length}):
+              Please resolve the following required fields:
             </strong>
             <ul className="list-disc pl-5 space-y-0.5 font-medium">
               {Object.entries(errors).map(([key, msg]) => (
@@ -559,60 +365,32 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
         </div>
       )}
 
-      {/* STAGE CONTENT PANELS */}
+      {/* TAB CONTENT PANELS */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-        {/* Stage Header Banner */}
-        <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {React.createElement(currentStage.icon, { className: 'w-5 h-5 text-blue-300' })}
-            <div>
-              <h3 className="font-bold text-sm uppercase tracking-wider text-white">
-                {currentStage.step}: {currentStage.label}
-              </h3>
-              <span className="text-xs text-blue-200">{currentStage.subtitle}</span>
+        {/* ========================================================= */}
+        {/* TAB 1: Corridor & Jurisdiction */}
+        {/* ========================================================= */}
+        {activeTab === 'IDENTITY' && (
+          <div>
+            <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <MapPin className="w-5 h-5 text-blue-300" />
+                <div>
+                  <h3 className="font-bold text-sm uppercase tracking-wider text-white">
+                    Tab 1: Corridor Identity &amp; Chainage Bounds
+                  </h3>
+                  <span className="text-xs text-blue-200">
+                    Administrative jurisdiction and continuous chainage limits
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="p-6 space-y-6">
-          {/* ========================================================= */}
-          {/* STAGE 1: Corridor & Jurisdiction */}
-          {/* ========================================================= */}
-          {activeStageIndex === 0 && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Highway Corridor Code <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={highwayCode}
-                    onChange={(e) => {
-                      setHighwayCode(e.target.value);
-                      if (errors.highwayCode) setErrors((prev) => ({ ...prev, highwayCode: '' }));
-                    }}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  {errors.highwayCode && <p className="text-[11px] text-rose-500 mt-1">{errors.highwayCode}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Administrative Circle <span className="text-rose-500">*</span>
-                  </label>
-                  <SearchableSelect
-                    options={circleOptions}
-                    value={circleName}
-                    onChange={handleCircleChange}
-                  />
-                  {errors.circleName && <p className="text-[11px] text-rose-500 mt-1">{errors.circleName}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Highway Division <span className="text-rose-500">*</span>
+                    Administrative Division <span className="text-rose-500">*</span>
                   </label>
                   <SearchableSelect
                     options={divisionOptions}
@@ -621,570 +399,601 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                       setDivisionName(val);
                       if (errors.divisionName) setErrors((prev) => ({ ...prev, divisionName: '' }));
                     }}
+                    placeholder="Select Division..."
                   />
                   {errors.divisionName && <p className="text-[11px] text-rose-500 mt-1">{errors.divisionName}</p>}
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Master Stretch Section Name
-                </label>
-                <input
-                  type="text"
-                  value={stretchName}
-                  onChange={(e) => setStretchName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    From Chainage (Km) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    min="0"
-                    value={fromKm}
-                    onChange={(e) => {
-                      setFromKm(e.target.value);
-                      if (errors.fromKm) setErrors((prev) => ({ ...prev, fromKm: '' }));
-                    }}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  {errors.fromKm && <p className="text-[11px] text-rose-500 mt-1">{errors.fromKm}</p>}
-                </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    To Chainage (Km) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    min="0"
-                    value={toKm}
-                    onChange={(e) => {
-                      setToKm(e.target.value);
-                      if (errors.toKm) setErrors((prev) => ({ ...prev, toKm: '' }));
-                    }}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  {errors.toKm && <p className="text-[11px] text-rose-500 mt-1">{errors.toKm}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Calculated Master Length (Km)
-                  </label>
-                  <div className="px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
-                    {calculatedLength.toFixed(3)} Km
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================= */}
-          {/* STAGE 2: Execution & Terms */}
-          {/* ========================================================= */}
-          {activeStageIndex === 1 && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Contractor / Execution Firm <span className="text-rose-500">*</span>
+                    National Highway Number / Code <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
-                    value={contractorName}
+                    value={highwayCode}
                     onChange={(e) => {
-                      setContractorName(e.target.value);
-                      if (errors.contractorName) setErrors((prev) => ({ ...prev, contractorName: '' }));
+                      setHighwayCode(e.target.value);
+                      if (errors.highwayCode) setErrors((prev) => ({ ...prev, highwayCode: '' }));
                     }}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. NH-179A, NH-44"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
-                  {errors.contractorName && <p className="text-[11px] text-rose-500 mt-1">{errors.contractorName}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Contract Procurement Mode <span className="text-rose-500">*</span>
-                  </label>
-                  <SearchableSelect
-                    options={contractModes}
-                    value={contractMode}
-                    onChange={(val) => {
-                      setContractMode(val);
-                      if (errors.contractMode) setErrors((prev) => ({ ...prev, contractMode: '' }));
-                    }}
-                  />
-                  {errors.contractMode && <p className="text-[11px] text-rose-500 mt-1">{errors.contractMode}</p>}
+                  {errors.highwayCode && <p className="text-[11px] text-rose-500 mt-1">{errors.highwayCode}</p>}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Date of Commencement (DOC) <span className="text-rose-500">*</span>
-                  </label>
-                  <DatePickerInput
-                    value={docDate}
-                    onChange={(val) => {
-                      setDocDate(val);
-                      if (errors.docDate) setErrors((prev) => ({ ...prev, docDate: '' }));
-                    }}
-                  />
-                  {errors.docDate && <p className="text-[11px] text-rose-500 mt-1">{errors.docDate}</p>}
-                </div>
+              {/* Chainage Limits Grid */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 block">
+                  Corridor Chainage Limits
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      From Chainage (Km) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      min="0"
+                      value={fromKm}
+                      onChange={(e) => {
+                        setFromKm(e.target.value);
+                        if (errors.fromKm) setErrors((prev) => ({ ...prev, fromKm: '' }));
+                      }}
+                      placeholder="0.000"
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                      required
+                    />
+                    {errors.fromKm && <p className="text-[11px] text-rose-500 mt-1">{errors.fromKm}</p>}
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Primary DLP Guarantee Expiry Date <span className="text-rose-500">*</span>
-                  </label>
-                  <DatePickerInput
-                    value={dlpExpiryDate}
-                    onChange={(val) => {
-                      setDlpExpiryDate(val);
-                      if (errors.dlpExpiryDate) setErrors((prev) => ({ ...prev, dlpExpiryDate: '' }));
-                    }}
-                  />
-                  {errors.dlpExpiryDate && <p className="text-[11px] text-rose-500 mt-1">{errors.dlpExpiryDate}</p>}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      To Chainage (Km) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      min="0"
+                      value={toKm}
+                      onChange={(e) => {
+                        setToKm(e.target.value);
+                        if (errors.toKm) setErrors((prev) => ({ ...prev, toKm: '' }));
+                      }}
+                      placeholder="45.000"
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                      required
+                    />
+                    {errors.toKm && <p className="text-[11px] text-rose-500 mt-1">{errors.toKm}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Calculated Total Length (Km)
+                    </label>
+                    <div className="px-3.5 py-2.5 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-mono font-bold text-blue-700 dark:text-blue-300">
+                      {totalLengthKm.toFixed(3)} Km
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Scope of Work & Maintenance Description
+                  Corridor Notes &amp; Administrative Remarks (Col AC)
                 </label>
                 <textarea
                   rows={3}
-                  value={workDescription}
-                  onChange={(e) => setWorkDescription(e.target.value)}
+                  value={corridorRemarks}
+                  onChange={(e) => setCorridorRemarks(e.target.value)}
+                  placeholder="Enter overall corridor remarks..."
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-            </div>
-          )}
 
-          {/* ========================================================= */}
-          {/* STAGE 3: Category Breakdown */}
-          {/* ========================================================= */}
-          {activeStageIndex === 2 && (
-            <div className="space-y-6">
-              {/* Category 1: DLP Warranty */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">
-                  1. Defect Liability Period (DLP) Stretches
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Contract Count</label>
-                    <input
-                      type="number"
-                      value={dlpContractCount}
-                      onChange={(e) => setDlpContractCount(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Length (Km)</label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      value={dlpLengthKm}
-                      onChange={(e) => setDlpLengthKm(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Chainage Bounds</label>
-                    <input
-                      type="text"
-                      value={dlpChainage}
-                      onChange={(e) => setDlpChainage(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Category 2: Active Construction */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 block">
-                  2. Active Construction Work Stretches
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Project Count</label>
-                    <input
-                      type="number"
-                      value={constructionProjectCount}
-                      onChange={(e) => setConstructionProjectCount(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Length (Km)</label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      value={constructionLengthKm}
-                      onChange={(e) => setConstructionLengthKm(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Chainage Bounds</label>
-                    <input
-                      type="text"
-                      value={constructionChainage}
-                      onChange={(e) => setConstructionChainage(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Category 3: STMC Stretches */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 block">
-                  3. Short-Term Maintenance Contracts (STMC)
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Contract Count</label>
-                    <input
-                      type="number"
-                      value={stmcContractCount}
-                      onChange={(e) => setStmcContractCount(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Length (Km)</label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      value={stmcLengthKm}
-                      onChange={(e) => setStmcLengthKm(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Chainage Bounds</label>
-                    <input
-                      type="text"
-                      value={stmcChainage}
-                      onChange={(e) => setStmcChainage(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">STMC Expiry</label>
-                    <DatePickerInput
-                      value={stmcExpiryDate}
-                      onChange={setStmcExpiryDate}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Category 4: PBMC Stretches */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
-                  4. Performance-Based Maintenance (PBMC)
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Project Count</label>
-                    <input
-                      type="number"
-                      value={pbmcProjectCount}
-                      onChange={(e) => setPbmcProjectCount(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Length (Km)</label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      value={pbmcLengthKm}
-                      onChange={(e) => setPbmcLengthKm(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Chainage Bounds</label>
-                    <input
-                      type="text"
-                      value={pbmcChainage}
-                      onChange={(e) => setPbmcChainage(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">PBMC Expiry</label>
-                    <DatePickerInput
-                      value={pbmcExpiryDate}
-                      onChange={setPbmcExpiryDate}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Category 5 & 6: Non-DLP and Uncontracted */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-rose-600 dark:text-rose-400 block">
-                    5. Non-DLP / Uncontracted Stretches
-                  </span>
-                  <div className="space-y-2">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Length (Km)</label>
-                      <input
-                        type="number"
-                        step="0.001"
-                        value={noDlpLengthKm}
-                        onChange={(e) => setNoDlpLengthKm(e.target.value)}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Chainage Bounds</label>
-                      <input
-                        type="text"
-                        value={noDlpChainage}
-                        onChange={(e) => setNoDlpChainage(e.target.value)}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Expiry Date</label>
-                      <DatePickerInput
-                        value={noDlpExpiryDate}
-                        onChange={setNoDlpExpiryDate}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400 block">
-                    6. Uncontracted Beyond 2027
-                  </span>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Length (Km)</label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      value={uncontractedAfter2027Km}
-                      onChange={(e) => setUncontractedAfter2027Km(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================= */}
-          {/* STAGE 4: Child Sub-Contracts */}
-          {/* ========================================================= */}
-          {activeStageIndex === 3 && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    1-to-N Child Packages & Sub-Contracts ({subContracts.length})
-                  </h4>
-                  <p className="text-[11px] text-slate-500">
-                    Add discrete road stretches, contractor assignments, chainages, and warranties
-                  </p>
-                </div>
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
                 <button
                   type="button"
-                  onClick={handleAddSubContract}
-                  className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  onClick={() => {
+                    if (validateTab1()) {
+                      setActiveTab('STRETCHES');
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Sub-Contract</span>
+                  Proceed to Sub-Work Stretches (Tab 2) &rarr;
                 </button>
               </div>
+            </div>
+          </div>
+        )}
 
-              {subContracts.length === 0 ? (
-                <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
-                  <Layers className="w-8 h-8 text-slate-400 mx-auto mb-2 opacity-50" />
-                  <p className="text-xs font-semibold text-slate-500">No child sub-contracts registered.</p>
-                  <button
-                    type="button"
-                    onClick={handleAddSubContract}
-                    className="mt-3 px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                  >
-                    + Add First Sub-Contract
-                  </button>
+        {/* ========================================================= */}
+        {/* TAB 2: Sub-Work Stretches Workspace */}
+        {/* ========================================================= */}
+        {activeTab === 'STRETCHES' && (
+          <div>
+            <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Layers className="w-5 h-5 text-blue-300" />
+                <div>
+                  <h3 className="font-bold text-sm uppercase tracking-wider text-white">
+                    Tab 2: Granular Sub-Work Stretches Workspace
+                  </h3>
+                  <span className="text-xs text-blue-200">
+                    2D spatial bounds (Chainage &amp; Lateral Road Width) across 5 categories
+                  </span>
+                </div>
+              </div>
+
+              {/* Dynamic + Add Work Dropdown Menu */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsAddMenuOpen((prev) => !prev)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-100 text-blue-900 font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4 text-blue-600" />
+                  <span>+ Add Work</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                </button>
+
+                {isAddMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 py-1.5 z-20 animate-in fade-in zoom-in-95">
+                    {(['DLP', 'CONSTRUCTION', 'STMC', 'PBMC', 'NO_DLP'] as DlpWorkCategory[]).map((cat) => {
+                      const cfg = CATEGORY_CONFIG[cat];
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => handleAddWorkStretch(cat)}
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <span className={`w-2 h-2 rounded-full ${cfg.dotColor}`} />
+                          <span>{cfg.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {workStretches.length === 0 ? (
+                <div className="py-16 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                  <Layers className="w-10 h-10 text-slate-400 mx-auto mb-3 opacity-60" />
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    No Sub-Work Stretches Added Yet
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+                    Click the <strong>&quot;+ Add Work&quot;</strong> button above to add a stretch under DLP, Construction, STMC, PBMC, or NO DLP.
+                  </p>
+                  <div className="flex justify-center gap-2 mt-4 flex-wrap">
+                    {(['DLP', 'CONSTRUCTION', 'STMC', 'PBMC', 'NO_DLP'] as DlpWorkCategory[]).map((cat) => {
+                      const cfg = CATEGORY_CONFIG[cat];
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => handleAddWorkStretch(cat)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
+                        >
+                          <span className={`w-2 h-2 rounded-full ${cfg.dotColor}`} />
+                          <span>+ {cfg.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {subContracts.map((sub, idx) => (
-                    <div
-                      key={sub.id || idx}
-                      className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3 relative"
-                    >
-                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-extrabold">
-                            {idx + 1}
+                <div className="space-y-4">
+                  {workStretches.map((stretch, index) => {
+                    const cfg = CATEGORY_CONFIG[stretch.category];
+                    return (
+                      <div
+                        key={stretch.id || index}
+                        className={`p-5 rounded-2xl border ${cfg.borderCard} bg-white dark:bg-slate-900/90 shadow-xs space-y-4 relative`}
+                      >
+                        {/* Card Top Row */}
+                        <div className="flex items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className={`px-2.5 py-1 rounded-lg font-extrabold text-xs flex items-center gap-1.5 ${cfg.bgBadge} ${cfg.textBadge}`}>
+                              <span className={`w-2 h-2 rounded-full ${cfg.dotColor}`} />
+                              {cfg.label}
+                            </span>
+                            <span className="text-xs font-bold text-slate-500 font-mono">
+                              Work Stretch #{index + 1}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveStretch(index)}
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg transition-colors cursor-pointer"
+                            title="Remove Work Stretch"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {/* 2D Spatial Boundaries Grid */}
+                        <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-3">
+                          <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400 block">
+                            2D Spatial Coordinates (Chainage &amp; Symmetrical Width from Centerline 0)
                           </span>
-                          <span>{sub.sub_stretch_title || `Sub-Package #${idx + 1}`}</span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSubContract(idx)}
-                          className="text-rose-500 hover:text-rose-700 p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
-                          title="Remove row"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                                Chainage From (Km)
+                              </label>
+                              <input
+                                type="number"
+                                step="0.001"
+                                min="0"
+                                value={stretch.chainage_from_km}
+                                onChange={(e) => handleUpdateStretch(index, 'chainage_from_km', e.target.value)}
+                                className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-3">
-                        <div className="sm:col-span-2">
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Package Title *</label>
-                          <input
-                            type="text"
-                            value={sub.sub_stretch_title}
-                            onChange={(e) => handleUpdateSubContract(idx, 'sub_stretch_title', e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold"
-                          />
-                        </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                                Chainage To (Km)
+                              </label>
+                              <input
+                                type="number"
+                                step="0.001"
+                                min="0"
+                                value={stretch.chainage_to_km}
+                                onChange={(e) => handleUpdateStretch(index, 'chainage_to_km', e.target.value)}
+                                className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
 
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Type *</label>
-                          <SearchableSelect
-                            options={maintenanceTypes}
-                            value={sub.maintenance_type}
-                            onChange={(val) => handleUpdateSubContract(idx, 'maintenance_type', val)}
-                          />
-                        </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                                Stretch Length (Km)
+                              </label>
+                              <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
+                                {Number(stretch.length_km || 0).toFixed(3)} Km
+                              </div>
+                            </div>
 
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">From Km *</label>
-                          <input
-                            type="number"
-                            step="0.001"
-                            value={sub.from_km ?? ''}
-                            onChange={(e) => handleUpdateSubContract(idx, 'from_km', e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold"
-                          />
-                        </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                                Road Width From (m)
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={stretch.road_width_from_m}
+                                onChange={(e) => handleUpdateStretch(index, 'road_width_from_m', e.target.value)}
+                                placeholder="0.00"
+                                className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
 
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">To Km *</label>
-                          <input
-                            type="number"
-                            step="0.001"
-                            value={sub.to_km ?? ''}
-                            onChange={(e) => handleUpdateSubContract(idx, 'to_km', e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Length (Km)</label>
-                          <div className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-blue-600">
-                            {(sub.length_km ?? 0).toFixed(3)}
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                                Road Width To (m)
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={stretch.road_width_to_m}
+                                onChange={(e) => handleUpdateStretch(index, 'road_width_to_m', e.target.value)}
+                                placeholder="3.50"
+                                className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
+                        {/* Category-Specific Dynamic Inputs */}
+                        {stretch.category === 'DLP' && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Name of Contractor (Col I)
+                              </label>
+                              <input
+                                type="text"
+                                value={stretch.contractor_name || ''}
+                                onChange={(e) => handleUpdateStretch(index, 'contractor_name', e.target.value)}
+                                placeholder="Contractor name..."
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Name of Work (Col J)
+                              </label>
+                              <input
+                                type="text"
+                                value={stretch.work_name || ''}
+                                onChange={(e) => handleUpdateStretch(index, 'work_name', e.target.value)}
+                                placeholder="e.g. Strengthening & Widening..."
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Date of Commencement (Col K)
+                              </label>
+                              <DatePickerInput
+                                value={stretch.commencement_date || ''}
+                                onChange={(val) => handleUpdateStretch(index, 'commencement_date', val)}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                DLP Till Date (Col L)
+                              </label>
+                              <DatePickerInput
+                                value={stretch.dlp_till_date || ''}
+                                onChange={(val) => handleUpdateStretch(index, 'dlp_till_date', val)}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {stretch.category === 'CONSTRUCTION' && (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                  Name of Contractor (Col M)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={stretch.contractor_name || ''}
+                                  onChange={(e) => handleUpdateStretch(index, 'contractor_name', e.target.value)}
+                                  placeholder="Contractor name..."
+                                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                  Name of Work (Col N)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={stretch.work_name || ''}
+                                  onChange={(e) => handleUpdateStretch(index, 'work_name', e.target.value)}
+                                  placeholder="e.g. 4-Laning Capital Work..."
+                                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                  Date of Commencement (Col O)
+                                </label>
+                                <DatePickerInput
+                                  value={stretch.commencement_date || ''}
+                                  onChange={(val) => handleUpdateStretch(index, 'commencement_date', val)}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                  Physical Progress % (Col P)
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="0.1"
+                                  value={stretch.physical_progress_pct ?? 0}
+                                  onChange={(e) => handleUpdateStretch(index, 'physical_progress_pct', e.target.value)}
+                                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                  Actual Date of Completion (Col Q)
+                                </label>
+                                <DatePickerInput
+                                  value={stretch.actual_completion_date || ''}
+                                  onChange={(val) => handleUpdateStretch(index, 'actual_completion_date', val)}
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                  DLP Period in Years (Col R)
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="10"
+                                  value={stretch.dlp_period_years ?? 5}
+                                  onChange={(e) => handleUpdateStretch(index, 'dlp_period_years', e.target.value)}
+                                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {stretch.category === 'STMC' && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Name of Contractor (Col S)
+                              </label>
+                              <input
+                                type="text"
+                                value={stretch.contractor_name || ''}
+                                onChange={(e) => handleUpdateStretch(index, 'contractor_name', e.target.value)}
+                                placeholder="STMC contractor..."
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Name of Work (Col T)
+                              </label>
+                              <input
+                                type="text"
+                                value={stretch.work_name || ''}
+                                onChange={(e) => handleUpdateStretch(index, 'work_name', e.target.value)}
+                                placeholder="STMC work title..."
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Date of Commencement (Col U)
+                              </label>
+                              <DatePickerInput
+                                value={stretch.commencement_date || ''}
+                                onChange={(val) => handleUpdateStretch(index, 'commencement_date', val)}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                DLP Till Date (Col V)
+                              </label>
+                              <DatePickerInput
+                                value={stretch.dlp_till_date || ''}
+                                onChange={(val) => handleUpdateStretch(index, 'dlp_till_date', val)}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {stretch.category === 'PBMC' && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Name of Contractor (Col W)
+                              </label>
+                              <input
+                                type="text"
+                                value={stretch.contractor_name || ''}
+                                onChange={(e) => handleUpdateStretch(index, 'contractor_name', e.target.value)}
+                                placeholder="PBMC contractor..."
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Name of Work (Col X)
+                              </label>
+                              <input
+                                type="text"
+                                value={stretch.work_name || ''}
+                                onChange={(e) => handleUpdateStretch(index, 'work_name', e.target.value)}
+                                placeholder="PBMC work title..."
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Date of Commencement (Col Y)
+                              </label>
+                              <DatePickerInput
+                                value={stretch.commencement_date || ''}
+                                onChange={(val) => handleUpdateStretch(index, 'commencement_date', val)}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                DLP Till Date (Col Z)
+                              </label>
+                              <DatePickerInput
+                                value={stretch.dlp_till_date || ''}
+                                onChange={(val) => handleUpdateStretch(index, 'dlp_till_date', val)}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {stretch.category === 'NO_DLP' && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Scheme / Proposed Action (Col AA)
+                              </label>
+                              <input
+                                type="text"
+                                value={stretch.scheme || ''}
+                                onChange={(e) => handleUpdateStretch(index, 'scheme', e.target.value)}
+                                placeholder="e.g. Proposed under Special Repairs..."
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                DLP Ended On Date (Col AB)
+                              </label>
+                              <DatePickerInput
+                                value={stretch.dlp_ended_on_date || ''}
+                                onChange={(val) => handleUpdateStretch(index, 'dlp_ended_on_date', val)}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Stretch Remarks */}
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Package Contractor</label>
+                          <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                            Stretch Remarks (Col AC)
+                          </label>
                           <input
                             type="text"
-                            value={sub.contractor_name || ''}
-                            onChange={(e) => handleUpdateSubContract(idx, 'contractor_name', e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Sub-Expiry Date</label>
-                          <DatePickerInput
-                            value={sub.expiry_date || ''}
-                            onChange={(val) => handleUpdateSubContract(idx, 'expiry_date', val)}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Remarks</label>
-                          <input
-                            type="text"
-                            value={sub.remarks || ''}
-                            onChange={(e) => handleUpdateSubContract(idx, 'remarks', e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold"
+                            value={stretch.remarks || ''}
+                            onChange={(e) => handleUpdateStretch(index, 'remarks', e.target.value)}
+                            placeholder="Stretch-specific remarks..."
+                            className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
                           />
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
-          )}
-        </div>
-
-        {/* Bottom Navigation & Save Action Footer */}
-        <div className="bg-slate-50 dark:bg-slate-800/60 px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-3">
-          <div>
-            {activeStageIndex > 0 ? (
-              <button
-                type="button"
-                onClick={handlePrevStage}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
-              >
-                <ChevronLeft className="w-4 h-4" /> Previous: {STAGES[activeStageIndex - 1].label}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onCancel}
-                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
-              >
-                Cancel
-              </button>
-            )}
           </div>
+        )}
+      </div>
 
-          <div className="flex items-center gap-2.5">
-            {activeStageIndex < STAGES.length - 1 && (
-              <button
-                type="button"
-                onClick={handleNextStage}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600 text-xs font-bold cursor-pointer transition-all"
-              >
-                <span>Next: {STAGES[activeStageIndex + 1].label}</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            )}
+      {/* Bottom Action Buttons */}
+      <div className="flex items-center justify-between pt-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+        >
+          Cancel
+        </button>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" /> {loading ? 'Saving Contract...' : `Save Progress (${currentStage.step})`}
-            </button>
-          </div>
-        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+        >
+          <Save className="w-4 h-4" /> {loading ? 'Saving Master Record...' : 'Save Complete Record'}
+        </button>
       </div>
     </form>
   );
 };
-
-export default DlpContractEntryForm;

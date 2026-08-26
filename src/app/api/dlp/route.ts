@@ -1,8 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { DLPContractItem } from '@/app/dlp/page';
+import { DlpCorridor, DlpWorkStretch } from '@/types/dlp';
 
 export const dynamic = 'force-dynamic';
+
+function computeStretchLiveStatus(stretch: DlpWorkStretch): DlpWorkStretch {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let daysRemaining: number | undefined = undefined;
+  let computedStatus: 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | 'COMPLETED' = 'ACTIVE';
+
+  if (stretch.category === 'CONSTRUCTION') {
+    if (Number(stretch.physical_progress_pct || 0) >= 100) {
+      computedStatus = 'COMPLETED';
+    } else {
+      computedStatus = 'ACTIVE';
+    }
+  } else if (stretch.dlp_till_date) {
+    const expiry = new Date(stretch.dlp_till_date);
+    expiry.setHours(0, 0, 0, 0);
+    const diffTime = expiry.getTime() - today.getTime();
+    daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (daysRemaining < 0) {
+      computedStatus = 'EXPIRED';
+    } else if (daysRemaining <= 90) {
+      computedStatus = 'EXPIRING_SOON';
+    } else {
+      computedStatus = 'ACTIVE';
+    }
+  } else if (stretch.category === 'NO_DLP') {
+    computedStatus = 'EXPIRED';
+  }
+
+  return {
+    ...stretch,
+    days_remaining: daysRemaining,
+    computed_status: computedStatus,
+  };
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,131 +51,97 @@ export async function GET(req: NextRequest) {
     const includeDeleted = searchParams.get('includeDeleted') === 'true';
 
     const supabase = await createClient();
-    if (supabase) {
-      let query = supabase.from('dlp_contracts').select('*').order('dlp_expiry_date', { ascending: true });
-
-      if (highwayCode) query = query.eq('highway_code', highwayCode);
-      if (includeDeleted) {
-        // Show everything including DELETED records
-      } else if (statusFilter && statusFilter !== 'ALL') {
-        query = query.eq('status', statusFilter);
-      } else {
-        query = query.neq('status', 'DELETED');
-      }
-
-      const { data, error } = await query;
-      if (!error && data) {
-        const today = new Date();
-
-        let formattedContracts: DLPContractItem[] = data.map((item: any) => {
-          const expiry = item.dlp_expiry_date ? new Date(item.dlp_expiry_date) : today;
-          const diffTime = expiry.getTime() - today.getTime();
-          const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          const currentStatus = item.status === 'DELETED'
-            ? 'DELETED'
-            : daysRemaining < 0
-            ? 'EXPIRED'
-            : daysRemaining <= 90
-            ? 'EXPIRING_SOON'
-            : 'ACTIVE';
-
-          let extractedDivision = item.division_name || '';
-          if (!extractedDivision && item.stretch_name) {
-            const match = item.stretch_name.match(/^([^ -]+(?:\s+Division)?)/i);
-            if (match) extractedDivision = match[1].replace(/\s+Division$/i, '').trim();
-          }
-
-          const details = item.contract_details || {};
-
-          return {
-            id: item.id,
-            highway_code: item.highway_code,
-            division_name: extractedDivision || 'General',
-            stretch_name: item.stretch_name || `Stretch ${item.highway_code}`,
-            from_km: Number(item.from_km || 0),
-            to_km: Number(item.to_km || 0),
-            length_km: Number(item.length_km || 0),
-
-            // 100% Complete Excel Breakdown Sub-Columns
-            dlp_contract_count: Number(item.dlp_contract_count ?? details.dlp_contract_count ?? 0),
-            dlp_length_km: Number(item.dlp_length_km ?? details.dlp_length_km ?? 0),
-            dlp_chainage: item.dlp_chainage || details.dlp_chainage || '',
-            dlp_expiry_date: item.dlp_expiry_date || details.dlp_expiry_date || '',
-
-            construction_project_count: Number(item.construction_project_count ?? details.construction_project_count ?? 0),
-            construction_length_km: Number(item.construction_length_km ?? details.construction_length_km ?? 0),
-            construction_chainage: item.construction_chainage || details.construction_chainage || '',
-
-            stmc_contract_count: Number(item.stmc_contract_count ?? details.stmc_contract_count ?? 0),
-            stmc_length_km: Number(item.stmc_length_km ?? details.stmc_length_km ?? 0),
-            stmc_chainage: item.stmc_chainage || details.stmc_chainage || '',
-            stmc_expiry_date: item.stmc_expiry_date || details.stmc_expiry_date || '',
-
-            pbmc_project_count: Number(item.pbmc_project_count ?? details.pbmc_project_count ?? 0),
-            pbmc_length_km: Number(item.pbmc_length_km ?? details.pbmc_length_km ?? 0),
-            pbmc_chainage: item.pbmc_chainage || details.pbmc_chainage || '',
-            pbmc_expiry_date: item.pbmc_expiry_date || details.pbmc_expiry_date || '',
-
-            no_dlp_length_km: Number(item.no_dlp_length_km ?? details.no_dlp_length_km ?? 0),
-            no_dlp_chainage: item.no_dlp_chainage || details.no_dlp_chainage || '',
-            no_dlp_expiry_date: item.no_dlp_expiry_date || details.no_dlp_expiry_date || '',
-
-            uncontracted_after_2027_km: Number(item.uncontracted_after_2027_km ?? details.uncontracted_after_2027_km ?? 0),
-
-            // 1-to-N Child Sub-Contracts Array
-            sub_contracts: (item.sub_contracts || details.sub_contracts || []).map((sub: any, idx: number) => ({
-              id: sub.id || `sub-${idx}`,
-              maintenance_type: sub.maintenance_type || sub.sub_contract_type || sub.type || 'DLP',
-              sub_stretch_title: sub.sub_stretch_title || sub.sub_contract_title || sub.title || `Sub-Stretch ${idx + 1}`,
-              from_km: Number(sub.from_km || 0),
-              to_km: Number(sub.to_km || 0),
-              length_km: Number(sub.length_km || 0),
-              contractor_name: sub.contractor_name || '',
-              expiry_date: sub.expiry_date || '',
-              days_remaining: typeof sub.days_remaining === 'number' ? sub.days_remaining : (sub.expiry_date ? Math.ceil((new Date(sub.expiry_date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : undefined),
-              status: sub.status || 'ACTIVE',
-              remarks: sub.remarks || '',
-            })),
-
-            contractor_name: item.contractor_name || 'Assigned Contractor',
-            contract_mode: item.contract_mode || 'EPC',
-            work_description: item.work_description || '',
-            doc_date: item.doc_date || '',
-            days_remaining: daysRemaining,
-            status: currentStatus as any,
-          };
-        });
-
-        if (statusFilter !== 'DELETED') {
-          formattedContracts = formattedContracts.filter((c) => (c.status as string) !== 'DELETED');
-        }
-
-        if (division) {
-          formattedContracts = formattedContracts.filter(
-            (c) => c.division_name?.toLowerCase().includes(division.toLowerCase()) || c.stretch_name.toLowerCase().includes(division.toLowerCase())
-          );
-        }
-
-        if (search) {
-          const term = search.toLowerCase();
-          formattedContracts = formattedContracts.filter(
-            (c) =>
-              c.highway_code.toLowerCase().includes(term) ||
-              c.stretch_name.toLowerCase().includes(term) ||
-              c.contractor_name.toLowerCase().includes(term) ||
-              c.work_description.toLowerCase().includes(term) ||
-              c.division_name?.toLowerCase().includes(term)
-          );
-        }
-
-        return NextResponse.json({ success: true, contracts: formattedContracts });
-      }
+    if (!supabase) {
+      return NextResponse.json({ success: false, error: 'Database client unavailable' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, contracts: [] });
+    let query = supabase
+      .from('dlp_corridors')
+      .select('*, dlp_work_stretches(*)')
+      .order('created_at', { ascending: false });
+
+    if (highwayCode) query = query.eq('highway_code', highwayCode);
+    if (division) query = query.ilike('division_name', `%${division}%`);
+
+    if (includeDeleted) {
+      // Return all statuses
+    } else if (statusFilter && statusFilter !== 'ALL') {
+      query = query.eq('status', statusFilter);
+    } else {
+      query = query.neq('status', 'DELETED');
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+
+    let corridors: DlpCorridor[] = (data || []).map((corridor: any) => {
+      const stretches: DlpWorkStretch[] = (corridor.dlp_work_stretches || [])
+        .filter((s: any) => includeDeleted || s.status !== 'DELETED')
+        .map((s: any) => computeStretchLiveStatus({
+          id: s.id,
+          corridor_id: s.corridor_id,
+          category: s.category,
+          chainage_from_km: Number(s.chainage_from_km || 0),
+          chainage_to_km: Number(s.chainage_to_km || 0),
+          length_km: Number(s.length_km || 0),
+          road_width_from_m: Number(s.road_width_from_m || 0),
+          road_width_to_m: Number(s.road_width_to_m || 3.5),
+          contractor_name: s.contractor_name || null,
+          work_name: s.work_name || null,
+          commencement_date: s.commencement_date || null,
+          dlp_till_date: s.dlp_till_date || null,
+          physical_progress_pct: s.physical_progress_pct !== null ? Number(s.physical_progress_pct) : null,
+          actual_completion_date: s.actual_completion_date || null,
+          dlp_period_years: s.dlp_period_years !== null ? Number(s.dlp_period_years) : null,
+          scheme: s.scheme || null,
+          dlp_ended_on_date: s.dlp_ended_on_date || null,
+          remarks: s.remarks || null,
+          status: s.status || 'ACTIVE',
+          created_at: s.created_at,
+          updated_at: s.updated_at,
+        }));
+
+      return {
+        id: corridor.id,
+        division_name: corridor.division_name,
+        highway_code: corridor.highway_code,
+        from_km: Number(corridor.from_km || 0),
+        to_km: Number(corridor.to_km || 0),
+        total_length_km: Number(corridor.total_length_km || 0),
+        remarks: corridor.remarks || null,
+        status: corridor.status || 'ACTIVE',
+        created_at: corridor.created_at,
+        updated_at: corridor.updated_at,
+        work_stretches: stretches,
+      };
+    });
+
+    if (search) {
+      const term = search.toLowerCase();
+      corridors = corridors.filter((c) => {
+        const matchesCorridor =
+          c.highway_code.toLowerCase().includes(term) ||
+          c.division_name.toLowerCase().includes(term) ||
+          (c.remarks && c.remarks.toLowerCase().includes(term));
+
+        const matchesStretch = c.work_stretches?.some(
+          (s) =>
+            (s.work_name && s.work_name.toLowerCase().includes(term)) ||
+            (s.contractor_name && s.contractor_name.toLowerCase().includes(term)) ||
+            (s.scheme && s.scheme.toLowerCase().includes(term)) ||
+            (s.remarks && s.remarks.toLowerCase().includes(term))
+        );
+
+        return matchesCorridor || matchesStretch;
+      });
+    }
+
+    return NextResponse.json({ success: true, corridors });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ success: false, error: msg, message: msg, contracts: [] }, { status: 500 });
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
 
@@ -146,153 +149,247 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const supabase = await createClient();
+    if (!supabase) {
+      return NextResponse.json({ success: false, error: 'Database client unavailable' }, { status: 500 });
+    }
 
-    const fromKm = Number(body.from_km || 0);
-    const toKm = Number(body.to_km || 0);
-    const lengthKm = Number(body.length_km || Math.abs(toKm - fromKm));
+    const {
+      division_name,
+      highway_code,
+      from_km,
+      to_km,
+      total_length_km,
+      remarks,
+      work_stretches = [],
+    } = body;
 
-    const breakdown = {
-      dlp_contract_count: Number(body.dlp_contract_count || 0),
-      dlp_length_km: Number(body.dlp_length_km || 0),
-      dlp_chainage: body.dlp_chainage || '',
-      dlp_expiry_date: body.dlp_expiry_date || '',
+    if (!division_name || !highway_code) {
+      return NextResponse.json(
+        { success: false, error: 'Division name and Highway code are required' },
+        { status: 400 }
+      );
+    }
 
-      construction_project_count: Number(body.construction_project_count || 0),
-      construction_length_km: Number(body.construction_length_km || 0),
-      construction_chainage: body.construction_chainage || '',
+    const numFrom = Number(from_km || 0);
+    const numTo = Number(to_km || 0);
+    const numLength = Number(total_length_km || Math.abs(numTo - numFrom));
 
-      stmc_contract_count: Number(body.stmc_contract_count || 0),
-      stmc_length_km: Number(body.stmc_length_km || 0),
-      stmc_chainage: body.stmc_chainage || '',
-      stmc_expiry_date: body.stmc_expiry_date || '',
+    // 1. Insert Parent Corridor
+    const { data: corridorData, error: corridorError } = await supabase
+      .from('dlp_corridors')
+      .insert([
+        {
+          division_name,
+          highway_code,
+          from_km: numFrom,
+          to_km: numTo,
+          total_length_km: numLength,
+          remarks: remarks || null,
+          status: 'ACTIVE',
+        },
+      ])
+      .select()
+      .single();
 
-      pbmc_project_count: Number(body.pbmc_project_count || 0),
-      pbmc_length_km: Number(body.pbmc_length_km || 0),
-      pbmc_chainage: body.pbmc_chainage || '',
-      pbmc_expiry_date: body.pbmc_expiry_date || '',
+    if (corridorError || !corridorData) {
+      return NextResponse.json({ success: false, error: corridorError?.message || 'Failed to create corridor' }, { status: 500 });
+    }
 
-      no_dlp_length_km: Number(body.no_dlp_length_km || 0),
-      no_dlp_chainage: body.no_dlp_chainage || '',
-      no_dlp_expiry_date: body.no_dlp_expiry_date || '',
+    const corridorId = corridorData.id;
 
-      uncontracted_after_2027_km: Number(body.uncontracted_after_2027_km || 0),
-      sub_contracts: body.sub_contracts || [],
-    };
+    // 2. Insert Granular Work Stretches if any
+    let insertedStretches: DlpWorkStretch[] = [];
+    if (Array.isArray(work_stretches) && work_stretches.length > 0) {
+      const stretchesToInsert = work_stretches.map((s: any) => {
+        const sFrom = Number(s.chainage_from_km || 0);
+        const sTo = Number(s.chainage_to_km || 0);
+        const sLen = Number(s.length_km || Math.abs(sTo - sFrom));
+        const wFrom = Number(s.road_width_from_m ?? 0.0);
+        const wTo = Number(s.road_width_to_m ?? 3.5);
 
-    const payload = {
-      highway_code: body.highway_code,
-      stretch_name: body.stretch_name || `${body.division_name || ''} Division - ${body.highway_code} (Km ${fromKm} to ${toKm})`,
-      from_km: fromKm,
-      to_km: toKm,
-      length_km: lengthKm,
-      contractor_name: body.contractor_name || `${body.division_name || ''} Division Contractor`,
-      contract_mode: body.contract_mode || 'EPC',
-      work_description: body.work_description || '',
-      doc_date: body.doc_date || null,
-      dlp_expiry_date: body.dlp_expiry_date || null,
-      status: 'ACTIVE',
-      division_name: body.division_name || '',
-      dlp_contract_count: breakdown.dlp_contract_count,
-      dlp_length_km: breakdown.dlp_length_km,
-      construction_project_count: breakdown.construction_project_count,
-      construction_length_km: breakdown.construction_length_km,
-      stmc_contract_count: breakdown.stmc_contract_count,
-      stmc_length_km: breakdown.stmc_length_km,
-      stmc_expiry_date: breakdown.stmc_expiry_date || null,
-      pbmc_project_count: breakdown.pbmc_project_count,
-      pbmc_length_km: breakdown.pbmc_length_km,
-      no_dlp_length_km: breakdown.no_dlp_length_km,
-      uncontracted_after_2027_km: breakdown.uncontracted_after_2027_km,
-      contract_details: breakdown,
-    };
+        let category = s.category;
+        let commencementDate = s.commencement_date || null;
+        let dlpTillDate = s.dlp_till_date || null;
+        let progressPct = s.physical_progress_pct !== null && s.physical_progress_pct !== undefined ? Number(s.physical_progress_pct) : null;
+        let completionDate = s.actual_completion_date || null;
+        let periodYears = s.dlp_period_years !== null && s.dlp_period_years !== undefined ? Number(s.dlp_period_years) : null;
+        let scheme = s.scheme || null;
+        let dlpEndedOn = s.dlp_ended_on_date || null;
 
-    if (supabase) {
-      const { data, error } = await supabase.from('dlp_contracts').insert([payload]).select();
-      if (!error && data && data[0]) {
-        return NextResponse.json({ success: true, contract: data[0] });
+        // Lifecycle rule: Construction reaching 100% with completion date auto-graduates to DLP
+        if (category === 'CONSTRUCTION' && progressPct !== null && progressPct >= 100 && completionDate) {
+          category = 'DLP';
+          commencementDate = completionDate;
+          if (periodYears && !dlpTillDate) {
+            const comp = new Date(completionDate);
+            comp.setFullYear(comp.getFullYear() + periodYears);
+            dlpTillDate = comp.toISOString().split('T')[0];
+          }
+        }
+
+        return {
+          corridor_id: corridorId,
+          category,
+          chainage_from_km: sFrom,
+          chainage_to_km: sTo,
+          length_km: sLen,
+          road_width_from_m: wFrom,
+          road_width_to_m: wTo,
+          contractor_name: s.contractor_name || null,
+          work_name: s.work_name || null,
+          commencement_date: commencementDate,
+          dlp_till_date: dlpTillDate,
+          physical_progress_pct: progressPct,
+          actual_completion_date: completionDate,
+          dlp_period_years: periodYears,
+          scheme: scheme,
+          dlp_ended_on_date: dlpEndedOn,
+          remarks: s.remarks || null,
+          status: 'ACTIVE',
+        };
+      });
+
+      const { data: stretchData, error: stretchError } = await supabase
+        .from('dlp_work_stretches')
+        .insert(stretchesToInsert)
+        .select();
+
+      if (stretchError) {
+        return NextResponse.json({ success: false, error: stretchError.message }, { status: 500 });
       }
+      insertedStretches = (stretchData || []).map(computeStretchLiveStatus);
     }
 
-    return NextResponse.json({ success: true, contract: { ...payload, ...breakdown, id: `dlp-${Date.now()}` } });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ success: false, error: msg, message: msg }, { status: 500 });
-  }
-}
-
-export async function PUT(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { id } = body;
-
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'DLP Contract ID is required', message: 'DLP Contract ID is required' }, { status: 400 });
-    }
-
-    const supabase = await createClient();
-
-    const fromKm = Number(body.from_km || 0);
-    const toKm = Number(body.to_km || 0);
-    const lengthKm = Number(body.length_km || Math.abs(toKm - fromKm));
-
-    const breakdown = {
-      dlp_contract_count: Number(body.dlp_contract_count || 0),
-      dlp_length_km: Number(body.dlp_length_km || 0),
-      dlp_chainage: body.dlp_chainage || '',
-      dlp_expiry_date: body.dlp_expiry_date || '',
-
-      construction_project_count: Number(body.construction_project_count || 0),
-      construction_length_km: Number(body.construction_length_km || 0),
-      construction_chainage: body.construction_chainage || '',
-
-      stmc_contract_count: Number(body.stmc_contract_count || 0),
-      stmc_length_km: Number(body.stmc_length_km || 0),
-      stmc_chainage: body.stmc_chainage || '',
-      stmc_expiry_date: body.stmc_expiry_date || '',
-
-      pbmc_project_count: Number(body.pbmc_project_count || 0),
-      pbmc_length_km: Number(body.pbmc_length_km || 0),
-      pbmc_chainage: body.pbmc_chainage || '',
-      pbmc_expiry_date: body.pbmc_expiry_date || '',
-
-      no_dlp_length_km: Number(body.no_dlp_length_km || 0),
-      no_dlp_chainage: body.no_dlp_chainage || '',
-      no_dlp_expiry_date: body.no_dlp_expiry_date || '',
-
-      uncontracted_after_2027_km: Number(body.uncontracted_after_2027_km || 0),
-      sub_contracts: body.sub_contracts || [],
-    };
-
-    const payload = {
-      highway_code: body.highway_code,
-      stretch_name: body.stretch_name || `${body.division_name || ''} Division - ${body.highway_code} (Km ${fromKm} to ${toKm})`,
-      from_km: fromKm,
-      to_km: toKm,
-      length_km: lengthKm,
-      contractor_name: body.contractor_name,
-      contract_mode: body.contract_mode,
-      work_description: body.work_description,
-      doc_date: body.doc_date || null,
-      dlp_expiry_date: body.dlp_expiry_date || null,
-      contract_details: breakdown,
-    };
-
-    if (supabase && !id.startsWith('dlp-')) {
-      const { data, error } = await supabase.from('dlp_contracts').update(payload).eq('id', id).select();
-      if (!error && data && data[0]) {
-        return NextResponse.json({ success: true, contract: data[0] });
-      }
-    }
-
-    return NextResponse.json({ success: true, contract: { ...body, ...payload, ...breakdown } });
+    return NextResponse.json({
+      success: true,
+      corridor: {
+        ...corridorData,
+        work_stretches: insertedStretches,
+      },
+    }, { status: 201 });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
 
-export async function PATCH(req: NextRequest) {
-  return PUT(req);
+export async function PUT(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id, division_name, highway_code, from_km, to_km, total_length_km, remarks, status, work_stretches } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Corridor ID is required' }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+    if (!supabase) {
+      return NextResponse.json({ success: false, error: 'Database client unavailable' }, { status: 500 });
+    }
+
+    const numFrom = Number(from_km || 0);
+    const numTo = Number(to_km || 0);
+    const numLength = Number(total_length_km || Math.abs(numTo - numFrom));
+
+    // 1. Update Corridor Record
+    const { data: updatedCorridor, error: corridorError } = await supabase
+      .from('dlp_corridors')
+      .update({
+        division_name,
+        highway_code,
+        from_km: numFrom,
+        to_km: numTo,
+        total_length_km: numLength,
+        remarks: remarks || null,
+        status: status || 'ACTIVE',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (corridorError || !updatedCorridor) {
+      return NextResponse.json({ success: false, error: corridorError?.message || 'Failed to update corridor' }, { status: 500 });
+    }
+
+    // 2. Sync Work Stretches if provided
+    let syncedStretches: DlpWorkStretch[] = [];
+    if (Array.isArray(work_stretches)) {
+      // Delete removed stretches
+      await supabase.from('dlp_work_stretches').delete().eq('corridor_id', id);
+
+      if (work_stretches.length > 0) {
+        const stretchesToInsert = work_stretches.map((s: any) => {
+          const sFrom = Number(s.chainage_from_km || 0);
+          const sTo = Number(s.chainage_to_km || 0);
+          const sLen = Number(s.length_km || Math.abs(sTo - sFrom));
+          const wFrom = Number(s.road_width_from_m ?? 0.0);
+          const wTo = Number(s.road_width_to_m ?? 3.5);
+
+          let category = s.category;
+          let commencementDate = s.commencement_date || null;
+          let dlpTillDate = s.dlp_till_date || null;
+          let progressPct = s.physical_progress_pct !== null && s.physical_progress_pct !== undefined ? Number(s.physical_progress_pct) : null;
+          let completionDate = s.actual_completion_date || null;
+          let periodYears = s.dlp_period_years !== null && s.dlp_period_years !== undefined ? Number(s.dlp_period_years) : null;
+          let scheme = s.scheme || null;
+          let dlpEndedOn = s.dlp_ended_on_date || null;
+
+          if (category === 'CONSTRUCTION' && progressPct !== null && progressPct >= 100 && completionDate) {
+            category = 'DLP';
+            commencementDate = completionDate;
+            if (periodYears && !dlpTillDate) {
+              const comp = new Date(completionDate);
+              comp.setFullYear(comp.getFullYear() + periodYears);
+              dlpTillDate = comp.toISOString().split('T')[0];
+            }
+          }
+
+          return {
+            corridor_id: id,
+            category,
+            chainage_from_km: sFrom,
+            chainage_to_km: sTo,
+            length_km: sLen,
+            road_width_from_m: wFrom,
+            road_width_to_m: wTo,
+            contractor_name: s.contractor_name || null,
+            work_name: s.work_name || null,
+            commencement_date: commencementDate,
+            dlp_till_date: dlpTillDate,
+            physical_progress_pct: progressPct,
+            actual_completion_date: completionDate,
+            dlp_period_years: periodYears,
+            scheme: scheme,
+            dlp_ended_on_date: dlpEndedOn,
+            remarks: s.remarks || null,
+            status: s.status || 'ACTIVE',
+          };
+        });
+
+        const { data: stretchData, error: stretchError } = await supabase
+          .from('dlp_work_stretches')
+          .insert(stretchesToInsert)
+          .select();
+
+        if (stretchError) {
+          return NextResponse.json({ success: false, error: stretchError.message }, { status: 500 });
+        }
+        syncedStretches = (stretchData || []).map(computeStretchLiveStatus);
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      corridor: {
+        ...updatedCorridor,
+        work_stretches: syncedStretches,
+      },
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  }
 }
 
 export async function DELETE(req: NextRequest) {
@@ -301,18 +398,30 @@ export async function DELETE(req: NextRequest) {
     const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json({ success: false, error: 'Contract ID is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Corridor ID is required' }, { status: 400 });
     }
 
     const supabase = await createClient();
-    if (supabase && !id.startsWith('dlp-')) {
-      const { error } = await supabase.from('dlp_contracts').update({ status: 'DELETED' }).eq('id', id);
-      if (error) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-      }
+    if (!supabase) {
+      return NextResponse.json({ success: false, error: 'Database client unavailable' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, message: `Contract ${id} successfully soft-deleted` });
+    // Soft-delete corridor and all its stretches
+    const { error: corridorErr } = await supabase
+      .from('dlp_corridors')
+      .update({ status: 'DELETED', updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (corridorErr) {
+      return NextResponse.json({ success: false, error: corridorErr.message }, { status: 500 });
+    }
+
+    await supabase
+      .from('dlp_work_stretches')
+      .update({ status: 'DELETED', updated_at: new Date().toISOString() })
+      .eq('corridor_id', id);
+
+    return NextResponse.json({ success: true, message: `Corridor ${id} soft-deleted` });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });

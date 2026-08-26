@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { DLPContractItem } from '@/app/dlp/page';
+import { DlpCorridor } from '@/types/dlp';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 
 interface DeleteDlpContractModalProps {
-  contract: DLPContractItem | null;
+  corridor: DlpCorridor | null;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
 export const DeleteDlpContractModal: React.FC<DeleteDlpContractModalProps> = ({
-  contract,
+  corridor,
   isOpen,
   onClose,
   onSuccess,
@@ -30,14 +30,14 @@ export const DeleteDlpContractModal: React.FC<DeleteDlpContractModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen || !contract) return null;
+  if (!isOpen || !corridor) return null;
 
   const handleDelete = async () => {
     try {
       setLoading(true);
       setErrorMsg('');
 
-      const res = await fetch(`/api/dlp?id=${encodeURIComponent(contract.id)}`, {
+      const res = await fetch(`/api/dlp?id=${encodeURIComponent(corridor.id)}`, {
         method: 'DELETE',
       });
 
@@ -47,7 +47,7 @@ export const DeleteDlpContractModal: React.FC<DeleteDlpContractModalProps> = ({
         onSuccess();
         onClose();
       } else {
-        setErrorMsg(data.error || 'Failed to soft-delete DLP contract record.');
+        setErrorMsg(data.error || 'Failed to soft-delete DLP corridor record.');
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -56,6 +56,8 @@ export const DeleteDlpContractModal: React.FC<DeleteDlpContractModalProps> = ({
       setLoading(false);
     }
   };
+
+  const stretchCount = corridor.work_stretches?.length || 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
@@ -70,28 +72,28 @@ export const DeleteDlpContractModal: React.FC<DeleteDlpContractModalProps> = ({
           </div>
 
           <h3 className="font-extrabold text-lg text-slate-900 dark:text-slate-100">
-            Archive DLP Contract Record?
+            Archive DLP Corridor Record?
           </h3>
 
           <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 text-left">
             <div className="flex items-center gap-2 mb-1">
               <span className="px-2 py-0.5 bg-blue-600 text-white rounded font-extrabold text-xs">
-                {contract.highway_code}
+                {corridor.highway_code}
               </span>
               <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                {contract.length_km} km ({contract.contract_mode})
+                {corridor.division_name} Division
               </span>
             </div>
             <p className="text-xs text-slate-700 dark:text-slate-300 font-bold line-clamp-1">
-              {contract.stretch_name}
+              Km {corridor.from_km} &rarr; Km {corridor.to_km} ({corridor.total_length_km} km)
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium line-clamp-1 mt-0.5">
-              {contract.contractor_name} &bull; Expiry: {contract.dlp_expiry_date || 'N/A'}
+              Contains {stretchCount} granular work {stretchCount === 1 ? 'stretch' : 'stretches'}
             </p>
           </div>
 
           <p className="text-xs text-slate-500 mt-3 leading-relaxed">
-            This action will soft-delete the DLP contract from the active portal view. Ground-truth historical data will remain archived in PostgreSQL for audit purposes.
+            This action will soft-delete the DLP corridor and its associated work stretches from active portal views. Historical data is preserved for audit compliance.
           </p>
 
           {errorMsg && (
@@ -126,7 +128,7 @@ export const DeleteDlpContractModal: React.FC<DeleteDlpContractModalProps> = ({
             ) : (
               <>
                 <Trash2 className="w-4 h-4" />
-                <span>Soft-Delete Contract</span>
+                <span>Soft-Delete Record</span>
               </>
             )}
           </button>

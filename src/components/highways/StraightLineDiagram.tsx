@@ -19,6 +19,7 @@ import {
   ArrowUpDown,
 } from 'lucide-react';
 import { SubChainageStretch } from '@/app/api/sub-chainages/route';
+import { DlpWorkStretch, DlpWorkCategory } from '@/types/dlp';
 
 interface HighwayMaster {
   id: string;
@@ -56,6 +57,8 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
   const [showRow, setShowRow] = useState<boolean>(true);
   const [showDpr, setShowDpr] = useState<boolean>(true);
   const [hoveredStretch, setHoveredStretch] = useState<SubChainageStretch | null>(null);
+  const [dlpStretches, setDlpStretches] = useState<DlpWorkStretch[]>([]);
+  const [hoveredDlpStretch, setHoveredDlpStretch] = useState<DlpWorkStretch | null>(null);
 
   // Fetch Highway and Sub-chainage Data
   const fetchData = useCallback(async () => {
@@ -100,6 +103,21 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
       if (subData.success) {
         setSubChainages(subData.subChainages || []);
+      }
+
+      // 3. Fetch DLP Corridors & Stretches
+      try {
+        const dlpRes = await fetch(`/api/dlp?highway_code=${encodeURIComponent(foundHighway.road_code)}`);
+        const dlpData = await dlpRes.json();
+        if (dlpData.success && Array.isArray(dlpData.corridors)) {
+          const allDlp: DlpWorkStretch[] = [];
+          dlpData.corridors.forEach((c: any) => {
+            (c.work_stretches || []).forEach((s: DlpWorkStretch) => allDlp.push(s));
+          });
+          setDlpStretches(allDlp);
+        }
+      } catch (dlpErr) {
+        console.warn('DLP fetch note in SLD:', dlpErr);
       }
     } catch (err: any) {
       console.error('Error loading SLD data:', err);
@@ -245,13 +263,108 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     };
   };
 
+  // DLP Category Visual Styling
+  const getDlpCategoryStyle = (cat: DlpWorkCategory) => {
+    switch (cat) {
+      case 'DLP':
+        return {
+          bg: 'bg-emerald-600 dark:bg-emerald-600',
+          border: 'border border-emerald-300 dark:border-emerald-400',
+          text: 'text-white',
+          badgeBg: 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200',
+          label: 'Under DLP',
+        };
+      case 'CONSTRUCTION':
+        return {
+          bg: 'bg-blue-600 dark:bg-blue-600',
+          border: 'border border-blue-300 dark:border-blue-400',
+          text: 'text-white',
+          badgeBg: 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200',
+          label: 'Under Construction',
+        };
+      case 'STMC':
+        return {
+          bg: 'bg-amber-600 dark:bg-amber-600',
+          border: 'border border-amber-300 dark:border-amber-400',
+          text: 'text-white',
+          badgeBg: 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200',
+          label: 'Under STMC',
+        };
+      case 'PBMC':
+        return {
+          bg: 'bg-purple-600 dark:bg-purple-600',
+          border: 'border border-purple-300 dark:border-purple-400',
+          text: 'text-white',
+          badgeBg: 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200',
+          label: 'Under PBMC',
+        };
+      case 'NO_DLP':
+      default:
+        return {
+          bg: 'bg-slate-600 dark:bg-slate-600',
+          border: 'border border-slate-400 dark:border-slate-500',
+          text: 'text-white',
+          badgeBg: 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200',
+          label: 'Under NO DLP',
+        };
+    }
+  };
+
   // Traffic PCU Badge Color
-  const getPcuColor = (pcu: number) => {
+  const getPcuColor = (pcu?: number | null) => {
     if (!pcu || pcu <= 0) return 'text-slate-400 dark:text-slate-600';
     if (pcu < 5000) return 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/40';
     if (pcu <= 15000) return 'bg-amber-50 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/40';
     return 'bg-red-50 dark:bg-red-950/70 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/50 font-bold';
   };
+
+  // Continuous 2D DLP Position Calculator
+  const getDlpPosition = useCallback(
+    (dlp: DlpWorkStretch) => {
+      const sFrom = Number(dlp.chainage_from_km || 0);
+      const sTo = Number(dlp.chainage_to_km || 0);
+
+      if (activeStretches.length > 0) {
+        let startPx = 0;
+        let endPx = canvasWidthPxActual;
+
+        for (let i = 0; i < activeStretches.length; i++) {
+          const st = activeStretches[i];
+          const pos = getStretchPos(st, i);
+          if (sFrom >= st.from_km && sFrom <= st.to_km) {
+            const ratio = st.to_km > st.from_km ? (sFrom - st.from_km) / (st.to_km - st.from_km) : 0;
+            startPx = pos.leftPx + ratio * pos.widthPx;
+            break;
+          } else if (sFrom < st.from_km && i === 0) {
+            startPx = 0;
+            break;
+          }
+        }
+
+        for (let i = 0; i < activeStretches.length; i++) {
+          const st = activeStretches[i];
+          const pos = getStretchPos(st, i);
+          if (sTo >= st.from_km && sTo <= st.to_km) {
+            const ratio = st.to_km > st.from_km ? (sTo - st.from_km) / (st.to_km - st.from_km) : 1;
+            endPx = pos.leftPx + ratio * pos.widthPx;
+            break;
+          } else if (sTo > st.to_km && i === activeStretches.length - 1) {
+            endPx = pos.leftPx + pos.widthPx;
+          }
+        }
+
+        return { leftPx: startPx, widthPx: Math.max(40, endPx - startPx) };
+      }
+
+      const startRatio = totalSpan > 0 ? Math.max(0, sFrom - minKm) / totalSpan : 0;
+      const lenRatio = totalSpan > 0 ? Math.min(1, Number(dlp.length_km || 1) / totalSpan) : 1;
+      return {
+        leftPx: startRatio * canvasWidthPxActual,
+        widthPx: Math.max(40, lenRatio * canvasWidthPxActual),
+      };
+    },
+    [activeStretches, getStretchPos, minKm, totalSpan, canvasWidthPxActual]
+  );
 
   if (loading) {
     return (
@@ -664,34 +777,128 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 {/* Horizontal Road Centerline Guide Line */}
                 <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-slate-400/40 dark:border-white/25 z-0 pointer-events-none" />
 
-                {activeStretches.length === 0 ? (
+                {activeStretches.length === 0 && dlpStretches.length === 0 ? (
                   <div className="w-full text-center text-xs text-slate-400 py-8">
-                    No micro sub-chainage stretches defined for this corridor. Add stretches in Level 2 to render the SLD timeline.
+                    No micro sub-chainage stretches or DLP works defined for this corridor.
                   </div>
                 ) : (
-                  activeStretches.map((st, i) => {
-                    const { leftPx, widthPx } = getStretchPos(st, i);
-                    const style = getLaneStyle(st.lane_configuration);
+                  <>
+                    {/* Baseline Carriageway Lane Spans */}
+                    {activeStretches.map((st, i) => {
+                      const { leftPx, widthPx } = getStretchPos(st, i);
+                      const style = getLaneStyle(st.lane_configuration);
 
-                    return (
-                      <div
-                        key={st.id || i}
-                        className={`absolute top-1/2 -translate-y-1/2 border-r border-slate-300 dark:border-white/20 border-y transition-all duration-200 cursor-pointer hover:brightness-110 dark:hover:brightness-125 hover:z-30 shadow-xs ${style.bg} ${style.border} print:bg-slate-200 print:border-slate-500 flex items-center justify-center overflow-hidden px-1`}
-                        style={{
-                          left: `${leftPx}px`,
-                          width: `${widthPx}px`,
-                          height: `${style.heightPx}px`,
-                        }}
-                        onMouseEnter={() => setHoveredStretch(st)}
-                        onClick={() => setHoveredStretch(st)}
-                        title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.length_km} km, ${st.lane_configuration}) - ${st.dpr_status || st.important_town || 'Baseline Stretch'}`}
-                      >
-                        <span className="text-[10px] font-extrabold font-mono text-slate-800 dark:text-slate-200 print:text-slate-900 truncate select-none px-1">
-                          {st.dpr_status || st.important_town || `${st.lane_configuration} (${st.length_km}km)`}
-                        </span>
-                      </div>
-                    );
-                  })
+                      return (
+                        <div
+                          key={st.id || i}
+                          className={`absolute top-1/2 -translate-y-1/2 border-r border-slate-300 dark:border-white/20 border-y transition-all duration-200 cursor-pointer hover:brightness-110 dark:hover:brightness-125 hover:z-20 shadow-xs ${style.bg} ${style.border} print:bg-slate-200 print:border-slate-500 flex items-center justify-center overflow-hidden px-1`}
+                          style={{
+                            left: `${leftPx}px`,
+                            width: `${widthPx}px`,
+                            height: `${style.heightPx}px`,
+                          }}
+                          onMouseEnter={() => setHoveredStretch(st)}
+                          onClick={() => setHoveredStretch(st)}
+                          title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.length_km} km, ${st.lane_configuration}) - ${st.dpr_status || st.important_town || 'Baseline Stretch'}`}
+                        >
+                          <span className="text-[10px] font-extrabold font-mono text-slate-800 dark:text-slate-200 print:text-slate-900 truncate select-none px-1">
+                            {st.dpr_status || st.important_town || `${st.lane_configuration} (${st.length_km}km)`}
+                          </span>
+                        </div>
+                      );
+                    })}
+
+                    {/* 2D DLP Continuous Work Boundaries Overlay (Intelligent Boundary Splitting) */}
+                    {dlpStretches.map((dlp, dIdx) => {
+                      const { leftPx, widthPx } = getDlpPosition(dlp);
+                      const style = getDlpCategoryStyle(dlp.category);
+                      const workTitle = dlp.work_name || dlp.scheme || dlp.category;
+                      const wFrom = Number(dlp.road_width_from_m ?? 0);
+                      const wTo = Number(dlp.road_width_to_m ?? 3.5);
+
+                      // Center Carriageway Work (0m to Width): 1 Continuous Symmetrical Central Band
+                      if (wFrom === 0) {
+                        const totalWidthM = wTo * 2;
+                        const heightPx = Math.max(32, totalWidthM * 10);
+
+                        return (
+                          <div
+                            key={dlp.id || dIdx}
+                            className={`absolute top-1/2 -translate-y-1/2 rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex items-center justify-center overflow-hidden px-2 z-30 ${style.bg} ${style.border} ${style.text}`}
+                            style={{
+                              left: `${leftPx}px`,
+                              width: `${widthPx}px`,
+                              height: `${heightPx}px`,
+                            }}
+                            onMouseEnter={() => {
+                              setHoveredDlpStretch(dlp);
+                            }}
+                            onClick={() => {
+                              setHoveredDlpStretch(dlp);
+                            }}
+                            title={`${dlp.category}: ${workTitle} (Km ${dlp.chainage_from_km} → Km ${dlp.chainage_to_km}, Width 0 to ${wTo}m)`}
+                          >
+                            <span className="text-[11px] font-black tracking-tight truncate select-none drop-shadow-xs">
+                              {workTitle}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      // Widening Work: 2 Symmetrical Parallel Boundary Strips (LHS & RHS)
+                      const stripHeightPx = Math.max(16, (wTo - wFrom) * 10);
+                      const topUpperPx = `calc(50% - ${wTo * 10}px)`;
+                      const topLowerPx = `calc(50% + ${wFrom * 10}px)`;
+
+                      return (
+                        <React.Fragment key={dlp.id || dIdx}>
+                          {/* Upper LHS Strip */}
+                          <div
+                            className={`absolute rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex items-center justify-center overflow-hidden px-1.5 z-30 ${style.bg} ${style.border} ${style.text}`}
+                            style={{
+                              left: `${leftPx}px`,
+                              width: `${widthPx}px`,
+                              top: topUpperPx,
+                              height: `${stripHeightPx}px`,
+                            }}
+                            onMouseEnter={() => {
+                              setHoveredDlpStretch(dlp);
+                            }}
+                            onClick={() => {
+                              setHoveredDlpStretch(dlp);
+                            }}
+                            title={`LHS Widening: ${workTitle}`}
+                          >
+                            <span className="text-[9px] font-black tracking-tight truncate select-none drop-shadow-xs">
+                              {workTitle}
+                            </span>
+                          </div>
+
+                          {/* Lower RHS Strip */}
+                          <div
+                            className={`absolute rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex items-center justify-center overflow-hidden px-1.5 z-30 ${style.bg} ${style.border} ${style.text}`}
+                            style={{
+                              left: `${leftPx}px`,
+                              width: `${widthPx}px`,
+                              top: topLowerPx,
+                              height: `${stripHeightPx}px`,
+                            }}
+                            onMouseEnter={() => {
+                              setHoveredDlpStretch(dlp);
+                            }}
+                            onClick={() => {
+                              setHoveredDlpStretch(dlp);
+                            }}
+                            title={`RHS Widening: ${workTitle}`}
+                          >
+                            <span className="text-[9px] font-black tracking-tight truncate select-none drop-shadow-xs">
+                              {workTitle}
+                            </span>
+                          </div>
+                        </React.Fragment>
+                      );
+                    })}
+                  </>
                 )}
               </div>
 
@@ -825,73 +1032,122 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
           </div>
         </div>
 
-        {/* Stretch Hover Detail Card */}
-        {hoveredStretch && (
+        {/* Hover / Selection Detail Passport Card */}
+        {(hoveredDlpStretch || hoveredStretch) && (
           <div className="bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-500/50 p-4 rounded-xs shadow-xl flex flex-col gap-3 animate-in fade-in duration-150 shrink-0 print:hidden">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 bg-blue-600 text-white font-mono font-bold text-xs rounded-xs">
-                    Km {hoveredStretch.from_km} &rarr; Km {hoveredStretch.to_km}
-                  </span>
-                  <span className="text-xs font-extrabold text-slate-900 dark:text-slate-200">
-                    Length: {hoveredStretch.length_km} km
-                  </span>
-                  <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 text-xs font-bold rounded-xs border border-slate-200 dark:border-slate-700 font-mono">
-                    {hoveredStretch.lane_configuration}
-                  </span>
+              {/* If a DLP work boundary is hovered/clicked */}
+              {hoveredDlpStretch ? (
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`px-2.5 py-0.5 rounded font-extrabold text-xs ${getDlpCategoryStyle(hoveredDlpStretch.category).badgeBg}`}>
+                      {getDlpCategoryStyle(hoveredDlpStretch.category).label}
+                    </span>
+                    <span className="text-sm font-black text-slate-900 dark:text-slate-100">
+                      {hoveredDlpStretch.work_name || hoveredDlpStretch.scheme || 'Untitled Work Stretch'}
+                    </span>
+                  </div>
+
+                  {/* 2D Dimensions & Timeline Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs bg-slate-50 dark:bg-slate-800/60 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div>
+                      <strong className="text-slate-500 block text-[10px] uppercase">Chainage Span:</strong>
+                      <span className="font-mono font-bold text-blue-700 dark:text-blue-300">
+                        Km {hoveredDlpStretch.chainage_from_km} &rarr; Km {hoveredDlpStretch.chainage_to_km} ({hoveredDlpStretch.length_km} km)
+                      </span>
+                    </div>
+
+                    <div>
+                      <strong className="text-slate-500 block text-[10px] uppercase">Road Width (Centerline):</strong>
+                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                        {hoveredDlpStretch.road_width_from_m}m &rarr; {hoveredDlpStretch.road_width_to_m}m
+                      </span>
+                    </div>
+
+                    <div>
+                      <strong className="text-slate-500 block text-[10px] uppercase">Contractor / Agency:</strong>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
+                        {hoveredDlpStretch.contractor_name || 'Assigned Agency'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <strong className="text-slate-500 block text-[10px] uppercase">
+                        {hoveredDlpStretch.category === 'CONSTRUCTION'
+                          ? 'Progress & Completion:'
+                          : hoveredDlpStretch.category === 'NO_DLP'
+                          ? 'DLP Ended On:'
+                          : 'DLP Till Date:'}
+                      </strong>
+                      <span className="font-bold font-mono">
+                        {hoveredDlpStretch.category === 'CONSTRUCTION'
+                          ? `${hoveredDlpStretch.physical_progress_pct ?? 0}% (${hoveredDlpStretch.actual_completion_date || 'In Progress'})`
+                          : hoveredDlpStretch.category === 'NO_DLP'
+                          ? hoveredDlpStretch.dlp_ended_on_date || 'N/A'
+                          : hoveredDlpStretch.dlp_till_date || 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {hoveredDlpStretch.remarks && (
+                    <p className="text-xs text-slate-600 dark:text-slate-300 italic pt-0.5">
+                      Remarks: {hoveredDlpStretch.remarks}
+                    </p>
+                  )}
                 </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 pt-1 flex items-center gap-4 flex-wrap">
-                  {hoveredStretch.important_town && (
-                    <span className="text-amber-700 dark:text-amber-400 font-bold">
-                      📍 Town: {hoveredStretch.important_town}
+              ) : hoveredStretch ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 bg-blue-600 text-white font-mono font-bold text-xs rounded-xs">
+                      Km {hoveredStretch.from_km} &rarr; Km {hoveredStretch.to_km}
                     </span>
-                  )}
-                  {hoveredStretch.row_width && (
-                    <span className="text-teal-700 dark:text-teal-400 font-bold font-mono">
-                      Right of Way: {hoveredStretch.row_width}
+                    <span className="text-xs font-extrabold text-slate-900 dark:text-slate-200">
+                      Length: {hoveredStretch.length_km} km
                     </span>
-                  )}
-                  {hoveredStretch.carriageway_width && (
-                    <span className="text-indigo-700 dark:text-indigo-400 font-bold font-mono">
-                      Carriageway Width: {hoveredStretch.carriageway_width}
+                    <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 text-xs font-bold rounded-xs border border-slate-200 dark:border-slate-700 font-mono">
+                      {hoveredStretch.lane_configuration}
                     </span>
-                  )}
-                  {hoveredStretch.pcu_count > 0 && (
-                    <span className="text-emerald-700 dark:text-emerald-400 font-bold font-mono">
-                      Traffic: {hoveredStretch.pcu_count.toLocaleString()} PCU
-                    </span>
-                  )}
-                </p>
-                {hoveredStretch.dpr_status && (
-                  <p className="text-xs italic text-purple-700 dark:text-purple-300 pt-0.5">
-                    &quot;{hoveredStretch.dpr_status}&quot;
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 pt-1 flex items-center gap-4 flex-wrap">
+                    {hoveredStretch.important_town && (
+                      <span className="text-amber-700 dark:text-amber-400 font-bold">
+                        📍 Town: {hoveredStretch.important_town}
+                      </span>
+                    )}
+                    {hoveredStretch.row_width && (
+                      <span className="text-teal-700 dark:text-teal-400 font-bold font-mono">
+                        Right of Way: {hoveredStretch.row_width}
+                      </span>
+                    )}
+                    {hoveredStretch.carriageway_width && (
+                      <span className="text-indigo-700 dark:text-indigo-400 font-bold font-mono">
+                        Carriageway Width: {hoveredStretch.carriageway_width}
+                      </span>
+                    )}
+                    {hoveredStretch.pcu_count > 0 && (
+                      <span className="text-emerald-700 dark:text-emerald-400 font-bold font-mono">
+                        Traffic: {hoveredStretch.pcu_count.toLocaleString()} PCU
+                      </span>
+                    )}
                   </p>
-                )}
-              </div>
+                  {hoveredStretch.dpr_status && (
+                    <p className="text-xs italic text-purple-700 dark:text-purple-300 pt-0.5">
+                      &quot;{hoveredStretch.dpr_status}&quot;
+                    </p>
+                  )}
+                </div>
+              ) : null}
 
               <button
                 type="button"
-                onClick={() => setHoveredStretch(null)}
+                onClick={() => {
+                  setHoveredStretch(null);
+                  setHoveredDlpStretch(null);
+                }}
                 className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xs transition-colors shrink-0 cursor-pointer self-start md:self-auto border border-slate-200 dark:border-slate-700"
               >
                 Dismiss Details
               </button>
-            </div>
-
-            {/* DLP Work Details Card */}
-            <div className="pt-2 mt-1 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold border border-slate-200 dark:border-slate-700 text-[11px]">
-                  🛡️ DLP Work Details:
-                </span>
-                <span className="text-slate-500 dark:text-slate-400 text-xs italic">
-                  DLP Contract Data Pending Upload / Linking
-                </span>
-              </div>
-              <span className="text-[10px] text-slate-400 font-mono">
-                (Km {hoveredStretch.from_km} – Km {hoveredStretch.to_km})
-              </span>
             </div>
           </div>
         )}
