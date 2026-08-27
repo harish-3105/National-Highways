@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { DlpCorridor, DlpWorkStretch } from '@/types/dlp';
+import { detectLaneWidthForChainage } from '@/lib/dlp/laneDetection';
 
 export const dynamic = 'force-dynamic';
 
@@ -200,12 +201,29 @@ export async function POST(req: NextRequest) {
     // 2. Insert Granular Work Stretches if any
     let insertedStretches: DlpWorkStretch[] = [];
     if (Array.isArray(work_stretches) && work_stretches.length > 0) {
+      // Prefetch Level 2 Sub-Chainages to auto-resolve lane widths when not provided
+      const plainNum = highway_code.replace(/^NH-?/i, '');
+      const searchCodes = Array.from(new Set([highway_code, `NH-${plainNum}`, plainNum]));
+      const { data: subChainagesData } = await supabase
+        .from('highway_sub_chainages')
+        .select('*')
+        .in('highway_code', searchCodes)
+        .neq('delete_status', 'DELETED')
+        .neq('delete_status', 'SOFT_DELETE');
+
       const stretchesToInsert = work_stretches.map((s: any) => {
         const sFrom = Number(s.chainage_from_km || 0);
         const sTo = Number(s.chainage_to_km || 0);
         const sLen = Number(s.length_km || Math.abs(sTo - sFrom));
         const wFrom = Number(s.road_width_from_m ?? 0.0);
-        const wTo = Number(s.road_width_to_m ?? 3.5);
+        
+        let wTo: number;
+        if (s.road_width_to_m !== undefined && s.road_width_to_m !== null && s.road_width_to_m !== '' && Number(s.road_width_to_m) > 0) {
+          wTo = Number(s.road_width_to_m);
+        } else {
+          const detected = detectLaneWidthForChainage(sFrom, sTo, subChainagesData || []);
+          wTo = detected.halfWidthMeters;
+        }
 
         let category = s.category;
         let commencementDate = s.commencement_date || null;
@@ -319,12 +337,29 @@ export async function PUT(req: NextRequest) {
       await supabase.from('dlp_work_stretches').delete().eq('corridor_id', id);
 
       if (work_stretches.length > 0) {
+        // Prefetch Level 2 Sub-Chainages to auto-resolve lane widths when not provided
+        const plainNum = (highway_code || '').replace(/^NH-?/i, '');
+        const searchCodes = Array.from(new Set([highway_code, `NH-${plainNum}`, plainNum]));
+        const { data: subChainagesData } = await supabase
+          .from('highway_sub_chainages')
+          .select('*')
+          .in('highway_code', searchCodes)
+          .neq('delete_status', 'DELETED')
+          .neq('delete_status', 'SOFT_DELETE');
+
         const stretchesToInsert = work_stretches.map((s: any) => {
           const sFrom = Number(s.chainage_from_km || 0);
           const sTo = Number(s.chainage_to_km || 0);
           const sLen = Number(s.length_km || Math.abs(sTo - sFrom));
           const wFrom = Number(s.road_width_from_m ?? 0.0);
-          const wTo = Number(s.road_width_to_m ?? 3.5);
+          
+          let wTo: number;
+          if (s.road_width_to_m !== undefined && s.road_width_to_m !== null && s.road_width_to_m !== '' && Number(s.road_width_to_m) > 0) {
+            wTo = Number(s.road_width_to_m);
+          } else {
+            const detected = detectLaneWidthForChainage(sFrom, sTo, subChainagesData || []);
+            wTo = detected.halfWidthMeters;
+          }
 
           let category = s.category;
           let commencementDate = s.commencement_date || null;

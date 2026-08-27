@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Save,
@@ -19,10 +19,13 @@ import {
   Briefcase,
   ChevronDown,
   Sparkles,
+  Info,
 } from 'lucide-react';
 import { DlpCorridor, DlpWorkStretch, DlpWorkCategory, DlpMasterData } from '@/types/dlp';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { SubChainageStretch } from '@/app/api/sub-chainages/route';
+import { detectLaneWidthForChainage } from '@/lib/dlp/laneDetection';
 
 interface DlpContractEntryFormProps {
   initialData?: Partial<DlpCorridor>;
@@ -91,6 +94,31 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
   );
   const [corridorRemarks, setCorridorRemarks] = useState<string>(initialData?.remarks || '');
 
+  // Level 2 Sub-Chainages for lane configuration detection
+  const [subChainages, setSubChainages] = useState<SubChainageStretch[]>([]);
+
+  useEffect(() => {
+    const code = highwayCode.trim();
+    if (!code) {
+      setSubChainages([]);
+      return;
+    }
+
+    const fetchSub = async () => {
+      try {
+        const res = await fetch(`/api/sub-chainages?code=${encodeURIComponent(code)}`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.subChainages)) {
+          setSubChainages(data.subChainages);
+        }
+      } catch (err) {
+        console.warn('Sub-chainages fetch note for DLP:', err);
+      }
+    };
+
+    fetchSub();
+  }, [highwayCode]);
+
   // Tab 2: Dynamic Sub-Work Stretches
   const [workStretches, setWorkStretches] = useState<DlpWorkStretch[]>(
     initialData?.work_stretches || []
@@ -136,6 +164,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
   const handleAddWorkStretch = (category: DlpWorkCategory) => {
     const parentFrom = Number(fromKm) || 0;
     const parentTo = Number(toKm) || 0;
+    const detected = detectLaneWidthForChainage(parentFrom, parentTo, subChainages);
 
     const newStretch: DlpWorkStretch = {
       id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -144,7 +173,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
       chainage_to_km: parentTo,
       length_km: Math.max(0, Math.round((parentTo - parentFrom) * 1000) / 1000),
       road_width_from_m: 0.0,
-      road_width_to_m: 3.5,
+      road_width_to_m: detected.halfWidthMeters,
       contractor_name: '',
       work_name: '',
       commencement_date: new Date().toISOString().split('T')[0],
@@ -585,6 +614,12 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                 <div className="space-y-4">
                   {workStretches.map((stretch, index) => {
                     const cfg = CATEGORY_CONFIG[stretch.category];
+                    const detectedLane = detectLaneWidthForChainage(
+                      Number(stretch.chainage_from_km) || 0,
+                      Number(stretch.chainage_to_km) || 0,
+                      subChainages
+                    );
+
                     return (
                       <div
                         key={stretch.id || index}
@@ -612,11 +647,17 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                           </button>
                         </div>
 
-                        {/* 2D Spatial Boundaries Grid */}
-                        <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-3">
-                          <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400 block">
-                            2D Spatial Coordinates (Chainage &amp; Symmetrical Width from Centerline 0)
-                          </span>
+                        {/* 2D Geometry Row: Chainage Limits & Centerline Offsets */}
+                        <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-slate-700/60 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                              2D Spatial Coordinates &bull; Longitudinal (Km) &amp; Lateral Width (m)
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              Centerline = 0m
+                            </span>
+                          </div>
+
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
                             <div>
                               <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
@@ -678,11 +719,40 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                                 step="0.01"
                                 value={stretch.road_width_to_m}
                                 onChange={(e) => handleUpdateStretch(index, 'road_width_to_m', e.target.value)}
-                                placeholder="3.50"
+                                placeholder={String(detectedLane.halfWidthMeters)}
                                 className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
                               />
                             </div>
                           </div>
+
+                          {/* Level 2 Sub-Chainage Lane Parameter Reference */}
+                          {detectedLane.matchedStretch && (
+                            <div className="mt-2.5 p-2.5 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                              <div className="flex items-center gap-2 text-blue-950 dark:text-blue-200 min-w-0">
+                                <span className="px-2 py-0.5 bg-blue-600 text-white rounded-md text-[10px] font-extrabold uppercase tracking-wider shrink-0">
+                                  Level 2 Lane
+                                </span>
+                                <span className="font-semibold truncate">
+                                  {detectedLane.laneConfig} &bull; Total Carriageway: <strong className="font-bold">{detectedLane.totalWidthMeters}m</strong> (Half-Width: 0 to {detectedLane.halfWidthMeters}m)
+                                  {detectedLane.pcuCount ? ` • ${detectedLane.pcuCount.toLocaleString()} PCU` : ''}
+                                  {detectedLane.importantTown ? ` • Town: ${detectedLane.importantTown}` : ''}
+                                </span>
+                              </div>
+
+                              {(Number(stretch.road_width_from_m || 0) !== 0 || Number(stretch.road_width_to_m || 0) !== detectedLane.halfWidthMeters) && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleUpdateStretch(index, 'road_width_from_m', 0);
+                                    handleUpdateStretch(index, 'road_width_to_m', detectedLane.halfWidthMeters);
+                                  }}
+                                  className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer self-start sm:self-auto shrink-0"
+                                >
+                                  Use Level 2 Width (0 to {detectedLane.halfWidthMeters}m)
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         {/* Category-Specific Dynamic Inputs */}
