@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { SubChainageStretch } from '@/app/api/sub-chainages/route';
 import { DlpWorkStretch, DlpWorkCategory } from '@/types/dlp';
+import { formatDateIndian } from '@/lib/formatters';
 
 interface HighwayMaster {
   id: string;
@@ -1093,10 +1094,10 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                       </strong>
                       <span className="font-bold font-mono">
                         {hoveredDlpStretch.category === 'CONSTRUCTION'
-                          ? `${hoveredDlpStretch.physical_progress_pct ?? 0}% (${hoveredDlpStretch.actual_completion_date || 'In Progress'})`
+                          ? `${hoveredDlpStretch.physical_progress_pct ?? 0}% (${formatDateIndian(hoveredDlpStretch.actual_completion_date) === '—' ? 'In Progress' : formatDateIndian(hoveredDlpStretch.actual_completion_date)})`
                           : hoveredDlpStretch.category === 'NO_DLP'
-                          ? hoveredDlpStretch.dlp_ended_on_date || 'N/A'
-                          : hoveredDlpStretch.dlp_till_date || 'N/A'}
+                          ? formatDateIndian(hoveredDlpStretch.dlp_ended_on_date)
+                          : formatDateIndian(hoveredDlpStretch.dlp_till_date)}
                       </span>
                     </div>
                   </div>

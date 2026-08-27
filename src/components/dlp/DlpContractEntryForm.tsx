@@ -31,7 +31,7 @@ import {
   analyzeSpanLaneSubSections,
   OverlappingLaneSubSection,
 } from '@/lib/dlp/laneDetection';
-import { addYearsToDateString } from '@/lib/formatters';
+import { addYearsToDateString, formatDateIndian } from '@/lib/formatters';
 
 interface DlpContractEntryFormProps {
   initialData?: Partial<DlpCorridor>;
@@ -1088,7 +1088,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                                 <div className="flex items-center gap-1.5 font-semibold">
                                   <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                                   <span>
-                                    Calculated DLP Expiry: <strong className="font-bold">{addYearsToDateString(stretch.actual_completion_date, stretch.dlp_period_years ?? 5) || '—'}</strong> ({stretch.dlp_period_years ?? 5} Years from Completion)
+                                    Calculated DLP Expiry: <strong className="font-bold">{formatDateIndian(addYearsToDateString(stretch.actual_completion_date, stretch.dlp_period_years ?? 5))}</strong> ({stretch.dlp_period_years ?? 5} Years from Completion)
                                   </span>
                                 </div>
                                 {Number(stretch.physical_progress_pct || 0) >= 100 && (

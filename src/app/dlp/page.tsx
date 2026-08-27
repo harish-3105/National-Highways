@@ -8,6 +8,7 @@ import { DlpMasterDataModal } from '@/components/dlp/DlpMasterDataModal';
 import DeleteDlpContractModal from '@/components/dlp/DeleteDlpContractModal';
 import ViewDlpContractModal from '@/components/dlp/ViewDlpContractModal';
 import { getCircleForDivision } from '@/lib/dlp/masterData';
+import { formatDateIndian } from '@/lib/formatters';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { DlpCorridor, DlpWorkStretch, DlpWorkCategory, DlpMasterData } from '@/types/dlp';
 import {
@@ -769,13 +770,15 @@ export default function DlpPage() {
                                                                     {Number(s.length_km || 0).toFixed(3)} km
                                                                   </td>
                                                                   <td className="px-2 py-1.5 text-slate-600 dark:text-slate-400">
-                                                                    {s.commencement_date || '—'}
+                                                                    {formatDateIndian(s.commencement_date)}
                                                                   </td>
                                                                   <td className="px-2 py-1.5 text-slate-700 dark:text-slate-300">
                                                                     {s.category === 'CONSTRUCTION' ? (
                                                                       <span className="font-semibold">{s.physical_progress_pct ?? 0}% Complete</span>
+                                                                    ) : s.category === 'NO_DLP' ? (
+                                                                      formatDateIndian(s.dlp_ended_on_date)
                                                                     ) : (
-                                                                      s.dlp_till_date || '—'
+                                                                      formatDateIndian(s.dlp_till_date)
                                                                     )}
                                                                   </td>
                                                                   <td className="px-2 py-1.5 whitespace-nowrap">

@@ -3,6 +3,7 @@
 import React from 'react';
 import { DlpCorridor, DlpWorkStretch, DlpWorkCategory } from '@/types/dlp';
 import { X, ShieldCheck, CheckCircle2, Clock, AlertTriangle, Layers, MapPin, Calendar } from 'lucide-react';
+import { formatDateIndian } from '@/lib/formatters';
 
 interface ViewDlpContractModalProps {
   corridor: DlpCorridor | null;
@@ -226,7 +227,7 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ corr
                                           </div>
                                           <div>
                                             <span className="font-semibold text-slate-500">Commencement: </span>
-                                            <span className="font-bold text-slate-800 dark:text-slate-200">{s.commencement_date || '—'}</span>
+                                            <span className="font-bold text-slate-800 dark:text-slate-200">{formatDateIndian(s.commencement_date)}</span>
                                           </div>
                                           <div>
                                             <span className="font-semibold text-slate-500">
@@ -236,8 +237,8 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ corr
                                               {s.category === 'CONSTRUCTION'
                                                 ? `${s.physical_progress_pct ?? 0}% Complete (${s.dlp_period_years ?? 5}y DLP)`
                                                 : s.category === 'NO_DLP'
-                                                ? s.dlp_ended_on_date || 'N/A'
-                                                : s.dlp_till_date || 'N/A'}
+                                                ? formatDateIndian(s.dlp_ended_on_date)
+                                                : formatDateIndian(s.dlp_till_date)}
                                             </span>
                                           </div>
                                         </div>

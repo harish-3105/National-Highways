@@ -215,3 +215,16 @@ export function normalizeDateForDb(dateStr: string | null | undefined): string |
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
+
+/**
+ * Formats any date string into standard Indian format 'DD/MM/YYYY'.
+ */
+export function formatDateIndian(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  const s = String(dateStr).trim();
+  if (!s || s === '-' || s === 'NA' || s === 'N/A' || s === '--') return '—';
+  const d = parseDateString(s);
+  if (!d) return s;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
