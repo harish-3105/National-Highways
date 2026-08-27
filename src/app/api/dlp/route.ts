@@ -26,7 +26,7 @@ function computeStretchLiveStatus(stretch: DlpWorkStretch): DlpWorkStretch {
       const diffTime = expiry.getTime() - today.getTime();
       daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      if (daysRemaining < 0) {
+      if (daysRemaining <= 0) {
         computedStatus = 'EXPIRED';
         // Lifecycle rule: Expired warranty automatically transitions into NO_DLP category
         return {
@@ -304,7 +304,7 @@ export async function POST(req: NextRequest) {
               exp.setHours(0, 0, 0, 0);
               const today = new Date();
               today.setHours(0, 0, 0, 0);
-              if (exp.getTime() < today.getTime()) {
+              if (exp.getTime() <= today.getTime()) {
                 category = 'NO_DLP';
                 if (!dlpEndedOn) dlpEndedOn = dlpTillDate;
                 if (!scheme) scheme = 'Proposed Special Repairs';
@@ -488,7 +488,7 @@ export async function PUT(req: NextRequest) {
                 exp.setHours(0, 0, 0, 0);
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                if (exp.getTime() < today.getTime()) {
+                if (exp.getTime() <= today.getTime()) {
                   category = 'NO_DLP';
                   if (!dlpEndedOn) dlpEndedOn = dlpTillDate;
                   if (!scheme) scheme = 'Proposed Special Repairs';

@@ -671,8 +671,13 @@ export default function DlpPage() {
                                       const contractorMap = new Map<string, Map<string, DlpWorkStretch[]>>();
 
                                       (item.work_stretches || []).forEach((s) => {
-                                        const contractor = s.contractor_name?.trim() || (s.category === 'NO_DLP' ? 'Departmental / Unassigned' : 'Unassigned Contractor');
-                                        const work = s.work_name?.trim() || (s.category === 'NO_DLP' ? (s.scheme || 'Maintenance Gap / No Active Work') : 'Unspecified Work');
+                                        const isNoDlp = s.category === 'NO_DLP' || s.computed_status === 'EXPIRED';
+                                        const contractor = isNoDlp
+                                          ? 'Departmental / Uncontracted (No DLP)'
+                                          : (s.contractor_name?.trim() || 'Unassigned Contractor');
+                                        const work = isNoDlp
+                                          ? (s.scheme || 'Proposed Special Repairs')
+                                          : (s.work_name?.trim() || 'Unspecified Work');
 
                                         if (!contractorMap.has(contractor)) {
                                           contractorMap.set(contractor, new Map());
@@ -700,7 +705,7 @@ export default function DlpPage() {
                                                   <div className="flex items-center gap-2">
                                                     <HardHat className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                                                     <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100">
-                                                      Contractor: {contractorName}
+                                                      {contractorName.includes('Departmental') ? contractorName : `Contractor: ${contractorName}`}
                                                     </span>
                                                   </div>
                                                   <div className="flex items-center gap-2 text-[11px]">
@@ -716,8 +721,9 @@ export default function DlpPage() {
                                                 {/* Tier 2: Works under this Contractor */}
                                                 <div className="p-3 space-y-3">
                                                   {Array.from(worksMap.entries()).map(([workName, stretches], wIdx) => {
-                                                    const primaryCat = stretches[0]?.category || 'DLP';
-                                                    const catBadge = CATEGORY_BADGES[primaryCat] || CATEGORY_BADGES.DLP;
+                                                    const isAllNoDlp = stretches.every((s) => s.category === 'NO_DLP' || s.computed_status === 'EXPIRED');
+                                                    const primaryCat = isAllNoDlp ? 'NO_DLP' : (stretches[0]?.category || 'DLP');
+                                                    const catBadge = CATEGORY_BADGES[primaryCat] || CATEGORY_BADGES.NO_DLP;
                                                     const totalWorkKm = stretches.reduce((acc, curr) => acc + Number(curr.length_km || 0), 0);
 
                                                     return (
@@ -749,8 +755,8 @@ export default function DlpPage() {
                                                                 <th className="px-2 py-1">Chainage Limits</th>
                                                                 <th className="px-2 py-1">Road Width</th>
                                                                 <th className="px-2 py-1">Length</th>
-                                                                <th className="px-2 py-1">Commencement</th>
-                                                                <th className="px-2 py-1">DLP Till / Progress</th>
+                                                                <th className="px-2 py-1">{primaryCat === 'NO_DLP' ? 'Ended Date' : 'Commencement'}</th>
+                                                                <th className="px-2 py-1">{primaryCat === 'NO_DLP' ? 'Scheme' : 'DLP Till / Progress'}</th>
                                                                 <th className="px-2 py-1">Status</th>
                                                               </tr>
                                                             </thead>
@@ -770,13 +776,15 @@ export default function DlpPage() {
                                                                     {Number(s.length_km || 0).toFixed(3)} km
                                                                   </td>
                                                                   <td className="px-2 py-1.5 text-slate-600 dark:text-slate-400">
-                                                                    {formatDateIndian(s.commencement_date)}
+                                                                    {primaryCat === 'NO_DLP'
+                                                                      ? formatDateIndian(s.dlp_ended_on_date || s.dlp_till_date)
+                                                                      : formatDateIndian(s.commencement_date)}
                                                                   </td>
                                                                   <td className="px-2 py-1.5 text-slate-700 dark:text-slate-300">
                                                                     {s.category === 'CONSTRUCTION' ? (
                                                                       <span className="font-semibold">{s.physical_progress_pct ?? 0}% Complete</span>
-                                                                    ) : s.category === 'NO_DLP' ? (
-                                                                      formatDateIndian(s.dlp_ended_on_date)
+                                                                    ) : primaryCat === 'NO_DLP' ? (
+                                                                      <span className="font-semibold text-slate-800 dark:text-slate-200">{s.scheme || 'Proposed Special Repairs'}</span>
                                                                     ) : (
                                                                       formatDateIndian(s.dlp_till_date)
                                                                     )}

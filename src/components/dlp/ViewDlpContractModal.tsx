@@ -138,8 +138,13 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ corr
                 const contractorMap = new Map<string, Map<string, DlpWorkStretch[]>>();
 
                 stretches.forEach((s) => {
-                  const contractor = s.contractor_name?.trim() || (s.category === 'NO_DLP' ? 'Departmental / Unassigned' : 'Unassigned Contractor');
-                  const work = s.work_name?.trim() || (s.category === 'NO_DLP' ? (s.scheme || 'Maintenance Gap / No Active Work') : 'Unspecified Work');
+                  const isNoDlp = s.category === 'NO_DLP' || s.computed_status === 'EXPIRED';
+                  const contractor = isNoDlp
+                    ? 'Departmental / Uncontracted (No DLP)'
+                    : (s.contractor_name?.trim() || 'Unassigned Contractor');
+                  const work = isNoDlp
+                    ? (s.scheme || 'Proposed Special Repairs')
+                    : (s.work_name?.trim() || 'Unspecified Work');
 
                   if (!contractorMap.has(contractor)) {
                     contractorMap.set(contractor, new Map());
@@ -165,7 +170,7 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ corr
                           {/* Tier 1: Contractor Banner */}
                           <div className="px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 flex-wrap">
                             <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100">
-                              Contractor: {contractorName}
+                              {contractorName.includes('Departmental') ? contractorName : `Contractor: ${contractorName}`}
                             </span>
                             <div className="flex items-center gap-2 text-[11px]">
                               <span className="text-slate-500 font-medium">
@@ -180,8 +185,9 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ corr
                           {/* Tier 2: Works under this Contractor */}
                           <div className="p-3 space-y-3">
                             {Array.from(worksMap.entries()).map(([workName, workStretchesList], wIdx) => {
-                              const primaryCat = workStretchesList[0]?.category || 'DLP';
-                              const catBadge = CATEGORY_BADGES[primaryCat] || CATEGORY_BADGES.DLP;
+                              const isAllNoDlp = workStretchesList.every((s) => s.category === 'NO_DLP' || s.computed_status === 'EXPIRED');
+                              const primaryCat = isAllNoDlp ? 'NO_DLP' : (workStretchesList[0]?.category || 'DLP');
+                              const catBadge = CATEGORY_BADGES[primaryCat] || CATEGORY_BADGES.NO_DLP;
                               const totalWorkKm = workStretchesList.reduce((acc, curr) => acc + Number(curr.length_km || 0), 0);
 
                               return (
@@ -226,18 +232,20 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ corr
                                             </span>
                                           </div>
                                           <div>
-                                            <span className="font-semibold text-slate-500">Commencement: </span>
-                                            <span className="font-bold text-slate-800 dark:text-slate-200">{formatDateIndian(s.commencement_date)}</span>
+                                            <span className="font-semibold text-slate-500">{primaryCat === 'NO_DLP' ? 'Scheme: ' : 'Commencement: '}</span>
+                                            <span className="font-bold text-slate-800 dark:text-slate-200">
+                                              {primaryCat === 'NO_DLP' ? (s.scheme || 'Proposed Special Repairs') : formatDateIndian(s.commencement_date)}
+                                            </span>
                                           </div>
                                           <div>
                                             <span className="font-semibold text-slate-500">
-                                              {s.category === 'CONSTRUCTION' ? 'Completion/DLP: ' : s.category === 'NO_DLP' ? 'Ended Date: ' : 'Expiry: '}
+                                              {s.category === 'CONSTRUCTION' ? 'Completion/DLP: ' : primaryCat === 'NO_DLP' ? 'Ended Date: ' : 'Expiry: '}
                                             </span>
                                             <span className="font-bold font-mono text-slate-800 dark:text-slate-200">
                                               {s.category === 'CONSTRUCTION'
                                                 ? `${s.physical_progress_pct ?? 0}% Complete (${s.dlp_period_years ?? 5}y DLP)`
-                                                : s.category === 'NO_DLP'
-                                                ? formatDateIndian(s.dlp_ended_on_date)
+                                                : primaryCat === 'NO_DLP'
+                                                ? formatDateIndian(s.dlp_ended_on_date || s.dlp_till_date)
                                                 : formatDateIndian(s.dlp_till_date)}
                                             </span>
                                           </div>
