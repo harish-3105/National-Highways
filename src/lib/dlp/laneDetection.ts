@@ -47,7 +47,8 @@ export function getLaneWidthFromConfig(
 }
 
 /**
- * Detects the Level 2 sub-chainage stretch and its full lane width for a given chainage span.
+ * Detects the Level 2 Micro-Lane sub-chainage stretch and its full physical lane width for a given chainage span.
+ * Strictly uses MICRO_LANE breakdown data (ignoring MACRO_PCU traffic tiers).
  */
 export function detectLaneWidthForChainage(
   fromKm: number,
@@ -62,6 +63,18 @@ export function detectLaneWidthForChainage(
     };
   }
 
+  // Strictly filter for MICRO_LANE physical records
+  const microStretches = subChainages.filter(
+    (s) =>
+      s.delete_status !== 'DELETED' &&
+      s.delete_status !== 'SOFT_DELETE' &&
+      s.breakdown_type !== 'MACRO_PCU' &&
+      s.lane_configuration?.toLowerCase() !== 'primary' &&
+      s.lane_configuration?.toLowerCase() !== 'secondary'
+  );
+
+  const candidatePool = microStretches.length > 0 ? microStretches : subChainages;
+
   const f = Math.min(fromKm, toKm);
   const t = Math.max(fromKm, toKm);
 
@@ -69,7 +82,7 @@ export function detectLaneWidthForChainage(
   let bestMatch: SubChainageStretch | null = null;
   let maxOverlap = -1;
 
-  for (const s of subChainages) {
+  for (const s of candidatePool) {
     if (s.delete_status === 'DELETED' || s.delete_status === 'SOFT_DELETE') continue;
 
     const sFrom = Number(s.from_km) || 0;
@@ -87,11 +100,11 @@ export function detectLaneWidthForChainage(
 
   // If no direct range overlap, pick the closest sub-chainage
   if (!bestMatch) {
-    bestMatch = subChainages.find((s) => {
+    bestMatch = candidatePool.find((s) => {
       const sFrom = Number(s.from_km) || 0;
       const sTo = Number(s.to_km) || 0;
       return f >= sFrom && f <= sTo;
-    }) || subChainages[0] || null;
+    }) || candidatePool[0] || null;
   }
 
   if (bestMatch) {

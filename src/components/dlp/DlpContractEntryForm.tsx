@@ -106,7 +106,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
 
     const fetchSub = async () => {
       try {
-        const res = await fetch(`/api/sub-chainages?code=${encodeURIComponent(code)}`);
+        const res = await fetch(`/api/sub-chainages?code=${encodeURIComponent(code)}&type=MICRO_LANE`);
         const data = await res.json();
         if (data.success && Array.isArray(data.subChainages)) {
           setSubChainages(data.subChainages);
@@ -725,16 +725,15 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                             </div>
                           </div>
 
-                          {/* Level 2 Sub-Chainage Lane Parameter Reference */}
+                          {/* Level 2 Sub-Chainage Micro-Lane Parameter Reference */}
                           {detectedLane.matchedStretch && (
                             <div className="mt-2.5 p-2.5 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                               <div className="flex items-center gap-2 text-blue-950 dark:text-blue-200 min-w-0">
                                 <span className="px-2 py-0.5 bg-blue-600 text-white rounded-md text-[10px] font-extrabold uppercase tracking-wider shrink-0">
-                                  Level 2 Lane
+                                  Level 2 Micro-Lane
                                 </span>
                                 <span className="font-semibold truncate">
                                   {detectedLane.laneConfig} &bull; Full Lane Width: <strong className="font-bold">{detectedLane.totalWidthMeters}m</strong> (0 to {detectedLane.totalWidthMeters}m)
-                                  {detectedLane.pcuCount ? ` • ${detectedLane.pcuCount.toLocaleString()} PCU` : ''}
                                   {detectedLane.importantTown ? ` • Town: ${detectedLane.importantTown}` : ''}
                                 </span>
                               </div>
