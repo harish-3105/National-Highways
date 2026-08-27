@@ -30,6 +30,7 @@ import {
   SlidersHorizontal,
   HardHat,
   Construction,
+  Building2,
 } from 'lucide-react';
 
 const CATEGORY_BADGES: Record<
@@ -51,6 +52,7 @@ export default function DlpPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCircle, setSelectedCircle] = useState('');
   const [selectedDivision, setSelectedDivision] = useState('');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<'ALL' | 'DLP' | 'CONSTRUCTION' | 'PBMC' | 'STMC' | 'NO_DLP' | 'EXPIRY_ALERTS'>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED'>('ALL');
   const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeFilter>({
     startDate: null,
@@ -164,66 +166,94 @@ export default function DlpPage() {
     ? (masterData.circleDivisionMap[selectedCircle] || [])
     : (masterData.divisions || []);
 
-  // Client-side Filter Logic
+  // Client-side Filter Logic (Two-Level Filter: Corridors + Granular Stretches)
   const filteredCorridors = useMemo(() => {
-    return corridors.filter((c) => {
-      // Circle filter
-      if (selectedCircle) {
-        const circleOfDiv = getCircleForDivision(c.division_name, masterData.circleDivisionMap);
-        if (circleOfDiv !== selectedCircle) return false;
-      }
+    const hasCategoryFilter = Boolean(selectedCategoryFilter && selectedCategoryFilter !== 'ALL');
+    const hasStatusFilter = statusFilter !== 'ALL';
+    const hasDateFilter = Boolean(dateRangeFilter.startDate || dateRangeFilter.endDate);
+    const hasSearchFilter = Boolean(searchTerm.trim());
 
-      // Division filter
-      if (selectedDivision && c.division_name.toLowerCase() !== selectedDivision.toLowerCase()) {
-        return false;
-      }
+    return corridors
+      .map((c) => {
+        const matchingStretches = (c.work_stretches || []).filter((s) => {
+          // 1. KPI Category filter
+          if (hasCategoryFilter) {
+            if (selectedCategoryFilter === 'EXPIRY_ALERTS') {
+              if (s.computed_status !== 'EXPIRING_SOON' && s.computed_status !== 'EXPIRED' && s.category !== 'NO_DLP') {
+                return false;
+              }
+            } else if (s.category !== selectedCategoryFilter) {
+              return false;
+            }
+          }
 
-      // Status filter on child stretches
-      if (statusFilter !== 'ALL') {
-        const hasMatchingStretch = c.work_stretches?.some((s) => s.computed_status === statusFilter);
-        if (!hasMatchingStretch) return false;
-      }
+          // 2. Status filter on child stretches
+          if (hasStatusFilter) {
+            if (s.computed_status !== statusFilter) return false;
+          }
 
-      // Date Range Filter on child stretches
-      if (dateRangeFilter.startDate || dateRangeFilter.endDate) {
-        const hasDateMatch = c.work_stretches?.some((s) => {
-          if (!s.dlp_till_date) return false;
-          if (dateRangeFilter.startDate && s.dlp_till_date < dateRangeFilter.startDate) return false;
-          if (dateRangeFilter.endDate && s.dlp_till_date > dateRangeFilter.endDate) return false;
+          // 3. Date Range filter on child stretches
+          if (hasDateFilter) {
+            const checkDate = s.dlp_till_date || s.dlp_ended_on_date || s.commencement_date;
+            if (!checkDate) return false;
+            if (dateRangeFilter.startDate && checkDate < dateRangeFilter.startDate) return false;
+            if (dateRangeFilter.endDate && checkDate > dateRangeFilter.endDate) return false;
+          }
+
+          // 4. Search filter on child stretches if corridor itself didn't match
+          if (hasSearchFilter) {
+            const term = searchTerm.toLowerCase();
+            const corridorMatches =
+              c.highway_code.toLowerCase().includes(term) ||
+              c.division_name.toLowerCase().includes(term) ||
+              (c.remarks && c.remarks.toLowerCase().includes(term));
+
+            if (!corridorMatches) {
+              const stretchMatches =
+                (s.contractor_name && s.contractor_name.toLowerCase().includes(term)) ||
+                (s.work_name && s.work_name.toLowerCase().includes(term)) ||
+                (s.scheme && s.scheme.toLowerCase().includes(term)) ||
+                (s.remarks && s.remarks.toLowerCase().includes(term));
+              if (!stretchMatches) return false;
+            }
+          }
+
           return true;
         });
-        if (!hasDateMatch) return false;
-      }
 
-      return true;
-    });
-  }, [corridors, selectedCircle, selectedDivision, statusFilter, dateRangeFilter]);
+        return {
+          ...c,
+          work_stretches: matchingStretches,
+        };
+      })
+      .filter((c) => {
+        // Circle filter
+        if (selectedCircle) {
+          const circleOfDiv = getCircleForDivision(c.division_name, masterData.circleDivisionMap);
+          if (circleOfDiv !== selectedCircle) return false;
+        }
 
-  // Executive KPI summary calculations
+        // Division filter
+        if (selectedDivision && c.division_name.toLowerCase() !== selectedDivision.toLowerCase()) {
+          return false;
+        }
+
+        // When any category, status, date, or search filter is active, only show corridors that have matching stretches
+        const isFilterActive = hasCategoryFilter || hasStatusFilter || hasDateFilter || hasSearchFilter;
+        if (isFilterActive && c.work_stretches.length === 0) {
+          return false;
+        }
+
+        return true;
+      });
+  }, [corridors, selectedCircle, selectedDivision, selectedCategoryFilter, statusFilter, dateRangeFilter, searchTerm, masterData.circleDivisionMap]);
+
+  // Executive KPI summary calculations (Total across entire registered database)
   const totalStretchesCount = useMemo(() => {
     return corridors.reduce((sum, c) => sum + (c.work_stretches?.length || 0), 0);
   }, [corridors]);
 
-  const activeDlpKm = useMemo(() => {
-    let km = 0;
-    corridors.forEach((c) => {
-      c.work_stretches?.forEach((s) => {
-        if (s.category === 'DLP') km += Number(s.length_km || 0);
-      });
-    });
-    return Math.round(km * 100) / 100;
-  }, [corridors]);
-
-  const constructionKm = useMemo(() => {
-    let km = 0;
-    corridors.forEach((c) => {
-      c.work_stretches?.forEach((s) => {
-        if (s.category === 'CONSTRUCTION') km += Number(s.length_km || 0);
-      });
-    });
-    return Math.round(km * 100) / 100;
-  }, [corridors]);
-
+  // 1. Expiry & Warranty Alerts (R1 C1)
   const expiringSoonCount = useMemo(() => {
     let count = 0;
     corridors.forEach((c) => {
@@ -232,6 +262,111 @@ export default function DlpPage() {
       });
     });
     return count;
+  }, [corridors]);
+
+  const expiredCount = useMemo(() => {
+    let count = 0;
+    corridors.forEach((c) => {
+      c.work_stretches?.forEach((s) => {
+        if (s.computed_status === 'EXPIRED' || s.category === 'NO_DLP') count++;
+      });
+    });
+    return count;
+  }, [corridors]);
+
+  const expiringSoonKm = useMemo(() => {
+    let km = 0;
+    corridors.forEach((c) => {
+      c.work_stretches?.forEach((s) => {
+        if (s.computed_status === 'EXPIRING_SOON') km += Number(s.length_km || 0);
+      });
+    });
+    return Math.round(km * 100) / 100;
+  }, [corridors]);
+
+  const expiredKm = useMemo(() => {
+    let km = 0;
+    corridors.forEach((c) => {
+      c.work_stretches?.forEach((s) => {
+        if (s.computed_status === 'EXPIRED' || s.category === 'NO_DLP') km += Number(s.length_km || 0);
+      });
+    });
+    return Math.round(km * 100) / 100;
+  }, [corridors]);
+
+  // 2. Under Construction (R1 C2)
+  const { constructionKm, constructionCount } = useMemo(() => {
+    let km = 0;
+    let count = 0;
+    corridors.forEach((c) => {
+      c.work_stretches?.forEach((s) => {
+        if (s.category === 'CONSTRUCTION') {
+          km += Number(s.length_km || 0);
+          count++;
+        }
+      });
+    });
+    return { constructionKm: Math.round(km * 100) / 100, constructionCount: count };
+  }, [corridors]);
+
+  // 3. Under DLP (R2 C1)
+  const { activeDlpKm, activeDlpCount } = useMemo(() => {
+    let km = 0;
+    let count = 0;
+    corridors.forEach((c) => {
+      c.work_stretches?.forEach((s) => {
+        if (s.category === 'DLP') {
+          km += Number(s.length_km || 0);
+          count++;
+        }
+      });
+    });
+    return { activeDlpKm: Math.round(km * 100) / 100, activeDlpCount: count };
+  }, [corridors]);
+
+  // 4. PBMC (R2 C2)
+  const { pbmcKm, pbmcCount } = useMemo(() => {
+    let km = 0;
+    let count = 0;
+    corridors.forEach((c) => {
+      c.work_stretches?.forEach((s) => {
+        if (s.category === 'PBMC') {
+          km += Number(s.length_km || 0);
+          count++;
+        }
+      });
+    });
+    return { pbmcKm: Math.round(km * 100) / 100, pbmcCount: count };
+  }, [corridors]);
+
+  // 5. STMC (R3 C1)
+  const { stmcKm, stmcCount } = useMemo(() => {
+    let km = 0;
+    let count = 0;
+    corridors.forEach((c) => {
+      c.work_stretches?.forEach((s) => {
+        if (s.category === 'STMC') {
+          km += Number(s.length_km || 0);
+          count++;
+        }
+      });
+    });
+    return { stmcKm: Math.round(km * 100) / 100, stmcCount: count };
+  }, [corridors]);
+
+  // 6. Under No DLP (R3 C2)
+  const { noDlpKm, noDlpCount } = useMemo(() => {
+    let km = 0;
+    let count = 0;
+    corridors.forEach((c) => {
+      c.work_stretches?.forEach((s) => {
+        if (s.category === 'NO_DLP' || s.computed_status === 'EXPIRED') {
+          km += Number(s.length_km || 0);
+          count++;
+        }
+      });
+    });
+    return { noDlpKm: Math.round(km * 100) / 100, noDlpCount: count };
   }, [corridors]);
 
   const renderStatusBadge = (stretch: DlpWorkStretch) => {
@@ -357,59 +492,250 @@ export default function DlpPage() {
               </div>
             </div>
 
-            {/* 4 Executive KPI Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Corridors / Stretches</span>
-                  <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600">
-                    <Layers className="w-4 h-4" />
+            {/* 6 Executive KPI Cards (3 Rows × 2 Columns) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {/* ROW 1, COL 1: Expiry & Warranty Alerts */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedCategoryFilter === 'EXPIRY_ALERTS') {
+                    setSelectedCategoryFilter('ALL');
+                  } else {
+                    setSelectedCategoryFilter('EXPIRY_ALERTS');
+                  }
+                }}
+                className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+                  selectedCategoryFilter === 'EXPIRY_ALERTS'
+                    ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/40 dark:bg-amber-950/30'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                    <span>Expiry &amp; Warranty Alerts</span>
+                    {selectedCategoryFilter === 'EXPIRY_ALERTS' && (
+                      <span className="text-[10px] font-extrabold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full">
+                        Active Filter
+                      </span>
+                    )}
+                  </span>
+                  <div className="p-2.5 bg-amber-100 dark:bg-amber-950/60 rounded-xl text-amber-600 dark:text-amber-400">
+                    <Clock className="w-5 h-5" />
                   </div>
                 </div>
-                <div className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono">
-                  {corridors.length} <span className="text-xs text-slate-400 font-sans font-normal">({totalStretchesCount} works)</span>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono flex items-baseline gap-2 flex-wrap">
+                    <span className="text-amber-600 dark:text-amber-400">{expiringSoonCount}</span>
+                    <span className="text-xs font-semibold text-slate-500 font-sans">Expiring Soon (&le;90d)</span>
+                    <span className="text-slate-300 dark:text-slate-700 font-normal">&bull;</span>
+                    <span className="text-rose-600 dark:text-rose-400">{expiredCount}</span>
+                    <span className="text-xs font-semibold text-slate-500 font-sans">Expired</span>
+                  </div>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">Total registered master corridors</p>
-              </div>
+                <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                  Total Span: {(expiringSoonKm + expiredKm).toFixed(2)} km &bull; Stretches nearing completion or passed validity
+                </div>
+              </button>
 
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active DLP Length</span>
-                  <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600">
-                    <ShieldCheck className="w-4 h-4" />
+              {/* ROW 1, COL 2: Under Construction */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedCategoryFilter === 'CONSTRUCTION') {
+                    setSelectedCategoryFilter('ALL');
+                  } else {
+                    setSelectedCategoryFilter('CONSTRUCTION');
+                  }
+                }}
+                className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+                  selectedCategoryFilter === 'CONSTRUCTION'
+                    ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/40 dark:bg-blue-950/30'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                    <span>Under Construction</span>
+                    {selectedCategoryFilter === 'CONSTRUCTION' && (
+                      <span className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950 px-2 py-0.5 rounded-full">
+                        Active Filter
+                      </span>
+                    )}
+                  </span>
+                  <div className="p-2.5 bg-blue-100 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400">
+                    <Construction className="w-5 h-5" />
                   </div>
                 </div>
-                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                  {activeDlpKm.toFixed(2)} <span className="text-xs text-slate-400 font-sans font-normal">km</span>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-blue-600 dark:text-blue-400 font-mono">
+                    {constructionKm.toFixed(2)} <span className="text-sm font-semibold text-slate-500 font-sans">km</span>
+                    <span className="text-sm font-normal text-slate-400 font-sans ml-2">({constructionCount} works)</span>
+                  </div>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">Stretches with live defect warranty</p>
-              </div>
+                <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
+                  Capital highway widening &amp; strengthening &bull; Auto-graduates to 5Y DLP on completion
+                </div>
+              </button>
 
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Under Construction</span>
-                  <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600">
-                    <Construction className="w-4 h-4" />
+              {/* ROW 2, COL 1: Under DLP */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedCategoryFilter === 'DLP') {
+                    setSelectedCategoryFilter('ALL');
+                  } else {
+                    setSelectedCategoryFilter('DLP');
+                  }
+                }}
+                className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+                  selectedCategoryFilter === 'DLP'
+                    ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/30'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                    <span>Under DLP</span>
+                    {selectedCategoryFilter === 'DLP' && (
+                      <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full">
+                        Active Filter
+                      </span>
+                    )}
+                  </span>
+                  <div className="p-2.5 bg-emerald-100 dark:bg-emerald-950/60 rounded-xl text-emerald-600 dark:text-emerald-400">
+                    <ShieldCheck className="w-5 h-5" />
                   </div>
                 </div>
-                <div className="text-2xl font-black text-blue-600 dark:text-blue-400 font-mono">
-                  {constructionKm.toFixed(2)} <span className="text-xs text-slate-400 font-sans font-normal">km</span>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                    {activeDlpKm.toFixed(2)} <span className="text-sm font-semibold text-slate-500 font-sans">km</span>
+                    <span className="text-sm font-normal text-slate-400 font-sans ml-2">({activeDlpCount} works)</span>
+                  </div>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">Active capital &amp; widening works</p>
-              </div>
+                <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                  Active defect liability warranty &bull; Contractor maintenance obligation active
+                </div>
+              </button>
 
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Expiring Soon (90d)</span>
-                  <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-600">
-                    <Clock className="w-4 h-4" />
+              {/* ROW 2, COL 2: PBMC */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedCategoryFilter === 'PBMC') {
+                    setSelectedCategoryFilter('ALL');
+                  } else {
+                    setSelectedCategoryFilter('PBMC');
+                  }
+                }}
+                className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+                  selectedCategoryFilter === 'PBMC'
+                    ? 'border-purple-500 ring-2 ring-purple-500/20 bg-purple-50/40 dark:bg-purple-950/30'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                    <span>PBMC</span>
+                    {selectedCategoryFilter === 'PBMC' && (
+                      <span className="text-[10px] font-extrabold text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-950 px-2 py-0.5 rounded-full">
+                        Active Filter
+                      </span>
+                    )}
+                  </span>
+                  <div className="p-2.5 bg-purple-100 dark:bg-purple-950/60 rounded-xl text-purple-600 dark:text-purple-400">
+                    <Layers className="w-5 h-5" />
                   </div>
                 </div>
-                <div className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
-                  {expiringSoonCount} <span className="text-xs text-slate-400 font-sans font-normal">stretches</span>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-purple-600 dark:text-purple-400 font-mono">
+                    {pbmcKm.toFixed(2)} <span className="text-sm font-semibold text-slate-500 font-sans">km</span>
+                    <span className="text-sm font-normal text-slate-400 font-sans ml-2">({pbmcCount} works)</span>
+                  </div>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">Maintenance expiring in &le; 90 days</p>
-              </div>
+                <div className="mt-2 text-xs text-purple-600 dark:text-purple-400 font-medium">
+                  Performance Based Maintenance Contracts &bull; 5-Year asset management
+                </div>
+              </button>
+
+              {/* ROW 3, COL 1: STMC */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedCategoryFilter === 'STMC') {
+                    setSelectedCategoryFilter('ALL');
+                  } else {
+                    setSelectedCategoryFilter('STMC');
+                  }
+                }}
+                className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+                  selectedCategoryFilter === 'STMC'
+                    ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/40 dark:bg-amber-950/30'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                    <span>STMC</span>
+                    {selectedCategoryFilter === 'STMC' && (
+                      <span className="text-[10px] font-extrabold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full">
+                        Active Filter
+                      </span>
+                    )}
+                  </span>
+                  <div className="p-2.5 bg-amber-100 dark:bg-amber-950/60 rounded-xl text-amber-600 dark:text-amber-400">
+                    <SlidersHorizontal className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
+                    {stmcKm.toFixed(2)} <span className="text-sm font-semibold text-slate-500 font-sans">km</span>
+                    <span className="text-sm font-normal text-slate-400 font-sans ml-2">({stmcCount} works)</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                  Short Term Maintenance Contracts &bull; 1-Year periodic surface renewal
+                </div>
+              </button>
+
+              {/* ROW 3, COL 2: Under No DLP */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedCategoryFilter === 'NO_DLP') {
+                    setSelectedCategoryFilter('ALL');
+                  } else {
+                    setSelectedCategoryFilter('NO_DLP');
+                  }
+                }}
+                className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+                  selectedCategoryFilter === 'NO_DLP'
+                    ? 'border-slate-500 ring-2 ring-slate-500/20 bg-slate-100 dark:bg-slate-800/60'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                    <span>Under No DLP</span>
+                    {selectedCategoryFilter === 'NO_DLP' && (
+                      <span className="text-[10px] font-extrabold text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                        Active Filter
+                      </span>
+                    )}
+                  </span>
+                  <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-slate-800 dark:text-slate-200 font-mono">
+                    {noDlpKm.toFixed(2)} <span className="text-sm font-semibold text-slate-500 font-sans">km</span>
+                    <span className="text-sm font-normal text-slate-400 font-sans ml-2">({noDlpCount} works)</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  Annual Work &bull; Expired warranty &bull; Maintenance gap stretches
+                </div>
+              </button>
             </div>
 
             {/* Filter Toolbar */}
@@ -475,6 +801,124 @@ export default function DlpPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Active Filter Chips / Status Banner */}
+              {(() => {
+                const isFilterActive =
+                  selectedCategoryFilter !== 'ALL' ||
+                  statusFilter !== 'ALL' ||
+                  Boolean(dateRangeFilter.startDate || dateRangeFilter.endDate) ||
+                  Boolean(searchTerm.trim()) ||
+                  Boolean(selectedCircle) ||
+                  Boolean(selectedDivision);
+
+                if (!isFilterActive) return null;
+
+                const totalFilteredStretches = filteredCorridors.reduce((sum, c) => sum + (c.work_stretches?.length || 0), 0);
+
+                return (
+                  <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 flex-wrap text-xs">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-slate-500">Active Filters:</span>
+                      {selectedCategoryFilter !== 'ALL' && (
+                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-extrabold rounded-md flex items-center gap-1">
+                          Category: {selectedCategoryFilter === 'EXPIRY_ALERTS' ? 'Expiry Alerts' : selectedCategoryFilter}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCategoryFilter('ALL')}
+                            className="hover:text-red-500 font-black ml-0.5 cursor-pointer"
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      )}
+                      {statusFilter !== 'ALL' && (
+                        <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-extrabold rounded-md flex items-center gap-1">
+                          Status: {statusFilter}
+                          <button
+                            type="button"
+                            onClick={() => setStatusFilter('ALL')}
+                            className="hover:text-red-500 font-black ml-0.5 cursor-pointer"
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      )}
+                      {(dateRangeFilter.startDate || dateRangeFilter.endDate) && (
+                        <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-extrabold rounded-md flex items-center gap-1">
+                          Date: {formatDateIndian(dateRangeFilter.startDate)} &rarr; {formatDateIndian(dateRangeFilter.endDate)}
+                          <button
+                            type="button"
+                            onClick={() => setDateRangeFilter({ startDate: null, endDate: null, preset: null })}
+                            className="hover:text-red-500 font-black ml-0.5 cursor-pointer"
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      )}
+                      {selectedCircle && (
+                        <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 font-extrabold rounded-md flex items-center gap-1">
+                          Circle: {selectedCircle}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCircle('');
+                              setSelectedDivision('');
+                            }}
+                            className="hover:text-red-500 font-black ml-0.5 cursor-pointer"
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      )}
+                      {selectedDivision && (
+                        <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 font-extrabold rounded-md flex items-center gap-1">
+                          Division: {selectedDivision}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDivision('')}
+                            className="hover:text-red-500 font-black ml-0.5 cursor-pointer"
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      )}
+                      {searchTerm.trim() && (
+                        <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-extrabold rounded-md flex items-center gap-1">
+                          Search: &quot;{searchTerm}&quot;
+                          <button
+                            type="button"
+                            onClick={() => setSearchTerm('')}
+                            className="hover:text-red-500 font-black ml-0.5 cursor-pointer"
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-slate-600 dark:text-slate-400">
+                        Showing <strong className="text-blue-600 dark:text-blue-400">{filteredCorridors.length}</strong> corridors ({totalFilteredStretches} works)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedCategoryFilter('ALL');
+                          setStatusFilter('ALL');
+                          setDateRangeFilter({ startDate: null, endDate: null, preset: null });
+                          setSelectedCircle('');
+                          setSelectedDivision('');
+                          setSearchTerm('');
+                        }}
+                        className="text-blue-600 dark:text-blue-400 hover:underline font-extrabold cursor-pointer"
+                      >
+                        Reset All
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* DLP Corridors Ledger Table */}
@@ -509,6 +953,7 @@ export default function DlpPage() {
                               setSearchTerm('');
                               setSelectedCircle('');
                               setSelectedDivision('');
+                              setSelectedCategoryFilter('ALL');
                               setStatusFilter('ALL');
                               setDateRangeFilter({ startDate: null, endDate: null, preset: null });
                             }}
