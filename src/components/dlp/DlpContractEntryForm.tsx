@@ -840,7 +840,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                                 step="0.01"
                                 value={stretch.road_width_to_m}
                                 onChange={(e) => handleUpdateStretch(index, 'road_width_to_m', e.target.value)}
-                                placeholder={hasEnteredChainages && spanAnalysis.hasMatches ? String(spanAnalysis.minCenterlineWidthMeters) : '0.00'}
+                                placeholder={hasEnteredChainages && spanAnalysis.hasMatches && spanAnalysis.isUniform ? String(spanAnalysis.minCenterlineWidthMeters) : '0.00'}
                                 className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
                               />
                             </div>
@@ -873,7 +873,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                             </div>
                           )}
 
-                          {/* Level 2 Multi-Lane Mixed Span Banner */}
+                          {/* Level 2 Multi-Lane Mixed Span Banner (Pure Auto-Split Focus) */}
                           {hasEnteredChainages && spanAnalysis.hasMatches && !spanAnalysis.isUniform && (
                             <div className="mt-2.5 p-3 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                               <div className="space-y-0.5 min-w-0">
@@ -882,33 +882,21 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                                     Multi-Lane Span ({spanAnalysis.totalSubSections} Sections)
                                   </span>
                                   <span className="font-bold truncate">
-                                    {spanAnalysis.summaryLabel} &bull; Safe Bottleneck Fit: <strong className="font-bold">0 to {spanAnalysis.minCenterlineWidthMeters}m ({spanAnalysis.bottleneckConfig})</strong>
+                                    {spanAnalysis.summaryLabel} &bull; Physical lane widths vary across this span
                                   </span>
                                 </div>
                                 <p className="text-[11px] text-amber-800 dark:text-amber-300">
-                                  This stretch covers multiple lane widths. Apply the safe bottleneck width or auto-split into matching individual entries.
+                                  This work crosses multiple lane configurations. Click below to automatically split this entry into {spanAnalysis.totalSubSections} discrete sub-sections with their respective Level 2 lane widths.
                                 </p>
                               </div>
 
-                              <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                                {(Number(stretch.road_width_from_m || 0) !== 0 || Number(stretch.road_width_to_m || 0) !== spanAnalysis.minCenterlineWidthMeters) && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      handleUpdateStretch(index, 'road_width_from_m', 0);
-                                      handleUpdateStretch(index, 'road_width_to_m', spanAnalysis.minCenterlineWidthMeters);
-                                    }}
-                                    className="px-2.5 py-1 bg-amber-100 dark:bg-amber-900/60 hover:bg-amber-200 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
-                                  >
-                                    Use Safe Width (0 to {spanAnalysis.minCenterlineWidthMeters}m)
-                                  </button>
-                                )}
+                              <div className="flex items-center gap-2 shrink-0">
                                 <button
                                   type="button"
                                   onClick={() => handleAutoSplitStretch(index, spanAnalysis.subSections)}
-                                  className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-extrabold shadow-xs transition-colors cursor-pointer"
+                                  className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow-xs transition-colors cursor-pointer"
                                 >
-                                  <Sparkles className="w-3.5 h-3.5" /> Split into {spanAnalysis.totalSubSections} Sections
+                                  <Sparkles className="w-4 h-4" /> Auto-Split into {spanAnalysis.totalSubSections} Lane Sections
                                 </button>
                               </div>
                             </div>
