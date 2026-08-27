@@ -143,7 +143,7 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ corr
                     ? 'Departmental / Uncontracted (No DLP)'
                     : (s.contractor_name?.trim() || 'Unassigned Contractor');
                   const work = isNoDlp
-                    ? (s.scheme || 'Proposed Special Repairs')
+                    ? (s.scheme || 'Annual Work')
                     : (s.work_name?.trim() || 'Unspecified Work');
 
                   if (!contractorMap.has(contractor)) {
@@ -234,7 +234,7 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ corr
                                           <div>
                                             <span className="font-semibold text-slate-500">{primaryCat === 'NO_DLP' ? 'Scheme: ' : 'Commencement: '}</span>
                                             <span className="font-bold text-slate-800 dark:text-slate-200">
-                                              {primaryCat === 'NO_DLP' ? (s.scheme || 'Proposed Special Repairs') : formatDateIndian(s.commencement_date)}
+                                              {primaryCat === 'NO_DLP' ? (s.scheme || 'Annual Work') : formatDateIndian(s.commencement_date)}
                                             </span>
                                           </div>
                                           <div>

@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { DlpCorridor, DlpWorkStretch } from '@/types/dlp';
+import { DlpCorridor, DlpWorkStretch, DlpWorkCategory } from '@/types/dlp';
 import { detectLaneWidthForChainage, checkSpanWidthCapacity } from '@/lib/dlp/laneDetection';
 import { addYearsToDateString, normalizeDateForDb, parseDateString } from '@/lib/formatters';
 
 export const dynamic = 'force-dynamic';
+
+function getExpiredScheme(originalCategory: DlpWorkCategory, existingScheme?: string | null, workName?: string | null): string {
+  if (existingScheme && existingScheme.trim() !== '' && existingScheme !== 'Proposed Special Repairs' && existingScheme !== 'Maintenance Gap / No Active Work') {
+    return existingScheme.trim();
+  }
+  if (originalCategory === 'DLP') return 'Annual Work';
+  if (originalCategory === 'PBMC') return 'PBMC';
+  if (originalCategory === 'STMC') return 'STMC';
+  if (originalCategory === 'CONSTRUCTION') return 'Construction';
+  return workName?.trim() || 'Annual Work';
+}
 
 function computeStretchLiveStatus(stretch: DlpWorkStretch): DlpWorkStretch {
   const today = new Date();
@@ -28,12 +39,12 @@ function computeStretchLiveStatus(stretch: DlpWorkStretch): DlpWorkStretch {
 
       if (daysRemaining <= 0) {
         computedStatus = 'EXPIRED';
-        // Lifecycle rule: Expired warranty automatically transitions into NO_DLP category
+        // Lifecycle rule: Expired warranty automatically transitions into NO_DLP with previous work type as scheme
         return {
           ...stretch,
           category: 'NO_DLP',
           dlp_ended_on_date: stretch.dlp_ended_on_date || stretch.dlp_till_date,
-          scheme: stretch.scheme || 'Proposed Special Repairs',
+          scheme: getExpiredScheme(stretch.category, stretch.scheme, stretch.work_name),
           days_remaining: daysRemaining,
           computed_status: 'EXPIRED',
         };
@@ -45,6 +56,9 @@ function computeStretchLiveStatus(stretch: DlpWorkStretch): DlpWorkStretch {
     }
   } else if (stretch.category === 'NO_DLP') {
     computedStatus = 'EXPIRED';
+    if (!stretch.scheme || stretch.scheme === 'Proposed Special Repairs' || stretch.scheme === 'Maintenance Gap / No Active Work') {
+      stretch.scheme = 'Annual Work';
+    }
     if (stretch.dlp_ended_on_date) {
       const ended = parseDateString(stretch.dlp_ended_on_date);
       if (ended) {
@@ -305,9 +319,10 @@ export async function POST(req: NextRequest) {
               const today = new Date();
               today.setHours(0, 0, 0, 0);
               if (exp.getTime() <= today.getTime()) {
+                const prevCat = category;
                 category = 'NO_DLP';
                 if (!dlpEndedOn) dlpEndedOn = dlpTillDate;
-                if (!scheme) scheme = 'Proposed Special Repairs';
+                scheme = getExpiredScheme(prevCat, scheme, s.work_name);
               }
             }
           }
@@ -489,9 +504,10 @@ export async function PUT(req: NextRequest) {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 if (exp.getTime() <= today.getTime()) {
+                  const prevCat = category;
                   category = 'NO_DLP';
                   if (!dlpEndedOn) dlpEndedOn = dlpTillDate;
-                  if (!scheme) scheme = 'Proposed Special Repairs';
+                  scheme = getExpiredScheme(prevCat, scheme, s.work_name);
                 }
               }
             }

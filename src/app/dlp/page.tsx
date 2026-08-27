@@ -676,7 +676,7 @@ export default function DlpPage() {
                                           ? 'Departmental / Uncontracted (No DLP)'
                                           : (s.contractor_name?.trim() || 'Unassigned Contractor');
                                         const work = isNoDlp
-                                          ? (s.scheme || 'Proposed Special Repairs')
+                                          ? (s.scheme || 'Annual Work')
                                           : (s.work_name?.trim() || 'Unspecified Work');
 
                                         if (!contractorMap.has(contractor)) {
@@ -784,7 +784,7 @@ export default function DlpPage() {
                                                                     {s.category === 'CONSTRUCTION' ? (
                                                                       <span className="font-semibold">{s.physical_progress_pct ?? 0}% Complete</span>
                                                                     ) : primaryCat === 'NO_DLP' ? (
-                                                                      <span className="font-semibold text-slate-800 dark:text-slate-200">{s.scheme || 'Proposed Special Repairs'}</span>
+                                                                      <span className="font-semibold text-slate-800 dark:text-slate-200">{s.scheme || 'Annual Work'}</span>
                                                                     ) : (
                                                                       formatDateIndian(s.dlp_till_date)
                                                                     )}

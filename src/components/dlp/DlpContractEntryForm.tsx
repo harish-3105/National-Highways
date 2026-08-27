@@ -184,7 +184,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
       physical_progress_pct: null,
       actual_completion_date: null,
       dlp_period_years: null,
-      scheme: category === 'NO_DLP' ? 'Proposed Special Repairs' : null,
+      scheme: category === 'NO_DLP' ? 'Annual Work' : null,
       dlp_ended_on_date: null,
       remarks: '',
       status: 'ACTIVE',
@@ -1013,7 +1013,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                                     <div className="flex items-center gap-1.5 font-semibold">
                                       <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                                       <span>
-                                        DLP Expired on <strong>{formatDateIndian(stretch.dlp_till_date)}</strong> &bull; Automatically categorizes under <strong>No DLP (Proposed Special Repairs)</strong> on save.
+                                        DLP Expired on <strong>{formatDateIndian(stretch.dlp_till_date)}</strong> &bull; Automatically categorizes under <strong>No DLP (Annual Work)</strong> on save.
                                       </span>
                                     </div>
                                     <span className="px-2 py-0.5 bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200 text-[10px] font-extrabold rounded-md uppercase tracking-wider shrink-0">
