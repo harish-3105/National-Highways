@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { DlpCorridor, DlpWorkStretch } from '@/types/dlp';
 import { detectLaneWidthForChainage, checkSpanWidthCapacity } from '@/lib/dlp/laneDetection';
-import { addYearsToDateString, normalizeDateForDb } from '@/lib/formatters';
+import { addYearsToDateString, normalizeDateForDb, parseDateString } from '@/lib/formatters';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,20 +20,39 @@ function computeStretchLiveStatus(stretch: DlpWorkStretch): DlpWorkStretch {
       computedStatus = 'ACTIVE';
     }
   } else if (stretch.dlp_till_date) {
-    const expiry = new Date(stretch.dlp_till_date);
-    expiry.setHours(0, 0, 0, 0);
-    const diffTime = expiry.getTime() - today.getTime();
-    daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const expiry = parseDateString(stretch.dlp_till_date);
+    if (expiry) {
+      expiry.setHours(0, 0, 0, 0);
+      const diffTime = expiry.getTime() - today.getTime();
+      daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (daysRemaining < 0) {
-      computedStatus = 'EXPIRED';
-    } else if (daysRemaining <= 90) {
-      computedStatus = 'EXPIRING_SOON';
-    } else {
-      computedStatus = 'ACTIVE';
+      if (daysRemaining < 0) {
+        computedStatus = 'EXPIRED';
+        // Lifecycle rule: Expired warranty automatically transitions into NO_DLP category
+        return {
+          ...stretch,
+          category: 'NO_DLP',
+          dlp_ended_on_date: stretch.dlp_ended_on_date || stretch.dlp_till_date,
+          scheme: stretch.scheme || 'Proposed Special Repairs',
+          days_remaining: daysRemaining,
+          computed_status: 'EXPIRED',
+        };
+      } else if (daysRemaining <= 90) {
+        computedStatus = 'EXPIRING_SOON';
+      } else {
+        computedStatus = 'ACTIVE';
+      }
     }
   } else if (stretch.category === 'NO_DLP') {
     computedStatus = 'EXPIRED';
+    if (stretch.dlp_ended_on_date) {
+      const ended = parseDateString(stretch.dlp_ended_on_date);
+      if (ended) {
+        ended.setHours(0, 0, 0, 0);
+        const diffTime = ended.getTime() - today.getTime();
+        daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      }
+    }
   }
 
   return {
@@ -277,6 +296,23 @@ export async function POST(req: NextRequest) {
           dlpTillDate = addYearsToDateString(commencementDate, periodYears);
         }
 
+        // 3. Expired warranty transition: If DLP (or STMC/PBMC) has passed its dlpTillDate, transition to NO_DLP
+        if (category === 'DLP' || category === 'STMC' || category === 'PBMC') {
+          if (dlpTillDate) {
+            const exp = parseDateString(dlpTillDate);
+            if (exp) {
+              exp.setHours(0, 0, 0, 0);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              if (exp.getTime() < today.getTime()) {
+                category = 'NO_DLP';
+                if (!dlpEndedOn) dlpEndedOn = dlpTillDate;
+                if (!scheme) scheme = 'Proposed Special Repairs';
+              }
+            }
+          }
+        }
+
         return {
           corridor_id: corridorId,
           category,
@@ -442,6 +478,23 @@ export async function PUT(req: NextRequest) {
           // 2. Under DLP: if dlpTillDate is missing but commencementDate & periodYears are present
           if (category === 'DLP' && !dlpTillDate && commencementDate && periodYears) {
             dlpTillDate = addYearsToDateString(commencementDate, periodYears);
+          }
+
+          // 3. Expired warranty transition: If DLP (or STMC/PBMC) has passed its dlpTillDate, transition to NO_DLP
+          if (category === 'DLP' || category === 'STMC' || category === 'PBMC') {
+            if (dlpTillDate) {
+              const exp = parseDateString(dlpTillDate);
+              if (exp) {
+                exp.setHours(0, 0, 0, 0);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                if (exp.getTime() < today.getTime()) {
+                  category = 'NO_DLP';
+                  if (!dlpEndedOn) dlpEndedOn = dlpTillDate;
+                  if (!scheme) scheme = 'Proposed Special Repairs';
+                }
+              }
+            }
           }
 
           return {
