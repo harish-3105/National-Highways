@@ -225,3 +225,166 @@ export function checkSpanWidthCapacity(
     bottlenecks,
   };
 }
+
+export interface OverlappingLaneSubSection {
+  fromKm: number;
+  toKm: number;
+  lengthKm: number;
+  laneConfig: string;
+  carriagewayWidthMeters: number;
+  centerlineWidthMeters: number;
+  importantTown?: string | null;
+  subStretch: SubChainageStretch;
+}
+
+export interface SpanLaneAnalysis {
+  hasMatches: boolean;
+  isUniform: boolean;
+  totalSubSections: number;
+  subSections: OverlappingLaneSubSection[];
+  minCenterlineWidthMeters: number;
+  minCarriagewayWidthMeters: number;
+  maxCenterlineWidthMeters: number;
+  maxCarriagewayWidthMeters: number;
+  bottleneckConfig: string;
+  primaryConfig: string;
+  summaryLabel: string;
+}
+
+/**
+ * Analyzes all Level 2 Micro-Lane sub-stretches covered by [fromKm, toKm].
+ * Detects whether the span has a uniform lane configuration or spans multiple different lane types.
+ * Provides the safe minimum bottleneck width as well as discrete sub-sections for auto-splitting.
+ */
+export function analyzeSpanLaneSubSections(
+  fromKm: number,
+  toKm: number,
+  subChainages: SubChainageStretch[]
+): SpanLaneAnalysis {
+  const defaultRes: SpanLaneAnalysis = {
+    hasMatches: false,
+    isUniform: true,
+    totalSubSections: 0,
+    subSections: [],
+    minCenterlineWidthMeters: 3.5,
+    minCarriagewayWidthMeters: 7.0,
+    maxCenterlineWidthMeters: 3.5,
+    maxCarriagewayWidthMeters: 7.0,
+    bottleneckConfig: '2-Lane',
+    primaryConfig: '2-Lane',
+    summaryLabel: '2-Lane',
+  };
+
+  if (!subChainages || subChainages.length === 0 || isNaN(fromKm) || isNaN(toKm) || (fromKm === 0 && toKm === 0)) {
+    return defaultRes;
+  }
+
+  const f = Math.min(fromKm, toKm);
+  const t = Math.max(fromKm, toKm);
+
+  const microStretches = subChainages.filter(
+    (s) =>
+      s.delete_status !== 'DELETED' &&
+      s.delete_status !== 'SOFT_DELETE' &&
+      s.breakdown_type !== 'MACRO_PCU' &&
+      s.lane_configuration?.toLowerCase() !== 'primary' &&
+      s.lane_configuration?.toLowerCase() !== 'secondary'
+  );
+
+  const candidatePool = microStretches.length > 0 ? microStretches : subChainages;
+  const rawSlices: OverlappingLaneSubSection[] = [];
+
+  for (const s of candidatePool) {
+    if (s.delete_status === 'DELETED' || s.delete_status === 'SOFT_DELETE') continue;
+
+    const sFrom = Number(s.from_km) || 0;
+    const sTo = Number(s.to_km) || 0;
+
+    const overlapStart = Math.max(f, sFrom);
+    const overlapEnd = Math.min(t, sTo);
+
+    if (overlapEnd > overlapStart) {
+      const { carriagewayWidth, centerlineWidth } = getLaneWidthFromConfig(s.lane_configuration, s.carriageway_width);
+      rawSlices.push({
+        fromKm: Math.round(overlapStart * 1000) / 1000,
+        toKm: Math.round(overlapEnd * 1000) / 1000,
+        lengthKm: Math.round((overlapEnd - overlapStart) * 1000) / 1000,
+        laneConfig: s.lane_configuration || '2-Lane',
+        carriagewayWidthMeters: carriagewayWidth,
+        centerlineWidthMeters: centerlineWidth,
+        importantTown: s.important_town || null,
+        subStretch: s,
+      });
+    }
+  }
+
+  // Sort slices by starting chainage
+  rawSlices.sort((a, b) => a.fromKm - b.fromKm);
+
+  // Merge contiguous slices that have identical laneConfig & centerlineWidth
+  const mergedSlices: OverlappingLaneSubSection[] = [];
+  for (const slice of rawSlices) {
+    if (mergedSlices.length === 0) {
+      mergedSlices.push({ ...slice });
+    } else {
+      const prev = mergedSlices[mergedSlices.length - 1];
+      if (
+        Math.abs(prev.toKm - slice.fromKm) < 0.005 &&
+        prev.centerlineWidthMeters === slice.centerlineWidthMeters &&
+        prev.laneConfig === slice.laneConfig
+      ) {
+        prev.toKm = slice.toKm;
+        prev.lengthKm = Math.round((prev.toKm - prev.fromKm) * 1000) / 1000;
+      } else {
+        mergedSlices.push({ ...slice });
+      }
+    }
+  }
+
+  if (mergedSlices.length === 0) {
+    return defaultRes;
+  }
+
+  let minCenterline = Infinity;
+  let minCarriageway = Infinity;
+  let maxCenterline = -Infinity;
+  let maxCarriageway = -Infinity;
+  let bottleneckConfig = mergedSlices[0].laneConfig;
+  let longestSliceLength = -1;
+  let primaryConfig = mergedSlices[0].laneConfig;
+
+  const distinctConfigs = new Set<string>();
+
+  for (const slice of mergedSlices) {
+    distinctConfigs.add(slice.laneConfig);
+    if (slice.centerlineWidthMeters < minCenterline) {
+      minCenterline = slice.centerlineWidthMeters;
+      minCarriageway = slice.carriagewayWidthMeters;
+      bottleneckConfig = slice.laneConfig;
+    }
+    if (slice.centerlineWidthMeters > maxCenterline) {
+      maxCenterline = slice.centerlineWidthMeters;
+      maxCarriageway = slice.carriagewayWidthMeters;
+    }
+    if (slice.lengthKm > longestSliceLength) {
+      longestSliceLength = slice.lengthKm;
+      primaryConfig = slice.laneConfig;
+    }
+  }
+
+  const isUniform = distinctConfigs.size === 1;
+
+  return {
+    hasMatches: true,
+    isUniform,
+    totalSubSections: mergedSlices.length,
+    subSections: mergedSlices,
+    minCenterlineWidthMeters: minCenterline === Infinity ? 3.5 : minCenterline,
+    minCarriagewayWidthMeters: minCarriageway === Infinity ? 7.0 : minCarriageway,
+    maxCenterlineWidthMeters: maxCenterline === -Infinity ? 3.5 : maxCenterline,
+    maxCarriagewayWidthMeters: maxCarriageway === -Infinity ? 7.0 : maxCarriageway,
+    bottleneckConfig,
+    primaryConfig,
+    summaryLabel: Array.from(distinctConfigs).join(' + '),
+  };
+}

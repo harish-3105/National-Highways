@@ -25,7 +25,12 @@ import { DlpCorridor, DlpWorkStretch, DlpWorkCategory, DlpMasterData } from '@/t
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { SubChainageStretch } from '@/app/api/sub-chainages/route';
-import { detectLaneWidthForChainage, checkSpanWidthCapacity } from '@/lib/dlp/laneDetection';
+import {
+  detectLaneWidthForChainage,
+  checkSpanWidthCapacity,
+  analyzeSpanLaneSubSections,
+  OverlappingLaneSubSection,
+} from '@/lib/dlp/laneDetection';
 
 interface DlpContractEntryFormProps {
   initialData?: Partial<DlpCorridor>;
@@ -211,6 +216,30 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
 
   const handleRemoveStretch = (index: number) => {
     setWorkStretches((prev) => prev.filter((_, idx) => idx !== index));
+    setSubmitError(null);
+  };
+
+  const handleAutoSplitStretch = (index: number, subSections: OverlappingLaneSubSection[]) => {
+    if (!subSections || subSections.length <= 1) return;
+
+    setWorkStretches((prev) => {
+      const target = prev[index];
+      if (!target) return prev;
+
+      const newStretches: DlpWorkStretch[] = subSections.map((sub) => ({
+        ...target,
+        id: undefined,
+        chainage_from_km: sub.fromKm,
+        chainage_to_km: sub.toKm,
+        length_km: sub.lengthKm,
+        road_width_from_m: 0,
+        road_width_to_m: sub.centerlineWidthMeters,
+      }));
+
+      const updated = [...prev];
+      updated.splice(index, 1, ...newStretches);
+      return updated;
+    });
     setSubmitError(null);
   };
 
@@ -679,18 +708,24 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                       !isNaN(Number(stretch.chainage_to_km)) &&
                       Number(stretch.chainage_to_km) > Number(stretch.chainage_from_km);
 
-                    const detectedLane = hasEnteredChainages
-                      ? detectLaneWidthForChainage(
+                    const spanAnalysis = hasEnteredChainages
+                      ? analyzeSpanLaneSubSections(
                           Number(stretch.chainage_from_km),
                           Number(stretch.chainage_to_km),
                           subChainages
                         )
                       : {
-                          matchedStretch: null,
-                          laneConfig: null,
-                          totalCarriagewayWidthMeters: 7.0,
-                          centerlineWidthMeters: 3.5,
-                          totalWidthMeters: 3.5,
+                          hasMatches: false,
+                          isUniform: true,
+                          totalSubSections: 0,
+                          subSections: [],
+                          minCenterlineWidthMeters: 3.5,
+                          minCarriagewayWidthMeters: 7.0,
+                          maxCenterlineWidthMeters: 3.5,
+                          maxCarriagewayWidthMeters: 7.0,
+                          bottleneckConfig: '2-Lane',
+                          primaryConfig: '2-Lane',
+                          summaryLabel: '2-Lane',
                         };
 
                     const capacity =
@@ -805,58 +840,110 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                                 step="0.01"
                                 value={stretch.road_width_to_m}
                                 onChange={(e) => handleUpdateStretch(index, 'road_width_to_m', e.target.value)}
-                                placeholder={hasEnteredChainages && detectedLane.matchedStretch ? String(detectedLane.centerlineWidthMeters) : '0.00'}
+                                placeholder={hasEnteredChainages && spanAnalysis.hasMatches ? String(spanAnalysis.minCenterlineWidthMeters) : '0.00'}
                                 className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
                               />
                             </div>
                           </div>
 
-                          {/* Level 2 Sub-Chainage Micro-Lane Parameter Reference (Only shown after user enters valid chainages) */}
-                          {hasEnteredChainages && detectedLane.matchedStretch && (
+                          {/* Level 2 Uniform Span Reference */}
+                          {hasEnteredChainages && spanAnalysis.hasMatches && spanAnalysis.isUniform && (
                             <div className="mt-2.5 p-2.5 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                               <div className="flex items-center gap-2 text-blue-950 dark:text-blue-200 min-w-0">
                                 <span className="px-2 py-0.5 bg-blue-600 text-white rounded-md text-[10px] font-extrabold uppercase tracking-wider shrink-0">
                                   Level 2 Micro-Lane
                                 </span>
                                 <span className="font-semibold truncate">
-                                  {detectedLane.laneConfig} &bull; {detectedLane.totalCarriagewayWidthMeters}m Carriageway &bull; Centerline Width: <strong className="font-bold">0 to {detectedLane.centerlineWidthMeters}m</strong>
-                                  {detectedLane.importantTown ? ` • Town: ${detectedLane.importantTown}` : ''}
+                                  {spanAnalysis.primaryConfig} &bull; {spanAnalysis.minCarriagewayWidthMeters}m Carriageway &bull; Centerline Width: <strong className="font-bold">0 to {spanAnalysis.minCenterlineWidthMeters}m</strong>
                                 </span>
                               </div>
 
-                              {(Number(stretch.road_width_from_m || 0) !== 0 || Number(stretch.road_width_to_m || 0) !== detectedLane.centerlineWidthMeters) && (
+                              {(Number(stretch.road_width_from_m || 0) !== 0 || Number(stretch.road_width_to_m || 0) !== spanAnalysis.minCenterlineWidthMeters) && (
                                 <button
                                   type="button"
                                   onClick={() => {
                                     handleUpdateStretch(index, 'road_width_from_m', 0);
-                                    handleUpdateStretch(index, 'road_width_to_m', detectedLane.centerlineWidthMeters);
+                                    handleUpdateStretch(index, 'road_width_to_m', spanAnalysis.minCenterlineWidthMeters);
                                   }}
                                   className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer self-start sm:self-auto shrink-0"
                                 >
-                                  Use Level 2 Width (0 to {detectedLane.centerlineWidthMeters}m)
+                                  Use Level 2 Width (0 to {spanAnalysis.minCenterlineWidthMeters}m)
                                 </button>
                               )}
                             </div>
                           )}
 
-                          {/* Width Capacity Alert if specified width exceeds any overlapping physical carriageway */}
-                          {hasEnteredChainages && !capacity.valid && (
-                            <div className="mt-2.5 p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 rounded-xl flex items-start gap-2.5 text-xs text-rose-900 dark:text-rose-200">
-                              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                              <div>
-                                <span className="font-bold">Width Exceeds Road Capacity: </span>
-                                <span>
-                                  Entered centerline width ({stretch.road_width_to_m}m = {(Number(stretch.road_width_to_m) * 2).toFixed(1)}m total) exceeds physical carriageway on{' '}
-                                  {capacity.bottlenecks.map((b, bi) => (
-                                    <strong key={bi} className="font-bold">
-                                      Km {b.overlapFromKm.toFixed(3)}–{b.overlapToKm.toFixed(3)} ({b.laneConfig}: max {b.maxAllowedCenterlineWidth}m centerline = {b.maxAllowedCarriagewayWidth}m total){bi < capacity.bottlenecks.length - 1 ? ', ' : ''}
-                                    </strong>
-                                  ))}.
-                                </span>
-                                <p className="mt-1 text-[11px] text-rose-700 dark:text-rose-300 font-semibold">
-                                  Please adjust the width or split this work into separate entries for each road section.
+                          {/* Level 2 Multi-Lane Mixed Span Banner */}
+                          {hasEnteredChainages && spanAnalysis.hasMatches && !spanAnalysis.isUniform && (
+                            <div className="mt-2.5 p-3 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                              <div className="space-y-0.5 min-w-0">
+                                <div className="flex items-center gap-2 text-amber-950 dark:text-amber-200 flex-wrap">
+                                  <span className="px-2 py-0.5 bg-amber-600 text-white rounded-md text-[10px] font-extrabold uppercase tracking-wider shrink-0">
+                                    Multi-Lane Span ({spanAnalysis.totalSubSections} Sections)
+                                  </span>
+                                  <span className="font-bold truncate">
+                                    {spanAnalysis.summaryLabel} &bull; Safe Bottleneck Fit: <strong className="font-bold">0 to {spanAnalysis.minCenterlineWidthMeters}m ({spanAnalysis.bottleneckConfig})</strong>
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                                  This stretch covers multiple lane widths. Apply the safe bottleneck width or auto-split into matching individual entries.
                                 </p>
                               </div>
+
+                              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                                {(Number(stretch.road_width_from_m || 0) !== 0 || Number(stretch.road_width_to_m || 0) !== spanAnalysis.minCenterlineWidthMeters) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleUpdateStretch(index, 'road_width_from_m', 0);
+                                      handleUpdateStretch(index, 'road_width_to_m', spanAnalysis.minCenterlineWidthMeters);
+                                    }}
+                                    className="px-2.5 py-1 bg-amber-100 dark:bg-amber-900/60 hover:bg-amber-200 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
+                                  >
+                                    Use Safe Width (0 to {spanAnalysis.minCenterlineWidthMeters}m)
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleAutoSplitStretch(index, spanAnalysis.subSections)}
+                                  className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-extrabold shadow-xs transition-colors cursor-pointer"
+                                >
+                                  <Sparkles className="w-3.5 h-3.5" /> Split into {spanAnalysis.totalSubSections} Sections
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Width Capacity Alert if specified width exceeds any overlapping physical carriageway */}
+                          {hasEnteredChainages && !capacity.valid && (
+                            <div className="mt-2.5 p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 rounded-xl flex items-start justify-between gap-3 text-xs text-rose-900 dark:text-rose-200 flex-wrap sm:flex-nowrap">
+                              <div className="flex items-start gap-2.5">
+                                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                                <div>
+                                  <span className="font-bold">Width Exceeds Road Capacity: </span>
+                                  <span>
+                                    Entered centerline width ({stretch.road_width_to_m}m = {(Number(stretch.road_width_to_m) * 2).toFixed(1)}m total) exceeds physical carriageway on{' '}
+                                    {capacity.bottlenecks.map((b, bi) => (
+                                      <strong key={bi} className="font-bold">
+                                        Km {b.overlapFromKm.toFixed(3)}–{b.overlapToKm.toFixed(3)} ({b.laneConfig}: max {b.maxAllowedCenterlineWidth}m centerline = {b.maxAllowedCarriagewayWidth}m total){bi < capacity.bottlenecks.length - 1 ? ', ' : ''}
+                                      </strong>
+                                    ))}.
+                                  </span>
+                                  <p className="mt-1 text-[11px] text-rose-700 dark:text-rose-300 font-semibold">
+                                    Please adjust the width or split this work into separate entries for each road section.
+                                  </p>
+                                </div>
+                              </div>
+
+                              {spanAnalysis.subSections.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleAutoSplitStretch(index, spanAnalysis.subSections)}
+                                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-extrabold shadow-xs transition-colors cursor-pointer self-start"
+                                >
+                                  <Sparkles className="w-3.5 h-3.5" /> Split Stretch
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
