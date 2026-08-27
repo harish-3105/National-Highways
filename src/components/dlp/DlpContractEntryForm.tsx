@@ -25,7 +25,7 @@ import { DlpCorridor, DlpWorkStretch, DlpWorkCategory, DlpMasterData } from '@/t
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { SubChainageStretch } from '@/app/api/sub-chainages/route';
-import { detectLaneWidthForChainage } from '@/lib/dlp/laneDetection';
+import { detectLaneWidthForChainage, checkSpanWidthCapacity } from '@/lib/dlp/laneDetection';
 
 interface DlpContractEntryFormProps {
   initialData?: Partial<DlpCorridor>;
@@ -127,6 +127,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
   const [isAddMenuOpen, setIsAddMenuOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const divisionOptions = masterData?.divisions || [];
 
@@ -162,27 +163,21 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
   );
 
   const handleAddWorkStretch = (category: DlpWorkCategory) => {
-    const parentFrom = Number(fromKm) || 0;
-    const parentTo = Number(toKm) || 0;
-    const detected = detectLaneWidthForChainage(parentFrom, parentTo, subChainages);
-
     const newStretch: DlpWorkStretch = {
       id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       category,
-      chainage_from_km: parentFrom,
-      chainage_to_km: parentTo,
-      length_km: Math.max(0, Math.round((parentTo - parentFrom) * 1000) / 1000),
-      road_width_from_m: 0.0,
-      road_width_to_m: detected.totalWidthMeters,
+      chainage_from_km: '' as any,
+      chainage_to_km: '' as any,
+      length_km: 0,
+      road_width_from_m: '' as any,
+      road_width_to_m: '' as any,
       contractor_name: '',
       work_name: '',
-      commencement_date: new Date().toISOString().split('T')[0],
-      dlp_till_date: category === 'DLP' || category === 'STMC' || category === 'PBMC'
-        ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        : '',
-      physical_progress_pct: category === 'CONSTRUCTION' ? 0 : null,
+      commencement_date: '',
+      dlp_till_date: '',
+      physical_progress_pct: null,
       actual_completion_date: null,
-      dlp_period_years: category === 'CONSTRUCTION' ? 5 : null,
+      dlp_period_years: null,
       scheme: category === 'NO_DLP' ? 'Proposed Special Repairs' : null,
       dlp_ended_on_date: null,
       remarks: '',
@@ -191,6 +186,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
 
     setWorkStretches((prev) => [...prev, newStretch]);
     setIsAddMenuOpen(false);
+    setSubmitError(null);
   };
 
   const handleUpdateStretch = (index: number, field: keyof DlpWorkStretch, value: any) => {
@@ -200,24 +196,69 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
 
       // Auto-compute length when chainages change
       if (field === 'chainage_from_km' || field === 'chainage_to_km') {
-        const f = Number(field === 'chainage_from_km' ? value : stretch.chainage_from_km) || 0;
-        const t = Number(field === 'chainage_to_km' ? value : stretch.chainage_to_km) || 0;
-        stretch.length_km = Math.max(0, Math.round((t - f) * 1000) / 1000);
+        const f = field === 'chainage_from_km' ? value : stretch.chainage_from_km;
+        const t = field === 'chainage_to_km' ? value : stretch.chainage_to_km;
+        if (f !== '' && t !== '' && !isNaN(Number(f)) && !isNaN(Number(t))) {
+          stretch.length_km = Math.max(0, Math.round((Number(t) - Number(f)) * 1000) / 1000);
+        }
       }
 
       updated[index] = stretch;
       return updated;
     });
+    setSubmitError(null);
   };
 
   const handleRemoveStretch = (index: number) => {
     setWorkStretches((prev) => prev.filter((_, idx) => idx !== index));
+    setSubmitError(null);
+  };
+
+  // Validate all Tab 2 sub-work stretches including Road Width Capacity checks
+  const validateStretches = (): { valid: boolean; errorMsg?: string } => {
+    for (let i = 0; i < workStretches.length; i++) {
+      const s = workStretches[i];
+      const rawFrom = String((s as any).chainage_from_km ?? '').trim();
+      const rawTo = String((s as any).chainage_to_km ?? '').trim();
+      const rawWidthTo = String((s as any).road_width_to_m ?? '').trim();
+      const sFrom = Number(rawFrom);
+      const sTo = Number(rawTo);
+      const wTo = Number(rawWidthTo);
+
+      if (rawFrom === '' || isNaN(sFrom) || sFrom < 0) {
+        return { valid: false, errorMsg: `Work Stretch #${i + 1}: Valid starting chainage is required.` };
+      }
+      if (rawTo === '' || isNaN(sTo) || sTo <= sFrom) {
+        return { valid: false, errorMsg: `Work Stretch #${i + 1}: Ending chainage must be greater than starting chainage.` };
+      }
+      if (rawWidthTo !== '' && !isNaN(wTo) && wTo > 0) {
+        const capacity = checkSpanWidthCapacity(sFrom, sTo, wTo, subChainages);
+        if (!capacity.valid) {
+          const b = capacity.bottlenecks[0];
+          return {
+            valid: false,
+            errorMsg: `Work Stretch #${i + 1}: Width (${wTo}m) exceeds physical carriageway on Km ${b.overlapFromKm.toFixed(3)}–${b.overlapToKm.toFixed(3)} (${b.laneConfig}: ${b.maxAllowedWidth}m). Please adjust or split the stretch.`,
+          };
+        }
+      }
+    }
+    return { valid: true };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
+
     if (!validateTab1()) {
       setActiveTab('IDENTITY');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const stretchValidation = validateStretches();
+    if (!stretchValidation.valid) {
+      setActiveTab('STRETCHES');
+      setSubmitError(stretchValidation.errorMsg || 'Invalid stretch configuration');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -235,6 +276,10 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
       status: initialData?.status || 'ACTIVE',
       work_stretches: workStretches.map((s) => ({
         ...s,
+        chainage_from_km: Number(s.chainage_from_km || 0),
+        chainage_to_km: Number(s.chainage_to_km || 0),
+        road_width_from_m: String((s as any).road_width_from_m ?? '').trim() !== '' ? Number(s.road_width_from_m) : 0.0,
+        road_width_to_m: String((s as any).road_width_to_m ?? '').trim() !== '' ? Number(s.road_width_to_m) : 0,
         contractor_name: s.contractor_name?.trim() || null,
         work_name: s.work_name?.trim() || null,
         scheme: s.scheme?.trim() || null,
@@ -244,6 +289,8 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
 
     try {
       await onSave(payload);
+    } catch (err: any) {
+      setSubmitError(err?.message || 'Failed to save corridor');
     } finally {
       setLoading(false);
     }
@@ -289,6 +336,17 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Form Submission Error Banner */}
+      {submitError && (
+        <div className="p-4 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-2xl flex items-start gap-3 text-xs text-rose-900 dark:text-rose-200 shadow-xs">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h4 className="font-bold text-sm text-rose-950 dark:text-rose-100">Validation / Save Issue</h4>
+            <p className="mt-0.5">{submitError}</p>
+          </div>
+        </div>
+      )}
 
       {/* 2-STAGE STAGE-GATED TAB NAVIGATION */}
       <div className="bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
@@ -619,6 +677,12 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                       Number(stretch.chainage_to_km) || 0,
                       subChainages
                     );
+                    const capacity = checkSpanWidthCapacity(
+                      Number(stretch.chainage_from_km),
+                      Number(stretch.chainage_to_km),
+                      Number(stretch.road_width_to_m),
+                      subChainages
+                    );
 
                     return (
                       <div
@@ -719,7 +783,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                                 step="0.01"
                                 value={stretch.road_width_to_m}
                                 onChange={(e) => handleUpdateStretch(index, 'road_width_to_m', e.target.value)}
-                                placeholder={String(detectedLane.totalWidthMeters)}
+                                placeholder={detectedLane.matchedStretch ? String(detectedLane.totalWidthMeters) : '0.00'}
                                 className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
                               />
                             </div>
@@ -750,6 +814,27 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                                   Use Level 2 Width (0 to {detectedLane.totalWidthMeters}m)
                                 </button>
                               )}
+                            </div>
+                          )}
+
+                          {/* Width Capacity Alert if specified width exceeds any overlapping physical carriageway */}
+                          {!capacity.valid && (
+                            <div className="mt-2.5 p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 rounded-xl flex items-start gap-2.5 text-xs text-rose-900 dark:text-rose-200">
+                              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="font-bold">Width Exceeds Road Capacity: </span>
+                                <span>
+                                  Entered width ({stretch.road_width_to_m}m) exceeds physical carriageway on{' '}
+                                  {capacity.bottlenecks.map((b, bi) => (
+                                    <strong key={bi} className="font-bold">
+                                      Km {b.overlapFromKm.toFixed(3)}–{b.overlapToKm.toFixed(3)} ({b.laneConfig}: {b.maxAllowedWidth}m){bi < capacity.bottlenecks.length - 1 ? ', ' : ''}
+                                    </strong>
+                                  ))}.
+                                </span>
+                                <p className="mt-1 text-[11px] text-rose-700 dark:text-rose-300 font-semibold">
+                                  Please adjust the width or split this work into separate entries for each road section.
+                                </p>
+                              </div>
                             </div>
                           )}
                         </div>

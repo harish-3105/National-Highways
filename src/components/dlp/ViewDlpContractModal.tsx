@@ -116,83 +116,150 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ corr
             </div>
           </div>
 
-          {/* Granular Sub-Work Stretches */}
-          <div className="space-y-3">
-            <h4 className="font-bold text-xs text-blue-700 dark:text-blue-400 uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-blue-600" />
-              Granular Sub-Work Stretches ({stretches.length} Recorded)
-            </h4>
+          {/* Granular Sub-Work Stretches grouped by Contractor -> Work Name */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-xs text-blue-700 dark:text-blue-400 uppercase tracking-wider flex items-center gap-2">
+                <Layers className="w-4 h-4 text-blue-600" />
+                Granular Sub-Work Packages &amp; Stretches ({stretches.length} Recorded)
+              </h4>
+              <span className="text-[10px] text-slate-500 font-mono">
+                Contractor &bull; Work Name &bull; Granular 2D Stretches
+              </span>
+            </div>
 
             {stretches.length === 0 ? (
               <p className="text-slate-500 italic text-xs p-4 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-center">
                 No individual work stretches recorded for this corridor.
               </p>
             ) : (
-              <div className="space-y-3">
-                {stretches.map((s, idx) => {
-                  const badge = CATEGORY_BADGES[s.category] || CATEGORY_BADGES.DLP;
-                  return (
-                    <div
-                      key={s.id || idx}
-                      className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 shadow-xs space-y-3"
-                    >
-                      <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded font-extrabold text-xs ${badge.bg} ${badge.text}`}>
-                            {badge.label}
-                          </span>
-                          <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">
-                            {s.work_name || s.scheme || 'Untitled Work'}
-                          </span>
-                        </div>
-                        {renderStatusBadge(s)}
-                      </div>
+              (() => {
+                const contractorMap = new Map<string, Map<string, DlpWorkStretch[]>>();
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
-                        <div>
-                          <strong className="text-slate-500 block">Chainage Span:</strong>
-                          <span className="font-mono font-bold">
-                            Km {s.chainage_from_km} &rarr; Km {s.chainage_to_km} ({s.length_km} km)
-                          </span>
-                        </div>
+                stretches.forEach((s) => {
+                  const contractor = s.contractor_name?.trim() || (s.category === 'NO_DLP' ? 'Departmental / Unassigned' : 'Unassigned Contractor');
+                  const work = s.work_name?.trim() || (s.category === 'NO_DLP' ? (s.scheme || 'Maintenance Gap / No Active Work') : 'Unspecified Work');
 
-                        <div>
-                          <strong className="text-slate-500 block">Road Width Bounds:</strong>
-                          <span className="font-mono font-bold">
-                            {s.road_width_from_m}m &rarr; {s.road_width_to_m}m from Centerline
-                          </span>
-                        </div>
+                  if (!contractorMap.has(contractor)) {
+                    contractorMap.set(contractor, new Map());
+                  }
+                  const workMap = contractorMap.get(contractor)!;
+                  if (!workMap.has(work)) {
+                    workMap.set(work, []);
+                  }
+                  workMap.get(work)!.push(s);
+                });
 
-                        <div>
-                          <strong className="text-slate-500 block">Contractor Agency:</strong>
-                          <span className="font-bold text-slate-800 dark:text-slate-200">
-                            {s.contractor_name || 'N/A'}
-                          </span>
-                        </div>
+                return (
+                  <div className="space-y-4">
+                    {Array.from(contractorMap.entries()).map(([contractorName, worksMap], cIdx) => {
+                      const allContractorStretches = Array.from(worksMap.values()).flat();
+                      const totalContractorKm = allContractorStretches.reduce((acc, curr) => acc + Number(curr.length_km || 0), 0);
 
-                        <div>
-                          <strong className="text-slate-500 block">
-                            {s.category === 'CONSTRUCTION' ? 'Completion & DLP:' : s.category === 'NO_DLP' ? 'Ended Date:' : 'Expiry Date:'}
-                          </strong>
-                          <span className="font-bold font-mono">
-                            {s.category === 'CONSTRUCTION'
-                              ? `${s.actual_completion_date || 'In Progress'} (${s.dlp_period_years ?? 5}y DLP)`
-                              : s.category === 'NO_DLP'
-                              ? s.dlp_ended_on_date || 'N/A'
-                              : s.dlp_till_date || 'N/A'}
-                          </span>
-                        </div>
-                      </div>
+                      return (
+                        <div
+                          key={cIdx}
+                          className="border border-slate-200 dark:border-slate-700/80 rounded-xl overflow-hidden bg-slate-50/50 dark:bg-slate-800/30"
+                        >
+                          {/* Tier 1: Contractor Banner */}
+                          <div className="px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 flex-wrap">
+                            <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100">
+                              Contractor: {contractorName}
+                            </span>
+                            <div className="flex items-center gap-2 text-[11px]">
+                              <span className="text-slate-500 font-medium">
+                                {worksMap.size} {worksMap.size === 1 ? 'Work Package' : 'Work Packages'} &bull; {allContractorStretches.length} Stretches
+                              </span>
+                              <span className="px-2 py-0.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md font-mono font-bold text-blue-600 dark:text-blue-400 text-[10px]">
+                                {totalContractorKm.toFixed(3)} km
+                              </span>
+                            </div>
+                          </div>
 
-                      {s.remarks && (
-                        <p className="text-[11px] text-slate-600 dark:text-slate-400 italic">
-                          Remarks: {s.remarks}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                          {/* Tier 2: Works under this Contractor */}
+                          <div className="p-3 space-y-3">
+                            {Array.from(worksMap.entries()).map(([workName, workStretchesList], wIdx) => {
+                              const primaryCat = workStretchesList[0]?.category || 'DLP';
+                              const catBadge = CATEGORY_BADGES[primaryCat] || CATEGORY_BADGES.DLP;
+                              const totalWorkKm = workStretchesList.reduce((acc, curr) => acc + Number(curr.length_km || 0), 0);
+
+                              return (
+                                <div
+                                  key={wIdx}
+                                  className="border border-slate-200/80 dark:border-slate-700/60 rounded-lg p-3 bg-white dark:bg-slate-900 space-y-3"
+                                >
+                                  {/* Work Header */}
+                                  <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-slate-100 dark:border-slate-800">
+                                    <div className="flex items-center gap-2">
+                                      <span className={`px-2 py-0.5 rounded font-extrabold text-[10px] ${catBadge.bg} ${catBadge.text}`}>
+                                        {catBadge.label}
+                                      </span>
+                                      <span className="font-bold text-xs text-slate-800 dark:text-slate-200">
+                                        {workName}
+                                      </span>
+                                    </div>
+                                    <span className="font-mono text-blue-600 dark:text-blue-400 font-bold text-[11px]">
+                                      Total Span: {totalWorkKm.toFixed(3)} km ({workStretchesList.length} {workStretchesList.length === 1 ? 'stretch' : 'stretches'})
+                                    </span>
+                                  </div>
+
+                                  {/* Tier 3: Discrete Stretches Cards */}
+                                  <div className="space-y-2">
+                                    {workStretchesList.map((s, sIdx) => (
+                                      <div
+                                        key={s.id || sIdx}
+                                        className="p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-xs space-y-2"
+                                      >
+                                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                                          <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                                            Segment #{sIdx + 1}: Km {s.chainage_from_km} &rarr; Km {s.chainage_to_km} ({Number(s.length_km || 0).toFixed(3)} km)
+                                          </span>
+                                          {renderStatusBadge(s)}
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+                                          <div>
+                                            <span className="font-semibold text-slate-500">Road Width: </span>
+                                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                                              {s.road_width_from_m}m &rarr; {s.road_width_to_m}m
+                                            </span>
+                                          </div>
+                                          <div>
+                                            <span className="font-semibold text-slate-500">Commencement: </span>
+                                            <span className="font-bold text-slate-800 dark:text-slate-200">{s.commencement_date || '—'}</span>
+                                          </div>
+                                          <div>
+                                            <span className="font-semibold text-slate-500">
+                                              {s.category === 'CONSTRUCTION' ? 'Completion/DLP: ' : s.category === 'NO_DLP' ? 'Ended Date: ' : 'Expiry: '}
+                                            </span>
+                                            <span className="font-bold font-mono text-slate-800 dark:text-slate-200">
+                                              {s.category === 'CONSTRUCTION'
+                                                ? `${s.physical_progress_pct ?? 0}% Complete (${s.dlp_period_years ?? 5}y DLP)`
+                                                : s.category === 'NO_DLP'
+                                                ? s.dlp_ended_on_date || 'N/A'
+                                                : s.dlp_till_date || 'N/A'}
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        {s.remarks && (
+                                          <p className="text-[10px] text-slate-500 italic border-t border-slate-200/60 dark:border-slate-700/60 pt-1">
+                                            Remarks: {s.remarks}
+                                          </p>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()
             )}
           </div>
 

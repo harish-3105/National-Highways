@@ -564,19 +564,56 @@ export default function DlpPage() {
                               </td>
 
                               <td className="py-4 px-6">
-                                <div className="flex flex-wrap gap-1 max-w-[280px]">
-                                  {item.work_stretches?.map((s, sIdx) => {
-                                    const badge = CATEGORY_BADGES[s.category] || CATEGORY_BADGES.DLP;
-                                    return (
-                                      <span
-                                        key={s.id || sIdx}
-                                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${badge.bg} ${badge.text}`}
-                                      >
-                                        {s.category}: {s.length_km}km
-                                      </span>
-                                    );
-                                  })}
-                                </div>
+                                {(() => {
+                                  const catSums: Record<DlpWorkCategory, number> = {
+                                    DLP: 0,
+                                    CONSTRUCTION: 0,
+                                    STMC: 0,
+                                    PBMC: 0,
+                                    NO_DLP: 0,
+                                  };
+                                  (item.work_stretches || []).forEach((s) => {
+                                    if (catSums[s.category] !== undefined) {
+                                      catSums[s.category] += Number(s.length_km || 0);
+                                    }
+                                  });
+                                  const activeSum = catSums.DLP + catSums.CONSTRUCTION + catSums.STMC + catSums.PBMC;
+                                  const cLen = Number(item.total_length_km || 0);
+                                  const unworkedNoDlp = Math.max(0, Math.round((cLen - activeSum) * 1000) / 1000);
+
+                                  return (
+                                    <div className="flex flex-wrap gap-1 max-w-[280px]">
+                                      {catSums.DLP > 0 && (
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${CATEGORY_BADGES.DLP.bg} ${CATEGORY_BADGES.DLP.text}`}>
+                                          DLP: {catSums.DLP.toFixed(2)}km
+                                        </span>
+                                      )}
+                                      {catSums.CONSTRUCTION > 0 && (
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${CATEGORY_BADGES.CONSTRUCTION.bg} ${CATEGORY_BADGES.CONSTRUCTION.text}`}>
+                                          Construction: {catSums.CONSTRUCTION.toFixed(2)}km
+                                        </span>
+                                      )}
+                                      {catSums.STMC > 0 && (
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${CATEGORY_BADGES.STMC.bg} ${CATEGORY_BADGES.STMC.text}`}>
+                                          STMC: {catSums.STMC.toFixed(2)}km
+                                        </span>
+                                      )}
+                                      {catSums.PBMC > 0 && (
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${CATEGORY_BADGES.PBMC.bg} ${CATEGORY_BADGES.PBMC.text}`}>
+                                          PBMC: {catSums.PBMC.toFixed(2)}km
+                                        </span>
+                                      )}
+                                      {unworkedNoDlp > 0 && (
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${CATEGORY_BADGES.NO_DLP.bg} ${CATEGORY_BADGES.NO_DLP.text}`}>
+                                          No DLP: {unworkedNoDlp.toFixed(2)}km
+                                        </span>
+                                      )}
+                                      {activeSum === 0 && unworkedNoDlp === 0 && (
+                                        <span className="text-slate-400 text-[10px] italic">No active works</span>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                               </td>
 
                               <td className="py-4 px-6 max-w-xs">
@@ -613,68 +650,152 @@ export default function DlpPage() {
                               </td>
                             </tr>
 
-                            {/* Accordion Sub-Stretches Nested Row */}
+                            {/* Accordion Sub-Stretches Nested Row (3-Tier Hierarchy: Contractor -> Work Name -> Stretches) */}
                             {isExpanded && stretchCount > 0 && (
                               <tr className="bg-slate-50/80 dark:bg-slate-900/40">
-                                <td colSpan={6} className="px-8 py-3">
-                                  <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-3 bg-white dark:bg-slate-900 shadow-xs space-y-2">
+                                <td colSpan={6} className="px-8 py-4">
+                                  <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-white dark:bg-slate-900 shadow-xs space-y-4">
                                     <div className="flex items-center justify-between">
                                       <span className="font-extrabold text-slate-900 dark:text-slate-100 text-xs flex items-center gap-1.5">
-                                        <Layers className="w-3.5 h-3.5 text-blue-600" />
-                                        2D Granular Sub-Work Stretches ({stretchCount} Works)
+                                        <Layers className="w-4 h-4 text-blue-600" />
+                                        Sub-Work Packages &amp; Stretches ({stretchCount} Stretches)
                                       </span>
                                       <span className="text-[10px] text-slate-500 font-mono">
-                                        Rows 7&ndash;12 Granular Format
+                                        Contractor &bull; Work Name &bull; Granular 2D Stretches
                                       </span>
                                     </div>
 
-                                    <div className="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800">
-                                      <table className="w-full text-left text-[11px]">
-                                        <thead className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold uppercase text-[9px]">
-                                          <tr>
-                                            <th className="px-3 py-1.5">Category</th>
-                                            <th className="px-3 py-1.5">Name of Work</th>
-                                            <th className="px-3 py-1.5">Chainage Limits</th>
-                                            <th className="px-3 py-1.5">Road Width</th>
-                                            <th className="px-3 py-1.5">Length</th>
-                                            <th className="px-3 py-1.5">Contractor</th>
-                                            <th className="px-3 py-1.5">DLP Expiry / Status</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                          {item.work_stretches?.map((s, idx) => {
-                                            const badge = CATEGORY_BADGES[s.category] || CATEGORY_BADGES.DLP;
+                                    {/* 3-Tier Grouping Renderer */}
+                                    {(() => {
+                                      const contractorMap = new Map<string, Map<string, DlpWorkStretch[]>>();
+
+                                      (item.work_stretches || []).forEach((s) => {
+                                        const contractor = s.contractor_name?.trim() || (s.category === 'NO_DLP' ? 'Departmental / Unassigned' : 'Unassigned Contractor');
+                                        const work = s.work_name?.trim() || (s.category === 'NO_DLP' ? (s.scheme || 'Maintenance Gap / No Active Work') : 'Unspecified Work');
+
+                                        if (!contractorMap.has(contractor)) {
+                                          contractorMap.set(contractor, new Map());
+                                        }
+                                        const workMap = contractorMap.get(contractor)!;
+                                        if (!workMap.has(work)) {
+                                          workMap.set(work, []);
+                                        }
+                                        workMap.get(work)!.push(s);
+                                      });
+
+                                      return (
+                                        <div className="space-y-4">
+                                          {Array.from(contractorMap.entries()).map(([contractorName, worksMap], cIdx) => {
+                                            const allContractorStretches = Array.from(worksMap.values()).flat();
+                                            const totalContractorKm = allContractorStretches.reduce((acc, curr) => acc + Number(curr.length_km || 0), 0);
+
                                             return (
-                                              <tr key={s.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                                                <td className="px-3 py-1.5 whitespace-nowrap">
-                                                  <span className={`px-1.5 py-0.5 rounded font-extrabold text-[9px] ${badge.bg} ${badge.text}`}>
-                                                    {badge.label}
-                                                  </span>
-                                                </td>
-                                                <td className="px-3 py-1.5 font-bold text-slate-900 dark:text-slate-100">
-                                                  {s.work_name || s.scheme || 'Untitled Work'}
-                                                </td>
-                                                <td className="px-3 py-1.5 font-mono text-slate-700 dark:text-slate-300">
-                                                  Km {s.chainage_from_km} &rarr; Km {s.chainage_to_km}
-                                                </td>
-                                                <td className="px-3 py-1.5 font-mono text-slate-600 dark:text-slate-400">
-                                                  {s.road_width_from_m}m &rarr; {s.road_width_to_m}m
-                                                </td>
-                                                <td className="px-3 py-1.5 font-bold text-blue-600 dark:text-blue-400">
-                                                  {s.length_km} km
-                                                </td>
-                                                <td className="px-3 py-1.5 text-slate-600 dark:text-slate-400">
-                                                  {s.contractor_name || 'N/A'}
-                                                </td>
-                                                <td className="px-3 py-1.5 whitespace-nowrap">
-                                                  {renderStatusBadge(s)}
-                                                </td>
-                                              </tr>
+                                              <div
+                                                key={cIdx}
+                                                className="border border-slate-200 dark:border-slate-700/80 rounded-xl overflow-hidden bg-slate-50/50 dark:bg-slate-800/30"
+                                              >
+                                                {/* Tier 1: Contractor Banner */}
+                                                <div className="px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 flex-wrap">
+                                                  <div className="flex items-center gap-2">
+                                                    <HardHat className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                                                    <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100">
+                                                      Contractor: {contractorName}
+                                                    </span>
+                                                  </div>
+                                                  <div className="flex items-center gap-2 text-[11px]">
+                                                    <span className="text-slate-500 font-medium">
+                                                      {worksMap.size} {worksMap.size === 1 ? 'Work Package' : 'Work Packages'} &bull; {allContractorStretches.length} Stretches
+                                                    </span>
+                                                    <span className="px-2 py-0.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md font-mono font-bold text-blue-600 dark:text-blue-400 text-[10px]">
+                                                      {totalContractorKm.toFixed(3)} km
+                                                    </span>
+                                                  </div>
+                                                </div>
+
+                                                {/* Tier 2: Works under this Contractor */}
+                                                <div className="p-3 space-y-3">
+                                                  {Array.from(worksMap.entries()).map(([workName, stretches], wIdx) => {
+                                                    const primaryCat = stretches[0]?.category || 'DLP';
+                                                    const catBadge = CATEGORY_BADGES[primaryCat] || CATEGORY_BADGES.DLP;
+                                                    const totalWorkKm = stretches.reduce((acc, curr) => acc + Number(curr.length_km || 0), 0);
+
+                                                    return (
+                                                      <div
+                                                        key={wIdx}
+                                                        className="border border-slate-200/80 dark:border-slate-700/60 rounded-lg p-2.5 bg-white dark:bg-slate-900 space-y-2"
+                                                      >
+                                                        {/* Work Header */}
+                                                        <div className="flex items-center justify-between gap-2 flex-wrap pb-1.5 border-b border-slate-100 dark:border-slate-800">
+                                                          <div className="flex items-center gap-2">
+                                                            <span className={`px-1.5 py-0.5 rounded font-extrabold text-[9px] ${catBadge.bg} ${catBadge.text}`}>
+                                                              {catBadge.label}
+                                                            </span>
+                                                            <span className="font-bold text-xs text-slate-800 dark:text-slate-200">
+                                                              {workName}
+                                                            </span>
+                                                          </div>
+                                                          <span className="font-mono text-blue-600 dark:text-blue-400 font-bold text-[11px]">
+                                                            Total Work Span: {totalWorkKm.toFixed(3)} km ({stretches.length} {stretches.length === 1 ? 'stretch' : 'stretches'})
+                                                          </span>
+                                                        </div>
+
+                                                        {/* Tier 3: Discrete Stretches Table */}
+                                                        <div className="overflow-x-auto">
+                                                          <table className="w-full text-left text-[11px]">
+                                                            <thead className="text-[9px] font-bold text-slate-500 uppercase bg-slate-50 dark:bg-slate-800/40">
+                                                              <tr>
+                                                                <th className="px-2 py-1">Stretch</th>
+                                                                <th className="px-2 py-1">Chainage Limits</th>
+                                                                <th className="px-2 py-1">Road Width</th>
+                                                                <th className="px-2 py-1">Length</th>
+                                                                <th className="px-2 py-1">Commencement</th>
+                                                                <th className="px-2 py-1">DLP Till / Progress</th>
+                                                                <th className="px-2 py-1">Status</th>
+                                                              </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                                              {stretches.map((s, sIdx) => (
+                                                                <tr key={s.id || sIdx} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                                                                  <td className="px-2 py-1.5 font-bold text-slate-500 font-mono text-[10px]">
+                                                                    #{sIdx + 1}
+                                                                  </td>
+                                                                  <td className="px-2 py-1.5 font-mono text-slate-700 dark:text-slate-300">
+                                                                    Km {s.chainage_from_km} &rarr; Km {s.chainage_to_km}
+                                                                  </td>
+                                                                  <td className="px-2 py-1.5 font-mono text-slate-600 dark:text-slate-400">
+                                                                    {s.road_width_from_m}m &rarr; {s.road_width_to_m}m
+                                                                  </td>
+                                                                  <td className="px-2 py-1.5 font-mono font-bold text-blue-600 dark:text-blue-400">
+                                                                    {Number(s.length_km || 0).toFixed(3)} km
+                                                                  </td>
+                                                                  <td className="px-2 py-1.5 text-slate-600 dark:text-slate-400">
+                                                                    {s.commencement_date || '—'}
+                                                                  </td>
+                                                                  <td className="px-2 py-1.5 text-slate-700 dark:text-slate-300">
+                                                                    {s.category === 'CONSTRUCTION' ? (
+                                                                      <span className="font-semibold">{s.physical_progress_pct ?? 0}% Complete</span>
+                                                                    ) : (
+                                                                      s.dlp_till_date || '—'
+                                                                    )}
+                                                                  </td>
+                                                                  <td className="px-2 py-1.5 whitespace-nowrap">
+                                                                    {renderStatusBadge(s)}
+                                                                  </td>
+                                                                </tr>
+                                                              ))}
+                                                            </tbody>
+                                                          </table>
+                                                        </div>
+                                                      </div>
+                                                    );
+                                                  })}
+                                                </div>
+                                              </div>
                                             );
                                           })}
-                                        </tbody>
-                                      </table>
-                                    </div>
+                                        </div>
+                                      );
+                                    })()}
                                   </div>
                                 </td>
                               </tr>

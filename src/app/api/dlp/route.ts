@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { DlpCorridor, DlpWorkStretch } from '@/types/dlp';
-import { detectLaneWidthForChainage } from '@/lib/dlp/laneDetection';
+import { detectLaneWidthForChainage, checkSpanWidthCapacity } from '@/lib/dlp/laneDetection';
 
 export const dynamic = 'force-dynamic';
 
@@ -211,6 +211,27 @@ export async function POST(req: NextRequest) {
         .neq('delete_status', 'DELETED')
         .neq('delete_status', 'SOFT_DELETE');
 
+      // Validate width capacity across all stretches before DB insert
+      for (let i = 0; i < work_stretches.length; i++) {
+        const s = work_stretches[i];
+        const sFrom = Number(s.chainage_from_km || 0);
+        const sTo = Number(s.chainage_to_km || 0);
+        const wTo = s.road_width_to_m !== undefined && s.road_width_to_m !== null && s.road_width_to_m !== '' && Number(s.road_width_to_m) > 0
+          ? Number(s.road_width_to_m)
+          : detectLaneWidthForChainage(sFrom, sTo, subChainagesData || []).totalWidthMeters;
+
+        if (subChainagesData && subChainagesData.length > 0) {
+          const capacity = checkSpanWidthCapacity(sFrom, sTo, wTo, subChainagesData);
+          if (!capacity.valid) {
+            const b = capacity.bottlenecks[0];
+            return NextResponse.json({
+              success: false,
+              error: `Work stretch #${i + 1} (Km ${sFrom}–${sTo}) width (${wTo}m) exceeds physical road capacity on Km ${b.overlapFromKm.toFixed(3)}–${b.overlapToKm.toFixed(3)} (${b.laneConfig}: ${b.maxAllowedWidth}m). Please adjust width or split into separate entries.`,
+            }, { status: 400 });
+          }
+        }
+      }
+
       const stretchesToInsert = work_stretches.map((s: any) => {
         const sFrom = Number(s.chainage_from_km || 0);
         const sTo = Number(s.chainage_to_km || 0);
@@ -333,19 +354,40 @@ export async function PUT(req: NextRequest) {
     // 2. Sync Work Stretches if provided
     let syncedStretches: DlpWorkStretch[] = [];
     if (Array.isArray(work_stretches)) {
-      // Delete removed stretches
-      await supabase.from('dlp_work_stretches').delete().eq('corridor_id', id);
+      // Prefetch Level 2 Sub-Chainages to auto-resolve lane widths when not provided
+      const plainNum = (highway_code || '').replace(/^NH-?/i, '');
+      const searchCodes = Array.from(new Set([highway_code, `NH-${plainNum}`, plainNum]));
+      const { data: subChainagesData } = await supabase
+        .from('highway_sub_chainages')
+        .select('*')
+        .in('highway_code', searchCodes)
+        .neq('delete_status', 'DELETED')
+        .neq('delete_status', 'SOFT_DELETE');
 
       if (work_stretches.length > 0) {
-        // Prefetch Level 2 Sub-Chainages to auto-resolve lane widths when not provided
-        const plainNum = (highway_code || '').replace(/^NH-?/i, '');
-        const searchCodes = Array.from(new Set([highway_code, `NH-${plainNum}`, plainNum]));
-        const { data: subChainagesData } = await supabase
-          .from('highway_sub_chainages')
-          .select('*')
-          .in('highway_code', searchCodes)
-          .neq('delete_status', 'DELETED')
-          .neq('delete_status', 'SOFT_DELETE');
+        // Validate width capacity across all stretches before DB update
+        for (let i = 0; i < work_stretches.length; i++) {
+          const s = work_stretches[i];
+          const sFrom = Number(s.chainage_from_km || 0);
+          const sTo = Number(s.chainage_to_km || 0);
+          const wTo = s.road_width_to_m !== undefined && s.road_width_to_m !== null && s.road_width_to_m !== '' && Number(s.road_width_to_m) > 0
+            ? Number(s.road_width_to_m)
+            : detectLaneWidthForChainage(sFrom, sTo, subChainagesData || []).totalWidthMeters;
+
+          if (subChainagesData && subChainagesData.length > 0) {
+            const capacity = checkSpanWidthCapacity(sFrom, sTo, wTo, subChainagesData);
+            if (!capacity.valid) {
+              const b = capacity.bottlenecks[0];
+              return NextResponse.json({
+                success: false,
+                error: `Work stretch #${i + 1} (Km ${sFrom}–${sTo}) width (${wTo}m) exceeds physical road capacity on Km ${b.overlapFromKm.toFixed(3)}–${b.overlapToKm.toFixed(3)} (${b.laneConfig}: ${b.maxAllowedWidth}m). Please adjust width or split into separate entries.`,
+              }, { status: 400 });
+            }
+          }
+        }
+
+        // Delete removed stretches
+        await supabase.from('dlp_work_stretches').delete().eq('corridor_id', id);
 
         const stretchesToInsert = work_stretches.map((s: any) => {
           const sFrom = Number(s.chainage_from_km || 0);

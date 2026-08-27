@@ -8,6 +8,18 @@ export interface DetectedLaneInfo {
   pcuCount?: number | null;
 }
 
+export interface SpanCapacityCheckResult {
+  valid: boolean;
+  overlappingCount: number;
+  bottlenecks: Array<{
+    subStretch: SubChainageStretch;
+    maxAllowedWidth: number;
+    overlapFromKm: number;
+    overlapToKm: number;
+    laneConfig: string;
+  }>;
+}
+
 /**
  * Extracts full carriageway/lane width from lane configuration or explicit carriageway string.
  */
@@ -126,5 +138,74 @@ export function detectLaneWidthForChainage(
     matchedStretch: null,
     laneConfig: null,
     totalWidthMeters: 7.0,
+  };
+}
+
+/**
+ * Checks whether the specified road width fits within the physical carriageway capacity
+ * for ALL underlying Level 2 Micro-Lane sub-stretches covered by [fromKm, toKm].
+ */
+export function checkSpanWidthCapacity(
+  fromKm: number,
+  toKm: number,
+  roadWidthToM: number,
+  subChainages: SubChainageStretch[]
+): SpanCapacityCheckResult {
+  if (
+    !subChainages ||
+    subChainages.length === 0 ||
+    isNaN(fromKm) ||
+    isNaN(toKm) ||
+    isNaN(roadWidthToM) ||
+    roadWidthToM <= 0
+  ) {
+    return { valid: true, overlappingCount: 0, bottlenecks: [] };
+  }
+
+  const f = Math.min(fromKm, toKm);
+  const t = Math.max(fromKm, toKm);
+
+  const microStretches = subChainages.filter(
+    (s) =>
+      s.delete_status !== 'DELETED' &&
+      s.delete_status !== 'SOFT_DELETE' &&
+      s.breakdown_type !== 'MACRO_PCU' &&
+      s.lane_configuration?.toLowerCase() !== 'primary' &&
+      s.lane_configuration?.toLowerCase() !== 'secondary'
+  );
+
+  const candidatePool = microStretches.length > 0 ? microStretches : subChainages;
+  const bottlenecks: SpanCapacityCheckResult['bottlenecks'] = [];
+  let overlappingCount = 0;
+
+  for (const s of candidatePool) {
+    if (s.delete_status === 'DELETED' || s.delete_status === 'SOFT_DELETE') continue;
+
+    const sFrom = Number(s.from_km) || 0;
+    const sTo = Number(s.to_km) || 0;
+
+    const overlapStart = Math.max(f, sFrom);
+    const overlapEnd = Math.min(t, sTo);
+
+    if (overlapEnd > overlapStart) {
+      overlappingCount++;
+      const { totalWidth } = getLaneWidthFromConfig(s.lane_configuration, s.carriageway_width);
+
+      if (roadWidthToM > totalWidth) {
+        bottlenecks.push({
+          subStretch: s,
+          maxAllowedWidth: totalWidth,
+          overlapFromKm: overlapStart,
+          overlapToKm: overlapEnd,
+          laneConfig: s.lane_configuration || '2-Lane',
+        });
+      }
+    }
+  }
+
+  return {
+    valid: bottlenecks.length === 0,
+    overlappingCount,
+    bottlenecks,
   };
 }

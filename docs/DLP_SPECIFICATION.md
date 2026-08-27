@@ -103,11 +103,31 @@ $$\text{offsetPx}(m) = m \times 6$$
 $$\text{heightPx}_{\text{center}} = 2 \times w_{\text{to}} \times 6$$
 $$\text{heightPx}_{\text{strip}} = (w_{\text{to}} - w_{\text{from}}) \times 6$$
 
-### Dynamic Level 2 Lane Width Defaulting
-When a user does not explicitly input a custom road width, the system automatically detects the underlying lane configuration from Corridors Level 2 (`public.highway_sub_chainages`) covering that chainage span:
-* **Default `From`**: $0.00\text{m}$.
-* **Default `To`**: Full width of the lane corresponding to the Level 2 lane configuration ($3.75\text{m}$ for $<2\text{L}$, $7.00\text{m}$ for $2\text{L}$, $10.00\text{m}$ for $2\text{L+PS}$, $14.00\text{m}$ for $4\text{L}$, $20.00\text{m}$ for $6\text{L}$, or explicit `carriageway_width`).
-* Engineers can manually override with custom meter offsets or click **"Use Level 2 Width"** to revert.
+### Dynamic Level 2 Micro-Lane Width Defaulting & Empty Form Standards
+1. **Zero Input Placeholders in Tab 2**:
+   * When adding a new work stretch in Tab 2, all input fields (`Chainage From`, `Chainage To`, `Road Width From`, `Road Width To`, `Contractor Name`, `Work Name`, dates) start **completely empty (`''` / `null`)** to prevent accidental submission of stale default values.
+2. **"Use Level 2 Width" Action**:
+   * When `From Km` and `To Km` are entered, clicking **"Use Level 2 Width"** queries the Level 2 Micro-Lane database (`type=MICRO_LANE`) and sets:
+     * `Road Width From`: $0.00\text{m}$
+     * `Road Width To`: Full width of the lane ($3.75\text{m}$ for $<2\text{L}$, $7.00\text{m}$ for $2\text{L}$, $10.00\text{m}$ for $2\text{L+PS}$, $14.00\text{m}$ for $4\text{L}$, $20.00\text{m}$ for $6\text{L}$, or explicit `carriageway_width`).
+
+### Physical Road Width Capacity Validation & Strict Save Blocking
+To prevent spatial impossibilities (e.g. entering a 4-Lane $14\text{m}$ width over a 2-Lane $7\text{m}$ section):
+* The system evaluates all overlapping Level 2 Micro-Lane sub-stretches covered by `[From Km, To Km]`.
+* If the entered `Road Width To` exceeds the physical carriageway capacity of **any** underlying section within that span:
+  * An immediate inline warning is displayed on the stretch card identifying the exact bottleneck chainage span and its maximum allowed width.
+  * **Saving the corridor is strictly blocked** on both frontend form submission and backend API routes (`400 Bad Request`) until the engineer adjusts the width or splits the work into discrete matching entries.
+
+### Structured 3-Tier Grouping Hierarchy
+On the main DLP overview and detailed modals, discrete stretches are organized into a clean 3-tier structure:
+$$\mathbf{Contractor\ Name} \longrightarrow \mathbf{Work\ Name} \longrightarrow \mathbf{Discrete\ 2D\ Spatial\ Stretches}$$
+
+### Consolidated Category Totals & Automatic Unworked "NO DLP" Calculation
+On the Corridor Overview Card:
+* Summary badges aggregate total distance **by Work Category** (`DLP`, `Construction`, `STMC`, `PBMC`).
+* The **NO DLP** summary badge automatically calculates the total unworked gap distance along the corridor:
+  $$\text{NO DLP (Km)} = \text{Total Corridor Length} - \sum(\text{Active Works: DLP, Construction, STMC, PBMC})$$
+  *(inclusive of explicit manual NO DLP records)*, providing the executive with the true uncontracted distance without requiring engineers to manually enter 20–30 gap rows.
 
 ---
 
