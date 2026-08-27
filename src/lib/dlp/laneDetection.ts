@@ -4,54 +4,50 @@ export interface DetectedLaneInfo {
   matchedStretch: SubChainageStretch | null;
   laneConfig: string | null;
   totalWidthMeters: number;
-  halfWidthMeters: number;
   importantTown?: string | null;
   pcuCount?: number | null;
 }
 
 /**
- * Extracts total carriageway width and half-width from lane configuration or explicit carriageway string.
+ * Extracts full carriageway/lane width from lane configuration or explicit carriageway string.
  */
 export function getLaneWidthFromConfig(
   laneConfig?: string | null,
   carriagewayWidth?: string | null
-): { totalWidth: number; halfWidth: number } {
+): { totalWidth: number } {
   // 1. If explicit numeric carriageway width is stored (e.g. "7.0", "10.0m", "14.0")
   if (carriagewayWidth) {
     const parsed = parseFloat(carriagewayWidth.replace(/[^0-9.]/g, ''));
     if (!isNaN(parsed) && parsed > 0) {
-      return {
-        totalWidth: parsed,
-        halfWidth: Math.round((parsed / 2) * 1000) / 1000,
-      };
+      return { totalWidth: parsed };
     }
   }
 
-  // 2. Derive standard width from lane configuration name
+  // 2. Derive standard full width from lane configuration name
   const norm = (laneConfig || '').toLowerCase();
 
   if (norm.includes('6l') || norm.includes('6-lane')) {
-    return { totalWidth: 20.0, halfWidth: 10.0 };
+    return { totalWidth: 20.0 };
   }
   if (norm.includes('4l') || norm.includes('4-lane')) {
-    return { totalWidth: 14.0, halfWidth: 7.0 };
+    return { totalWidth: 14.0 };
   }
   if (norm.includes('2l+ps') || norm.includes('paved')) {
-    return { totalWidth: 10.0, halfWidth: 5.0 };
+    return { totalWidth: 10.0 };
   }
   if (norm.includes('2l') || norm.includes('2-lane')) {
-    return { totalWidth: 7.0, halfWidth: 3.5 };
+    return { totalWidth: 7.0 };
   }
   if (norm.includes('< 2') || norm.includes('single') || norm.includes('intermediate') || norm.includes('1-lane')) {
-    return { totalWidth: 3.75, halfWidth: 1.875 };
+    return { totalWidth: 3.75 };
   }
 
   // Standard 2-Lane default fallback
-  return { totalWidth: 7.0, halfWidth: 3.5 };
+  return { totalWidth: 7.0 };
 }
 
 /**
- * Detects the Level 2 sub-chainage stretch and its lane width for a given chainage span.
+ * Detects the Level 2 sub-chainage stretch and its full lane width for a given chainage span.
  */
 export function detectLaneWidthForChainage(
   fromKm: number,
@@ -63,7 +59,6 @@ export function detectLaneWidthForChainage(
       matchedStretch: null,
       laneConfig: null,
       totalWidthMeters: 7.0,
-      halfWidthMeters: 3.5,
     };
   }
 
@@ -100,7 +95,7 @@ export function detectLaneWidthForChainage(
   }
 
   if (bestMatch) {
-    const { totalWidth, halfWidth } = getLaneWidthFromConfig(
+    const { totalWidth } = getLaneWidthFromConfig(
       bestMatch.lane_configuration,
       bestMatch.carriageway_width
     );
@@ -109,7 +104,6 @@ export function detectLaneWidthForChainage(
       matchedStretch: bestMatch,
       laneConfig: bestMatch.lane_configuration || '2-Lane',
       totalWidthMeters: totalWidth,
-      halfWidthMeters: halfWidth,
       importantTown: bestMatch.important_town || null,
       pcuCount: bestMatch.pcu_count !== undefined && bestMatch.pcu_count !== null ? Number(bestMatch.pcu_count) : null,
     };
@@ -119,6 +113,5 @@ export function detectLaneWidthForChainage(
     matchedStretch: null,
     laneConfig: null,
     totalWidthMeters: 7.0,
-    halfWidthMeters: 3.5,
   };
 }

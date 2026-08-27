@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
           wTo = Number(s.road_width_to_m);
         } else {
           const detected = detectLaneWidthForChainage(sFrom, sTo, subChainagesData || []);
-          wTo = detected.halfWidthMeters;
+          wTo = detected.totalWidthMeters;
         }
 
         let category = s.category;
@@ -358,7 +358,7 @@ export async function PUT(req: NextRequest) {
             wTo = Number(s.road_width_to_m);
           } else {
             const detected = detectLaneWidthForChainage(sFrom, sTo, subChainagesData || []);
-            wTo = detected.halfWidthMeters;
+            wTo = detected.totalWidthMeters;
           }
 
           let category = s.category;

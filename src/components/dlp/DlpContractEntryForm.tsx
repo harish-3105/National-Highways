@@ -173,7 +173,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
       chainage_to_km: parentTo,
       length_km: Math.max(0, Math.round((parentTo - parentFrom) * 1000) / 1000),
       road_width_from_m: 0.0,
-      road_width_to_m: detected.halfWidthMeters,
+      road_width_to_m: detected.totalWidthMeters,
       contractor_name: '',
       work_name: '',
       commencement_date: new Date().toISOString().split('T')[0],
@@ -719,7 +719,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                                 step="0.01"
                                 value={stretch.road_width_to_m}
                                 onChange={(e) => handleUpdateStretch(index, 'road_width_to_m', e.target.value)}
-                                placeholder={String(detectedLane.halfWidthMeters)}
+                                placeholder={String(detectedLane.totalWidthMeters)}
                                 className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
                               />
                             </div>
@@ -733,22 +733,22 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                                   Level 2 Lane
                                 </span>
                                 <span className="font-semibold truncate">
-                                  {detectedLane.laneConfig} &bull; Total Carriageway: <strong className="font-bold">{detectedLane.totalWidthMeters}m</strong> (Half-Width: 0 to {detectedLane.halfWidthMeters}m)
+                                  {detectedLane.laneConfig} &bull; Full Lane Width: <strong className="font-bold">{detectedLane.totalWidthMeters}m</strong> (0 to {detectedLane.totalWidthMeters}m)
                                   {detectedLane.pcuCount ? ` • ${detectedLane.pcuCount.toLocaleString()} PCU` : ''}
                                   {detectedLane.importantTown ? ` • Town: ${detectedLane.importantTown}` : ''}
                                 </span>
                               </div>
 
-                              {(Number(stretch.road_width_from_m || 0) !== 0 || Number(stretch.road_width_to_m || 0) !== detectedLane.halfWidthMeters) && (
+                              {(Number(stretch.road_width_from_m || 0) !== 0 || Number(stretch.road_width_to_m || 0) !== detectedLane.totalWidthMeters) && (
                                 <button
                                   type="button"
                                   onClick={() => {
                                     handleUpdateStretch(index, 'road_width_from_m', 0);
-                                    handleUpdateStretch(index, 'road_width_to_m', detectedLane.halfWidthMeters);
+                                    handleUpdateStretch(index, 'road_width_to_m', detectedLane.totalWidthMeters);
                                   }}
                                   className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer self-start sm:self-auto shrink-0"
                                 >
-                                  Use Level 2 Width (0 to {detectedLane.halfWidthMeters}m)
+                                  Use Level 2 Width (0 to {detectedLane.totalWidthMeters}m)
                                 </button>
                               )}
                             </div>

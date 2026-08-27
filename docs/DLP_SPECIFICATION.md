@@ -105,8 +105,8 @@ $$\text{heightPx}_{\text{strip}} = (w_{\text{to}} - w_{\text{from}}) \times 6$$
 
 ### Dynamic Level 2 Lane Width Defaulting
 When a user does not explicitly input a custom road width, the system automatically detects the underlying lane configuration from Corridors Level 2 (`public.highway_sub_chainages`) covering that chainage span:
-* **Default `From`**: Centerline $0.00\text{m}$.
-* **Default `To`**: Centerline half-width corresponding to the Level 2 lane configuration ($1.875\text{m}$ for $<2\text{L}$, $3.50\text{m}$ for $2\text{L}$, $5.00\text{m}$ for $2\text{L+PS}$, $7.00\text{m}$ for $4\text{L}$, $10.00\text{m}$ for $6\text{L}$).
+* **Default `From`**: $0.00\text{m}$.
+* **Default `To`**: Full width of the lane corresponding to the Level 2 lane configuration ($3.75\text{m}$ for $<2\text{L}$, $7.00\text{m}$ for $2\text{L}$, $10.00\text{m}$ for $2\text{L+PS}$, $14.00\text{m}$ for $4\text{L}$, $20.00\text{m}$ for $6\text{L}$, or explicit `carriageway_width`).
 * Engineers can manually override with custom meter offsets or click **"Use Level 2 Width"** to revert.
 
 ---
