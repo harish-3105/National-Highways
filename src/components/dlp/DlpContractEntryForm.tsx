@@ -21,11 +21,6 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { DlpCorridor, DlpWorkStretch, DlpWorkCategory, DlpMasterData } from '@/types/dlp';
-import {
-  DLP_CIRCLE_OPTIONS,
-  DLP_CIRCLE_DIVISION_MAP,
-  getCircleForDivision,
-} from '@/lib/dlp/masterData';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 
@@ -105,9 +100,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const divisionOptions = masterData?.divisions && masterData.divisions.length > 0
-    ? masterData.divisions
-    : Object.values(DLP_CIRCLE_DIVISION_MAP).flat();
+  const divisionOptions = masterData?.divisions || [];
 
   const totalLengthKm =
     fromKm !== '' && toKm !== ''
@@ -934,11 +927,19 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                               </label>
                               <input
                                 type="text"
+                                list="dlp-schemes-list"
                                 value={stretch.scheme || ''}
                                 onChange={(e) => handleUpdateStretch(index, 'scheme', e.target.value)}
                                 placeholder="e.g. Proposed under Special Repairs..."
                                 className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
                               />
+                              {masterData?.schemes && masterData.schemes.length > 0 && (
+                                <datalist id="dlp-schemes-list">
+                                  {masterData.schemes.map((s) => (
+                                    <option key={s} value={s} />
+                                  ))}
+                                </datalist>
+                              )}
                             </div>
 
                             <div>

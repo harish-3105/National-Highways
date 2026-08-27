@@ -43,12 +43,24 @@ export interface DlpCorridor {
   work_stretches?: DlpWorkStretch[];
 }
 
-export interface DlpMasterData {
-  divisions: string[];
-  circles: string[];
-  highwayCodes?: string[];
-  rawItems?: any[];
-  contractModes?: string[];
-  maintenanceTypes?: string[];
-  statuses?: string[];
+export type DlpMasterConfigCategory = 'circle' | 'division' | 'scheme';
+
+export interface DlpMasterConfigItem {
+  id: string;
+  category: DlpMasterConfigCategory | string;
+  value: string;
+  parent_category?: string | null;
+  parent_value?: string | null;
+  status?: DlpRecordStatus;
+  created_at?: string;
+  updated_at?: string;
 }
+
+export interface DlpMasterData {
+  rawItems: DlpMasterConfigItem[];
+  circles: string[];
+  divisions: string[];
+  schemes: string[];
+  circleDivisionMap: Record<string, string[]>;
+}
+

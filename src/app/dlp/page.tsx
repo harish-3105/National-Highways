@@ -5,17 +5,11 @@ import { NavigationHeader } from '@/components/NavigationHeader';
 import { DlpCalendarDateFilter, DateRangeFilter } from '@/components/dlp/DlpCalendarDateFilter';
 import { DlpContractEntryForm } from '@/components/dlp/DlpContractEntryForm';
 import { DlpMasterDataModal } from '@/components/dlp/DlpMasterDataModal';
-import { DlpMasterData } from '@/app/api/dlp/master-data/route';
 import DeleteDlpContractModal from '@/components/dlp/DeleteDlpContractModal';
 import ViewDlpContractModal from '@/components/dlp/ViewDlpContractModal';
-import {
-  DLP_CIRCLE_OPTIONS,
-  DLP_CIRCLE_DIVISION_MAP,
-  ALL_DLP_DIVISIONS,
-  getCircleForDivision,
-} from '@/lib/dlp/masterData';
+import { getCircleForDivision } from '@/lib/dlp/masterData';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
-import { DlpCorridor, DlpWorkStretch, DlpWorkCategory } from '@/types/dlp';
+import { DlpCorridor, DlpWorkStretch, DlpWorkCategory, DlpMasterData } from '@/types/dlp';
 import {
   ShieldCheck,
   Clock,
@@ -77,11 +71,10 @@ export default function DlpPage() {
   const [isMasterModalOpen, setIsMasterModalOpen] = useState<boolean>(false);
   const [masterData, setMasterData] = useState<DlpMasterData>({
     rawItems: [],
-    circles: [...DLP_CIRCLE_OPTIONS],
-    divisions: ALL_DLP_DIVISIONS,
-    contractModes: ['EPC', 'STMC', 'PBMC', 'BOT', 'HAM', 'Annual Plan', 'Special Repairs', 'Departmental'],
-    maintenanceTypes: ['DLP', 'STMC', 'PBMC', 'CONSTRUCTION', 'NO_DLP', 'UNCONTRACTED'],
-    statuses: ['ACTIVE', 'EXPIRING_SOON', 'EXPIRED'],
+    circles: [],
+    divisions: [],
+    schemes: [],
+    circleDivisionMap: {},
   });
 
   const fetchMasterData = async () => {
@@ -167,15 +160,15 @@ export default function DlpPage() {
   };
 
   const divisionOptions = selectedCircle
-    ? DLP_CIRCLE_DIVISION_MAP[selectedCircle] || []
-    : (masterData.divisions && masterData.divisions.length > 0 ? masterData.divisions : ALL_DLP_DIVISIONS);
+    ? (masterData.circleDivisionMap[selectedCircle] || [])
+    : (masterData.divisions || []);
 
   // Client-side Filter Logic
   const filteredCorridors = useMemo(() => {
     return corridors.filter((c) => {
       // Circle filter
       if (selectedCircle) {
-        const circleOfDiv = getCircleForDivision(c.division_name);
+        const circleOfDiv = getCircleForDivision(c.division_name, masterData.circleDivisionMap);
         if (circleOfDiv !== selectedCircle) return false;
       }
 
@@ -436,7 +429,7 @@ export default function DlpPage() {
                 {/* Circle Filter */}
                 <div className="w-full">
                   <SearchableSelect
-                    options={['All Circles', ...DLP_CIRCLE_OPTIONS]}
+                    options={['All Circles', ...(masterData.circles || [])]}
                     value={selectedCircle ? `${selectedCircle}` : 'All Circles'}
                     onChange={(val) => {
                       setSelectedCircle(val === 'All Circles' ? '' : val);

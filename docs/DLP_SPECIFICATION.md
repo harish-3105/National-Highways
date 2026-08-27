@@ -4,8 +4,8 @@
 **Module**: Defect Liability Period (DLP) & 2D Linear Maintenance System  
 **Routes**: `/dlp`, `/api/dlp`, `/api/dlp/master-data`, `/highways/[id]/sld`  
 **Database Tables**: `public.dlp_corridors`, `public.dlp_work_stretches`, `public.dlp_master_config`  
-**Migration**: [`0029_dlp_rework_schema.sql`](file:///home/mathir14/nh_proj/supabase/migrations/0029_dlp_rework_schema.sql)  
-**Last Updated**: August 26, 2026  
+**Migrations**: [`0029_dlp_rework_schema.sql`](file:///home/mathir14/nh_proj/supabase/migrations/0029_dlp_rework_schema.sql), [`0030_dlp_master_config.sql`](file:///home/mathir14/nh_proj/supabase/migrations/0030_dlp_master_config.sql)  
+**Last Updated**: August 27, 2026  
 **Status**: 🟢 **Production Ready & Deployed**
 
 ---
@@ -170,3 +170,18 @@ CREATE TABLE IF NOT EXISTS public.dlp_work_stretches (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
+
+### Table 3: `dlp_master_config` (Normalized Dynamic Master Config)
+```sql
+CREATE TABLE IF NOT EXISTS public.dlp_master_config (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    category TEXT NOT NULL,         -- 'circle', 'division', 'scheme'
+    value TEXT NOT NULL,            -- e.g. 'Salem', 'NH(O)'
+    parent_category TEXT,           -- 'circle' (when category is 'division')
+    parent_value TEXT,              -- e.g. 'Salem' (parent circle of division)
+    status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'ARCHIVED', 'DELETED')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+

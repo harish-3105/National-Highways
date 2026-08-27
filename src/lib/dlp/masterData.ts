@@ -1,29 +1,47 @@
-// Master data for DLP Module (Circles and Divisions)
+// Dynamic Master data utilities for DLP Module (Circles, Divisions, Schemes)
+import { DlpMasterConfigItem } from '@/types/dlp';
 
-export const DLP_CIRCLE_OPTIONS = ['Chennai', 'Salem', 'Madurai', 'Trichy'] as const;
+/**
+ * Builds a mapping of Circle -> Division names dynamically from master config records.
+ */
+export function buildCircleDivisionMap(items: DlpMasterConfigItem[]): Record<string, string[]> {
+  const map: Record<string, string[]> = {};
 
-export const DLP_CIRCLE_DIVISION_MAP: Record<string, string[]> = {
-  Chennai: ['Vellore', 'Villupuram', 'Chennai', 'Kanchipuram'],
-  Salem: ['Salem', 'Coimbatore', 'Gobichettipalayam'],
-  Madurai: ['Madurai', 'Tirunelveli'],
-  Trichy: ['Trichy', 'Thanjavur'],
-};
+  const circles = items
+    .filter((i) => i.category === 'circle' && i.status !== 'DELETED')
+    .map((i) => i.value.trim());
 
-export const ALL_DLP_DIVISIONS = [
-  'Vellore',
-  'Villupuram',
-  'Madurai',
-  'Trichy',
-  'Salem',
-  'Coimbatore',
-  'Gobichettipalayam',
-  'Chennai',
-  'Kanchipuram',
-  'Tirunelveli',
-];
+  circles.forEach((circle) => {
+    map[circle] = [];
+  });
 
-export function getCircleForDivision(divisionName: string): string | null {
-  for (const [circle, divisions] of Object.entries(DLP_CIRCLE_DIVISION_MAP)) {
+  items
+    .filter((i) => i.category === 'division' && i.status !== 'DELETED')
+    .forEach((item) => {
+      const parentCircle = item.parent_value?.trim();
+      if (parentCircle) {
+        if (!map[parentCircle]) {
+          map[parentCircle] = [];
+        }
+        if (!map[parentCircle].includes(item.value.trim())) {
+          map[parentCircle].push(item.value.trim());
+        }
+      }
+    });
+
+  return map;
+}
+
+/**
+ * Finds the administrative Circle associated with a given division name dynamically.
+ */
+export function getCircleForDivision(
+  divisionName: string,
+  circleDivisionMap?: Record<string, string[]> | null
+): string | null {
+  if (!divisionName || !circleDivisionMap) return null;
+
+  for (const [circle, divisions] of Object.entries(circleDivisionMap)) {
     if (divisions.some((d) => d.toLowerCase() === divisionName.toLowerCase())) {
       return circle;
     }
