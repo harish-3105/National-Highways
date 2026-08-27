@@ -237,7 +237,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
           const b = capacity.bottlenecks[0];
           return {
             valid: false,
-            errorMsg: `Work Stretch #${i + 1}: Width (${wTo}m) exceeds physical carriageway on Km ${b.overlapFromKm.toFixed(3)}–${b.overlapToKm.toFixed(3)} (${b.laneConfig}: ${b.maxAllowedWidth}m). Please adjust or split the stretch.`,
+            errorMsg: `Work Stretch #${i + 1}: Entered centerline width (${wTo}m = ${(wTo * 2).toFixed(1)}m total) exceeds physical carriageway on Km ${b.overlapFromKm.toFixed(3)}–${b.overlapToKm.toFixed(3)} (${b.laneConfig}: max ${b.maxAllowedCenterlineWidth}m centerline = ${b.maxAllowedCarriagewayWidth}m total). Please adjust width or split into separate entries.`,
           };
         }
       }
@@ -672,17 +672,39 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                 <div className="space-y-4">
                   {workStretches.map((stretch, index) => {
                     const cfg = CATEGORY_CONFIG[stretch.category];
-                    const detectedLane = detectLaneWidthForChainage(
-                      Number(stretch.chainage_from_km) || 0,
-                      Number(stretch.chainage_to_km) || 0,
-                      subChainages
-                    );
-                    const capacity = checkSpanWidthCapacity(
-                      Number(stretch.chainage_from_km),
-                      Number(stretch.chainage_to_km),
-                      Number(stretch.road_width_to_m),
-                      subChainages
-                    );
+                    const hasEnteredChainages =
+                      String(stretch.chainage_from_km ?? '').trim() !== '' &&
+                      String(stretch.chainage_to_km ?? '').trim() !== '' &&
+                      !isNaN(Number(stretch.chainage_from_km)) &&
+                      !isNaN(Number(stretch.chainage_to_km)) &&
+                      Number(stretch.chainage_to_km) > Number(stretch.chainage_from_km);
+
+                    const detectedLane = hasEnteredChainages
+                      ? detectLaneWidthForChainage(
+                          Number(stretch.chainage_from_km),
+                          Number(stretch.chainage_to_km),
+                          subChainages
+                        )
+                      : {
+                          matchedStretch: null,
+                          laneConfig: null,
+                          totalCarriagewayWidthMeters: 7.0,
+                          centerlineWidthMeters: 3.5,
+                          totalWidthMeters: 3.5,
+                        };
+
+                    const capacity =
+                      hasEnteredChainages &&
+                      String(stretch.road_width_to_m ?? '').trim() !== '' &&
+                      !isNaN(Number(stretch.road_width_to_m)) &&
+                      Number(stretch.road_width_to_m) > 0
+                        ? checkSpanWidthCapacity(
+                            Number(stretch.chainage_from_km),
+                            Number(stretch.chainage_to_km),
+                            Number(stretch.road_width_to_m),
+                            subChainages
+                          )
+                        : { valid: true, overlappingCount: 0, bottlenecks: [] };
 
                     return (
                       <div
@@ -783,51 +805,51 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                                 step="0.01"
                                 value={stretch.road_width_to_m}
                                 onChange={(e) => handleUpdateStretch(index, 'road_width_to_m', e.target.value)}
-                                placeholder={detectedLane.matchedStretch ? String(detectedLane.totalWidthMeters) : '0.00'}
+                                placeholder={hasEnteredChainages && detectedLane.matchedStretch ? String(detectedLane.centerlineWidthMeters) : '0.00'}
                                 className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
                               />
                             </div>
                           </div>
 
-                          {/* Level 2 Sub-Chainage Micro-Lane Parameter Reference */}
-                          {detectedLane.matchedStretch && (
+                          {/* Level 2 Sub-Chainage Micro-Lane Parameter Reference (Only shown after user enters valid chainages) */}
+                          {hasEnteredChainages && detectedLane.matchedStretch && (
                             <div className="mt-2.5 p-2.5 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                               <div className="flex items-center gap-2 text-blue-950 dark:text-blue-200 min-w-0">
                                 <span className="px-2 py-0.5 bg-blue-600 text-white rounded-md text-[10px] font-extrabold uppercase tracking-wider shrink-0">
                                   Level 2 Micro-Lane
                                 </span>
                                 <span className="font-semibold truncate">
-                                  {detectedLane.laneConfig} &bull; Full Lane Width: <strong className="font-bold">{detectedLane.totalWidthMeters}m</strong> (0 to {detectedLane.totalWidthMeters}m)
+                                  {detectedLane.laneConfig} &bull; {detectedLane.totalCarriagewayWidthMeters}m Carriageway &bull; Centerline Width: <strong className="font-bold">0 to {detectedLane.centerlineWidthMeters}m</strong>
                                   {detectedLane.importantTown ? ` • Town: ${detectedLane.importantTown}` : ''}
                                 </span>
                               </div>
 
-                              {(Number(stretch.road_width_from_m || 0) !== 0 || Number(stretch.road_width_to_m || 0) !== detectedLane.totalWidthMeters) && (
+                              {(Number(stretch.road_width_from_m || 0) !== 0 || Number(stretch.road_width_to_m || 0) !== detectedLane.centerlineWidthMeters) && (
                                 <button
                                   type="button"
                                   onClick={() => {
                                     handleUpdateStretch(index, 'road_width_from_m', 0);
-                                    handleUpdateStretch(index, 'road_width_to_m', detectedLane.totalWidthMeters);
+                                    handleUpdateStretch(index, 'road_width_to_m', detectedLane.centerlineWidthMeters);
                                   }}
                                   className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer self-start sm:self-auto shrink-0"
                                 >
-                                  Use Level 2 Width (0 to {detectedLane.totalWidthMeters}m)
+                                  Use Level 2 Width (0 to {detectedLane.centerlineWidthMeters}m)
                                 </button>
                               )}
                             </div>
                           )}
 
                           {/* Width Capacity Alert if specified width exceeds any overlapping physical carriageway */}
-                          {!capacity.valid && (
+                          {hasEnteredChainages && !capacity.valid && (
                             <div className="mt-2.5 p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 rounded-xl flex items-start gap-2.5 text-xs text-rose-900 dark:text-rose-200">
                               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                               <div>
                                 <span className="font-bold">Width Exceeds Road Capacity: </span>
                                 <span>
-                                  Entered width ({stretch.road_width_to_m}m) exceeds physical carriageway on{' '}
+                                  Entered centerline width ({stretch.road_width_to_m}m = {(Number(stretch.road_width_to_m) * 2).toFixed(1)}m total) exceeds physical carriageway on{' '}
                                   {capacity.bottlenecks.map((b, bi) => (
                                     <strong key={bi} className="font-bold">
-                                      Km {b.overlapFromKm.toFixed(3)}–{b.overlapToKm.toFixed(3)} ({b.laneConfig}: {b.maxAllowedWidth}m){bi < capacity.bottlenecks.length - 1 ? ', ' : ''}
+                                      Km {b.overlapFromKm.toFixed(3)}–{b.overlapToKm.toFixed(3)} ({b.laneConfig}: max {b.maxAllowedCenterlineWidth}m centerline = {b.maxAllowedCarriagewayWidth}m total){bi < capacity.bottlenecks.length - 1 ? ', ' : ''}
                                     </strong>
                                   ))}.
                                 </span>

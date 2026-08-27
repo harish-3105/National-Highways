@@ -226,7 +226,7 @@ export async function POST(req: NextRequest) {
             const b = capacity.bottlenecks[0];
             return NextResponse.json({
               success: false,
-              error: `Work stretch #${i + 1} (Km ${sFrom}–${sTo}) width (${wTo}m) exceeds physical road capacity on Km ${b.overlapFromKm.toFixed(3)}–${b.overlapToKm.toFixed(3)} (${b.laneConfig}: ${b.maxAllowedWidth}m). Please adjust width or split into separate entries.`,
+              error: `Work stretch #${i + 1} (Km ${sFrom}–${sTo}) width (${wTo}m centerline) exceeds physical road capacity on Km ${b.overlapFromKm.toFixed(3)}–${b.overlapToKm.toFixed(3)} (${b.laneConfig}: max ${b.maxAllowedCenterlineWidth}m centerline = ${b.maxAllowedCarriagewayWidth}m total). Please adjust width or split into separate entries.`,
             }, { status: 400 });
           }
         }
@@ -380,7 +380,7 @@ export async function PUT(req: NextRequest) {
               const b = capacity.bottlenecks[0];
               return NextResponse.json({
                 success: false,
-                error: `Work stretch #${i + 1} (Km ${sFrom}–${sTo}) width (${wTo}m) exceeds physical road capacity on Km ${b.overlapFromKm.toFixed(3)}–${b.overlapToKm.toFixed(3)} (${b.laneConfig}: ${b.maxAllowedWidth}m). Please adjust width or split into separate entries.`,
+                error: `Work stretch #${i + 1} (Km ${sFrom}–${sTo}) width (${wTo}m centerline) exceeds physical road capacity on Km ${b.overlapFromKm.toFixed(3)}–${b.overlapToKm.toFixed(3)} (${b.laneConfig}: max ${b.maxAllowedCenterlineWidth}m centerline = ${b.maxAllowedCarriagewayWidth}m total). Please adjust width or split into separate entries.`,
               }, { status: 400 });
             }
           }
