@@ -187,3 +187,31 @@ export function formatDelayCompact(yearsVal: number | string | null | undefined)
   }
   return `${totalDays}d delay`;
 }
+
+/**
+ * Safely adds years to any date string (ISO or Indian formats) and returns formatted 'YYYY-MM-DD'.
+ */
+export function addYearsToDateString(dateStr: string | null | undefined, years: number | string | null | undefined): string | null {
+  if (!dateStr || years === null || years === undefined || years === '') return null;
+  const numYears = Number(years);
+  if (isNaN(numYears) || numYears <= 0) return null;
+  const d = parseDateString(dateStr);
+  if (!d) return null;
+  d.setFullYear(d.getFullYear() + numYears);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Normalizes any Indian/ISO date string to standard ISO 'YYYY-MM-DD' for PostgreSQL database columns.
+ */
+export function normalizeDateForDb(dateStr: string | null | undefined): string | null {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  if (!s || s === '-' || s === 'NA' || s === 'N/A' || s === '--') return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = parseDateString(s);
+  if (!d) return null;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}

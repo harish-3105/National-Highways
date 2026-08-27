@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { DlpCorridor, DlpWorkStretch } from '@/types/dlp';
 import { detectLaneWidthForChainage, checkSpanWidthCapacity } from '@/lib/dlp/laneDetection';
+import { addYearsToDateString, normalizeDateForDb } from '@/lib/formatters';
 
 export const dynamic = 'force-dynamic';
 
@@ -247,23 +248,33 @@ export async function POST(req: NextRequest) {
         }
 
         let category = s.category;
-        let commencementDate = s.commencement_date || null;
-        let dlpTillDate = s.dlp_till_date || null;
-        let progressPct = s.physical_progress_pct !== null && s.physical_progress_pct !== undefined ? Number(s.physical_progress_pct) : null;
-        let completionDate = s.actual_completion_date || null;
-        let periodYears = s.dlp_period_years !== null && s.dlp_period_years !== undefined ? Number(s.dlp_period_years) : null;
+        let commencementDate = normalizeDateForDb(s.commencement_date);
+        let dlpTillDate = normalizeDateForDb(s.dlp_till_date);
+        let progressPct = s.physical_progress_pct !== null && s.physical_progress_pct !== undefined && String(s.physical_progress_pct).trim() !== '' ? Number(s.physical_progress_pct) : null;
+        let completionDate = normalizeDateForDb(s.actual_completion_date);
+        let periodYears = s.dlp_period_years !== null && s.dlp_period_years !== undefined && String(s.dlp_period_years).trim() !== '' ? Number(s.dlp_period_years) : null;
         let scheme = s.scheme || null;
-        let dlpEndedOn = s.dlp_ended_on_date || null;
+        let dlpEndedOn = normalizeDateForDb(s.dlp_ended_on_date);
 
-        // Lifecycle rule: Construction reaching 100% with completion date auto-graduates to DLP
-        if (category === 'CONSTRUCTION' && progressPct !== null && progressPct >= 100 && completionDate) {
-          category = 'DLP';
-          commencementDate = completionDate;
-          if (periodYears && !dlpTillDate) {
-            const comp = new Date(completionDate);
-            comp.setFullYear(comp.getFullYear() + periodYears);
-            dlpTillDate = comp.toISOString().split('T')[0];
+        // Lifecycle & Date calculation logic:
+        // 1. Under Construction with completion date and period years
+        if (category === 'CONSTRUCTION') {
+          if (completionDate && periodYears && !dlpTillDate) {
+            dlpTillDate = addYearsToDateString(completionDate, periodYears);
           }
+          // Auto-graduate to DLP if 100% or if completed
+          if (progressPct !== null && progressPct >= 100 && completionDate) {
+            category = 'DLP';
+            commencementDate = completionDate;
+            if (periodYears && !dlpTillDate) {
+              dlpTillDate = addYearsToDateString(completionDate, periodYears);
+            }
+          }
+        }
+
+        // 2. Under DLP: if dlpTillDate is missing but commencementDate & periodYears are present
+        if (category === 'DLP' && !dlpTillDate && commencementDate && periodYears) {
+          dlpTillDate = addYearsToDateString(commencementDate, periodYears);
         }
 
         return {
@@ -404,22 +415,33 @@ export async function PUT(req: NextRequest) {
           }
 
           let category = s.category;
-          let commencementDate = s.commencement_date || null;
-          let dlpTillDate = s.dlp_till_date || null;
-          let progressPct = s.physical_progress_pct !== null && s.physical_progress_pct !== undefined ? Number(s.physical_progress_pct) : null;
-          let completionDate = s.actual_completion_date || null;
-          let periodYears = s.dlp_period_years !== null && s.dlp_period_years !== undefined ? Number(s.dlp_period_years) : null;
+          let commencementDate = normalizeDateForDb(s.commencement_date);
+          let dlpTillDate = normalizeDateForDb(s.dlp_till_date);
+          let progressPct = s.physical_progress_pct !== null && s.physical_progress_pct !== undefined && String(s.physical_progress_pct).trim() !== '' ? Number(s.physical_progress_pct) : null;
+          let completionDate = normalizeDateForDb(s.actual_completion_date);
+          let periodYears = s.dlp_period_years !== null && s.dlp_period_years !== undefined && String(s.dlp_period_years).trim() !== '' ? Number(s.dlp_period_years) : null;
           let scheme = s.scheme || null;
-          let dlpEndedOn = s.dlp_ended_on_date || null;
+          let dlpEndedOn = normalizeDateForDb(s.dlp_ended_on_date);
 
-          if (category === 'CONSTRUCTION' && progressPct !== null && progressPct >= 100 && completionDate) {
-            category = 'DLP';
-            commencementDate = completionDate;
-            if (periodYears && !dlpTillDate) {
-              const comp = new Date(completionDate);
-              comp.setFullYear(comp.getFullYear() + periodYears);
-              dlpTillDate = comp.toISOString().split('T')[0];
+          // Lifecycle & Date calculation logic:
+          // 1. Under Construction with completion date and period years
+          if (category === 'CONSTRUCTION') {
+            if (completionDate && periodYears && !dlpTillDate) {
+              dlpTillDate = addYearsToDateString(completionDate, periodYears);
             }
+            // Auto-graduate to DLP if 100% or if completed
+            if (progressPct !== null && progressPct >= 100 && completionDate) {
+              category = 'DLP';
+              commencementDate = completionDate;
+              if (periodYears && !dlpTillDate) {
+                dlpTillDate = addYearsToDateString(completionDate, periodYears);
+              }
+            }
+          }
+
+          // 2. Under DLP: if dlpTillDate is missing but commencementDate & periodYears are present
+          if (category === 'DLP' && !dlpTillDate && commencementDate && periodYears) {
+            dlpTillDate = addYearsToDateString(commencementDate, periodYears);
           }
 
           return {

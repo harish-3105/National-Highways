@@ -31,6 +31,7 @@ import {
   analyzeSpanLaneSubSections,
   OverlappingLaneSubSection,
 } from '@/lib/dlp/laneDetection';
+import { addYearsToDateString } from '@/lib/formatters';
 
 interface DlpContractEntryFormProps {
   initialData?: Partial<DlpCorridor>;
@@ -205,6 +206,20 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
         const t = field === 'chainage_to_km' ? value : stretch.chainage_to_km;
         if (f !== '' && t !== '' && !isNaN(Number(f)) && !isNaN(Number(t))) {
           stretch.length_km = Math.max(0, Math.round((Number(t) - Number(f)) * 1000) / 1000);
+        }
+      }
+
+      // Auto-compute DLP Till Date when completion date or dlp_period_years or commencement_date change
+      if (field === 'actual_completion_date' || field === 'dlp_period_years' || field === 'commencement_date') {
+        const compDate = field === 'actual_completion_date' ? value : stretch.actual_completion_date;
+        const commDate = field === 'commencement_date' ? value : stretch.commencement_date;
+        const years = field === 'dlp_period_years' ? value : (stretch.dlp_period_years ?? 5);
+        const baseDate = compDate || (stretch.category === 'DLP' ? commDate : null);
+        if (baseDate && years && !isNaN(Number(years)) && Number(years) > 0) {
+          const computed = addYearsToDateString(baseDate, years);
+          if (computed) {
+            stretch.dlp_till_date = computed;
+          }
         }
       }
 
@@ -1067,6 +1082,22 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                                 />
                               </div>
                             </div>
+
+                            {stretch.actual_completion_date && (
+                              <div className="p-2 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-xl text-xs text-blue-900 dark:text-blue-200 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5 font-semibold">
+                                  <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                  <span>
+                                    Calculated DLP Expiry: <strong className="font-bold">{addYearsToDateString(stretch.actual_completion_date, stretch.dlp_period_years ?? 5) || '—'}</strong> ({stretch.dlp_period_years ?? 5} Years from Completion)
+                                  </span>
+                                </div>
+                                {Number(stretch.physical_progress_pct || 0) >= 100 && (
+                                  <span className="px-2 py-0.5 bg-emerald-600 text-white text-[10px] font-extrabold rounded-md uppercase tracking-wider">
+                                    Auto-Graduates to DLP
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
 
