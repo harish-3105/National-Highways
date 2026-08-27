@@ -10,11 +10,10 @@ function getExpiredScheme(originalCategory: DlpWorkCategory, existingScheme?: st
   if (existingScheme && existingScheme.trim() !== '' && existingScheme !== 'Proposed Special Repairs' && existingScheme !== 'Maintenance Gap / No Active Work') {
     return existingScheme.trim();
   }
-  if (originalCategory === 'DLP') return 'Annual Work';
   if (originalCategory === 'PBMC') return 'PBMC';
   if (originalCategory === 'STMC') return 'STMC';
-  if (originalCategory === 'CONSTRUCTION') return 'Construction';
-  return workName?.trim() || 'Annual Work';
+  // Both standard DLP and completed Construction stretches expire into 'Annual Work'
+  return 'Annual Work';
 }
 
 function computeStretchLiveStatus(stretch: DlpWorkStretch): DlpWorkStretch {
@@ -24,14 +23,31 @@ function computeStretchLiveStatus(stretch: DlpWorkStretch): DlpWorkStretch {
   let daysRemaining: number | undefined = undefined;
   let computedStatus: 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | 'COMPLETED' = 'ACTIVE';
 
-  if (stretch.category === 'CONSTRUCTION') {
-    if (Number(stretch.physical_progress_pct || 0) >= 100) {
-      computedStatus = 'COMPLETED';
+  // 1. If Construction is 100% complete or has completion date, it graduates to DLP
+  let currentCategory = stretch.category;
+  let commencementDate = stretch.commencement_date;
+  let dlpTillDate = stretch.dlp_till_date;
+
+  if (currentCategory === 'CONSTRUCTION') {
+    const isCompleted = Number(stretch.physical_progress_pct || 0) >= 100 || Boolean(stretch.actual_completion_date);
+    if (isCompleted) {
+      currentCategory = 'DLP';
+      commencementDate = stretch.actual_completion_date || stretch.commencement_date;
+      if (!dlpTillDate && commencementDate) {
+        dlpTillDate = addYearsToDateString(commencementDate, stretch.dlp_period_years ?? 5);
+      }
     } else {
-      computedStatus = 'ACTIVE';
+      return {
+        ...stretch,
+        category: 'CONSTRUCTION',
+        computed_status: 'ACTIVE',
+      };
     }
-  } else if (stretch.dlp_till_date) {
-    const expiry = parseDateString(stretch.dlp_till_date);
+  }
+
+  // 2. For warranties (DLP, STMC, PBMC): Check DLP expiry against today
+  if (dlpTillDate) {
+    const expiry = parseDateString(dlpTillDate);
     if (expiry) {
       expiry.setHours(0, 0, 0, 0);
       const diffTime = expiry.getTime() - today.getTime();
@@ -39,12 +55,14 @@ function computeStretchLiveStatus(stretch: DlpWorkStretch): DlpWorkStretch {
 
       if (daysRemaining <= 0) {
         computedStatus = 'EXPIRED';
-        // Lifecycle rule: Expired warranty automatically transitions into NO_DLP with previous work type as scheme
+        // Lifecycle rule: Expired warranty transitions into NO_DLP with previous work type as scheme
         return {
           ...stretch,
           category: 'NO_DLP',
-          dlp_ended_on_date: stretch.dlp_ended_on_date || stretch.dlp_till_date,
-          scheme: getExpiredScheme(stretch.category, stretch.scheme, stretch.work_name),
+          commencement_date: commencementDate,
+          dlp_till_date: dlpTillDate,
+          dlp_ended_on_date: stretch.dlp_ended_on_date || dlpTillDate,
+          scheme: getExpiredScheme(currentCategory, stretch.scheme, stretch.work_name),
           days_remaining: daysRemaining,
           computed_status: 'EXPIRED',
         };
@@ -54,7 +72,7 @@ function computeStretchLiveStatus(stretch: DlpWorkStretch): DlpWorkStretch {
         computedStatus = 'ACTIVE';
       }
     }
-  } else if (stretch.category === 'NO_DLP') {
+  } else if (currentCategory === 'NO_DLP') {
     computedStatus = 'EXPIRED';
     if (!stretch.scheme || stretch.scheme === 'Proposed Special Repairs' || stretch.scheme === 'Maintenance Gap / No Active Work') {
       stretch.scheme = 'Annual Work';
@@ -71,6 +89,9 @@ function computeStretchLiveStatus(stretch: DlpWorkStretch): DlpWorkStretch {
 
   return {
     ...stretch,
+    category: currentCategory,
+    commencement_date: commencementDate,
+    dlp_till_date: dlpTillDate,
     days_remaining: daysRemaining,
     computed_status: computedStatus,
   };
