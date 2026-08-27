@@ -10,10 +10,11 @@ The application unifies ground-truth departmental data across corridors, linear 
 
 ### 🌟 Key Capabilities
 * **Full-Stack Next.js 16 + React 19 Architecture**: Server-side rendering, dynamic API route handlers, and static optimization powered by Turbopack.
-* **8 Integrated Production Modules**: Ongoing Works, Straight-Line Diagrams (SLD), Highways Catalog, DLP Maintenance, Legal Litigation, Fee Bills, Staff Directory, and Data Ingestion.
+* **8 Integrated Production Modules**: Ongoing Works & Major Projects, Straight-Line Diagrams (SLD), Highways Catalog, DLP Maintenance & 2D Spatial Geometry, Legal Litigation, Fee Bills, Staff Directory, and Data Ingestion.
+* **2D Continuous Spatial Asset Geometry**: Micro-lane spatial offsets measured continuously from Centerline ($0$), strictly mapping 1:1 to dedicated relational PostgreSQL columns.
 * **Dual Theme Engine**: Seamless support for both **Light Mode** (clean white canvas, high-contrast typography) and **Dark Mode** (VS Code Minimalist Charcoal & Zinc palette `#181a1f`).
 * **Sharp Minimalist Aesthetic**: Standardized `2px` border-radius (`rounded-xs`) across all cards, modals, tables, badges, and controls.
-* **100% Dynamic Postgres Database**: Backed by Supabase with Row Level Security (RLS), full CRUD support, soft-delete archiving, and automated mathematical helpers.
+* **100% Dynamic Postgres Database**: Backed by Supabase with Row Level Security (RLS), full CRUD support, soft-delete archiving, master data configuration, and automated mathematical helpers.
 
 ---
 
@@ -54,27 +55,44 @@ Web-based interactive linear asset diagram replacing static Excel bar charts (`T
   5. **Traffic PCU Volume**: Passenger Car Unit traffic densities with color ranges.
   6. **Right of Way (ROW)**: Corridor land acquisition boundary widths.
   7. **DPR & Sanctioned Proposals**: Project development proposals and bridge clearance statuses.
+* **2D Spatial DLP Overlay Matrix**: Renders color-coded continuous boundary boxes directly on the road corridor canvas matching the exact lateral gauge ($6\text{px}/\text{m}$), displaying `Name of Work` on canvas and full warranty/contractor passport on hover.
 * **Height-Matched Caliper Dimension Gauge**: Fixed sidebar caliper reference lines seamlessly docking with the road corridor's vertical lane heights.
-* **Interactive Hovercard**: Displays full asset metrics and formatted DLP work details.
 * **Print & Export Engine**: Landscape browser `@media print` system with department letterhead and technical legend footers.
 
 ---
 
-### 3. Master Highways Catalog (`/highways`)
+### 3. Defect Liability Period (DLP) & 2D Spatial Geometry Tracker (`/dlp`)
+Comprehensive defect warranty and linear maintenance management covering all 24 columns of the departmental spreadsheet (`798 NH Length Summary`, Cols A to AC).
+
+* **2D Spatial Coordinates for Every Work**:
+  * **Longitudinal (X-Axis)**: Chainage `From (Km)` $\rightarrow$ `To (Km)` ($\text{Length} = \text{To} - \text{From}$).
+  * **Lateral / Cross-Sectional (Y-Axis)**: Symmetrical meters from **Centerline ($0$)** (e.g. $0$ to $3.5\text{m}$ for $2\text{L}$, $0$ to $7.0\text{m}$ for $4\text{L}$).
+* **Granular 1-Record-Per-Stretch Standard (Rows 7–12 standard)**: Every sub-stretch is an independent relational database row (`public.dlp_work_stretches`) linked 1:1 to parent corridors (`public.dlp_corridors`).
+* **5 Core Work Categories**:
+  * `Under DLP`, `Under Construction`, `Under STMC`, `Under PBMC`, `Under NO DLP` (all including explicit `Name of Work`).
+* **Level 2 Micro-Lane Intelligence & Auto-Split**:
+  * Automatically detects physical Level 2 Micro-Lane sub-chainages (`type=MICRO_LANE`).
+  * Deferred detection: Activates only after valid `From Km` and `To Km` are entered.
+  * **Multi-Lane Auto-Split**: When a stretch crosses multiple lane configurations (e.g. 4L+PS and 2L+PS), clicking **`⚡ Auto-Split into Matching Lane Sections`** instantly divides the entry into discrete sub-sections with their exact matching Level 2 widths.
+* **Road Width Capacity Validation & Strict Save Blocking**:
+  * Prevents spatial impossibilities (e.g. entering $7.0\text{m}$ centerline offset on a $2\text{L}$ section) by cross-checking against underlying Level 2 carriageways.
+  * Inline bottleneck alerts block form submission and API persistence (`400 Bad Request`) until resolved.
+* **Structured 3-Tier Grouping Hierarchy**:
+  $$\mathbf{Contractor\ Name} \longrightarrow \mathbf{Work\ Name} \longrightarrow \mathbf{Discrete\ 2D\ Spatial\ Stretches}$$
+* **Consolidated Overview Category Totals & Auto-Computed NO DLP Total**:
+  * Aggregates total distance by work category (`DLP`, `Construction`, `STMC`, `PBMC`).
+  * Automatically computes true uncontracted corridor gap distance:
+    $$\text{NO DLP (Km)} = \text{Total Corridor Length} - \sum(\text{Active Works: DLP, Construction, STMC, PBMC})$$
+* **Dynamic Master Data Configuration Portal**: In-app management modal for Circles, Divisions, Schemes, and Circle-Division mappings (`public.dlp_master_config`).
+
+---
+
+### 4. Master Highways Catalog (`/highways`)
 Ground-truth inventory of all National Highway corridors in Tamil Nadu.
 
 * **Level 1 Inventory**: Old/New NH numbers, chainage spans, length metrics, and multi-lane configuration distribution (`<2L`, `2L`, `2L+PS`, `4L`, `6L`).
 * **Quadrant KPI Matrix**: Clickable 2x2 summary grid that filters and isolates specific lane distance metrics in table rows.
 * **CRUD & Exporter**: Add/Edit/Soft-Delete modals + Custom Report Exporter (Excel `.xlsx` / CSV `.csv`) with parameter selectors.
-
----
-
-### 4. Defect Liability Period (DLP) & Maintenance Tracker (`/dlp`)
-Warranties and maintenance contract tracker covering all 26 columns of the departmental spreadsheet (`Status of NH Length Maintenance DLP as on 16.07.2026.xlsx`).
-
-* **1-to-N Sub-Contract Engine**: Dynamic sub-contract repeaters storing multiple contractor warranties in `contract_details` JSONB.
-* **4-Tier Status Tracking**: `ACTIVE`, `EXPIRING_SOON`, `EXPIRED`, and `UNDER_MAINTENANCE` with calendar date range filters.
-* **Detailed Breakdown Cards**: DLP, STMC, PBMC, Construction, No DLP, and Uncontracted stretches.
 
 ---
 
@@ -91,7 +109,7 @@ Centralized judicial tracker managing 100% of the department's 48 legal fields a
 Invoice auditing and payment voucher management for departmental legal counsels.
 
 * **Fee Voucher Processing**: Invoice logging, pendency tracking, voucher auditing, and lawyer fee verification.
-* **Dynamic Master Data Config**: Master dropdown configuration for courts, advocates, and bill stages.
+* **Dynamic Master Data Config**: Master dropdown configuration for courts, advocates, and bill stages (`public.fee_bill_master_items`).
 
 ---
 
@@ -117,7 +135,7 @@ Automated data ingestion pipeline parsing complex departmental spreadsheets.
 
 ### 1. Automatic Financial Progress Metric (%)
 $$\text{Financial Progress (\%)} = \frac{\text{Cumulative Financial Expenditure (₹ Cr)}}{\max(\text{Revised Cost (RCE)}, \text{Sanctioned TPC})} \times 100$$
-* Automatically calculated across the entire platform. Rendered with dual progress bars (Emerald for Physical %, Blue for Financial %).
+* Rendered with dual progress bars (Emerald for Physical %, Blue for Financial %).
 
 ### 2. Live Dynamic Delay Gap Engine
 $$\text{Delay} = \text{Current Date} - \text{Scheduled Completion Date}$$
@@ -126,9 +144,10 @@ $$\text{Delay} = \text{Current Date} - \text{Scheduled Completion Date}$$
 * **On Schedule ($\text{Current Date} \le \text{Scheduled Date}$ or Physical Progress $= 100\%$)**:
   * Marked as **`On Schedule`** (`0 delay`).
 
-### 3. Mega Projects Classification
-$$\text{Cost Basis} = \text{Revised Cost (if present)} \text{ or } \text{Sanctioned Cost (TPC)} \ge 50\text{ Cr}$$
-* Flagged with `⚡ ≥ ₹50 Cr Mega Project` badges.
+### 3. Symmetrical 2D Cross-Sectional Centerline Offset
+$$\text{offsetPx}(m) = m \times 6$$
+$$\text{heightPx}_{\text{center}} = 2 \times w_{\text{to}} \times 6$$
+$$\text{heightPx}_{\text{strip}} = (w_{\text{to}} - w_{\text{from}}) \times 6$$
 
 ---
 
@@ -150,16 +169,17 @@ nh_proj/
 ├── src/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── dlp/                    # DLP warranties API
+│   │   │   ├── dlp/                    # DLP master CRUD & spatial sub-stretches API
+│   │   │   ├── dlp/master-data/        # DLP dynamic master data API
 │   │   │   ├── fee-bills/              # Legal fee bills API & master data
 │   │   │   ├── highways/               # Corridors catalog API
 │   │   │   ├── ingest/                 # Excel ingestion API
 │   │   │   ├── legal/                  # Litigation cases API
-│   │   │   ├── major-projects/         # Ongoing works API & master data
+│   │   │   ├── major-projects/         # Ongoing works API & snapshots
 │   │   │   ├── ongoing-works/          # Ongoing works route alias
 │   │   │   ├── staff/                  # Department staff API & master data
 │   │   │   └── sub-chainages/          # Linear asset sub-chainages API
-│   │   ├── dlp/page.tsx                # DLP warranties dashboard
+│   │   ├── dlp/page.tsx                # DLP warranties & 2D spatial dashboard
 │   │   ├── fee-bills/page.tsx          # Fee bills audit dashboard
 │   │   ├── highways/page.tsx           # Highways catalog dashboard
 │   │   ├── highways/[id]/sld/page.tsx  # Interactive Straight-Line Diagram (SLD)
@@ -173,7 +193,7 @@ nh_proj/
 │   │   └── page.tsx                    # Landing / redirect route
 │   ├── components/
 │   │   ├── common/                     # Reusable DatePickerInput & SearchableSelect
-│   │   ├── dlp/                        # DLP modals, filters, and tables
+│   │   ├── dlp/                        # 2D DLP entry form, view/delete modals, master config
 │   │   ├── fee-bills/                  # Fee bill audit, entry, and list tables
 │   │   ├── highways/                   # Corridors grid, table, and StraightLineDiagram
 │   │   ├── legal/                      # Legal entry forms, view modals, and table
@@ -181,15 +201,17 @@ nh_proj/
 │   │   ├── staff/                      # Staff table, master modals, and entry forms
 │   │   └── NavigationHeader.tsx        # VS Code tab-bar navigation
 │   └── lib/
-│       ├── dlp/                        # DLP master data configuration
+│       ├── dlp/                        # DLP master data & Level 2 micro-lane detection
 │       ├── export/                     # Excel / CSV custom export generator
 │       ├── formatters.ts               # Dynamic delay & financial progress calculations
 │       ├── ingestion/                  # Parser engine with Excel serial date conversions
 │       ├── legal/                      # Legal master data constants
 │       └── supabase/                   # Supabase client & server instances
 ├── supabase/
-│   └── migrations/                     # 20 incremental SQL migration files (0000 to 0019)
-├── HANDOVER_STATUS.md                  # Comprehensive handover & sprint logs
+│   └── migrations/                     # 31 incremental SQL migration files (0000 to 0030)
+├── docs/                               # Detailed module specifications
+│   ├── DLP_SPECIFICATION.md            # DLP 2D Spatial Geometry & Lifecycle specification
+│   └── ONGOING_WORKS_SPECIFICATION.md  # Ongoing works 29-column specification
 ├── README.md                           # Master project documentation
 └── package.json                        # Next.js 16, React 19, TailwindCSS v4
 ```
@@ -219,6 +241,17 @@ Located in `supabase/migrations/`:
 * `0017_ongoing_works_master_config.sql` $\rightarrow$ Ongoing works master configuration.
 * `0018_ongoing_works_27_columns.sql` $\rightarrow$ Full 29-column expansion for ongoing works.
 * `0019_widen_text_columns.sql` $\rightarrow$ Widened text columns for multi-paragraph bridge logs.
+* `0020_add_contract_and_issues_fields_major_projects.sql` $\rightarrow$ Added contract packages, CALA stages, and clearance issue matrices.
+* `0021_major_projects_snapshots_schema.sql` $\rightarrow$ Project timeline historical snapshots table.
+* `0022_fee_bills_branching_and_payment_fields.sql` $\rightarrow$ Assistant settlement, draft bills, and payment breakdown columns.
+* `0023_legal_cases_workflow_v2.sql` $\rightarrow$ Expanded 48-field legal litigation schema with Module 1 & Module 2 conversion.
+* `0024_staff_master_config_hierarchy.sql` $\rightarrow$ Hierarchical staff configuration table.
+* `0025_fee_bill_master_items_table.sql` $\rightarrow$ Dynamic fee bill master dropdown items table.
+* `0026_fee_bills_numeric_cases_and_assistant_settlement.sql` $\rightarrow$ Strongly-typed numeric case counts and assistant bill tracking.
+* `0027_legal_cases_relax_category_and_schema_updates.sql` $\rightarrow$ Relaxed legal category constraints and dynamic court complex fields.
+* `0028_add_base_original_case_columns.sql` $\rightarrow$ Added base case tracking for appeal proceedings.
+* `0029_dlp_rework_schema.sql` $\rightarrow$ Relational 2D spatial rework: `dlp_corridors` and `dlp_work_stretches` tables.
+* `0030_dlp_master_config.sql` $\rightarrow$ Dynamic DLP master data configuration table.
 
 ---
 
@@ -228,7 +261,7 @@ Located in `supabase/migrations/`:
 * **Frontend**: React 19, Tailwind CSS v4, Lucide React Icons
 * **Database**: Supabase PostgreSQL with Row Level Security (RLS)
 * **Excel Processing**: SheetJS (`xlsx`)
-* **Build Verification**: `npm run build` verified (16/16 routes compiled with 0 errors).
+* **Build Verification**: `npm run build` verified (17/17 routes compiled with 0 errors).
 
 ---
 
@@ -256,3 +289,4 @@ npm run build
 ### 3. Git Branching
 * **`main`**: Active production branch
 * **`mathir`**: Development & feature synchronization branch
+
