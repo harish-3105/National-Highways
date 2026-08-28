@@ -158,10 +158,35 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
       };
     });
 
-    const phyPoints = items.length > 1 ? items.map((it) => `${it.x},${it.yPhy}`).join(' ') : '';
-    const finPoints = items.length > 1 ? items.map((it) => `${it.x},${it.yFin}`).join(' ') : '';
+    // Generate Step Graph Path (Step-After / Discrete Milestone Staircase)
+    const generateStepPath = (pts: Array<{ x: number; y: number }>) => {
+      if (pts.length === 0) return '';
+      if (pts.length === 1) return `M ${pts[0].x},${pts[0].y} h 1`;
+      let d = `M ${pts[0].x},${pts[0].y}`;
+      for (let i = 1; i < pts.length; i++) {
+        const prev = pts[i - 1];
+        const curr = pts[i];
+        // Step-after: Horizontal to current x at previous y, then vertical to current y
+        d += ` H ${curr.x} V ${curr.y}`;
+      }
+      return d;
+    };
 
-    return { phyPoints, finPoints, items, width, height, padding, plotW, plotH };
+    const generateStepArea = (pts: Array<{ x: number; y: number }>, baselineY: number) => {
+      if (pts.length === 0) return '';
+      const linePath = generateStepPath(pts);
+      const lastX = pts[pts.length - 1].x;
+      const firstX = pts[0].x;
+      return `${linePath} V ${baselineY} H ${firstX} Z`;
+    };
+
+    const phyStepPath = items.length > 1 ? generateStepPath(items.map((it) => ({ x: it.x, y: it.yPhy }))) : '';
+    const finStepPath = items.length > 1 ? generateStepPath(items.map((it) => ({ x: it.x, y: it.yFin }))) : '';
+
+    const phyStepArea = items.length > 1 ? generateStepArea(items.map((it) => ({ x: it.x, y: it.yPhy })), padding.top + plotH) : '';
+    const finStepArea = items.length > 1 ? generateStepArea(items.map((it) => ({ x: it.x, y: it.yFin })), padding.top + plotH) : '';
+
+    return { phyStepPath, finStepPath, phyStepArea, finStepArea, items, width, height, padding, plotW, plotH };
   }, [snapshots]);
 
   if (!isOpen || !project) return null;
@@ -257,24 +282,24 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
 
         {/* Body Content */}
         <div className="p-6 overflow-y-auto flex-1 space-y-6">
-          {/* Section A: Trading-Style Progress Trendline Chart */}
+          {/* Section A: Milestone-Style Progress Step Chart */}
           <div className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 shadow-md space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-emerald-400" />
                 <h3 className="font-bold text-sm tracking-wide text-white">
-                  Physical vs. Financial Progress Time Series
+                  Physical vs. Financial Progress Step Graph (Milestone Staircase)
                 </h3>
               </div>
 
               {/* Legend */}
               <div className="flex items-center gap-4 text-xs font-semibold">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <span className="w-3 h-3 rounded-xs bg-emerald-500" />
                   <span className="text-emerald-300 font-mono">Physical Progress (%)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-blue-500" />
+                  <span className="w-3 h-3 rounded-xs bg-blue-500" />
                   <span className="text-blue-300 font-mono">Financial Progress (%)</span>
                 </div>
               </div>
@@ -283,6 +308,17 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
             {/* SVG Chart Canvas */}
             <div className="w-full overflow-x-auto">
               <svg viewBox="0 0 800 240" className="w-full h-56 min-w-[600px]">
+                <defs>
+                  <linearGradient id="finGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
+                  </linearGradient>
+                  <linearGradient id="phyGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.2" />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+
                 {/* Horizontal Grid lines (0%, 25%, 50%, 75%, 100%) */}
                 {[0, 25, 50, 75, 100].map((pct) => {
                   const y = 30 + (240 - 70) - (pct / 100) * (240 - 70);
@@ -311,27 +347,33 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
                   );
                 })}
 
-                {/* Financial Progress Line (Blue) */}
-                {chartPoints.finPoints && (
-                  <polyline
+                {/* Financial Progress Step Area & Line (Blue) */}
+                {chartPoints.finStepArea && (
+                  <path d={chartPoints.finStepArea} fill="url(#finGradient)" />
+                )}
+                {chartPoints.finStepPath && (
+                  <path
+                    d={chartPoints.finStepPath}
                     fill="none"
                     stroke="#3b82f6"
                     strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    points={chartPoints.finPoints}
+                    strokeLinecap="square"
+                    strokeLinejoin="miter"
                   />
                 )}
 
-                {/* Physical Progress Line (Emerald) */}
-                {chartPoints.phyPoints && (
-                  <polyline
+                {/* Physical Progress Step Area & Line (Emerald) */}
+                {chartPoints.phyStepArea && (
+                  <path d={chartPoints.phyStepArea} fill="url(#phyGradient)" />
+                )}
+                {chartPoints.phyStepPath && (
+                  <path
+                    d={chartPoints.phyStepPath}
                     fill="none"
                     stroke="#10b981"
                     strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    points={chartPoints.phyPoints}
+                    strokeLinecap="square"
+                    strokeLinejoin="miter"
                   />
                 )}
 

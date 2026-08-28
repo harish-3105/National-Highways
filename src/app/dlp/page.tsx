@@ -37,11 +37,11 @@ const CATEGORY_BADGES: Record<
   DlpWorkCategory,
   { label: string; bg: string; text: string }
 > = {
-  DLP: { label: 'Under DLP', bg: 'bg-emerald-100 dark:bg-emerald-950', text: 'text-emerald-800 dark:text-emerald-200' },
-  CONSTRUCTION: { label: 'Construction', bg: 'bg-blue-100 dark:bg-blue-950', text: 'text-blue-800 dark:text-blue-200' },
-  STMC: { label: 'STMC', bg: 'bg-amber-100 dark:bg-amber-950', text: 'text-amber-800 dark:text-amber-200' },
-  PBMC: { label: 'PBMC', bg: 'bg-purple-100 dark:bg-purple-950', text: 'text-purple-800 dark:text-purple-200' },
-  NO_DLP: { label: 'No DLP', bg: 'bg-slate-200 dark:bg-slate-800', text: 'text-slate-800 dark:text-slate-200' },
+  DLP: { label: 'Under DLP', bg: 'bg-lime-50 dark:bg-lime-950/40', text: 'text-lime-800 dark:text-lime-200' },
+  CONSTRUCTION: { label: 'Construction', bg: 'bg-emerald-100 dark:bg-emerald-950/60', text: 'text-emerald-900 dark:text-emerald-100' },
+  STMC: { label: 'STMC', bg: 'bg-amber-50 dark:bg-amber-950/40', text: 'text-amber-800 dark:text-amber-200' },
+  PBMC: { label: 'PBMC', bg: 'bg-purple-50 dark:bg-purple-950/40', text: 'text-purple-800 dark:text-purple-200' },
+  NO_DLP: { label: 'No DLP', bg: 'bg-rose-50 dark:bg-rose-950/40', text: 'text-rose-700 dark:text-rose-300' },
 };
 
 export default function DlpPage() {
@@ -1174,21 +1174,48 @@ export default function DlpPage() {
                                                     return (
                                                       <div
                                                         key={wIdx}
-                                                        className="border border-slate-200/80 dark:border-slate-700/60 rounded-lg p-2.5 bg-white dark:bg-slate-900 space-y-2"
+                                                        className="border border-slate-200/80 dark:border-slate-700/60 rounded-xl p-3 bg-white dark:bg-slate-900 shadow-2xs space-y-3"
                                                       >
-                                                        {/* Work Header */}
-                                                        <div className="flex items-center justify-between gap-2 flex-wrap pb-1.5 border-b border-slate-100 dark:border-slate-800">
-                                                          <div className="flex items-center gap-2">
-                                                            <span className={`px-1.5 py-0.5 rounded font-extrabold text-[9px] ${catBadge.bg} ${catBadge.text}`}>
+                                                        {/* Work Boundary Header: Left = Contractor, Middle = Work Name, Right = DLP Date / Status & Span */}
+                                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                                                          {/* Left: Contractor & Category Badge */}
+                                                          <div className="flex items-center gap-2 shrink-0">
+                                                            <HardHat className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                                                            <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100 max-w-[220px] truncate" title={contractorName}>
+                                                              {contractorName.includes('Departmental') ? contractorName : contractorName}
+                                                            </span>
+                                                            <span className={`px-2 py-0.5 rounded-md font-extrabold text-[10px] shrink-0 ${catBadge.bg} ${catBadge.text}`}>
                                                               {catBadge.label}
                                                             </span>
-                                                            <span className="font-bold text-xs text-slate-800 dark:text-slate-200">
+                                                          </div>
+
+                                                          {/* Middle: Name of the Work (Wrapped cleanly inside work boundary) */}
+                                                          <div className="flex-1 min-w-0 md:px-3">
+                                                            <h5 className="font-bold text-xs text-slate-800 dark:text-slate-200 break-words leading-relaxed">
                                                               {workName}
+                                                            </h5>
+                                                          </div>
+
+                                                          {/* Right: DLP Ended / Till Date based on type & Work Span */}
+                                                          <div className="flex items-center gap-2 shrink-0 flex-wrap md:justify-end text-xs">
+                                                            <span className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md font-mono font-bold text-slate-700 dark:text-slate-300 text-[11px] shadow-2xs">
+                                                              {(() => {
+                                                                const firstStretch = stretches[0];
+                                                                if (isAllNoDlp) {
+                                                                  return `DLP Ended: ${formatDateIndian(firstStretch?.dlp_ended_on_date || firstStretch?.dlp_till_date)}`;
+                                                                }
+                                                                if (primaryCat === 'CONSTRUCTION') {
+                                                                  const pct = firstStretch?.physical_progress_pct ?? 0;
+                                                                  const compDate = formatDateIndian(firstStretch?.actual_completion_date);
+                                                                  return `Progress: ${pct}% • ${compDate === '—' ? 'In Progress' : `Comp: ${compDate}`}`;
+                                                                }
+                                                                return `DLP Till: ${formatDateIndian(firstStretch?.dlp_till_date)}`;
+                                                              })()}
+                                                            </span>
+                                                            <span className="px-2 py-1 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 rounded-md font-mono text-blue-700 dark:text-blue-300 font-extrabold text-[11px]">
+                                                              Span: {totalWorkKm.toFixed(3)} km
                                                             </span>
                                                           </div>
-                                                          <span className="font-mono text-blue-600 dark:text-blue-400 font-bold text-[11px]">
-                                                            Total Work Span: {totalWorkKm.toFixed(3)} km ({stretches.length} {stretches.length === 1 ? 'stretch' : 'stretches'})
-                                                          </span>
                                                         </div>
 
                                                         {/* Tier 3: Discrete Stretches Table */}
@@ -1211,21 +1238,21 @@ export default function DlpPage() {
                                                                   <td className="px-2 py-1.5 font-bold text-slate-500 font-mono text-[10px]">
                                                                     #{sIdx + 1}
                                                                   </td>
-                                                                  <td className="px-2 py-1.5 font-mono text-slate-700 dark:text-slate-300">
+                                                                  <td className="px-2 py-1.5 font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                                                     Km {s.chainage_from_km} &rarr; Km {s.chainage_to_km}
                                                                   </td>
-                                                                  <td className="px-2 py-1.5 font-mono text-slate-600 dark:text-slate-400">
+                                                                  <td className="px-2 py-1.5 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
                                                                     {s.road_width_from_m}m &rarr; {s.road_width_to_m}m
                                                                   </td>
-                                                                  <td className="px-2 py-1.5 font-mono font-bold text-blue-600 dark:text-blue-400">
+                                                                  <td className="px-2 py-1.5 font-mono font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">
                                                                     {Number(s.length_km || 0).toFixed(3)} km
                                                                   </td>
-                                                                  <td className="px-2 py-1.5 text-slate-600 dark:text-slate-400">
+                                                                  <td className="px-2 py-1.5 text-slate-600 dark:text-slate-400 whitespace-nowrap">
                                                                     {primaryCat === 'NO_DLP'
                                                                       ? formatDateIndian(s.dlp_ended_on_date || s.dlp_till_date)
                                                                       : formatDateIndian(s.commencement_date)}
                                                                   </td>
-                                                                  <td className="px-2 py-1.5 text-slate-700 dark:text-slate-300">
+                                                                  <td className="px-2 py-1.5 text-slate-700 dark:text-slate-300 break-words max-w-[200px]">
                                                                     {s.category === 'CONSTRUCTION' ? (
                                                                       <span className="font-semibold">{s.physical_progress_pct ?? 0}% Complete</span>
                                                                     ) : primaryCat === 'NO_DLP' ? (

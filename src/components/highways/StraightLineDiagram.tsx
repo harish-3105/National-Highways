@@ -217,7 +217,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     return Math.max(0.35, Math.round((1000 / totalW) * 100) / 100);
   }, [canvasWidthPxActual]);
 
-  // Helper for Excel bar height specs (Standard: 6px per meter width)
+  // Helper for Excel bar height specs (Scaled: 10px per meter width)
   const getLaneStyle = (laneConfig: string) => {
     const norm = (laneConfig || '').toLowerCase();
     const neutralStyle = {
@@ -229,7 +229,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         ...neutralStyle,
         border: 'border-y-2 border-y-purple-400 dark:border-y-purple-600',
         label: '6-Lane (6L)',
-        heightPx: 120,
+        heightPx: 200,
       };
     }
     if (norm.includes('4l') || norm.includes('4-lane')) {
@@ -237,7 +237,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         ...neutralStyle,
         border: 'border-y-2 border-y-blue-400 dark:border-y-blue-600',
         label: '4-Lane / 4L+PS',
-        heightPx: 84,
+        heightPx: 140,
       };
     }
     if (norm.includes('2l+ps') || norm.includes('paved')) {
@@ -245,7 +245,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         ...neutralStyle,
         border: 'border-y-2 border-y-emerald-400 dark:border-y-emerald-600',
         label: '2L + Paved Shoulder',
-        heightPx: 60,
+        heightPx: 100,
       };
     }
     if (norm.includes('2l') || norm.includes('2-lane')) {
@@ -253,59 +253,59 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         ...neutralStyle,
         border: 'border-y-2 border-y-amber-400 dark:border-y-amber-600',
         label: '2-Lane (2L)',
-        heightPx: 42,
+        heightPx: 70,
       };
     }
     return {
       ...neutralStyle,
       border: 'border-y-2 border-y-slate-500 dark:border-y-slate-400',
       label: '< 2-Lane',
-      heightPx: 22,
+      heightPx: 38,
     };
   };
 
-  // DLP Category Visual Styling
+  // DLP Category Visual Styling (Soft / Muted Tones)
   const getDlpCategoryStyle = (cat: DlpWorkCategory) => {
     switch (cat) {
       case 'DLP':
         return {
-          bg: 'bg-emerald-600 dark:bg-emerald-600',
-          border: 'border border-emerald-300 dark:border-emerald-400',
+          bg: 'bg-lime-700 dark:bg-lime-600',
+          border: 'border border-lime-400 dark:border-lime-400',
           text: 'text-white',
-          badgeBg: 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200',
+          badgeBg: 'bg-lime-50 dark:bg-lime-950/40 text-lime-800 dark:text-lime-200 border border-lime-200 dark:border-lime-800',
           label: 'Under DLP',
         };
       case 'CONSTRUCTION':
         return {
-          bg: 'bg-blue-600 dark:bg-blue-600',
-          border: 'border border-blue-300 dark:border-blue-400',
+          bg: 'bg-emerald-800 dark:bg-emerald-700',
+          border: 'border border-emerald-400 dark:border-emerald-400',
           text: 'text-white',
-          badgeBg: 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200',
+          badgeBg: 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-100 border border-emerald-300 dark:border-emerald-800',
           label: 'Under Construction',
         };
       case 'STMC':
         return {
-          bg: 'bg-amber-600 dark:bg-amber-600',
+          bg: 'bg-amber-500 dark:bg-amber-600',
           border: 'border border-amber-300 dark:border-amber-400',
           text: 'text-white',
-          badgeBg: 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200',
+          badgeBg: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800',
           label: 'Under STMC',
         };
       case 'PBMC':
         return {
-          bg: 'bg-purple-600 dark:bg-purple-600',
+          bg: 'bg-purple-600 dark:bg-purple-500',
           border: 'border border-purple-300 dark:border-purple-400',
           text: 'text-white',
-          badgeBg: 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200',
+          badgeBg: 'bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-200 border border-purple-200 dark:border-purple-800',
           label: 'Under PBMC',
         };
       case 'NO_DLP':
       default:
         return {
-          bg: 'bg-slate-600 dark:bg-slate-600',
-          border: 'border border-slate-400 dark:border-slate-500',
+          bg: 'bg-rose-600 dark:bg-rose-500',
+          border: 'border border-rose-300 dark:border-rose-400',
           text: 'text-white',
-          badgeBg: 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200',
+          badgeBg: 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800',
           label: 'Under NO DLP',
         };
     }
@@ -320,13 +320,13 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
   };
 
   // Converts lateral road width from centerline (in meters) to vertical pixel offset from centerline
-  // Standard: Constant 6 pixels per meter (1m = 6px) across all road elements:
-  // 2L (7m total width / 3.5m half-width) -> 21px offset (42px total height)
-  // 2L+PS (10m total width / 5.0m half-width) -> 30px offset (60px total height)
-  // 4L (14m total width / 7.0m half-width) -> 42px offset (84px total height)
-  // 6L (20m total width / 10.0m half-width) -> 60px offset (120px total height)
+  // Scaled: 10 pixels per meter (1m = 10px) across all road elements:
+  // 2L (7m total width / 3.5m half-width) -> 35px offset (70px total height)
+  // 2L+PS (10m total width / 5.0m half-width) -> 50px offset (100px total height)
+  // 4L (14m total width / 7.0m half-width) -> 70px offset (140px total height)
+  // 6L (20m total width / 10.0m half-width) -> 100px offset (200px total height)
   const getLateralOffsetPx = (metersFromCenterline: number): number => {
-    return Math.max(0, Number(metersFromCenterline || 0)) * 6;
+    return Math.max(0, Number(metersFromCenterline || 0)) * 10;
   };
 
   // Continuous 2D DLP Position Calculator
@@ -632,7 +632,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
             </div>
 
             {/* Row 3: Height-Matched Clean Carriageway Width Dimension Arrow Gauge */}
-            <div className="h-[220px] border-b border-slate-200 dark:border-slate-800 px-2 shrink-0 select-none relative overflow-hidden bg-slate-100/50 dark:bg-slate-950">
+            <div className="h-[340px] border-b border-slate-200 dark:border-slate-800 px-2 shrink-0 select-none relative overflow-hidden bg-slate-100/50 dark:bg-slate-950">
               {/* Horizontal Centerline Axis Guide Line */}
               <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-slate-400/40 dark:border-white/25 z-0 pointer-events-none" />
 
@@ -644,10 +644,10 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               {/* Right-Facing Caliper Docking Gauge */}
               <div className="absolute inset-0 flex items-center z-10 pointer-events-none">
                 {[
-                  { label: '6L', width: '20m', heightPx: 120, leftOffset: '12px', color: 'text-purple-400 dark:text-purple-600 border-purple-400 dark:border-purple-600' },
-                  { label: '4L / 4L+PS', width: '14m', heightPx: 84, leftOffset: '50px', color: 'text-blue-400 dark:text-blue-600 border-blue-400 dark:border-blue-600' },
-                  { label: '2L+PS', width: '10m', heightPx: 60, leftOffset: '115px', color: 'text-emerald-400 dark:text-emerald-600 border-emerald-400 dark:border-emerald-600' },
-                  { label: '2L', width: '7m', heightPx: 42, leftOffset: '165px', color: 'text-amber-400 dark:text-amber-600 border-amber-400 dark:border-amber-600' },
+                  { label: '6L', width: '20m', heightPx: 200, leftOffset: '12px', color: 'text-purple-400 dark:text-purple-600 border-purple-400 dark:border-purple-600' },
+                  { label: '4L / 4L+PS', width: '14m', heightPx: 140, leftOffset: '50px', color: 'text-blue-400 dark:text-blue-600 border-blue-400 dark:border-blue-600' },
+                  { label: '2L+PS', width: '10m', heightPx: 100, leftOffset: '115px', color: 'text-emerald-400 dark:text-emerald-600 border-emerald-400 dark:border-emerald-600' },
+                  { label: '2L', width: '7m', heightPx: 70, leftOffset: '165px', color: 'text-amber-400 dark:text-amber-600 border-amber-400 dark:border-amber-600' },
                 ].map((spec) => (
                   <React.Fragment key={spec.label}>
                     {/* 1. Vertical Line */}
@@ -784,7 +784,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               </div>
 
               {/* TRACK 3: CENTERLINE-ALIGNED ROAD CORRIDOR */}
-              <div className="relative h-[220px] border-b border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/90 flex items-center shrink-0 overflow-hidden">
+              <div className="relative h-[340px] border-b border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/90 flex items-center shrink-0 overflow-hidden">
                 {/* Horizontal Road Centerline Guide Line */}
                 <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-slate-400/40 dark:border-white/25 z-0 pointer-events-none" />
 
@@ -1109,43 +1109,53 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                   )}
                 </div>
               ) : hoveredStretch ? (
-                <div className="space-y-1">
+                <div className="space-y-2 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2 py-0.5 bg-blue-600 text-white font-mono font-bold text-xs rounded-xs">
-                      Km {hoveredStretch.from_km} &rarr; Km {hoveredStretch.to_km}
+                    <span className="px-2.5 py-0.5 rounded font-extrabold text-xs bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200 border border-purple-200 dark:border-purple-800">
+                      {hoveredStretch.dpr_status ? 'DPR Proposal' : 'Corridor Sub-Section'}
                     </span>
-                    <span className="text-xs font-extrabold text-slate-900 dark:text-slate-200">
-                      Length: {hoveredStretch.length_km} km
+                    <span className="text-sm font-black text-slate-900 dark:text-slate-100">
+                      {hoveredStretch.important_town ? `Town / Landmark: ${hoveredStretch.important_town}` : `${hoveredStretch.lane_configuration} Corridor Stretch`}
                     </span>
-                    <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 text-xs font-bold rounded-xs border border-slate-200 dark:border-slate-700 font-mono">
+                    <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-md border border-slate-200 dark:border-slate-700 font-mono">
                       {hoveredStretch.lane_configuration}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 pt-1 flex items-center gap-4 flex-wrap">
-                    {hoveredStretch.important_town && (
-                      <span className="text-amber-700 dark:text-amber-400 font-bold">
-                        📍 Town: {hoveredStretch.important_town}
+
+                  {/* 2D Dimensions & Technical Specifications Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs bg-slate-50 dark:bg-slate-800/60 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div>
+                      <strong className="text-slate-500 block text-[10px] uppercase">Chainage Span:</strong>
+                      <span className="font-mono font-bold text-blue-700 dark:text-blue-300">
+                        Km {hoveredStretch.from_km} &rarr; Km {hoveredStretch.to_km} ({hoveredStretch.length_km} km)
                       </span>
-                    )}
-                    {hoveredStretch.row_width && (
-                      <span className="text-teal-700 dark:text-teal-400 font-bold font-mono">
-                        Right of Way: {hoveredStretch.row_width}
+                    </div>
+
+                    <div>
+                      <strong className="text-slate-500 block text-[10px] uppercase">Carriageway / ROW:</strong>
+                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                        CW: {hoveredStretch.carriageway_width || '—'} | ROW: {hoveredStretch.row_width || '—'}
                       </span>
-                    )}
-                    {hoveredStretch.carriageway_width && (
-                      <span className="text-indigo-700 dark:text-indigo-400 font-bold font-mono">
-                        Carriageway Width: {hoveredStretch.carriageway_width}
+                    </div>
+
+                    <div>
+                      <strong className="text-slate-500 block text-[10px] uppercase">Traffic Volume:</strong>
+                      <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                        {hoveredStretch.pcu_count > 0 ? `${hoveredStretch.pcu_count.toLocaleString()} PCU` : '—'}
                       </span>
-                    )}
-                    {hoveredStretch.pcu_count > 0 && (
-                      <span className="text-emerald-700 dark:text-emerald-400 font-bold font-mono">
-                        Traffic: {hoveredStretch.pcu_count.toLocaleString()} PCU
+                    </div>
+
+                    <div>
+                      <strong className="text-slate-500 block text-[10px] uppercase">DPR Sanction Status:</strong>
+                      <span className="font-bold text-purple-700 dark:text-purple-300 font-mono">
+                        {hoveredStretch.dpr_status || 'No Active DPR Proposal'}
                       </span>
-                    )}
-                  </p>
-                  {hoveredStretch.dpr_status && (
-                    <p className="text-xs italic text-purple-700 dark:text-purple-300 pt-0.5">
-                      &quot;{hoveredStretch.dpr_status}&quot;
+                    </div>
+                  </div>
+
+                  {hoveredStretch.stretch_name && (
+                    <p className="text-xs text-slate-600 dark:text-slate-300 italic pt-0.5">
+                      Section: {hoveredStretch.stretch_name}
                     </p>
                   )}
                 </div>

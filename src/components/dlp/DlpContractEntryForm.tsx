@@ -50,38 +50,38 @@ const CATEGORY_CONFIG: Record<
 > = {
   DLP: {
     label: 'Under DLP',
-    bgBadge: 'bg-emerald-100 dark:bg-emerald-950',
-    textBadge: 'text-emerald-800 dark:text-emerald-200',
-    borderCard: 'border-emerald-300 dark:border-emerald-800/60',
-    dotColor: 'bg-emerald-500',
+    bgBadge: 'bg-lime-50 dark:bg-lime-950/40',
+    textBadge: 'text-lime-800 dark:text-lime-200',
+    borderCard: 'border-lime-200 dark:border-lime-800/60',
+    dotColor: 'bg-lime-600',
   },
   CONSTRUCTION: {
     label: 'Under Construction',
-    bgBadge: 'bg-blue-100 dark:bg-blue-950',
-    textBadge: 'text-blue-800 dark:text-blue-200',
-    borderCard: 'border-blue-300 dark:border-blue-800/60',
-    dotColor: 'bg-blue-500',
+    bgBadge: 'bg-emerald-100 dark:bg-emerald-950/60',
+    textBadge: 'text-emerald-900 dark:text-emerald-100',
+    borderCard: 'border-emerald-300 dark:border-emerald-800/60',
+    dotColor: 'bg-emerald-700',
   },
   STMC: {
     label: 'Under STMC',
-    bgBadge: 'bg-amber-100 dark:bg-amber-950',
+    bgBadge: 'bg-amber-50 dark:bg-amber-950/40',
     textBadge: 'text-amber-800 dark:text-amber-200',
-    borderCard: 'border-amber-300 dark:border-amber-800/60',
+    borderCard: 'border-amber-200 dark:border-amber-800/60',
     dotColor: 'bg-amber-500',
   },
   PBMC: {
     label: 'Under PBMC',
-    bgBadge: 'bg-purple-100 dark:bg-purple-950',
+    bgBadge: 'bg-purple-50 dark:bg-purple-950/40',
     textBadge: 'text-purple-800 dark:text-purple-200',
-    borderCard: 'border-purple-300 dark:border-purple-800/60',
+    borderCard: 'border-purple-200 dark:border-purple-800/60',
     dotColor: 'bg-purple-500',
   },
   NO_DLP: {
     label: 'Under NO DLP',
-    bgBadge: 'bg-slate-200 dark:bg-slate-800',
-    textBadge: 'text-slate-800 dark:text-slate-200',
-    borderCard: 'border-slate-300 dark:border-slate-700',
-    dotColor: 'bg-slate-500',
+    bgBadge: 'bg-rose-50 dark:bg-rose-950/40',
+    textBadge: 'text-rose-700 dark:text-rose-300',
+    borderCard: 'border-rose-200 dark:border-rose-800/60',
+    dotColor: 'bg-rose-500',
   },
 };
 
@@ -242,9 +242,9 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
     const newStretch: DlpWorkStretch = {
       id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       category,
-      chainage_from_km: fromKm !== '' ? Number(fromKm) : ('' as any),
-      chainage_to_km: toKm !== '' ? Number(toKm) : ('' as any),
-      length_km: totalLengthKm,
+      chainage_from_km: '' as any,
+      chainage_to_km: '' as any,
+      length_km: 0,
       road_width_from_m: 0.0,
       road_width_to_m: '' as any,
       contractor_name: '',
@@ -741,50 +741,76 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
 
                     {/* 2D Geometry Row: Chainage Limits & Centerline Offsets */}
                     <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-slate-700/60 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                          2D Spatial Coordinates &bull; Longitudinal (Km) &amp; Lateral Width (m)
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                          <span>2D Spatial Coordinates &bull; Longitudinal (Km) &amp; Lateral Width (m)</span>
                         </span>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          Centerline = 0m
-                        </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {hasEnteredChainages ? (
+                            <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-200 border border-blue-300 dark:border-blue-700 rounded-md font-mono font-extrabold text-[11px] shadow-2xs flex items-center gap-1">
+                              <span>📍 DLP Work Range:</span>
+                              <strong className="text-blue-900 dark:text-blue-100">Km {Number(stretch.chainage_from_km).toFixed(3)} &rarr; Km {Number(stretch.chainage_to_km).toFixed(3)}</strong>
+                              <span className="text-[10px] text-blue-600 dark:text-blue-300">({Number(stretch.length_km || 0).toFixed(3)} Km)</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-mono italic">
+                              Enter From &amp; To Km to establish range
+                            </span>
+                          )}
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            Centerline = 0m
+                          </span>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
                         <div>
                           <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
-                            Chainage From (Km)
+                            Chainage From (Km) <span className="text-rose-500">*</span>
                           </label>
-                          <input
-                            type="number"
-                            step="0.001"
-                            min="0"
-                            value={stretch.chainage_from_km}
-                            onChange={(e) => handleUpdateStretch(index, 'chainage_from_km', e.target.value)}
-                            className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
-                          />
+                          <div className="relative flex items-center">
+                            <span className="absolute left-2.5 text-[10px] font-extrabold font-mono text-slate-400 select-none">
+                              Km
+                            </span>
+                            <input
+                              type="number"
+                              step="0.001"
+                              min="0"
+                              value={stretch.chainage_from_km}
+                              onChange={(e) => handleUpdateStretch(index, 'chainage_from_km', e.target.value)}
+                              placeholder="0.000"
+                              className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                            />
+                          </div>
                         </div>
 
                         <div>
                           <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
-                            Chainage To (Km)
+                            Chainage To (Km) <span className="text-rose-500">*</span>
                           </label>
-                          <input
-                            type="number"
-                            step="0.001"
-                            min="0"
-                            value={stretch.chainage_to_km}
-                            onChange={(e) => handleUpdateStretch(index, 'chainage_to_km', e.target.value)}
-                            className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
-                          />
+                          <div className="relative flex items-center">
+                            <span className="absolute left-2.5 text-[10px] font-extrabold font-mono text-slate-400 select-none">
+                              Km
+                            </span>
+                            <input
+                              type="number"
+                              step="0.001"
+                              min="0"
+                              value={stretch.chainage_to_km}
+                              onChange={(e) => handleUpdateStretch(index, 'chainage_to_km', e.target.value)}
+                              placeholder="0.000"
+                              className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                            />
+                          </div>
                         </div>
 
                         <div>
                           <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
                             Stretch Length (Km)
                           </label>
-                          <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
-                            {Number(stretch.length_km || 0).toFixed(3)} Km
+                          <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold text-blue-600 dark:text-blue-400 flex items-center justify-between">
+                            <span>{Number(stretch.length_km || 0).toFixed(3)} Km</span>
+                            {hasEnteredChainages && <span className="text-[10px] text-slate-400 font-normal">Span</span>}
                           </div>
                         </div>
 
@@ -798,7 +824,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                             value={stretch.road_width_from_m}
                             onChange={(e) => handleUpdateStretch(index, 'road_width_from_m', e.target.value)}
                             placeholder="0.00"
-                            className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
+                            className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
                           />
                         </div>
 
@@ -812,7 +838,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
                             value={stretch.road_width_to_m}
                             onChange={(e) => handleUpdateStretch(index, 'road_width_to_m', e.target.value)}
                             placeholder={hasEnteredChainages && spanAnalysis.hasMatches && spanAnalysis.isUniform ? String(spanAnalysis.minCenterlineWidthMeters) : '0.00'}
-                            className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
+                            className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
                           />
                         </div>
                       </div>

@@ -14,11 +14,11 @@ const CATEGORY_BADGES: Record<
   DlpWorkCategory,
   { label: string; bg: string; text: string }
 > = {
-  DLP: { label: 'Under DLP', bg: 'bg-emerald-100 dark:bg-emerald-950', text: 'text-emerald-800 dark:text-emerald-200' },
-  CONSTRUCTION: { label: 'Construction', bg: 'bg-blue-100 dark:bg-blue-950', text: 'text-blue-800 dark:text-blue-200' },
-  STMC: { label: 'STMC', bg: 'bg-amber-100 dark:bg-amber-950', text: 'text-amber-800 dark:text-amber-200' },
-  PBMC: { label: 'PBMC', bg: 'bg-purple-100 dark:bg-purple-950', text: 'text-purple-800 dark:text-purple-200' },
-  NO_DLP: { label: 'No DLP', bg: 'bg-slate-200 dark:bg-slate-800', text: 'text-slate-800 dark:text-slate-200' },
+  DLP: { label: 'Under DLP', bg: 'bg-lime-50 dark:bg-lime-950/40', text: 'text-lime-800 dark:text-lime-200' },
+  CONSTRUCTION: { label: 'Construction', bg: 'bg-emerald-100 dark:bg-emerald-950/60', text: 'text-emerald-900 dark:text-emerald-100' },
+  STMC: { label: 'STMC', bg: 'bg-amber-50 dark:bg-amber-950/40', text: 'text-amber-800 dark:text-amber-200' },
+  PBMC: { label: 'PBMC', bg: 'bg-purple-50 dark:bg-purple-950/40', text: 'text-purple-800 dark:text-purple-200' },
+  NO_DLP: { label: 'No DLP', bg: 'bg-rose-50 dark:bg-rose-950/40', text: 'text-rose-700 dark:text-rose-300' },
 };
 
 export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ corridor, onClose }) => {
