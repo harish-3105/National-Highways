@@ -957,10 +957,32 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                         const offsetToPx = getLateralOffsetPx(wTo);
                         const heightPx = Math.max(20, offsetToPx * 2);
 
+                        // Dynamic text scaling based on bar dimensions
+                        const isVeryCompact = widthPx < 120 || heightPx < 55;
+                        const isCompact = widthPx < 180 || heightPx < 85;
+
+                        const contractorSize = isVeryCompact
+                          ? 'text-[7px]'
+                          : isCompact
+                          ? 'text-[8.5px]'
+                          : 'text-[10px] md:text-[10.5px]';
+
+                        const workTitleSize = isVeryCompact
+                          ? 'text-[7.5px] line-clamp-2'
+                          : isCompact
+                          ? 'text-[9px] line-clamp-3'
+                          : 'text-[10.5px] md:text-[11.5px] line-clamp-4';
+
+                        const dateSize = isVeryCompact
+                          ? 'text-[7px]'
+                          : isCompact
+                          ? 'text-[8px]'
+                          : 'text-[9.5px] md:text-[10px]';
+
                         return (
                           <div
                             key={dlp.id || dIdx}
-                            className={`absolute top-1/2 -translate-y-1/2 rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex items-center justify-between overflow-hidden px-2 z-30 ${style.bg} ${style.border} ${style.text}`}
+                            className={`absolute top-1/2 -translate-y-1/2 rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex flex-col justify-between items-center text-center overflow-hidden p-1.5 z-30 ${style.bg} ${style.border} ${style.text}`}
                             style={{
                               left: `${leftPx}px`,
                               width: `${widthPx}px`,
@@ -976,20 +998,26 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                             }}
                             title={`${dlp.category} | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel} (Km ${dlp.chainage_from_km} → Km ${dlp.chainage_to_km}, Width 0 to ${wTo}m)`}
                           >
-                            {/* Left: Contractor Name */}
-                            <span className="text-[9.5px] md:text-[10.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs shrink-0 max-w-[28%] truncate pr-1 select-none">
-                              {contractorTitle}
-                            </span>
+                            {/* TOP: Contractor Name */}
+                            <div className="w-full text-center shrink-0 border-b border-white/20 pb-0.5 select-none">
+                              <span className={`${contractorSize} font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate block max-w-full leading-tight`}>
+                                {contractorTitle}
+                              </span>
+                            </div>
 
-                            {/* Middle: Name of the Work (Wrapped so everything fits inside boundary) */}
-                            <span className="text-[10px] md:text-[11px] font-black tracking-tight text-center px-1 break-words line-clamp-2 drop-shadow-xs flex-1 min-w-0 leading-tight select-none">
-                              {workTitle}
-                            </span>
+                            {/* CENTER: Name of the Work (Justified / Centered & Wrapped) */}
+                            <div className="w-full flex-1 flex items-center justify-center my-0.5 px-0.5 overflow-hidden select-none">
+                              <span className={`${workTitleSize} font-black tracking-tight text-center break-words drop-shadow-xs leading-tight`}>
+                                {workTitle}
+                              </span>
+                            </div>
 
-                            {/* Right: DLP Ended / Till Date based on type */}
-                            <span className="text-[9px] md:text-[10px] font-mono font-black text-white/95 drop-shadow-xs shrink-0 max-w-[32%] text-right truncate pl-1 select-none">
-                              {rightDateLabel}
-                            </span>
+                            {/* BOTTOM: DLP Date / Status */}
+                            <div className="w-full text-center shrink-0 border-t border-white/20 pt-0.5 select-none">
+                              <span className={`${dateSize} font-mono font-bold text-white/95 drop-shadow-xs truncate block max-w-full leading-tight`}>
+                                {rightDateLabel}
+                              </span>
+                            </div>
                           </div>
                         );
                       }
@@ -1001,11 +1029,32 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                       const topUpperPx = `calc(50% - ${offsetToPx}px)`;
                       const topLowerPx = `calc(50% + ${offsetFromPx}px)`;
 
+                      const isStripVeryCompact = widthPx < 120 || stripHeightPx < 25;
+                      const isStripCompact = widthPx < 180 || stripHeightPx < 40;
+
+                      const stripContractorSize = isStripVeryCompact
+                        ? 'text-[6.5px]'
+                        : isStripCompact
+                        ? 'text-[7.5px]'
+                        : 'text-[8.5px]';
+
+                      const stripWorkSize = isStripVeryCompact
+                        ? 'text-[7px] line-clamp-1'
+                        : isStripCompact
+                        ? 'text-[8px] line-clamp-2'
+                        : 'text-[9.5px] line-clamp-2';
+
+                      const stripDateSize = isStripVeryCompact
+                        ? 'text-[6.5px]'
+                        : isStripCompact
+                        ? 'text-[7.5px]'
+                        : 'text-[8.5px]';
+
                       return (
                         <React.Fragment key={dlp.id || dIdx}>
                           {/* Upper LHS Strip */}
                           <div
-                            className={`absolute rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex items-center justify-between overflow-hidden px-1.5 z-30 ${style.bg} ${style.border} ${style.text}`}
+                            className={`absolute rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex flex-col justify-between items-center text-center overflow-hidden p-1 z-30 ${style.bg} ${style.border} ${style.text}`}
                             style={{
                               left: `${leftPx}px`,
                               width: `${widthPx}px`,
@@ -1022,20 +1071,20 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                             }}
                             title={`LHS Widening | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel}`}
                           >
-                            <span className="text-[8.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs shrink-0 max-w-[28%] truncate pr-1 select-none">
+                            <span className={`${stripContractorSize} font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none`}>
                               {contractorTitle}
                             </span>
-                            <span className="text-[9px] font-black tracking-tight text-center px-1 break-words line-clamp-1 drop-shadow-xs flex-1 min-w-0 leading-tight select-none">
+                            <span className={`${stripWorkSize} font-black tracking-tight text-center break-words drop-shadow-xs leading-tight my-0.5 flex-1 flex items-center justify-center select-none`}>
                               {workTitle}
                             </span>
-                            <span className="text-[8.5px] font-mono font-black text-white/95 drop-shadow-xs shrink-0 max-w-[32%] text-right truncate pl-1 select-none">
+                            <span className={`${stripDateSize} font-mono font-bold text-white/95 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none`}>
                               {rightDateLabel}
                             </span>
                           </div>
 
                           {/* Lower RHS Strip */}
                           <div
-                            className={`absolute rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex items-center justify-between overflow-hidden px-1.5 z-30 ${style.bg} ${style.border} ${style.text}`}
+                            className={`absolute rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex flex-col justify-between items-center text-center overflow-hidden p-1 z-30 ${style.bg} ${style.border} ${style.text}`}
                             style={{
                               left: `${leftPx}px`,
                               width: `${widthPx}px`,
@@ -1052,13 +1101,13 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                             }}
                             title={`RHS Widening | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel}`}
                           >
-                            <span className="text-[8.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs shrink-0 max-w-[28%] truncate pr-1 select-none">
+                            <span className={`${stripContractorSize} font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none`}>
                               {contractorTitle}
                             </span>
-                            <span className="text-[9px] font-black tracking-tight text-center px-1 break-words line-clamp-1 drop-shadow-xs flex-1 min-w-0 leading-tight select-none">
+                            <span className={`${stripWorkSize} font-black tracking-tight text-center break-words drop-shadow-xs leading-tight my-0.5 flex-1 flex items-center justify-center select-none`}>
                               {workTitle}
                             </span>
-                            <span className="text-[8.5px] font-mono font-black text-white/95 drop-shadow-xs shrink-0 max-w-[32%] text-right truncate pl-1 select-none">
+                            <span className={`${stripDateSize} font-mono font-bold text-white/95 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none`}>
                               {rightDateLabel}
                             </span>
                           </div>
