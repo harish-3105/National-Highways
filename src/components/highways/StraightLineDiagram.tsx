@@ -746,7 +746,14 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                         key={st.id || i}
                         className="absolute h-full top-0 border-r border-slate-200 dark:border-slate-800 flex items-center justify-center px-1 text-[11px] font-bold text-amber-700 dark:text-amber-300 truncate cursor-pointer hover:bg-amber-100/50 dark:hover:bg-amber-950/40 transition-colors"
                         style={{ left: `${leftPx}px`, width: `${widthPx}px` }}
-                        onClick={() => setHoveredStretch(st)}
+                        onMouseEnter={() => {
+                          setHoveredDlpStretch(null);
+                          setHoveredStretch(st);
+                        }}
+                        onClick={() => {
+                          setHoveredDlpStretch(null);
+                          setHoveredStretch(st);
+                        }}
                       >
                         {st.important_town ? (
                           <span className="px-2 py-1 bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 rounded-xs flex items-center gap-1 truncate max-w-full shadow-2xs font-semibold">
@@ -770,8 +777,16 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                   return (
                     <div
                       key={st.id || i}
-                      className="absolute h-full border-r border-slate-300 dark:border-slate-700 flex items-center justify-between px-2 text-[10px] font-mono font-bold text-blue-700 dark:text-blue-300 overflow-hidden"
+                      className="absolute h-full border-r border-slate-300 dark:border-slate-700 flex items-center justify-between px-2 text-[10px] font-mono font-bold text-blue-700 dark:text-blue-300 overflow-hidden cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-950/30 transition-colors"
                       style={{ left: `${leftPx}px`, width: `${widthPx}px` }}
+                      onMouseEnter={() => {
+                        setHoveredDlpStretch(null);
+                        setHoveredStretch(st);
+                      }}
+                      onClick={() => {
+                        setHoveredDlpStretch(null);
+                        setHoveredStretch(st);
+                      }}
                     >
                       <span className="truncate">Km {st.from_km}</span>
                       <span className="text-slate-600 dark:text-slate-400 text-[9px] bg-white dark:bg-slate-900 px-1 py-0.5 rounded-xs border border-slate-200 dark:border-slate-700 shrink-0 font-sans font-semibold">
@@ -808,8 +823,14 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                             width: `${widthPx}px`,
                             height: `${style.heightPx}px`,
                           }}
-                          onMouseEnter={() => setHoveredStretch(st)}
-                          onClick={() => setHoveredStretch(st)}
+                          onMouseEnter={() => {
+                            setHoveredDlpStretch(null);
+                            setHoveredStretch(st);
+                          }}
+                          onClick={() => {
+                            setHoveredDlpStretch(null);
+                            setHoveredStretch(st);
+                          }}
                           title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.length_km} km, ${st.lane_configuration}) - ${st.dpr_status || st.important_town || 'Baseline Stretch'}`}
                         >
                           <span className="text-[10px] font-extrabold font-mono text-slate-800 dark:text-slate-200 print:text-slate-900 truncate select-none px-1">
@@ -842,9 +863,11 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                               height: `${heightPx}px`,
                             }}
                             onMouseEnter={() => {
+                              setHoveredStretch(null);
                               setHoveredDlpStretch(dlp);
                             }}
                             onClick={() => {
+                              setHoveredStretch(null);
                               setHoveredDlpStretch(dlp);
                             }}
                             title={`${dlp.category}: ${workTitle} (Km ${dlp.chainage_from_km} → Km ${dlp.chainage_to_km}, Width 0 to ${wTo}m)`}
@@ -875,9 +898,11 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                               height: `${stripHeightPx}px`,
                             }}
                             onMouseEnter={() => {
+                              setHoveredStretch(null);
                               setHoveredDlpStretch(dlp);
                             }}
                             onClick={() => {
+                              setHoveredStretch(null);
                               setHoveredDlpStretch(dlp);
                             }}
                             title={`LHS Widening: ${workTitle}`}
@@ -897,9 +922,11 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                               height: `${stripHeightPx}px`,
                             }}
                             onMouseEnter={() => {
+                              setHoveredStretch(null);
                               setHoveredDlpStretch(dlp);
                             }}
                             onClick={() => {
+                              setHoveredStretch(null);
                               setHoveredDlpStretch(dlp);
                             }}
                             title={`RHS Widening: ${workTitle}`}
@@ -948,8 +975,16 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     return (
                       <div
                         key={st.id || i}
-                        className="absolute h-full top-0 border-r border-slate-200 dark:border-slate-800 flex items-center justify-center px-1 text-[10px] font-bold truncate"
+                        className="absolute h-full top-0 border-r border-slate-200 dark:border-slate-800 flex items-center justify-center px-1 text-[10px] font-bold truncate cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 transition-colors"
                         style={{ left: `${leftPx}px`, width: `${widthPx}px` }}
+                        onMouseEnter={() => {
+                          setHoveredDlpStretch(null);
+                          setHoveredStretch(st);
+                        }}
+                        onClick={() => {
+                          setHoveredDlpStretch(null);
+                          setHoveredStretch(st);
+                        }}
                       >
                         {specLabel ? (
                           <span className={`px-2 py-1 border rounded-xs truncate max-w-full font-mono shadow-2xs flex items-center justify-center gap-1 ${badgeStyle}`}>
@@ -974,8 +1009,16 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     return (
                       <div
                         key={st.id || i}
-                        className="absolute h-full top-0 border-r border-slate-200 dark:border-slate-800 flex items-center justify-center px-1 text-[10px] font-mono font-bold truncate"
+                        className="absolute h-full top-0 border-r border-slate-200 dark:border-slate-800 flex items-center justify-center px-1 text-[10px] font-mono font-bold truncate cursor-pointer hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30 transition-colors"
                         style={{ left: `${leftPx}px`, width: `${widthPx}px` }}
+                        onMouseEnter={() => {
+                          setHoveredDlpStretch(null);
+                          setHoveredStretch(st);
+                        }}
+                        onClick={() => {
+                          setHoveredDlpStretch(null);
+                          setHoveredStretch(st);
+                        }}
                       >
                         {st.pcu_count && st.pcu_count > 0 ? (
                           <span className={`px-2 py-0.5 border rounded-xs truncate ${pcuStyle}`}>
@@ -999,8 +1042,16 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     return (
                       <div
                         key={st.id || i}
-                        className="absolute h-full top-0 border-r border-slate-200 dark:border-slate-800 flex items-center justify-center px-1 text-[10px] font-bold truncate"
+                        className="absolute h-full top-0 border-r border-slate-200 dark:border-slate-800 flex items-center justify-center px-1 text-[10px] font-bold truncate cursor-pointer hover:bg-teal-50/50 dark:hover:bg-teal-950/30 transition-colors"
                         style={{ left: `${leftPx}px`, width: `${widthPx}px` }}
+                        onMouseEnter={() => {
+                          setHoveredDlpStretch(null);
+                          setHoveredStretch(st);
+                        }}
+                        onClick={() => {
+                          setHoveredDlpStretch(null);
+                          setHoveredStretch(st);
+                        }}
                       >
                         {st.row_width ? (
                           <span className="px-2 py-0.5 bg-teal-50 dark:bg-teal-950/70 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-500/40 rounded-xs truncate max-w-full font-mono">
@@ -1026,7 +1077,14 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                         key={st.id || i}
                         className="absolute h-full top-0 border-r border-slate-200 dark:border-slate-800 flex items-center justify-center px-1.5 text-[10px] font-semibold truncate cursor-pointer hover:bg-purple-100/50 dark:hover:bg-purple-950/40 transition-colors"
                         style={{ left: `${leftPx}px`, width: `${widthPx}px` }}
-                        onClick={() => setHoveredStretch(st)}
+                        onMouseEnter={() => {
+                          setHoveredDlpStretch(null);
+                          setHoveredStretch(st);
+                        }}
+                        onClick={() => {
+                          setHoveredDlpStretch(null);
+                          setHoveredStretch(st);
+                        }}
                       >
                         {st.dpr_status ? (
                           <span className="px-2 py-1 bg-purple-50 dark:bg-purple-950/80 text-purple-800 dark:text-purple-200 border border-purple-200 dark:border-purple-500/50 rounded-xs flex items-center gap-1 truncate max-w-full shadow-2xs">
