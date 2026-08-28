@@ -911,30 +911,20 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                             }}
                             title={`${dlp.category} | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel} (Km ${dlp.chainage_from_km} → Km ${dlp.chainage_to_km}, Width 0 to ${wTo}m)`}
                           >
-                            {/* Left: Contractor Name + Start Km */}
-                            <div className="flex items-center gap-1 shrink-0 max-w-[32%] truncate pr-1 select-none">
-                              <span className="px-1 py-0.5 rounded bg-black/30 text-white font-mono text-[9px] font-black shrink-0 border border-white/20">
-                                Km {dlp.chainage_from_km}
-                              </span>
-                              <span className="text-[9.5px] md:text-[10.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate">
-                                {contractorTitle}
-                              </span>
-                            </div>
+                            {/* Left: Contractor Name */}
+                            <span className="text-[9.5px] md:text-[10.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs shrink-0 max-w-[28%] truncate pr-1 select-none">
+                              {contractorTitle}
+                            </span>
 
                             {/* Middle: Name of the Work (Wrapped so everything fits inside boundary) */}
                             <span className="text-[10px] md:text-[11px] font-black tracking-tight text-center px-1 break-words line-clamp-2 drop-shadow-xs flex-1 min-w-0 leading-tight select-none">
                               {workTitle}
                             </span>
 
-                            {/* Right: DLP Ended / Till Date based on type + End Km */}
-                            <div className="flex items-center justify-end gap-1 shrink-0 max-w-[35%] truncate pl-1 select-none text-right">
-                              <span className="text-[9px] md:text-[10px] font-mono font-black text-white/95 drop-shadow-xs truncate">
-                                {rightDateLabel}
-                              </span>
-                              <span className="px-1 py-0.5 rounded bg-black/30 text-white font-mono text-[9px] font-black shrink-0 border border-white/20">
-                                Km {dlp.chainage_to_km}
-                              </span>
-                            </div>
+                            {/* Right: DLP Ended / Till Date based on type */}
+                            <span className="text-[9px] md:text-[10px] font-mono font-black text-white/95 drop-shadow-xs shrink-0 max-w-[32%] text-right truncate pl-1 select-none">
+                              {rightDateLabel}
+                            </span>
                           </div>
                         );
                       }
@@ -967,17 +957,15 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                             }}
                             title={`LHS Widening | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel}`}
                           >
-                            <div className="flex items-center gap-1 shrink-0 max-w-[32%] truncate pr-1 select-none">
-                              <span className="px-1 py-0.2 bg-black/30 rounded text-[8px] font-mono font-black">Km {dlp.chainage_from_km}</span>
-                              <span className="text-[8.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate">{contractorTitle}</span>
-                            </div>
+                            <span className="text-[8.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs shrink-0 max-w-[28%] truncate pr-1 select-none">
+                              {contractorTitle}
+                            </span>
                             <span className="text-[9px] font-black tracking-tight text-center px-1 break-words line-clamp-1 drop-shadow-xs flex-1 min-w-0 leading-tight select-none">
                               {workTitle}
                             </span>
-                            <div className="flex items-center justify-end gap-1 shrink-0 max-w-[35%] truncate pl-1 select-none text-right">
-                              <span className="text-[8.5px] font-mono font-black text-white/95 drop-shadow-xs truncate">{rightDateLabel}</span>
-                              <span className="px-1 py-0.2 bg-black/30 rounded text-[8px] font-mono font-black">Km {dlp.chainage_to_km}</span>
-                            </div>
+                            <span className="text-[8.5px] font-mono font-black text-white/95 drop-shadow-xs shrink-0 max-w-[32%] text-right truncate pl-1 select-none">
+                              {rightDateLabel}
+                            </span>
                           </div>
 
                           {/* Lower RHS Strip */}
@@ -999,17 +987,15 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                             }}
                             title={`RHS Widening | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel}`}
                           >
-                            <div className="flex items-center gap-1 shrink-0 max-w-[32%] truncate pr-1 select-none">
-                              <span className="px-1 py-0.2 bg-black/30 rounded text-[8px] font-mono font-black">Km {dlp.chainage_from_km}</span>
-                              <span className="text-[8.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate">{contractorTitle}</span>
-                            </div>
+                            <span className="text-[8.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs shrink-0 max-w-[28%] truncate pr-1 select-none">
+                              {contractorTitle}
+                            </span>
                             <span className="text-[9px] font-black tracking-tight text-center px-1 break-words line-clamp-1 drop-shadow-xs flex-1 min-w-0 leading-tight select-none">
                               {workTitle}
                             </span>
-                            <div className="flex items-center justify-end gap-1 shrink-0 max-w-[35%] truncate pl-1 select-none text-right">
-                              <span className="text-[8.5px] font-mono font-black text-white/95 drop-shadow-xs truncate">{rightDateLabel}</span>
-                              <span className="px-1 py-0.2 bg-black/30 rounded text-[8px] font-mono font-black">Km {dlp.chainage_to_km}</span>
-                            </div>
+                            <span className="text-[8.5px] font-mono font-black text-white/95 drop-shadow-xs shrink-0 max-w-[32%] text-right truncate pl-1 select-none">
+                              {rightDateLabel}
+                            </span>
                           </div>
                         </React.Fragment>
                       );
