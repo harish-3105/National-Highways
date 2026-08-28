@@ -850,6 +850,27 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                       const wFrom = Number(dlp.road_width_from_m ?? 0);
                       const wTo = Number(dlp.road_width_to_m ?? 3.5);
 
+                      const sFrom = Number(dlp.chainage_from_km || 0);
+                      const sTo = Number(dlp.chainage_to_km || 0);
+
+                      // Deduplicate milestone pins: If an earlier stretch in the list already shares the start or end chainage, don't re-render it
+                      const hasEarlierPinAtStart = dlpStretches.some((other, oIdx) => {
+                        if (oIdx >= dIdx) return false;
+                        const oFrom = Number(other.chainage_from_km || 0);
+                        const oTo = Number(other.chainage_to_km || 0);
+                        return Math.abs(oFrom - sFrom) < 0.005 || Math.abs(oTo - sFrom) < 0.005;
+                      });
+
+                      const hasEarlierPinAtEnd = dlpStretches.some((other, oIdx) => {
+                        if (oIdx >= dIdx) return false;
+                        const oFrom = Number(other.chainage_from_km || 0);
+                        const oTo = Number(other.chainage_to_km || 0);
+                        return Math.abs(oFrom - sTo) < 0.005 || Math.abs(oTo - sTo) < 0.005;
+                      });
+
+                      const showStartPin = !hasEarlierPinAtStart;
+                      const showEndPin = !hasEarlierPinAtEnd;
+
                       const rightDateLabel = dlp.category === 'NO_DLP'
                         ? `DLP Ended: ${formatDateIndian(dlp.dlp_ended_on_date || dlp.dlp_till_date)}`
                         : dlp.category === 'CONSTRUCTION'
@@ -871,15 +892,19 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                               height: `${heightPx}px`,
                             }}
                           >
-                            {/* Top Left Milestone Pin */}
-                            <span className="absolute -top-3.5 left-0 -translate-x-1/2 px-1.5 py-0.2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 rounded-sm text-[8px] font-mono font-black shadow-md z-40 flex items-center gap-0.5 whitespace-nowrap border border-white/40 pointer-events-none">
-                              📍 Km {dlp.chainage_from_km}
-                            </span>
+                            {/* Top Left Milestone Pin (Render once) */}
+                            {showStartPin && (
+                              <span className="absolute -top-3.5 left-0 -translate-x-1/2 px-1.5 py-0.2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 rounded-sm text-[8px] font-mono font-black shadow-md z-40 flex items-center gap-0.5 whitespace-nowrap border border-white/40 pointer-events-none">
+                                📍 Km {dlp.chainage_from_km}
+                              </span>
+                            )}
 
-                            {/* Top Right Milestone Pin */}
-                            <span className="absolute -top-3.5 right-0 translate-x-1/2 px-1.5 py-0.2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 rounded-sm text-[8px] font-mono font-black shadow-md z-40 flex items-center gap-0.5 whitespace-nowrap border border-white/40 pointer-events-none">
-                              📍 Km {dlp.chainage_to_km}
-                            </span>
+                            {/* Top Right Milestone Pin (Render once) */}
+                            {showEndPin && (
+                              <span className="absolute -top-3.5 right-0 translate-x-1/2 px-1.5 py-0.2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 rounded-sm text-[8px] font-mono font-black shadow-md z-40 flex items-center gap-0.5 whitespace-nowrap border border-white/40 pointer-events-none">
+                                📍 Km {dlp.chainage_to_km}
+                              </span>
+                            )}
 
                             {/* Work Boundary Bar */}
                             <div
@@ -932,12 +957,16 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                               height: `${stripHeightPx}px`,
                             }}
                           >
-                            <span className="absolute -top-3 left-0 -translate-x-1/2 px-1 py-0.2 bg-slate-900 text-white rounded text-[7.5px] font-mono font-black shadow-md z-40 whitespace-nowrap pointer-events-none">
-                              📍 Km {dlp.chainage_from_km}
-                            </span>
-                            <span className="absolute -top-3 right-0 translate-x-1/2 px-1 py-0.2 bg-slate-900 text-white rounded text-[7.5px] font-mono font-black shadow-md z-40 whitespace-nowrap pointer-events-none">
-                              📍 Km {dlp.chainage_to_km}
-                            </span>
+                            {showStartPin && (
+                              <span className="absolute -top-3 left-0 -translate-x-1/2 px-1 py-0.2 bg-slate-900 text-white rounded text-[7.5px] font-mono font-black shadow-md z-40 whitespace-nowrap pointer-events-none">
+                                📍 Km {dlp.chainage_from_km}
+                              </span>
+                            )}
+                            {showEndPin && (
+                              <span className="absolute -top-3 right-0 translate-x-1/2 px-1 py-0.2 bg-slate-900 text-white rounded text-[7.5px] font-mono font-black shadow-md z-40 whitespace-nowrap pointer-events-none">
+                                📍 Km {dlp.chainage_to_km}
+                              </span>
+                            )}
                             <div
                               className={`w-full h-full rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex items-center justify-between overflow-hidden px-1.5 ${style.bg} ${style.border} ${style.text}`}
                               onMouseEnter={() => {
@@ -972,12 +1001,16 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                               height: `${stripHeightPx}px`,
                             }}
                           >
-                            <span className="absolute -bottom-3 left-0 -translate-x-1/2 px-1 py-0.2 bg-slate-900 text-white rounded text-[7.5px] font-mono font-black shadow-md z-40 whitespace-nowrap pointer-events-none">
-                              📍 Km {dlp.chainage_from_km}
-                            </span>
-                            <span className="absolute -bottom-3 right-0 translate-x-1/2 px-1 py-0.2 bg-slate-900 text-white rounded text-[7.5px] font-mono font-black shadow-md z-40 whitespace-nowrap pointer-events-none">
-                              📍 Km {dlp.chainage_to_km}
-                            </span>
+                            {showStartPin && (
+                              <span className="absolute -bottom-3 left-0 -translate-x-1/2 px-1 py-0.2 bg-slate-900 text-white rounded text-[7.5px] font-mono font-black shadow-md z-40 whitespace-nowrap pointer-events-none">
+                                📍 Km {dlp.chainage_from_km}
+                              </span>
+                            )}
+                            {showEndPin && (
+                              <span className="absolute -bottom-3 right-0 translate-x-1/2 px-1 py-0.2 bg-slate-900 text-white rounded text-[7.5px] font-mono font-black shadow-md z-40 whitespace-nowrap pointer-events-none">
+                                📍 Km {dlp.chainage_to_km}
+                              </span>
+                            )}
                             <div
                               className={`w-full h-full rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex items-center justify-between overflow-hidden px-1.5 ${style.bg} ${style.border} ${style.text}`}
                               onMouseEnter={() => {
