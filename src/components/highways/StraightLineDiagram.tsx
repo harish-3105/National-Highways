@@ -999,7 +999,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                             title={`${dlp.category} | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel} (Km ${dlp.chainage_from_km} → Km ${dlp.chainage_to_km}, Width 0 to ${wTo}m)`}
                           >
                             {/* TOP: Contractor Name */}
-                            <div className="w-full text-center shrink-0 border-b border-white/20 pb-0.5 select-none">
+                            <div className="w-full text-center shrink-0 select-none">
                               <span className={`${contractorSize} font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate block max-w-full leading-tight`}>
                                 {contractorTitle}
                               </span>
@@ -1013,7 +1013,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                             </div>
 
                             {/* BOTTOM: DLP Date / Status */}
-                            <div className="w-full text-center shrink-0 border-t border-white/20 pt-0.5 select-none">
+                            <div className="w-full text-center shrink-0 select-none">
                               <span className={`${dateSize} font-mono font-bold text-white/95 drop-shadow-xs truncate block max-w-full leading-tight`}>
                                 {rightDateLabel}
                               </span>
