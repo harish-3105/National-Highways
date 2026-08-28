@@ -886,19 +886,36 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 {/* Horizontal Road Centerline Guide Line */}
                 <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-slate-400/40 dark:border-white/25 z-0 pointer-events-none" />
 
-                {/* Top-Ceiling Uniform Milestone Pins for DLP Work Boundaries (Uniform Height above all lane configurations) */}
-                {uniqueDlpPins.map((pin) => (
-                  <div
-                    key={`dlp-pin-${pin.km}`}
-                    className="absolute top-2 -translate-x-1/2 z-40 pointer-events-none flex flex-col items-center select-none"
-                    style={{ left: `${pin.xPx}px` }}
-                  >
-                    <span className="px-1.5 py-0.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 rounded-sm text-[8.5px] font-mono font-black shadow-md flex items-center gap-0.5 whitespace-nowrap border border-white/40">
-                      📍 Km {pin.km}
-                    </span>
-                    <div className="w-px h-10 border-l border-dashed border-slate-400/60 dark:border-slate-500/60" />
-                  </div>
-                ))}
+                {/* Top-Ceiling Uniform Milestone Pins for DLP Work Boundaries (Edge-Aware Clamped) */}
+                {uniqueDlpPins.map((pin) => {
+                  const isLeftEdge = pin.xPx <= 24;
+                  const isRightEdge = canvasWidthPxActual - pin.xPx <= 24;
+
+                  const translateClass = isLeftEdge
+                    ? 'translate-x-0 items-start'
+                    : isRightEdge
+                    ? '-translate-x-full items-end'
+                    : '-translate-x-1/2 items-center';
+
+                  const guidelinePos = isLeftEdge
+                    ? 'left-0'
+                    : isRightEdge
+                    ? 'right-0'
+                    : 'left-1/2 -translate-x-1/2';
+
+                  return (
+                    <div
+                      key={`dlp-pin-${pin.km}`}
+                      className={`absolute top-2 z-40 pointer-events-none flex flex-col select-none ${translateClass}`}
+                      style={{ left: `${pin.xPx}px` }}
+                    >
+                      <span className="px-1.5 py-0.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 rounded-sm text-[8.5px] font-mono font-black shadow-md flex items-center gap-0.5 whitespace-nowrap border border-white/40">
+                        📍 Km {pin.km}
+                      </span>
+                      <div className={`w-px h-10 border-l border-dashed border-slate-400/60 dark:border-slate-500/60 relative ${guidelinePos}`} />
+                    </div>
+                  );
+                })}
 
                 {activeStretches.length === 0 && dlpStretches.length === 0 ? (
                   <div className="w-full text-center text-xs text-slate-400 py-8">
