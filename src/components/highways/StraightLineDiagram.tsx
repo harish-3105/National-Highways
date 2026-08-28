@@ -886,20 +886,20 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 {/* Horizontal Road Centerline Guide Line */}
                 <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-slate-400/40 dark:border-white/25 z-0 pointer-events-none" />
 
-                {/* Top-Ceiling Uniform Milestone Pins for DLP Work Boundaries (Edge-Aware Clamped) */}
+                {/* Top-Ceiling Uniform Milestone Pins for DLP Work Boundaries */}
                 {uniqueDlpPins.map((pin) => {
-                  const isLeftEdge = pin.xPx <= 24;
-                  const isRightEdge = canvasWidthPxActual - pin.xPx <= 24;
+                  const isStartEdge = Math.abs(pin.xPx) < 1;
+                  const isEndEdge = Math.abs(pin.xPx - canvasWidthPxActual) < 1;
 
-                  const translateClass = isLeftEdge
+                  const translateClass = isStartEdge
                     ? 'translate-x-0 items-start'
-                    : isRightEdge
+                    : isEndEdge
                     ? '-translate-x-full items-end'
                     : '-translate-x-1/2 items-center';
 
-                  const guidelinePos = isLeftEdge
+                  const guidelinePos = isStartEdge
                     ? 'left-0'
-                    : isRightEdge
+                    : isEndEdge
                     ? 'right-0'
                     : 'left-1/2 -translate-x-1/2';
 
