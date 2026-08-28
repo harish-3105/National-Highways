@@ -139,8 +139,15 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     id: initial?.id,
     caseClassification: initial?.caseClassification || 'Normal Case',
     appealInfo: initial?.appealInfo
-      ? { ...initial.appealInfo }
+      ? {
+          ...initial.appealInfo,
+          appealCaseDetails:
+            initial.appealInfo.appealCaseDetails ||
+            [initial.appealInfo.appealCaseType, initial.appealInfo.appealCaseNumber, initial.appealInfo.appealYear].filter(Boolean).join(' ') ||
+            '',
+        }
       : {
+          appealCaseDetails: '',
           appealCaseType: '',
           appealCaseNumber: '',
           appealYear: '',
@@ -151,6 +158,11 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
           delayPeriodDays: 0,
           condonationOfDelay: '',
         },
+    caseDetails:
+      initial?.caseDetails ||
+      [initial?.caseType, initial?.caseNumber, initial?.caseYear].filter(Boolean).join(' ') ||
+      '',
+    appealCaseDetails: initial?.appealCaseDetails || '',
     caseType: initial?.caseType || '',
     circle: initial?.circle || '',
     division: initial?.division || '',
@@ -166,6 +178,10 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     baseCircle: initial?.baseCircle || '',
     baseDivision: initial?.baseDivision || '',
     baseCourtName: initial?.baseCourtName || '',
+    baseCaseDetails:
+      initial?.baseCaseDetails ||
+      [initial?.baseCaseType, initial?.baseCaseNumber, initial?.baseCaseYear].filter(Boolean).join(' ') ||
+      '',
     baseCaseType: initial?.baseCaseType || '',
     baseCaseNumber: initial?.baseCaseNumber || '',
     baseCaseYear: initial?.baseCaseYear || '',
@@ -369,11 +385,17 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
     const matched = existingCases.find((c) => c.id === caseId);
     if (matched) {
+      const bCaseDetails =
+        matched.caseDetails ||
+        [matched.caseType, matched.caseNumber, matched.caseYear].filter(Boolean).join(' ') ||
+        '';
+
       setFormData((prev) => ({
         ...prev,
         baseCircle: matched.circle || '',
         baseDivision: matched.division || '',
         baseCourtName: matched.nameOfCourt || '',
+        baseCaseDetails: bCaseDetails,
         baseCaseType: matched.caseType || '',
         baseCaseNumber: matched.caseNumber || '',
         baseCaseYear: matched.caseYear || '',
@@ -392,6 +414,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
           'baseCircle',
           'baseDivision',
           'baseCourtName',
+          'baseCaseDetails',
           'baseCaseType',
           'baseCaseNumber',
           'baseCaseYear',
@@ -419,17 +442,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       if (!formData.circle?.trim()) stageErrors.circle = 'Circle Jurisdiction is required.';
       if (!formData.division?.trim()) stageErrors.division = 'Division Jurisdiction is required.';
       if (!formData.nameOfCourt?.trim()) stageErrors.nameOfCourt = 'Name of Court / Forum is required.';
-      if (!formData.caseType?.trim()) stageErrors.caseType = 'Case Type is required.';
-      if (!formData.caseNumber?.trim()) stageErrors.caseNumber = 'Case Number is required.';
-      if (!formData.caseYear?.trim()) {
-        stageErrors.caseYear = 'Case Filing Year is required.';
-      } else {
-        const yr = Number(formData.caseYear);
-        const currentYear = new Date().getFullYear();
-        if (isNaN(yr) || yr < 1900 || yr > currentYear) {
-          stageErrors.caseYear = `Case Year must be a valid 4-digit year (up to ${currentYear}).`;
-        }
-      }
+      if (!formData.caseDetails?.trim()) stageErrors.caseDetails = 'Case Details / Particulars is required.';
       if (!formData.petitionerNames?.trim()) stageErrors.petitionerNames = 'Petitioner Name(s) is required.';
       if (!formData.respondentNames?.trim()) stageErrors.respondentNames = 'Respondent Name(s) is required.';
       if (!formData.casePertainsTo?.trim()) stageErrors.casePertainsTo = 'Case Pertains To is required.';
@@ -443,18 +456,8 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       if (!formData.briefOfPrayer?.trim()) stageErrors.briefOfPrayer = 'Brief of Prayer is required.';
     } else if (stageDef.id === 'appeal_registry') {
       // Stage 1 for Appeal Case (Fully Mandatory)
-      if (!formData.appealInfo?.appealCaseType?.trim()) stageErrors.appealCaseType = 'Appeal Case Type is required.';
       if (!formData.appealInfo?.appellateCourt?.trim()) stageErrors.appellateCourt = 'Appellate Court is required.';
-      if (!formData.appealInfo?.appealCaseNumber?.trim()) stageErrors.appealCaseNumber = 'Appeal Case Number is required.';
-      if (!formData.appealInfo?.appealYear?.trim()) {
-        stageErrors.appealYear = 'Appeal Year is required.';
-      } else {
-        const yr = Number(formData.appealInfo.appealYear);
-        const currentYear = new Date().getFullYear();
-        if (isNaN(yr) || yr < 1900 || yr > currentYear) {
-          stageErrors.appealYear = `Appeal Year must be a valid 4-digit year (up to ${currentYear}).`;
-        }
-      }
+      if (!formData.appealInfo?.appealCaseDetails?.trim()) stageErrors.appealCaseDetails = 'Appeal Case Details / Particulars is required.';
       if (!formData.appealInfo?.appealFilingDate?.trim()) stageErrors.appealFilingDate = 'Appeal Filing Date is required.';
       if (!formData.appealInfo?.limitationDueDate?.trim()) stageErrors.limitationDueDate = 'Limitation Due Date is required.';
       if (!formData.appealInfo?.condonationOfDelay?.trim()) stageErrors.condonationOfDelay = 'Condonation of Delay is required.';
@@ -477,17 +480,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       if (!formData.baseCircle?.trim()) stageErrors.baseCircle = 'Base Circle Jurisdiction is required.';
       if (!formData.baseDivision?.trim()) stageErrors.baseDivision = 'Base Division Jurisdiction is required.';
       if (!formData.baseCourtName?.trim()) stageErrors.baseCourtName = 'Base / Lower Court Name is required.';
-      if (!formData.baseCaseType?.trim()) stageErrors.baseCaseType = 'Base Case Type is required.';
-      if (!formData.baseCaseNumber?.trim()) stageErrors.baseCaseNumber = 'Base Case Number is required.';
-      if (!formData.baseCaseYear?.trim()) {
-        stageErrors.baseCaseYear = 'Base Case Filing Year is required.';
-      } else {
-        const yr = Number(formData.baseCaseYear);
-        const currentYear = new Date().getFullYear();
-        if (isNaN(yr) || yr < 1900 || yr > currentYear) {
-          stageErrors.baseCaseYear = `Base Case Year must be a valid 4-digit year (up to ${currentYear}).`;
-        }
-      }
+      if (!formData.baseCaseDetails?.trim()) stageErrors.baseCaseDetails = 'Base / Original Case Details is required.';
       if (!formData.basePetitionerNames?.trim()) stageErrors.basePetitionerNames = 'Base Petitioner Name(s) is required.';
       if (!formData.baseRespondentNames?.trim()) stageErrors.baseRespondentNames = 'Base Respondent Name(s) is required.';
       if (!formData.baseCasePertainsTo?.trim()) stageErrors.baseCasePertainsTo = 'Base Case Pertains To is required.';
@@ -559,7 +552,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     }
 
     return stageErrors;
-  }, [stages, formData]);
+  }, [formData, stages]);
 
   const isStageAccessible = (targetStageIdx: number): boolean => {
     if (targetStageIdx === 0) return true;
@@ -576,11 +569,10 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
     if (stageDef.id === 'case_registry') {
       return Boolean(
-        formData.caseNumber.trim() &&
+        formData.caseDetails?.trim() &&
         formData.circle &&
         formData.division &&
         formData.nameOfCourt &&
-        formData.caseType &&
         formData.petitionerNames.trim() &&
         formData.respondentNames.trim() &&
         formData.briefOfPrayer.trim() &&
@@ -589,8 +581,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     }
     if (stageDef.id === 'appeal_registry') {
       return Boolean(
-        formData.appealInfo?.appealCaseNumber?.trim() &&
-        formData.appealInfo?.appealCaseType &&
+        formData.appealInfo?.appealCaseDetails?.trim() &&
         formData.appealInfo?.appellateCourt &&
         formData.petitionerNames.trim() &&
         formData.respondentNames.trim() &&
@@ -600,9 +591,8 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     }
     if (stageDef.id === 'base_case_details') {
       return Boolean(
-        formData.baseCaseNumber?.trim() &&
+        formData.baseCaseDetails?.trim() &&
         formData.baseCourtName &&
-        formData.baseCaseType &&
         formData.basePetitionerNames?.trim() &&
         formData.baseRespondentNames?.trim() &&
         formData.baseBriefOfPrayer?.trim() &&
@@ -671,9 +661,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       // Sync caseNumber and nameOfCourt for appeal cases if needed
       const payloadToSave: LegalCaseData = { ...formData };
       if (isAppeal && formData.appealInfo) {
-        payloadToSave.caseNumber = formData.appealInfo.appealCaseNumber || formData.caseNumber;
-        payloadToSave.caseYear = formData.appealInfo.appealYear || formData.caseYear;
-        payloadToSave.caseType = formData.appealInfo.appealCaseType || formData.caseType;
+        payloadToSave.caseDetails = formData.appealInfo.appealCaseDetails || formData.caseDetails;
+        payloadToSave.appealCaseDetails = formData.appealInfo.appealCaseDetails || formData.appealCaseDetails;
+        payloadToSave.caseNumber = formData.appealInfo.appealCaseDetails || formData.caseNumber;
         payloadToSave.nameOfCourt = formData.appealInfo.appellateCourt || formData.nameOfCourt;
       }
       onSave(payloadToSave);
@@ -688,7 +678,15 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     formData.natureOfCase?.toLowerCase() === 'other';
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-6 pb-12">
+    <form
+      onSubmit={handleSubmit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+          e.preventDefault();
+        }
+      }}
+      className="max-w-7xl mx-auto space-y-6 pb-12"
+    >
       {/* Top Header Bar */}
       <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -878,47 +876,19 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
-              {/* Case Registry Specifics */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Case Type <span className="text-rose-500">*</span>
-                  </label>
-                  <SearchableSelect
-                    options={caseTypes}
-                    value={formData.caseType}
-                    onChange={(val) => handleChange('caseType', val)}
-                  />
-                  {errors.caseType && <p className="text-[11px] text-rose-500 mt-1">{errors.caseType}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Case Number <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.caseNumber}
-                    onChange={(e) => handleChange('caseNumber', e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    required
-                  />
-                  {errors.caseNumber && <p className="text-[11px] text-rose-500 mt-1">{errors.caseNumber}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Case Filing Year <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.caseYear}
-                    onChange={(e) => handleChange('caseYear', e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    required
-                  />
-                  {errors.caseYear && <p className="text-[11px] text-rose-500 mt-1">{errors.caseYear}</p>}
-                </div>
+              {/* Case Details / Number */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Case Details / Number <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.caseDetails || ''}
+                  onChange={(e) => handleChange('caseDetails', e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                  required
+                />
+                {errors.caseDetails && <p className="text-[11px] text-rose-500 mt-1">{errors.caseDetails}</p>}
               </div>
 
               {/* Litigant Parties */}
@@ -1041,6 +1011,33 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
+              {/* Administrative Jurisdiction */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Circle Jurisdiction <span className="text-rose-500">*</span>
+                  </label>
+                  <SearchableSelect
+                    options={circles}
+                    value={formData.circle}
+                    onChange={handleCircleChange}
+                  />
+                  {errors.circle && <p className="text-[11px] text-rose-500 mt-1">{errors.circle}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Division Jurisdiction <span className="text-rose-500">*</span>
+                  </label>
+                  <SearchableSelect
+                    options={divisions}
+                    value={formData.division}
+                    onChange={(val) => handleChange('division', val)}
+                  />
+                  {errors.division && <p className="text-[11px] text-rose-500 mt-1">{errors.division}</p>}
+                </div>
+              </div>
+
               {/* Appellate Jurisdiction Particulars */}
               <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
@@ -1048,17 +1045,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Appeal Case Type <span className="text-rose-500">*</span>
-                    </label>
-                    <SearchableSelect
-                      options={appealCaseTypes}
-                      value={formData.appealInfo?.appealCaseType || ''}
-                      onChange={(val) => handleAppealInfoChange('appealCaseType', val)}
-                    />
-                    {errors.appealCaseType && <p className="text-[11px] text-rose-500 mt-1">{errors.appealCaseType}</p>}
-                  </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Appellate Court <span className="text-rose-500">*</span>
@@ -1070,37 +1056,22 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     />
                     {errors.appellateCourt && <p className="text-[11px] text-rose-500 mt-1">{errors.appellateCourt}</p>}
                   </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Appeal Case Details / Number <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.appealInfo?.appealCaseDetails || ''}
+                      onChange={(e) => handleAppealInfoChange('appealCaseDetails', e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                      required
+                    />
+                    {errors.appealCaseDetails && <p className="text-[11px] text-rose-500 mt-1">{errors.appealCaseDetails}</p>}
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Appeal Case No <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.appealInfo?.appealCaseNumber || ''}
-                      onChange={(e) => handleAppealInfoChange('appealCaseNumber', e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                      required
-                    />
-                    {errors.appealCaseNumber && <p className="text-[11px] text-rose-500 mt-1">{errors.appealCaseNumber}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Appeal Year <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.appealInfo?.appealYear || ''}
-                      onChange={(e) => handleAppealInfoChange('appealYear', e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                      required
-                    />
-                    {errors.appealYear && <p className="text-[11px] text-rose-500 mt-1">{errors.appealYear}</p>}
-                  </div>
-
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Appeal Filing Date <span className="text-rose-500">*</span>
@@ -1149,37 +1120,11 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 )}
               </div>
 
-              {/* Appeal Administrative Jurisdiction */}
+              {/* Appeal Litigants & Case Particulars */}
               <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                  Appeal Administrative Jurisdiction & Litigants
+                  Appeal Litigants & Particulars
                 </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Circle Jurisdiction <span className="text-rose-500">*</span>
-                    </label>
-                    <SearchableSelect
-                      options={circles}
-                      value={formData.circle}
-                      onChange={handleCircleChange}
-                    />
-                    {errors.circle && <p className="text-[11px] text-rose-500 mt-1">{errors.circle}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Division Jurisdiction <span className="text-rose-500">*</span>
-                    </label>
-                    <SearchableSelect
-                      options={divisions}
-                      value={formData.division}
-                      onChange={(val) => handleChange('division', val)}
-                    />
-                    {errors.division && <p className="text-[11px] text-rose-500 mt-1">{errors.division}</p>}
-                  </div>
-                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -1289,7 +1234,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     options={[
                       '-- Select Existing Case to Auto-Fill --',
                       ...existingCases.map(
-                        (c) => `${c.caseNumber} (${c.caseYear}) - ${c.nameOfCourt || 'Court'} - ${c.petitionerNames || ''}`
+                        (c) => `${c.caseDetails || `${c.caseNumber} (${c.caseYear})`} - ${c.nameOfCourt || 'Court'} - ${c.petitionerNames || ''}`
                       ),
                     ]}
                     value={
@@ -1297,7 +1242,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                         ? (() => {
                             const match = existingCases.find((c) => c.id === selectedExistingCaseId);
                             return match
-                              ? `${match.caseNumber} (${match.caseYear}) - ${match.nameOfCourt || 'Court'} - ${match.petitionerNames || ''}`
+                              ? `${match.caseDetails || `${match.caseNumber} (${match.caseYear})`} - ${match.nameOfCourt || 'Court'} - ${match.petitionerNames || ''}`
                               : '-- Select Existing Case to Auto-Fill --';
                           })()
                         : '-- Select Existing Case to Auto-Fill --'
@@ -1307,7 +1252,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                         setSelectedExistingCaseId('');
                       } else {
                         const match = existingCases.find(
-                          (c) => `${c.caseNumber} (${c.caseYear}) - ${c.nameOfCourt || 'Court'} - ${c.petitionerNames || ''}` === val
+                          (c) => `${c.caseDetails || `${c.caseNumber} (${c.caseYear})`} - ${c.nameOfCourt || 'Court'} - ${c.petitionerNames || ''}` === val
                         );
                         if (match?.id) handleAutoFillFromExisting(match.id);
                       }
@@ -1355,47 +1300,19 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
-              {/* Base Case Specifics */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Base Case Type <span className="text-rose-500">*</span>
-                  </label>
-                  <SearchableSelect
-                    options={caseTypes}
-                    value={formData.baseCaseType || ''}
-                    onChange={(val) => handleChange('baseCaseType', val)}
-                  />
-                  {errors.baseCaseType && <p className="text-[11px] text-rose-500 mt-1">{errors.baseCaseType}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Base Case Number <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.baseCaseNumber || ''}
-                    onChange={(e) => handleChange('baseCaseNumber', e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    required
-                  />
-                  {errors.baseCaseNumber && <p className="text-[11px] text-rose-500 mt-1">{errors.baseCaseNumber}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Base Case Filing Year <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.baseCaseYear || ''}
-                    onChange={(e) => handleChange('baseCaseYear', e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                    required
-                  />
-                  {errors.baseCaseYear && <p className="text-[11px] text-rose-500 mt-1">{errors.baseCaseYear}</p>}
-                </div>
+              {/* Base Case Details / Number */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Base / Original Case Details / Number <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.baseCaseDetails || ''}
+                  onChange={(e) => handleChange('baseCaseDetails', e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                  required
+                />
+                {errors.baseCaseDetails && <p className="text-[11px] text-rose-500 mt-1">{errors.baseCaseDetails}</p>}
               </div>
 
               {/* Base Litigant Parties */}

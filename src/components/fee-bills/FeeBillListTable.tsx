@@ -113,9 +113,11 @@ export const FeeBillListTable: React.FC<FeeBillListTableProps> = ({
 
                   <td className="py-3.5 px-4">
                     <div className="font-bold text-slate-800 dark:text-slate-200">
-                      Case {item.caseNumber} {item.caseYear ? `(${item.caseYear})` : ''}
+                      {item.caseDetails || `Case ${item.caseNumber || ''} ${item.caseYear ? `(${item.caseYear})` : ''}`.trim() || '—'}
                     </div>
-                    <div className="text-[11px] text-slate-500">{item.caseType} ({item.casePertainsTo})</div>
+                    {item.casePertainsTo && (
+                      <div className="text-[11px] text-slate-500">{item.casePertainsTo}</div>
+                    )}
                   </td>
 
                   <td className="py-3.5 px-4 text-right font-extrabold text-slate-900 dark:text-slate-100">

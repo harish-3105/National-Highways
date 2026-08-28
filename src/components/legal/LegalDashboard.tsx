@@ -172,13 +172,16 @@ export const LegalDashboard: React.FC = () => {
       });
       const data = await res.json();
       if (data.success) {
-        fetchCases();
+        await fetchCases();
+        setUiMode('LIST');
+        setSelectedCaseForEdit(null);
+      } else {
+        alert('Database / Save Error: ' + (data.error || data.message || 'Failed to save case.'));
       }
-    } catch (err) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error('Failed to save case:', err);
-    } finally {
-      setUiMode('LIST');
-      setSelectedCaseForEdit(null);
+      alert('Error connecting to server: ' + msg);
     }
   };
 
@@ -186,16 +189,22 @@ export const LegalDashboard: React.FC = () => {
   const handleSaveAndCreateAppeal = async (savedData: LegalCaseData) => {
     try {
       // 1. Save lower case
-      await fetch('/api/legal', {
+      const res = await fetch('/api/legal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(savedData),
       });
+      const data = await res.json();
+      if (!data.success) {
+        alert('Database / Save Error: ' + (data.error || data.message || 'Failed to save base case before creating appeal.'));
+        return;
+      }
 
       // 2. Prepare pre-filled Appeal Case (unforced dropdowns so user selects)
       const appealCaseInit: Partial<LegalCaseData> = {
         caseClassification: 'Appeal Case',
         appealInfo: {
+          appealCaseDetails: '',
           appealCaseType: '',
           appealCaseNumber: '',
           appealYear: '',
@@ -209,6 +218,8 @@ export const LegalDashboard: React.FC = () => {
         caseType: '',
         circle: savedData.circle || '',
         division: savedData.division || '',
+        caseDetails: '',
+        appealCaseDetails: '',
         caseNumber: '',
         caseYear: '',
         nameOfCourt: '',
@@ -216,10 +227,11 @@ export const LegalDashboard: React.FC = () => {
         respondentNames: savedData.petitionerNames || '',
         casePertainsTo: savedData.casePertainsTo || '',
         natureOfCase: savedData.natureOfCase || '',
-        briefOfPrayer: `Appeal in ${savedData.caseNumber}: ${savedData.briefOfPrayer}`,
+        briefOfPrayer: `Appeal in ${savedData.caseDetails || savedData.caseNumber || 'case'}: ${savedData.briefOfPrayer}`,
         baseCircle: savedData.circle || '',
         baseDivision: savedData.division || '',
         baseCourtName: savedData.nameOfCourt || '',
+        baseCaseDetails: savedData.caseDetails || [savedData.caseType, savedData.caseNumber, savedData.caseYear].filter(Boolean).join(' ') || '',
         baseCaseType: savedData.caseType || '',
         baseCaseNumber: savedData.caseNumber || '',
         baseCaseYear: savedData.caseYear || '',
@@ -695,7 +707,7 @@ export const LegalDashboard: React.FC = () => {
                       {/* Case No & Type */}
                       <td className="py-3.5 px-5">
                         <div className="font-extrabold text-blue-600 dark:text-blue-400 text-sm">
-                          {item.caseNumber}
+                          {item.caseDetails || item.caseNumber}
                         </div>
                         <div className="flex items-center gap-1.5 mt-1">
                           <span
@@ -707,7 +719,7 @@ export const LegalDashboard: React.FC = () => {
                           >
                             {item.caseClassification}
                           </span>
-                          <span className="text-slate-400 font-mono text-[11px]">Yr {item.caseYear}</span>
+                          {item.caseYear && <span className="text-slate-400 font-mono text-[11px]">Yr {item.caseYear}</span>}
                         </div>
                       </td>
 

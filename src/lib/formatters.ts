@@ -226,7 +226,8 @@ export function formatDelayCompact(yearsVal: number | string | null | undefined)
 }
 
 /**
- * Safely adds years to any date string (ISO or Indian formats) and returns formatted 'YYYY-MM-DD'.
+ * Safely adds years to any date string (ISO or Indian formats) and returns formatted 'YYYY-MM-DD'
+ * subtracted by 1 day (e.g. 20/08/2026 + 5 years = 19/08/2031).
  */
 export function addYearsToDateString(dateStr: string | null | undefined, years: number | string | null | undefined): string | null {
   if (!dateStr || years === null || years === undefined || years === '') return null;
@@ -235,6 +236,7 @@ export function addYearsToDateString(dateStr: string | null | undefined, years: 
   const d = parseDateString(dateStr);
   if (!d) return null;
   d.setFullYear(d.getFullYear() + numYears);
+  d.setDate(d.getDate() - 1);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }

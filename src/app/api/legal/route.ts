@@ -8,23 +8,41 @@ export const dynamic = 'force-dynamic';
 const inMemoryLegalStore: LegalCaseData[] = [];
 
 function mapDbRowToLegalCase(item: Record<string, unknown>): LegalCaseData {
-  const appealInfo = (item.appeal_info as LegalCaseData['appealInfo']) || undefined;
-  const postHearing = (item.post_hearing_details as Record<string, unknown>) || undefined;
-  const caDetails = (item.counter_affidavit_details as Record<string, unknown>) || undefined;
-
   const getStr = (val: unknown, fallback = ''): string => {
     if (val === null || val === undefined) return fallback;
     return String(val);
   };
 
+  const appealInfo = (item.appeal_info as LegalCaseData['appealInfo']) || undefined;
+  const postHearing = (item.post_hearing_details as Record<string, unknown>) || undefined;
+  const caDetails = (item.counter_affidavit_details as Record<string, unknown>) || undefined;
+
+  const appealInfoObj = appealInfo
+    ? {
+        ...appealInfo,
+        appealCaseDetails:
+          appealInfo.appealCaseDetails ||
+          getStr(item.appeal_case_details) ||
+          [appealInfo.appealCaseType, appealInfo.appealCaseNumber, appealInfo.appealYear].filter(Boolean).join(' ') ||
+          '',
+      }
+    : undefined;
+
+  const caseDetailsStr = getStr(item.case_details) || [item.case_type, item.case_number, item.case_year].filter(Boolean).join(' ') || '';
+  const appealCaseDetailsStr = getStr(item.appeal_case_details) || (appealInfoObj?.appealCaseDetails || '');
+  const baseCaseDetailsStr = getStr(item.base_case_details) || [item.base_case_type, item.base_case_number, item.base_case_year].filter(Boolean).join(' ') || '';
+
   return {
     id: item.id ? String(item.id) : `lc-${Date.now()}`,
     caseClassification: getStr(item.case_classification, item.appeal_info ? 'Appeal Case' : 'Normal Case') as LegalCaseData['caseClassification'],
-    appealInfo,
+    appealInfo: appealInfoObj,
+    caseDetails: caseDetailsStr,
+    appealCaseDetails: appealCaseDetailsStr,
+    baseCaseDetails: baseCaseDetailsStr,
     caseType: getStr(item.case_type),
     circle: getStr(item.circle),
     division: getStr(item.division),
-    caseNumber: getStr(item.case_number),
+    caseNumber: getStr(item.case_number) || caseDetailsStr,
     caseYear: getStr(item.case_year),
     category: getStr(item.category),
     nameOfCourt: getStr(item.name_of_court),
@@ -38,7 +56,7 @@ function mapDbRowToLegalCase(item: Record<string, unknown>): LegalCaseData {
     baseDivision: getStr(item.base_division),
     baseCourtName: getStr(item.base_court_name),
     baseCaseType: getStr(item.base_case_type),
-    baseCaseNumber: getStr(item.base_case_number),
+    baseCaseNumber: getStr(item.base_case_number) || baseCaseDetailsStr,
     baseCaseYear: getStr(item.base_case_year),
     basePetitionerNames: getStr(item.base_petitioner_names),
     baseRespondentNames: getStr(item.base_respondent_names),
@@ -123,7 +141,7 @@ export async function GET(req: NextRequest) {
         const cleanSearch = search.replace(/[,()"]/g, '').trim();
         if (cleanSearch) {
           query = query.or(
-            `case_number.ilike.%${cleanSearch}%,name_of_court.ilike.%${cleanSearch}%,petitioner_names.ilike.%${cleanSearch}%,respondent_names.ilike.%${cleanSearch}%,brief_of_prayer.ilike.%${cleanSearch}%`
+            `case_details.ilike.%${cleanSearch}%,case_number.ilike.%${cleanSearch}%,appeal_case_details.ilike.%${cleanSearch}%,base_case_details.ilike.%${cleanSearch}%,name_of_court.ilike.%${cleanSearch}%,petitioner_names.ilike.%${cleanSearch}%,respondent_names.ilike.%${cleanSearch}%,brief_of_prayer.ilike.%${cleanSearch}%`
           );
         }
       }
@@ -151,7 +169,10 @@ export async function GET(req: NextRequest) {
           if (search) {
             const term = search.toLowerCase();
             const hit =
-              c.caseNumber.toLowerCase().includes(term) ||
+              (c.caseDetails && c.caseDetails.toLowerCase().includes(term)) ||
+              (c.appealCaseDetails && c.appealCaseDetails.toLowerCase().includes(term)) ||
+              (c.baseCaseDetails && c.baseCaseDetails.toLowerCase().includes(term)) ||
+              (c.caseNumber && c.caseNumber.toLowerCase().includes(term)) ||
               c.nameOfCourt.toLowerCase().includes(term) ||
               c.petitionerNames.toLowerCase().includes(term) ||
               c.respondentNames.toLowerCase().includes(term) ||
@@ -188,14 +209,36 @@ export async function POST(req: NextRequest) {
     };
 
     if (supabase) {
+      const computedCaseDetails =
+        body.caseDetails ||
+        (body.caseClassification === 'Appeal Case'
+          ? body.appealCaseDetails || body.appealInfo?.appealCaseDetails
+          : '') ||
+        [body.caseType, body.caseNumber, body.caseYear].filter(Boolean).join(' ') ||
+        null;
+
+      const computedAppealCaseDetails =
+        body.appealCaseDetails ||
+        body.appealInfo?.appealCaseDetails ||
+        [body.appealInfo?.appealCaseType, body.appealInfo?.appealCaseNumber, body.appealInfo?.appealYear].filter(Boolean).join(' ') ||
+        null;
+
+      const computedBaseCaseDetails =
+        body.baseCaseDetails ||
+        [body.baseCaseType, body.baseCaseNumber, body.baseCaseYear].filter(Boolean).join(' ') ||
+        null;
+
       const payload: Record<string, unknown> = {
         case_classification: body.caseClassification || 'Normal Case',
         appeal_info: body.appealInfo || null,
-        case_type: body.caseType,
+        case_details: computedCaseDetails,
+        appeal_case_details: computedAppealCaseDetails,
+        base_case_details: computedBaseCaseDetails,
+        case_type: body.caseType || '',
         circle: body.circle,
         division: body.division,
-        case_number: body.caseNumber,
-        case_year: body.caseYear,
+        case_number: body.caseNumber || computedCaseDetails || '',
+        case_year: body.caseYear || '',
         category: body.category || '',
         name_of_court: body.nameOfCourt,
         petitioner_names: body.petitionerNames,

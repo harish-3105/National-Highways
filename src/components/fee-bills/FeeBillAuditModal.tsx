@@ -121,7 +121,7 @@ export const FeeBillAuditModal: React.FC<FeeBillAuditModalProps> = ({
           {/* Record Summary Box */}
           <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
             <div className="flex justify-between font-bold text-slate-900 dark:text-slate-100">
-              <span>{contract.caseNumber} ({contract.caseType})</span>
+              <span>{contract.caseDetails || [contract.caseType, contract.caseNumber, contract.caseYear].filter(Boolean).join(' ') || '—'}</span>
               <span className="text-blue-600 font-extrabold">{formatINR(contract.totalFeeAmount)}</span>
             </div>
             <p className="text-slate-500 text-[11px]">

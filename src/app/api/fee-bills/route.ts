@@ -58,6 +58,7 @@ export async function GET(request: Request) {
             division: item.division,
             lawyerName: item.lawyer_name,
             lawyerDesignation: item.lawyer_designation,
+            caseDetails: item.case_details || [item.case_type, item.case_number, item.case_year].filter(Boolean).join(' ') || '',
             caseType: item.case_type,
             caseNumber: item.case_number,
             caseYear: item.case_year,
@@ -73,7 +74,7 @@ export async function GET(request: Request) {
             totalFeeAmount: Number(item.total_fee_amount) || 0,
             assistantName: item.assistant_name || '',
             assistantDesignation: item.assistant_designation || '',
-            paymentStatus: item.payment_status || '',
+            paymentStatus: (item.payment_status === 'Not Settled' || !item.payment_status) ? 'Pending' : item.payment_status,
             settledAmount: Number(item.settled_amount) || 0,
             itCess: Number(item.it_cess) || 0,
             amountDeposited: Number(item.amount_deposited) || 0,
@@ -89,6 +90,8 @@ export async function GET(request: Request) {
             statusOfObtainingGo: item.status_of_obtaining_go || '',
             goNumber: item.go_number || '',
             goDate: item.go_date || '',
+            goReferenceLetterNo: item.go_reference_letter_no || ext.goReferenceLetterNo || '',
+            goReferenceLetterDate: item.go_reference_letter_date || ext.goReferenceLetterDate || '',
             statusOfPaymentProposal: item.status_of_payment_proposal || '',
             proceedingLetterNo: item.proceeding_letter_no || '',
             proceedingLetterDate: item.proceeding_letter_date || '',
@@ -117,7 +120,7 @@ export async function GET(request: Request) {
           if (paymentStatus && paymentStatus !== 'ALL' && b.paymentStatus !== paymentStatus) return false;
           if (pendencyStatus && pendencyStatus !== 'ALL' && b.currentPendency !== pendencyStatus) return false;
           if (search) {
-            const str = [b.feeBillNumber, b.lawyerName, String(b.caseNumber), b.division, b.circle].filter(Boolean).join(' ').toLowerCase();
+            const str = [b.feeBillNumber, b.lawyerName, b.caseDetails, String(b.caseNumber || ''), b.division, b.circle].filter(Boolean).join(' ').toLowerCase();
             if (!str.includes(search)) return false;
           }
           return true;
@@ -135,7 +138,7 @@ export async function GET(request: Request) {
       if (paymentStatus && paymentStatus !== 'ALL' && b.paymentStatus !== paymentStatus) return false;
       if (pendencyStatus && pendencyStatus !== 'ALL' && b.currentPendency !== pendencyStatus) return false;
       if (search) {
-        const str = [b.feeBillNumber, b.lawyerName, String(b.caseNumber), b.division, b.circle].filter(Boolean).join(' ').toLowerCase();
+        const str = [b.feeBillNumber, b.lawyerName, b.caseDetails, String(b.caseNumber || ''), b.division, b.circle].filter(Boolean).join(' ').toLowerCase();
         if (!str.includes(search)) return false;
       }
       return true;
@@ -166,6 +169,7 @@ export async function POST(request: Request) {
 
     const record: FeeBillRecord = {
       ...body,
+      caseDetails: body.caseDetails || [body.caseType, body.caseNumber, body.caseYear].filter(Boolean).join(' ') || '',
       feeBillNumber: trimmedFeeBillNumber,
       id: body.id && String(body.id).startsWith('fb-') ? body.id : (body.id || `fb-${Date.now()}`),
       currentPendency: derivedPendency,
@@ -206,9 +210,10 @@ export async function POST(request: Request) {
         division: record.division,
         lawyer_name: record.lawyerName,
         lawyer_designation: record.lawyerDesignation,
-        case_type: record.caseType,
-        case_number: record.caseNumber ? Number(String(record.caseNumber).replace(/\D/g, '')) || record.caseNumber : null,
-        case_year: record.caseYear ? Number(String(record.caseYear).replace(/\D/g, '')) || record.caseYear : null,
+        case_details: record.caseDetails || null,
+        case_type: record.caseType || null,
+        case_number: record.caseNumber ? (isNaN(Number(record.caseNumber)) ? null : Number(record.caseNumber)) : null,
+        case_year: record.caseYear ? (isNaN(Number(record.caseYear)) ? null : Number(record.caseYear)) : null,
         case_pertains_to: record.casePertainsTo || 'GOTN',
         appearance_amount: Number(record.appearanceAmount) || 0,
         appearance_date: record.appearanceDate || null,
@@ -221,7 +226,7 @@ export async function POST(request: Request) {
         total_fee_amount: Number(record.totalFeeAmount) || 0,
         assistant_name: record.assistantName || null,
         assistant_designation: record.assistantDesignation || null,
-        payment_status: record.paymentStatus || 'Not Settled',
+        payment_status: record.paymentStatus || 'Pending',
         settled_amount: Number(record.settledAmount) || 0,
         it_cess: Number(record.itCess) || 0,
         amount_deposited: Number(record.amountDeposited) || 0,
@@ -237,6 +242,8 @@ export async function POST(request: Request) {
         status_of_obtaining_go: record.statusOfObtainingGo || null,
         go_number: record.goNumber || null,
         go_date: record.goDate || null,
+        go_reference_letter_no: record.goReferenceLetterNo || null,
+        go_reference_letter_date: record.goReferenceLetterDate || null,
         status_of_payment_proposal: record.statusOfPaymentProposal || null,
         proceeding_letter_no: record.proceedingLetterNo || null,
         proceeding_letter_date: record.proceedingLetterDate || null,
@@ -266,6 +273,8 @@ export async function POST(request: Request) {
           delete fallbackPayload.assistant_utr_rbi_reference;
           delete fallbackPayload.assistant_payment_date;
           delete fallbackPayload.assistant_payment_status;
+          delete fallbackPayload.go_reference_letter_no;
+          delete fallbackPayload.go_reference_letter_date;
           fallbackPayload.case_number = String(record.caseNumber || '');
           fallbackPayload.case_year = String(record.caseYear || '');
           fallbackPayload.proposal_movement = {
@@ -278,6 +287,8 @@ export async function POST(request: Request) {
               assistantUtrRbiReference: record.assistantUtrRbiReference || null,
               assistantPaymentDate: record.assistantPaymentDate || null,
               assistantPaymentStatus: record.assistantPaymentStatus || null,
+              goReferenceLetterNo: record.goReferenceLetterNo || null,
+              goReferenceLetterDate: record.goReferenceLetterDate || null,
             },
           };
           const { error: retryErr } = await supabase.from('fee_bills').update(fallbackPayload).eq('id', body.id);
@@ -305,6 +316,8 @@ export async function POST(request: Request) {
           delete fallbackPayload.assistant_utr_rbi_reference;
           delete fallbackPayload.assistant_payment_date;
           delete fallbackPayload.assistant_payment_status;
+          delete fallbackPayload.go_reference_letter_no;
+          delete fallbackPayload.go_reference_letter_date;
           fallbackPayload.case_number = String(record.caseNumber || '');
           fallbackPayload.case_year = String(record.caseYear || '');
           fallbackPayload.proposal_movement = {
@@ -317,6 +330,8 @@ export async function POST(request: Request) {
               assistantUtrRbiReference: record.assistantUtrRbiReference || null,
               assistantPaymentDate: record.assistantPaymentDate || null,
               assistantPaymentStatus: record.assistantPaymentStatus || null,
+              goReferenceLetterNo: record.goReferenceLetterNo || null,
+              goReferenceLetterDate: record.goReferenceLetterDate || null,
             },
           };
 

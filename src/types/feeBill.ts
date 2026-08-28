@@ -2,7 +2,7 @@
 
 export type CircleType = string;
 export type CasePertainsToType = 'GOTN' | 'MoRTH' | 'BOTH';
-export type PaymentStatusType = 'Settled' | 'Not Settled';
+export type PaymentStatusType = 'Settled' | 'Pending' | 'Not Settled';
 export type GOStatusType = 'Yes' | 'No' | 'Not Required';
 export type YesNoType = 'Yes' | 'No';
 
@@ -33,9 +33,10 @@ export interface FeeBillRecord {
   lawyerDesignation: string;
 
   // 4. Case Information
-  caseType: string;
-  caseNumber: string | number;
-  caseYear: string | number; // 4-digit number/string
+  caseDetails: string; // Unified open text field (e.g. WP 1234/2023)
+  caseType?: string; // Legacy column
+  caseNumber?: string | number; // Legacy column
+  caseYear?: string | number; // Legacy column
   casePertainsTo: CasePertainsToType;
 
   // 5. Fee Bill Amount Details
@@ -78,6 +79,8 @@ export interface FeeBillRecord {
   statusOfObtainingGo?: string; // e.g., 'G.O. Obtained', 'Proposal Under Process', 'Submitted to Government'
   goNumber?: string;
   goDate?: string;
+  goReferenceLetterNo?: string;
+  goReferenceLetterDate?: string;
   paymentSanction?: YesNoType;
   proposalSubmitted?: YesNoType;
 
@@ -153,8 +156,9 @@ export interface FeeBillFilterCriteria {
   circle: string;
   division: string;
   lawyerName: string;
-  caseType: string;
-  caseYear: string;
+  caseDetails?: string;
+  caseType?: string;
+  caseYear?: string;
   casePertainsTo: string;
   paymentStatus: string;
   goStatus: string;

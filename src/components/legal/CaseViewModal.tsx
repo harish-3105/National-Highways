@@ -181,14 +181,16 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-extrabold text-base text-white">
-                  {caseData.caseNumber} ({caseData.caseYear})
+                  {caseData.caseDetails || `${caseData.caseNumber || ''} ${caseData.caseYear ? `(${caseData.caseYear})` : ''}`.trim() || 'Legal Case'}
                 </h3>
                 <span className="text-[10px] bg-blue-800 text-blue-200 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
                   {caseData.caseClassification}
                 </span>
-                <span className="text-[10px] bg-white/10 text-white px-2 py-0.5 rounded-md font-bold uppercase">
-                  {caseData.caseType}
-                </span>
+                {caseData.caseType && (
+                  <span className="text-[10px] bg-white/10 text-white px-2 py-0.5 rounded-md font-bold uppercase">
+                    {caseData.caseType}
+                  </span>
+                )}
                 {caseData.currentStatus && (
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase ${
@@ -369,6 +371,18 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 </h3>
               </div>
 
+              {/* Appeal Jurisdiction Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Appeal Circle</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.circle}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Appeal Division</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.division}</span>
+                </div>
+              </div>
+
               {caseData.appealInfo && (
                 <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
                   <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
@@ -378,9 +392,11 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div>
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Appeal Case Type & No</span>
+                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Appeal Case Details / No</span>
                       <span className="font-bold text-slate-900 dark:text-slate-100">
-                        {caseData.appealInfo.appealCaseType} {caseData.appealInfo.appealCaseNumber}/{caseData.appealInfo.appealYear}
+                        {caseData.appealInfo.appealCaseDetails ||
+                          [caseData.appealInfo.appealCaseType, caseData.appealInfo.appealCaseNumber, caseData.appealInfo.appealYear].filter(Boolean).join(' ') ||
+                          '—'}
                       </span>
                     </div>
                     <div>
@@ -407,18 +423,6 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                   )}
                 </div>
               )}
-
-              {/* Appeal Jurisdiction Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Appeal Circle</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.circle}</span>
-                </div>
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Appeal Division</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.division}</span>
-                </div>
-              </div>
 
               {/* Litigants */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -476,16 +480,14 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
               </div>
 
               {/* Base Case Particulars Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Case No & Year</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Case Details / No</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    {caseData.baseCaseNumber ? `${caseData.baseCaseNumber} (${caseData.baseCaseYear || '—'})` : '—'}
+                    {caseData.baseCaseDetails ||
+                      [caseData.baseCaseType, caseData.baseCaseNumber, caseData.baseCaseYear].filter(Boolean).join(' ') ||
+                      '—'}
                   </span>
-                </div>
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Case Type</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.baseCaseType || '—'}</span>
                 </div>
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Court / Forum</span>

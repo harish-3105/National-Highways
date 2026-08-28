@@ -53,6 +53,7 @@ const defaultFormState: FeeBillRecord = {
   division: '',
   lawyerName: '',
   lawyerDesignation: '',
+  caseDetails: '',
   caseType: '',
   caseNumber: '',
   caseYear: '',
@@ -68,7 +69,7 @@ const defaultFormState: FeeBillRecord = {
   totalFeeAmount: 0,
   assistantName: '',
   assistantDesignation: '',
-  paymentStatus: '' as any,
+  paymentStatus: 'Pending' as any,
   settledAmount: 0,
   itCess: 0,
   amountDeposited: 0,
@@ -84,6 +85,8 @@ const defaultFormState: FeeBillRecord = {
   statusOfObtainingGo: '',
   goNumber: '',
   goDate: '',
+  goReferenceLetterNo: '',
+  goReferenceLetterDate: '',
   statusOfPaymentProposal: '',
   proceedingLetterNo: '',
   proceedingLetterDate: '',
@@ -127,6 +130,10 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
     ...defaultFormState,
     ...initialData,
     id: initialData?.id || `fb-${Date.now()}`,
+    caseDetails:
+      initialData?.caseDetails ||
+      [initialData?.caseType, initialData?.caseNumber, initialData?.caseYear].filter(Boolean).join(' ') ||
+      '',
     amountDeposited:
       initialData?.amountDeposited !== undefined
         ? initialData.amountDeposited
@@ -352,32 +359,26 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
       if (!formData.casePertainsTo) {
         stageErrors.casePertainsTo = 'Case Pertains To jurisdiction is required (Stage 2).';
       }
-      if (!formData.caseType?.trim()) {
-        stageErrors.caseType = 'Case Type & Category is required (Stage 2).';
-      }
-      if (!formData.caseNumber || String(formData.caseNumber).trim() === '') {
-        stageErrors.caseNumber = 'Case Number is required (Stage 2).';
-      } else if (isNaN(Number(formData.caseNumber)) || Number(formData.caseNumber) <= 0) {
-        stageErrors.caseNumber = 'Case Number must be a valid numeric value.';
-      }
-      if (!formData.caseYear || String(formData.caseYear).trim() === '') {
-        stageErrors.caseYear = 'Case Year is required (Stage 2).';
-      } else {
-        const yr = Number(formData.caseYear);
-        const currentYear = new Date().getFullYear();
-        if (isNaN(yr) || yr < 1900 || yr > currentYear) {
-          stageErrors.caseYear = `Case Year must be a valid 4-digit year (up to ${currentYear}).`;
-        }
+      if (!formData.caseDetails || !formData.caseDetails.trim()) {
+        stageErrors.caseDetails = 'Case Details / Particulars is required (Stage 2).';
       }
 
       // Assistant Law Officer Validation & Co-dependency
-      if (hasAssistant || formData.assistantName?.trim()) {
+      if (hasAssistant || formData.assistantName?.trim() || formData.assistantDesignation?.trim()) {
         if (!formData.assistantName?.trim()) {
           stageErrors.assistantName = 'Assistant Law Officer Name is required when assistant option is enabled.';
         }
+        if (!formData.assistantDesignation?.trim()) {
+          stageErrors.assistantDesignation = 'Assistant Law Officer Designation is required when assistant option is enabled.';
+        }
       }
-      if (formData.appearanceAmount > 0 && (!hasAssistant || !formData.assistantName?.trim())) {
-        stageErrors.assistantName = 'Assistant Law Officer is required when Appearance Fee is claimed.';
+      if (formData.appearanceAmount > 0 && (!hasAssistant || !formData.assistantName?.trim() || !formData.assistantDesignation?.trim())) {
+        if (!formData.assistantName?.trim()) {
+          stageErrors.assistantName = 'Assistant Law Officer Name is required when Appearance Fee is claimed.';
+        }
+        if (!formData.assistantDesignation?.trim()) {
+          stageErrors.assistantDesignation = 'Assistant Law Officer Designation is required when Appearance Fee is claimed.';
+        }
       }
     } else if (stageIdx === 2) {
       // Stage 3: Fee Breakdown
@@ -386,7 +387,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
       if (formData.verifyingAmount < 0) stageErrors.verifyingAmount = 'Opinion / Vetting Amount cannot be negative.';
 
       // Assistant co-dependency: If assistant is assigned, appearance fee is mandatory (> 0)
-      if ((hasAssistant || formData.assistantName?.trim()) && (!formData.appearanceAmount || formData.appearanceAmount <= 0)) {
+      if ((hasAssistant || formData.assistantName?.trim() || formData.assistantDesignation?.trim()) && (!formData.appearanceAmount || formData.appearanceAmount <= 0)) {
         stageErrors.appearanceAmount = 'Appearance Fee is required (> ₹0) when an Assistant Law Officer is assigned.';
       }
 
@@ -405,8 +406,39 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
       }
     } else if (stageIdx === 3) {
       // Stage 4: G.O. Workflow
+      if (formData.goStatus === 'Yes' || formData.goStatus?.toLowerCase() === 'yes') {
+        if (!formData.statusOfObtainingGo?.trim()) {
+          stageErrors.statusOfObtainingGo = 'Status of Obtaining G.O. is required when G.O. is required.';
+        }
+        const isObtained = formData.statusOfObtainingGo?.toLowerCase().includes('obtained');
+        if (isObtained) {
+          if (!formData.goNumber?.trim()) {
+            stageErrors.goNumber = 'G.O. Number is required when G.O. is obtained.';
+          }
+          if (!formData.goDate?.trim()) {
+            stageErrors.goDate = 'G.O. Date is required when G.O. is obtained.';
+          }
+        }
+        const isProposal =
+          !isObtained &&
+          Boolean(formData.statusOfObtainingGo) &&
+          (formData.statusOfObtainingGo?.toLowerCase().includes('proposal') ||
+            formData.statusOfObtainingGo?.toLowerCase().includes('sent') ||
+            formData.statusOfObtainingGo?.toLowerCase().includes('submitted'));
+        if (isProposal) {
+          if (!formData.goReferenceLetterNo?.trim()) {
+            stageErrors.goReferenceLetterNo = 'G.O. Proposal Reference Letter Number is required.';
+          }
+          if (!formData.goReferenceLetterDate?.trim()) {
+            stageErrors.goReferenceLetterDate = 'G.O. Proposal Reference Letter Date is required.';
+          }
+        }
+      }
       if (formData.goDate && formData.goDate > todayStr) {
         stageErrors.goDate = 'G.O. Date cannot be a future date.';
+      }
+      if (formData.goReferenceLetterDate && formData.goReferenceLetterDate > todayStr) {
+        stageErrors.goReferenceLetterDate = 'G.O. Proposal Reference Letter Date cannot be a future date.';
       }
     } else if (stageIdx === 4) {
       // Stage 5: Payment & Settlement
@@ -452,9 +484,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
         formData.lawyerName.trim() &&
         formData.lawyerDesignation &&
         formData.casePertainsTo &&
-        formData.caseType &&
-        formData.caseNumber &&
-        formData.caseYear &&
+        formData.caseDetails?.trim() &&
         Object.keys(validateSingleStage(1)).length === 0
       );
     }
@@ -462,10 +492,16 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
       return Boolean(formData.totalFeeAmount > 0 && Object.keys(validateSingleStage(2)).length === 0);
     }
     if (stageIdx === 3) {
-      return Boolean(formData.goStatus === 'Not Required' || formData.goNumber || formData.statusOfObtainingGo);
+      return Boolean(
+        (formData.goStatus === 'Not Required' || formData.goStatus === 'No' || formData.goNumber || formData.statusOfObtainingGo) &&
+        Object.keys(validateSingleStage(3)).length === 0
+      );
     }
     if (stageIdx === 4) {
-      return Boolean(formData.paymentStatus === 'Settled' || formData.statusOfPaymentProposal);
+      return Boolean(
+        (formData.paymentStatus === 'Settled' || formData.statusOfPaymentProposal || formData.paymentStatus === 'Pending') &&
+        Object.keys(validateSingleStage(4)).length === 0
+      );
     }
     return false;
   };
@@ -756,7 +792,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
             {/* 1. Lawyer Name */}
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -785,7 +821,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               {errors.lawyerDesignation && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.lawyerDesignation}</p>}
             </div>
 
-            {/* 3. Case Pertains To (Swapped with Case Type) */}
+            {/* 3. Case Pertains To */}
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Case Pertains To <span className="text-red-500">*</span>
@@ -799,54 +835,18 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               {errors.casePertainsTo && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.casePertainsTo}</p>}
             </div>
 
-            {/* 4. Case Type & Category (Swapped with Case Pertains To) */}
+            {/* 4. Case Details / Number */}
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Case Type & Category <span className="text-red-500">*</span>
+                Case Details / Number <span className="text-red-500">*</span>
               </label>
-              <SearchableSelect
-                options={caseTypes}
-                value={formData.caseType}
-                onChange={(val) => setFormData((prev) => ({ ...prev, caseType: val }))}
-                required
+              <input
+                type="text"
+                value={formData.caseDetails || ''}
+                onChange={(e) => setFormData((prev) => ({ ...prev, caseDetails: e.target.value }))}
+                className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500"
               />
-              {errors.caseType && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.caseType}</p>}
-            </div>
-
-            {/* 5. Case Number & Year (Numeric inputs) */}
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Case Number & Year <span className="text-red-500">*</span>
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="No."
-                  value={formData.caseNumber || ''}
-                  onChange={(e) => {
-                    const cleanNum = e.target.value.replace(/\D/g, '');
-                    setFormData((prev) => ({ ...prev, caseNumber: cleanNum }));
-                  }}
-                  className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
-                />
-                <input
-                  type="number"
-                  min="1900"
-                  max={new Date().getFullYear()}
-                  step="1"
-                  placeholder="YYYY"
-                  value={formData.caseYear || ''}
-                  onChange={(e) => {
-                    const cleanYr = e.target.value.replace(/\D/g, '').slice(0, 4);
-                    setFormData((prev) => ({ ...prev, caseYear: cleanYr }));
-                  }}
-                  className="w-24 h-10 px-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-center"
-                />
-              </div>
-              {errors.caseNumber && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.caseNumber}</p>}
-              {errors.caseYear && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.caseYear}</p>}
+              {errors.caseDetails && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.caseDetails}</p>}
             </div>
           </div>
 
@@ -900,13 +900,16 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   </div>
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Assistant Designation (Optional)
+                      Assistant Law Officer Designation <span className="text-red-500">*</span>
                     </label>
                     <SearchableSelect
                       options={assistantDesignations.length > 0 ? assistantDesignations : lawyerDesignations}
                       value={formData.assistantDesignation || ''}
                       onChange={(val) => setFormData((prev) => ({ ...prev, assistantDesignation: val }))}
                     />
+                    {errors.assistantDesignation && (
+                      <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.assistantDesignation}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -962,7 +965,13 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 label="Appearance Date"
                 max={todayStr}
                 value={formData.appearanceDate}
-                onChange={(val) => setFormData((prev) => ({ ...prev, appearanceDate: val }))}
+                onChange={(val) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    appearanceDate: val,
+                    assistanceDate: val,
+                  }))
+                }
                 error={errors.appearanceDate}
               />
             </div>
@@ -1119,6 +1128,47 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             </div>
           )}
 
+          {/* Conditional Branch: If G.O. Required == YES and Status is along the lines of "Proposal sent..." */}
+          {(formData.goStatus === 'Yes' || formData.goStatus?.toLowerCase() === 'yes') &&
+            Boolean(formData.statusOfObtainingGo) &&
+            !formData.statusOfObtainingGo?.toLowerCase().includes('obtained') &&
+            (formData.statusOfObtainingGo?.toLowerCase().includes('proposal') ||
+              formData.statusOfObtainingGo?.toLowerCase().includes('sent') ||
+              formData.statusOfObtainingGo?.toLowerCase().includes('submitted')) && (
+            <div className="p-5 bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl space-y-3 text-xs animate-in fade-in">
+              <div className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-amber-600" /> G.O. Proposal Reference Particulars
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Reference Letter Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.goReferenceLetterNo || ''}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, goReferenceLetterNo: e.target.value }))}
+                    placeholder="e.g. Lr. No. 1284/GO/2026"
+                    className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
+                  />
+                  {errors.goReferenceLetterNo && (
+                    <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.goReferenceLetterNo}</p>
+                  )}
+                </div>
+                <div>
+                  <DatePickerInput
+                    label="Reference Letter Date"
+                    required
+                    max={todayStr}
+                    value={formData.goReferenceLetterDate || ''}
+                    onChange={(val) => setFormData((prev) => ({ ...prev, goReferenceLetterDate: val }))}
+                    error={errors.goReferenceLetterDate}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {formData.goStatus !== 'Yes' && (
             <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-500">
               {formData.goStatus === 'No'
@@ -1156,7 +1206,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border-amber-200'
               }`}
             >
-              Status: {formData.paymentStatus || 'Not Settled'}
+              Status: {formData.paymentStatus || 'Pending'}
             </span>
           </div>
 
@@ -1168,14 +1218,14 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               </label>
               <SearchableSelect
                 options={paymentStatuses}
-                value={formData.paymentStatus || 'Not Settled'}
+                value={formData.paymentStatus || 'Pending'}
                 onChange={(val) => setFormData((prev) => ({ ...prev, paymentStatus: val as PaymentStatusType }))}
               />
             </div>
           </div>
 
           {/* ========================================================================= */}
-          {/* BRANCH A: IF PAYMENT STATUS IS PENDING / NOT SETTLED                       */}
+          {/* BRANCH A: IF PAYMENT STATUS IS PENDING                                     */}
           {/* ========================================================================= */}
           {formData.paymentStatus !== 'Settled' && (
             <div className="space-y-5 animate-in fade-in">

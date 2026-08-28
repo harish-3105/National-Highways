@@ -33,6 +33,7 @@ import { ExportFeeBillsModal } from './ExportFeeBillsModal';
 
 export type PivotDimensionKey =
   | 'lawyerName'
+  | 'caseDetails'
   | 'caseNumber'
   | 'circle'
   | 'division'
@@ -55,11 +56,9 @@ export type PivotSortOrder = 'total_desc' | 'total_asc' | 'alpha_asc' | 'count_d
 
 const ROW_DIMENSIONS: { key: PivotDimensionKey; label: string }[] = [
   { key: 'lawyerName', label: 'Advocate / Law Officer' },
-  { key: 'caseNumber', label: 'Court Case Number' },
+  { key: 'caseDetails', label: 'Court Case Particulars' },
   { key: 'circle', label: 'Circle Jurisdiction' },
   { key: 'division', label: 'Division Jurisdiction' },
-  { key: 'caseType', label: 'Case Type' },
-  { key: 'caseYear', label: 'Case Year' },
   { key: 'currentPendency', label: 'Pendency Stage' },
   { key: 'paymentStatus', label: 'Payment Status' },
 ];
@@ -69,7 +68,6 @@ const COL_DIMENSIONS: { key: PivotDimensionKey; label: string }[] = [
   { key: 'none', label: 'None (Simple Summary)' },
   { key: 'circle', label: 'Circle Jurisdiction' },
   { key: 'division', label: 'Division Jurisdiction' },
-  { key: 'caseType', label: 'Case Type' },
   { key: 'currentPendency', label: 'Pendency Stage' },
   { key: 'goStatus', label: 'Whether G.O. Required' },
 ];
@@ -131,7 +129,7 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
   const unsettledAmount = unsettledBills.reduce((acc, b) => acc + (Number(b.totalFeeAmount) || 0), 0);
 
   const distinctCases = useMemo(() => {
-    return new Set(activeBills.map((b) => String(b.caseNumber || '').trim().toUpperCase()).filter(Boolean)).size;
+    return new Set(activeBills.map((b) => String(b.caseDetails || b.caseNumber || '').trim().toUpperCase()).filter(Boolean)).size;
   }, [activeBills]);
 
   const distinctLawyers = useMemo(() => {
@@ -143,6 +141,10 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
     if (key === 'none') return 'Total';
     if (key === 'paymentStatus') {
       return bill.paymentStatus === 'Settled' ? 'Settled' : 'Unsettled';
+    }
+    if (key === 'caseDetails' || key === 'caseNumber') {
+      const val = bill.caseDetails || (bill.caseNumber ? `Case ${bill.caseNumber}` : '');
+      return val ? String(val).trim() : 'Unspecified Court Case Particulars';
     }
     const val = (bill as unknown as Record<string, unknown>)[key];
     if (val === null || val === undefined || String(val).trim() === '') {
@@ -547,9 +549,9 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
 
           <button
             type="button"
-            onClick={() => applyPreset('caseNumber', 'paymentStatus', 'totalFeeAmount')}
+            onClick={() => applyPreset('caseDetails', 'paymentStatus', 'totalFeeAmount')}
             className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer border ${
-              rowDimension === 'caseNumber' && colDimension === 'paymentStatus' && metric === 'totalFeeAmount'
+              rowDimension === 'caseDetails' && colDimension === 'paymentStatus' && metric === 'totalFeeAmount'
                 ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                 : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
             }`}
@@ -579,18 +581,6 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
             }`}
           >
             ⏳ Stage &times; Circle
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyPreset('caseType', 'paymentStatus', 'totalFeeAmount')}
-            className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer border ${
-              rowDimension === 'caseType' && colDimension === 'paymentStatus' && metric === 'totalFeeAmount'
-                ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-            }`}
-          >
-            ⚖️ Case Type &times; Status
           </button>
         </div>
       </div>

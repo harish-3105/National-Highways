@@ -11,9 +11,10 @@ export type NatureOfCaseType = string;
 
 // Section A: Appeal Case Information (Only when Case Type = 'Appeal Case')
 export interface AppealCaseInformation {
-  appealCaseType: string; // e.g. WA, CMA, AS, SLP, Review Petition
-  appealCaseNumber: string; // e.g. WA 123/2024
-  appealYear: string; // 4-digit Year (e.g. 2024)
+  appealCaseDetails: string; // Unified open text field (e.g. WA 123/2024)
+  appealCaseType?: string; // Optional legacy column
+  appealCaseNumber?: string; // Optional legacy column
+  appealYear?: string; // Optional legacy column
   appellateCourt: string; // e.g. High Court of Madras (Division Bench, Chennai)
   appealFilingDate: string; // Date field YYYY-MM-DD
   limitationDueDate: string; // Date field YYYY-MM-DD
@@ -33,11 +34,13 @@ export interface LegalCaseData {
   appealInfo?: AppealCaseInformation;
 
   // B.1. Case Information (Stage 1: Registry)
-  caseType: string; // Dropdown: WP, WA, CMA, OS, AS, CRP, Contempt, etc.
+  caseDetails: string; // Unified open text field (e.g. WP 1234/2023)
+  caseType?: string; // Legacy column
   circle: CircleType; // Dropdown: Chennai, Salem, Madurai, etc.
   division: string; // Dropdown: Cascading division
-  caseNumber: string; // Text field (e.g. WP 1234/2023)
-  caseYear: string; // 4-digit Year string (e.g. 2023)
+  caseNumber?: string; // Legacy column
+  caseYear?: string; // Legacy column
+  appealCaseDetails?: string; // Dedicated column for appeal cases
   category?: string; // Optional legacy column
   nameOfCourt: string; // Dropdown: High Court of Madras, Madurai Bench, District Court, etc.
   petitionerNames: string; // Text field (Name of Petitioner(s))
@@ -51,9 +54,10 @@ export interface LegalCaseData {
   baseCircle?: CircleType; // Dropdown: Chennai, Salem, Madurai, etc.
   baseDivision?: string; // Dropdown: Cascading division
   baseCourtName?: string; // Dropdown / Text: Original Court Name
-  baseCaseType?: string; // Dropdown: WP, OS, LAOP, etc.
-  baseCaseNumber?: string; // Text field: Original Case Number
-  baseCaseYear?: string; // 4-digit Year string
+  baseCaseDetails?: string; // Unified open text field (e.g. WP 1234/2023)
+  baseCaseType?: string; // Legacy column
+  baseCaseNumber?: string; // Legacy column
+  baseCaseYear?: string; // Legacy column
   basePetitionerNames?: string; // Text field: Original Petitioner(s)
   baseRespondentNames?: string; // Text field: Original Respondent(s)
   baseCasePertainsTo?: CasePertainsToType; // Dropdown: GOTN | MoRTH | Both | NHAI

@@ -114,7 +114,7 @@ export function FeeBillManagementPortal() {
   const unsettledAmount = unsettledBills.reduce((acc, b) => acc + (Number(b.totalFeeAmount) || 0), 0);
 
   const distinctCases = useMemo(() => {
-    return new Set(activeBills.map((b) => String(b.caseNumber || '').trim().toUpperCase()).filter(Boolean)).size;
+    return new Set(activeBills.map((b) => String(b.caseDetails || b.caseNumber || '').trim().toUpperCase()).filter(Boolean)).size;
   }, [activeBills]);
 
   const distinctLawyers = useMemo(() => {
@@ -391,7 +391,7 @@ export function FeeBillManagementPortal() {
               type="button"
               onClick={() => {
                 setActiveKpiCard('pending');
-                setPaymentStatusFilter('Not Settled');
+                setPaymentStatusFilter('Pending');
               }}
               className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
                 activeKpiCard === 'pending'

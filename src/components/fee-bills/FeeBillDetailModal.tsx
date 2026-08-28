@@ -272,27 +272,16 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Letter / Reference Number</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    {contract.letterNumber || '—'}
-                  </span>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Letter Date</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {formatDateDMY(contract.letterDate)}
-                  </span>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Current Pendency</span>
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Current Pendency Lifecycle Stage</span>
                   <span className="font-bold text-amber-700 dark:text-amber-300 text-xs mt-0.5 block">
                     {contract.currentPendency || '—'}
                   </span>
                 </div>
+                <span className="px-2.5 py-1 bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 text-xs font-bold rounded-lg">
+                  Stage 1 Complete
+                </span>
               </div>
             </div>
           )}
@@ -333,25 +322,17 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Details / Number</span>
+                  <span className="font-extrabold text-blue-900 dark:text-blue-300 text-xs mt-0.5 block">
+                    {contract.caseDetails || [contract.caseType, contract.caseNumber, contract.caseYear].filter(Boolean).join(' ') || '—'}
+                  </span>
+                </div>
+
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Pertains To</span>
                   <span className="font-bold text-purple-700 dark:text-purple-300 text-xs mt-0.5 block">{contract.casePertainsTo || '—'}</span>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Type</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{contract.caseType || '—'}</span>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Number</span>
-                  <span className="font-extrabold text-blue-900 dark:text-blue-300 text-xs mt-0.5 block">{contract.caseNumber}</span>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Year</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{contract.caseYear || '—'}</span>
                 </div>
               </div>
             </div>
@@ -463,19 +444,41 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                   <span className="font-bold text-blue-700 dark:text-blue-300 text-xs mt-0.5 block">{contract.statusOfObtainingGo || '—'}</span>
                 </div>
 
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">G.O. Number</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    {contract.goNumber || '—'}
-                  </span>
-                </div>
+                {(contract.goNumber || contract.goDate) && (
+                  <>
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">G.O. Number</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                        {contract.goNumber || '—'}
+                      </span>
+                    </div>
 
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">G.O. Date</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {formatDateDMY(contract.goDate)}
-                  </span>
-                </div>
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">G.O. Date</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                        📅 {formatDateDMY(contract.goDate)}
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {(contract.goReferenceLetterNo || contract.goReferenceLetterDate) && (
+                  <>
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">G.O. Proposal Ref Letter No</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                        {contract.goReferenceLetterNo || '—'}
+                      </span>
+                    </div>
+
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">G.O. Proposal Ref Letter Date</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                        📅 {formatDateDMY(contract.goReferenceLetterDate)}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -497,7 +500,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Payment Status</span>
                   <span className={`font-extrabold text-sm ${contract.paymentStatus === 'Settled' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {contract.paymentStatus || 'Not Settled'}
+                    {contract.paymentStatus || 'Pending'}
                   </span>
                 </div>
                 {contract.statusOfPaymentProposal && (
