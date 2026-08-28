@@ -377,6 +377,29 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     [activeStretches, getStretchPos, minKm, totalSpan, canvasWidthPxActual]
   );
 
+  // Unique top-aligned DLP boundary milestone pins
+  const uniqueDlpPins = useMemo(() => {
+    if (!dlpStretches || dlpStretches.length === 0) return [];
+    const map = new Map<number, { km: string | number; xPx: number }>();
+    dlpStretches.forEach((dlp) => {
+      const sFrom = Number(dlp.chainage_from_km || 0);
+      const sTo = Number(dlp.chainage_to_km || 0);
+      const pos = getDlpPosition(dlp);
+
+      // Start Pin (leftPx)
+      if (!Array.from(map.keys()).some((k) => Math.abs(k - sFrom) < 0.005)) {
+        map.set(sFrom, { km: dlp.chainage_from_km, xPx: pos.leftPx });
+      }
+
+      // End Pin (leftPx + widthPx)
+      if (!Array.from(map.keys()).some((k) => Math.abs(k - sTo) < 0.005)) {
+        map.set(sTo, { km: dlp.chainage_to_km, xPx: pos.leftPx + pos.widthPx });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [dlpStretches, getDlpPosition]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white flex flex-col items-center justify-center p-6">
@@ -804,6 +827,20 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 {/* Horizontal Road Centerline Guide Line */}
                 <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-slate-400/40 dark:border-white/25 z-0 pointer-events-none" />
 
+                {/* Top-Ceiling Uniform Milestone Pins for DLP Work Boundaries (Uniform Height above all lane configurations) */}
+                {uniqueDlpPins.map((pin) => (
+                  <div
+                    key={`dlp-pin-${pin.km}`}
+                    className="absolute top-2 -translate-x-1/2 z-40 pointer-events-none flex flex-col items-center select-none"
+                    style={{ left: `${pin.xPx}px` }}
+                  >
+                    <span className="px-1.5 py-0.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 rounded-sm text-[8.5px] font-mono font-black shadow-md flex items-center gap-0.5 whitespace-nowrap border border-white/40">
+                      📍 Km {pin.km}
+                    </span>
+                    <div className="w-px h-10 border-l border-dashed border-slate-400/60 dark:border-slate-500/60" />
+                  </div>
+                ))}
+
                 {activeStretches.length === 0 && dlpStretches.length === 0 ? (
                   <div className="w-full text-center text-xs text-slate-400 py-8">
                     No micro sub-chainage stretches or DLP works defined for this corridor.
@@ -850,27 +887,6 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                       const wFrom = Number(dlp.road_width_from_m ?? 0);
                       const wTo = Number(dlp.road_width_to_m ?? 3.5);
 
-                      const sFrom = Number(dlp.chainage_from_km || 0);
-                      const sTo = Number(dlp.chainage_to_km || 0);
-
-                      // Deduplicate milestone pins: If an earlier stretch in the list already shares the start or end chainage, don't re-render it
-                      const hasEarlierPinAtStart = dlpStretches.some((other, oIdx) => {
-                        if (oIdx >= dIdx) return false;
-                        const oFrom = Number(other.chainage_from_km || 0);
-                        const oTo = Number(other.chainage_to_km || 0);
-                        return Math.abs(oFrom - sFrom) < 0.005 || Math.abs(oTo - sFrom) < 0.005;
-                      });
-
-                      const hasEarlierPinAtEnd = dlpStretches.some((other, oIdx) => {
-                        if (oIdx >= dIdx) return false;
-                        const oFrom = Number(other.chainage_from_km || 0);
-                        const oTo = Number(other.chainage_to_km || 0);
-                        return Math.abs(oFrom - sTo) < 0.005 || Math.abs(oTo - sTo) < 0.005;
-                      });
-
-                      const showStartPin = !hasEarlierPinAtStart;
-                      const showEndPin = !hasEarlierPinAtEnd;
-
                       const rightDateLabel = dlp.category === 'NO_DLP'
                         ? `DLP Ended: ${formatDateIndian(dlp.dlp_ended_on_date || dlp.dlp_till_date)}`
                         : dlp.category === 'CONSTRUCTION'
@@ -885,55 +901,36 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                         return (
                           <div
                             key={dlp.id || dIdx}
-                            className="absolute top-1/2 -translate-y-1/2 z-30"
+                            className={`absolute top-1/2 -translate-y-1/2 rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex items-center justify-between overflow-hidden px-2 z-30 ${style.bg} ${style.border} ${style.text}`}
                             style={{
                               left: `${leftPx}px`,
                               width: `${widthPx}px`,
                               height: `${heightPx}px`,
                             }}
+                            onMouseEnter={() => {
+                              setHoveredStretch(null);
+                              setHoveredDlpStretch(dlp);
+                            }}
+                            onClick={() => {
+                              setHoveredStretch(null);
+                              setHoveredDlpStretch(dlp);
+                            }}
+                            title={`${dlp.category} | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel} (Km ${dlp.chainage_from_km} → Km ${dlp.chainage_to_km}, Width 0 to ${wTo}m)`}
                           >
-                            {/* Top Left Milestone Pin (Render once) */}
-                            {showStartPin && (
-                              <span className="absolute -top-3.5 left-0 -translate-x-1/2 px-1.5 py-0.2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 rounded-sm text-[8px] font-mono font-black shadow-md z-40 flex items-center gap-0.5 whitespace-nowrap border border-white/40 pointer-events-none">
-                                📍 Km {dlp.chainage_from_km}
-                              </span>
-                            )}
+                            {/* Left: Contractor Name */}
+                            <span className="text-[9.5px] md:text-[10.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs shrink-0 max-w-[28%] truncate pr-1 select-none">
+                              {contractorTitle}
+                            </span>
 
-                            {/* Top Right Milestone Pin (Render once) */}
-                            {showEndPin && (
-                              <span className="absolute -top-3.5 right-0 translate-x-1/2 px-1.5 py-0.2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 rounded-sm text-[8px] font-mono font-black shadow-md z-40 flex items-center gap-0.5 whitespace-nowrap border border-white/40 pointer-events-none">
-                                📍 Km {dlp.chainage_to_km}
-                              </span>
-                            )}
+                            {/* Middle: Name of the Work (Wrapped so everything fits inside boundary) */}
+                            <span className="text-[10px] md:text-[11px] font-black tracking-tight text-center px-1 break-words line-clamp-2 drop-shadow-xs flex-1 min-w-0 leading-tight select-none">
+                              {workTitle}
+                            </span>
 
-                            {/* Work Boundary Bar */}
-                            <div
-                              className={`w-full h-full rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex items-center justify-between overflow-hidden px-2 ${style.bg} ${style.border} ${style.text}`}
-                              onMouseEnter={() => {
-                                setHoveredStretch(null);
-                                setHoveredDlpStretch(dlp);
-                              }}
-                              onClick={() => {
-                                setHoveredStretch(null);
-                                setHoveredDlpStretch(dlp);
-                              }}
-                              title={`${dlp.category} | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel} (Km ${dlp.chainage_from_km} → Km ${dlp.chainage_to_km}, Width 0 to ${wTo}m)`}
-                            >
-                              {/* Left: Contractor Name */}
-                              <span className="text-[9.5px] md:text-[10.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs shrink-0 max-w-[28%] truncate pr-1 select-none">
-                                {contractorTitle}
-                              </span>
-
-                              {/* Middle: Name of the Work (Wrapped so everything fits inside boundary) */}
-                              <span className="text-[10px] md:text-[11px] font-black tracking-tight text-center px-1 break-words line-clamp-2 drop-shadow-xs flex-1 min-w-0 leading-tight select-none">
-                                {workTitle}
-                              </span>
-
-                              {/* Right: DLP Ended / Till Date based on type */}
-                              <span className="text-[9px] md:text-[10px] font-mono font-black text-white/95 drop-shadow-xs shrink-0 max-w-[32%] text-right truncate pl-1 select-none">
-                                {rightDateLabel}
-                              </span>
-                            </div>
+                            {/* Right: DLP Ended / Till Date based on type */}
+                            <span className="text-[9px] md:text-[10px] font-mono font-black text-white/95 drop-shadow-xs shrink-0 max-w-[32%] text-right truncate pl-1 select-none">
+                              {rightDateLabel}
+                            </span>
                           </div>
                         );
                       }
@@ -949,90 +946,62 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                         <React.Fragment key={dlp.id || dIdx}>
                           {/* Upper LHS Strip */}
                           <div
-                            className="absolute z-30"
+                            className={`absolute rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex items-center justify-between overflow-hidden px-1.5 z-30 ${style.bg} ${style.border} ${style.text}`}
                             style={{
                               left: `${leftPx}px`,
                               width: `${widthPx}px`,
                               top: topUpperPx,
                               height: `${stripHeightPx}px`,
                             }}
+                            onMouseEnter={() => {
+                              setHoveredStretch(null);
+                              setHoveredDlpStretch(dlp);
+                            }}
+                            onClick={() => {
+                              setHoveredStretch(null);
+                              setHoveredDlpStretch(dlp);
+                            }}
+                            title={`LHS Widening | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel}`}
                           >
-                            {showStartPin && (
-                              <span className="absolute -top-3 left-0 -translate-x-1/2 px-1 py-0.2 bg-slate-900 text-white rounded text-[7.5px] font-mono font-black shadow-md z-40 whitespace-nowrap pointer-events-none">
-                                📍 Km {dlp.chainage_from_km}
-                              </span>
-                            )}
-                            {showEndPin && (
-                              <span className="absolute -top-3 right-0 translate-x-1/2 px-1 py-0.2 bg-slate-900 text-white rounded text-[7.5px] font-mono font-black shadow-md z-40 whitespace-nowrap pointer-events-none">
-                                📍 Km {dlp.chainage_to_km}
-                              </span>
-                            )}
-                            <div
-                              className={`w-full h-full rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex items-center justify-between overflow-hidden px-1.5 ${style.bg} ${style.border} ${style.text}`}
-                              onMouseEnter={() => {
-                                setHoveredStretch(null);
-                                setHoveredDlpStretch(dlp);
-                              }}
-                              onClick={() => {
-                                setHoveredStretch(null);
-                                setHoveredDlpStretch(dlp);
-                              }}
-                              title={`LHS Widening | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel}`}
-                            >
-                              <span className="text-[8.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs shrink-0 max-w-[28%] truncate pr-1 select-none">
-                                {contractorTitle}
-                              </span>
-                              <span className="text-[9px] font-black tracking-tight text-center px-1 break-words line-clamp-1 drop-shadow-xs flex-1 min-w-0 leading-tight select-none">
-                                {workTitle}
-                              </span>
-                              <span className="text-[8.5px] font-mono font-black text-white/95 drop-shadow-xs shrink-0 max-w-[32%] text-right truncate pl-1 select-none">
-                                {rightDateLabel}
-                              </span>
-                            </div>
+                            <span className="text-[8.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs shrink-0 max-w-[28%] truncate pr-1 select-none">
+                              {contractorTitle}
+                            </span>
+                            <span className="text-[9px] font-black tracking-tight text-center px-1 break-words line-clamp-1 drop-shadow-xs flex-1 min-w-0 leading-tight select-none">
+                              {workTitle}
+                            </span>
+                            <span className="text-[8.5px] font-mono font-black text-white/95 drop-shadow-xs shrink-0 max-w-[32%] text-right truncate pl-1 select-none">
+                              {rightDateLabel}
+                            </span>
                           </div>
 
                           {/* Lower RHS Strip */}
                           <div
-                            className="absolute z-30"
+                            className={`absolute rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex items-center justify-between overflow-hidden px-1.5 z-30 ${style.bg} ${style.border} ${style.text}`}
                             style={{
                               left: `${leftPx}px`,
                               width: `${widthPx}px`,
                               top: topLowerPx,
                               height: `${stripHeightPx}px`,
                             }}
+                            onMouseEnter={() => {
+                              setHoveredStretch(null);
+                              setHoveredDlpStretch(dlp);
+                            }}
+                            onClick={() => {
+                              setHoveredStretch(null);
+                              setHoveredDlpStretch(dlp);
+                            }}
+                            title={`RHS Widening | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel}`}
                           >
-                            {showStartPin && (
-                              <span className="absolute -bottom-3 left-0 -translate-x-1/2 px-1 py-0.2 bg-slate-900 text-white rounded text-[7.5px] font-mono font-black shadow-md z-40 whitespace-nowrap pointer-events-none">
-                                📍 Km {dlp.chainage_from_km}
-                              </span>
-                            )}
-                            {showEndPin && (
-                              <span className="absolute -bottom-3 right-0 translate-x-1/2 px-1 py-0.2 bg-slate-900 text-white rounded text-[7.5px] font-mono font-black shadow-md z-40 whitespace-nowrap pointer-events-none">
-                                📍 Km {dlp.chainage_to_km}
-                              </span>
-                            )}
-                            <div
-                              className={`w-full h-full rounded-xs shadow-md transition-all duration-150 cursor-pointer hover:brightness-110 hover:z-40 flex items-center justify-between overflow-hidden px-1.5 ${style.bg} ${style.border} ${style.text}`}
-                              onMouseEnter={() => {
-                                setHoveredStretch(null);
-                                setHoveredDlpStretch(dlp);
-                              }}
-                              onClick={() => {
-                                setHoveredStretch(null);
-                                setHoveredDlpStretch(dlp);
-                              }}
-                              title={`RHS Widening | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel}`}
-                            >
-                              <span className="text-[8.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs shrink-0 max-w-[28%] truncate pr-1 select-none">
-                                {contractorTitle}
-                              </span>
-                              <span className="text-[9px] font-black tracking-tight text-center px-1 break-words line-clamp-1 drop-shadow-xs flex-1 min-w-0 leading-tight select-none">
-                                {workTitle}
-                              </span>
-                              <span className="text-[8.5px] font-mono font-black text-white/95 drop-shadow-xs shrink-0 max-w-[32%] text-right truncate pl-1 select-none">
-                                {rightDateLabel}
-                              </span>
-                            </div>
+                            <span className="text-[8.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs shrink-0 max-w-[28%] truncate pr-1 select-none">
+                              {contractorTitle}
+                            </span>
+                            <span className="text-[9px] font-black tracking-tight text-center px-1 break-words line-clamp-1 drop-shadow-xs flex-1 min-w-0 leading-tight select-none">
+                              {workTitle}
+                            </span>
+                            <span className="text-[8.5px] font-mono font-black text-white/95 drop-shadow-xs shrink-0 max-w-[32%] text-right truncate pl-1 select-none">
+                              {rightDateLabel}
+                            </span>
                           </div>
                         </React.Fragment>
                       );
