@@ -615,13 +615,13 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
 
                       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
                         <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
-                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Assistant Settled</span>
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Settled Amount</span>
                           <span className="font-extrabold text-slate-900 dark:text-slate-100 font-mono block mt-0.5">
                             {formatINR(contract.assistantSettledAmount || 0)}
                           </span>
                         </div>
                         <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
-                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Assistant IT Cess</span>
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">IT Cess (TDS)</span>
                           <span className="font-bold text-rose-600 dark:text-rose-400 font-mono block mt-0.5">
                             - {formatINR(contract.assistantItCess || 0)}
                           </span>
@@ -633,7 +633,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                           </span>
                         </div>
                         <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
-                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Assistant UTR</span>
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">UTR / RBI Ref No.</span>
                           <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-[11px] block mt-0.5 truncate">
                             {contract.assistantUtrRbiReference || '—'}
                           </span>

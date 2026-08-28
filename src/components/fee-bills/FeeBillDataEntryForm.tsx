@@ -1452,7 +1452,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                     <div>
                       <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Assistant Claim (₹)
+                        Claim Amount (₹)
                       </label>
                       <input
                         type="text"
@@ -1464,7 +1464,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
                     <div>
                       <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Assistant Settled Amount (₹)
+                        Settled Amount (₹)
                       </label>
                       <input
                         type="number"
@@ -1477,7 +1477,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
                     <div>
                       <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Assistant IT Cess (₹)
+                        IT Cess (TDS ₹)
                       </label>
                       <input
                         type="number"
@@ -1490,7 +1490,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
                     <div>
                       <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Assistant Net Deposited (₹)
+                        Net Deposited (₹)
                       </label>
                       <input
                         type="number"
@@ -1503,7 +1503,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
                     <div>
                       <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Assistant UTR / RBI Ref No.
+                        Payment UTR / RBI Ref No.
                       </label>
                       <input
                         type="text"
@@ -1515,7 +1515,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
                     <div>
                       <DatePickerInput
-                        label="Assistant Payment Date"
+                        label="Payment / Bank Date"
                         max={todayStr}
                         value={formData.assistantPaymentDate || ''}
                         onChange={(val) => setFormData((prev) => ({ ...prev, assistantPaymentDate: val }))}
