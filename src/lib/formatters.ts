@@ -17,7 +17,7 @@ export function parseDateString(dateStr: string | null | undefined): Date | null
     const month = parseInt(dmyMatch[2], 10) - 1;
     const year = parseInt(dmyMatch[3], 10);
     const d = new Date(year, month, day);
-    if (!isNaN(d.getTime())) return d;
+    if (!isNaN(d.getTime()) && d.getDate() === day && d.getMonth() === month && d.getFullYear() === year) return d;
   }
 
   // YYYY-MM-DD
@@ -27,11 +27,48 @@ export function parseDateString(dateStr: string | null | undefined): Date | null
     const month = parseInt(ymdMatch[2], 10) - 1;
     const day = parseInt(ymdMatch[3], 10);
     const d = new Date(year, month, day);
+    if (!isNaN(d.getTime()) && d.getDate() === day && d.getMonth() === month && d.getFullYear() === year) return d;
+  }
+
+  // DD.MM.YY or DD-MM-YY or DD/MM/YY (2-digit year support e.g. 25 -> 2025)
+  const dmy2Match = s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{2})$/);
+  if (dmy2Match) {
+    const day = parseInt(dmy2Match[1], 10);
+    const month = parseInt(dmy2Match[2], 10) - 1;
+    const shortYear = parseInt(dmy2Match[3], 10);
+    const year = shortYear >= 70 ? 1900 + shortYear : 2000 + shortYear;
+    const d = new Date(year, month, day);
+    if (!isNaN(d.getTime()) && d.getDate() === day && d.getMonth() === month && d.getFullYear() === year) return d;
+  }
+
+  // 8 straight digits: DDMMYYYY
+  const ddmmyyyyMatch = s.match(/^(\d{2})(\d{2})(\d{4})$/);
+  if (ddmmyyyyMatch) {
+    const day = parseInt(ddmmyyyyMatch[1], 10);
+    const month = parseInt(ddmmyyyyMatch[2], 10) - 1;
+    const year = parseInt(ddmmyyyyMatch[3], 10);
+    const d = new Date(year, month, day);
+    if (!isNaN(d.getTime()) && d.getDate() === day && d.getMonth() === month && d.getFullYear() === year) return d;
+  }
+
+  // 6 straight digits: DDMMYY
+  const ddmmyyMatch = s.match(/^(\d{2})(\d{2})(\d{2})$/);
+  if (ddmmyyMatch) {
+    const day = parseInt(ddmmyyMatch[1], 10);
+    const month = parseInt(ddmmyyMatch[2], 10) - 1;
+    const shortYear = parseInt(ddmmyyMatch[3], 10);
+    const year = shortYear >= 70 ? 1900 + shortYear : 2000 + shortYear;
+    const d = new Date(year, month, day);
+    if (!isNaN(d.getTime()) && d.getDate() === day && d.getMonth() === month && d.getFullYear() === year) return d;
+  }
+
+  // ISO timestamp (e.g. 2025-05-10T00:00:00.000Z)
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+    const d = new Date(s);
     if (!isNaN(d.getTime())) return d;
   }
 
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? null : d;
+  return null;
 }
 
 export interface ProjectDelayResult {

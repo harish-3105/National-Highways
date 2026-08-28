@@ -22,9 +22,12 @@ interface DatePickerInputProps {
 function normalizeToYmd(val: string | null | undefined): string {
   if (!val) return '';
   const s = String(val).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const d = parseDateString(s);
+    return d ? s : '';
+  }
   const d = parseDateString(s);
-  if (!d || isNaN(d.getTime())) return s;
+  if (!d) return '';
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
@@ -33,23 +36,30 @@ function normalizeToYmd(val: string | null | undefined): string {
 
 function formatToDmy(ymd: string): string {
   if (!ymd) return '';
-  const parts = ymd.split('-');
-  if (parts.length === 3) {
+  const s = String(ymd).trim();
+  const parts = s.split('-');
+  if (parts.length === 3 && parts[0].length === 4) {
     const [yyyy, mm, dd] = parts;
     return `${dd}/${mm}/${yyyy}`;
   }
-  return ymd;
+  const d = parseDateString(s);
+  if (d) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy}`;
+  }
+  return s;
 }
 
-function parseDmyToYmd(dmy: string): string {
-  if (!dmy) return '';
-  const clean = dmy.trim();
-  const match = clean.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
-  if (match) {
-    const [, dd, mm, yyyy] = match;
-    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
-  }
-  return normalizeToYmd(clean);
+function parseUserInputToYmd(raw: string): string | null {
+  if (!raw) return '';
+  const d = parseDateString(raw.trim());
+  if (!d) return null;
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 export const DatePickerInput: React.FC<DatePickerInputProps> = ({
@@ -67,11 +77,16 @@ export const DatePickerInput: React.FC<DatePickerInputProps> = ({
   className = '',
 }) => {
   const hiddenDateRef = useRef<HTMLInputElement>(null);
+  const isFocusedRef = useRef(false);
+
   const normalizedYmd = useMemo(() => normalizeToYmd(value), [value]);
   const [displayText, setDisplayText] = useState(() => formatToDmy(normalizedYmd));
 
+  // Keep displayText in sync with incoming value when the user is NOT actively typing
   useEffect(() => {
-    setDisplayText(formatToDmy(normalizedYmd));
+    if (!isFocusedRef.current) {
+      setDisplayText(formatToDmy(normalizedYmd));
+    }
   }, [normalizedYmd]);
 
   const todayYmd = useMemo(() => {
@@ -82,35 +97,56 @@ export const DatePickerInput: React.FC<DatePickerInputProps> = ({
     return `${yyyy}-${mm}-${dd}`;
   }, []);
 
+  const handleFocus = () => {
+    isFocusedRef.current = true;
+  };
+
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
+    let raw = e.target.value.replace(/[^0-9/.-]/g, '');
+
+    // Auto-mask 8 continuous digits e.g. 15082025 -> 15/08/2025
+    if (/^\d{8}$/.test(raw)) {
+      raw = `${raw.slice(0, 2)}/${raw.slice(2, 4)}/${raw.slice(4)}`;
+    }
+
     setDisplayText(raw);
-    const parsed = parseDmyToYmd(raw);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(parsed)) {
-      onChange(parsed);
-    } else if (!raw.trim()) {
+
+    if (!raw.trim()) {
       onChange('');
+      return;
+    }
+
+    // Only commit to parent if a complete, valid date format is matched
+    const parsedYmd = parseUserInputToYmd(raw);
+    if (parsedYmd) {
+      onChange(parsedYmd);
     }
   };
 
   const handleBlur = () => {
-    const parsed = parseDmyToYmd(displayText);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(parsed)) {
-      onChange(parsed);
-      setDisplayText(formatToDmy(parsed));
-    } else if (!displayText.trim()) {
+    isFocusedRef.current = false;
+    const clean = displayText.trim();
+
+    if (!clean) {
       onChange('');
       setDisplayText('');
+      return;
+    }
+
+    const parsedYmd = parseUserInputToYmd(clean);
+    if (parsedYmd) {
+      onChange(parsedYmd);
+      setDisplayText(formatToDmy(parsedYmd));
     } else {
-      // Revert to current normalized value if incomplete/invalid
+      // Revert to current valid value if input was incomplete or invalid
       setDisplayText(formatToDmy(normalizedYmd));
     }
   };
 
   const handlePickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const ymd = e.target.value;
-    onChange(ymd);
-    setDisplayText(formatToDmy(ymd));
+    onChange(ymd || '');
+    setDisplayText(formatToDmy(ymd || ''));
   };
 
   const openCalendar = () => {
@@ -139,6 +175,8 @@ export const DatePickerInput: React.FC<DatePickerInputProps> = ({
           type="text"
           value={displayText}
           placeholder={placeholder}
+          maxLength={10}
+          onFocus={handleFocus}
           onChange={handleTextChange}
           onBlur={handleBlur}
           disabled={disabled}
