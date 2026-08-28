@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
   Save,
@@ -13,15 +13,18 @@ import {
   Calendar,
   Building2,
   Check,
-  LockKeyhole,
   CheckCircle2,
   Clock,
   Briefcase,
   ChevronDown,
   Sparkles,
   Info,
+  Route,
+  RefreshCw,
+  Edit3,
 } from 'lucide-react';
 import { DlpCorridor, DlpWorkStretch, DlpWorkCategory, DlpMasterData } from '@/types/dlp';
+import { HighwayCorridor } from '@/app/api/highways/route';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { SubChainageStretch } from '@/app/api/sub-chainages/route';
@@ -36,6 +39,7 @@ import { addYearsToDateString, formatDateIndian, parseDateString } from '@/lib/f
 interface DlpContractEntryFormProps {
   initialData?: Partial<DlpCorridor>;
   masterData?: DlpMasterData;
+  masterCorridors?: HighwayCorridor[];
   onSave: (corridorData: Partial<DlpCorridor>) => Promise<void> | void;
   onCancel: () => void;
 }
@@ -81,15 +85,28 @@ const CATEGORY_CONFIG: Record<
   },
 };
 
+function parseChainageValue(val: string | number | null | undefined, fallback: number = 0): number {
+  if (val === null || val === undefined || val === '') return fallback;
+  if (typeof val === 'number') return isNaN(val) ? fallback : val;
+  const s = String(val).trim().replace('/', '.');
+  const num = parseFloat(s);
+  return isNaN(num) ? fallback : num;
+}
+
 export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
   initialData,
   masterData,
+  masterCorridors: initialMasterCorridors,
   onSave,
   onCancel,
 }) => {
-  const [activeTab, setActiveTab] = useState<'IDENTITY' | 'STRETCHES'>('IDENTITY');
+  // Master Corridors State
+  const [corridorsList, setCorridorsList] = useState<HighwayCorridor[]>(initialMasterCorridors || []);
+  const [fetchingCorridors, setFetchingCorridors] = useState<boolean>(!initialMasterCorridors || initialMasterCorridors.length === 0);
+  const [selectedCorridorId, setSelectedCorridorId] = useState<string>('');
+  const [selectedCorridor, setSelectedCorridor] = useState<HighwayCorridor | null>(null);
 
-  // Tab 1: Corridor & Jurisdiction
+  // Selected Corridor Level 1 Identity
   const [divisionName, setDivisionName] = useState<string>(initialData?.division_name || '');
   const [highwayCode, setHighwayCode] = useState<string>(initialData?.highway_code || '');
   const [fromKm, setFromKm] = useState<string>(
@@ -99,10 +116,68 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
     initialData?.to_km !== undefined && initialData?.to_km !== null ? String(initialData.to_km) : ''
   );
   const [corridorRemarks, setCorridorRemarks] = useState<string>(initialData?.remarks || '');
+  const [isChangingCorridor, setIsChangingCorridor] = useState<boolean>(false);
 
   // Level 2 Sub-Chainages for lane configuration detection
   const [subChainages, setSubChainages] = useState<SubChainageStretch[]>([]);
 
+  // Granular Sub-Work Stretches
+  const [workStretches, setWorkStretches] = useState<DlpWorkStretch[]>(
+    initialData?.work_stretches || []
+  );
+
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Fetch Master Highway Corridors if not passed as prop
+  useEffect(() => {
+    if (initialMasterCorridors && initialMasterCorridors.length > 0) {
+      setCorridorsList(initialMasterCorridors);
+      setFetchingCorridors(false);
+      return;
+    }
+
+    const fetchCorridors = async () => {
+      try {
+        setFetchingCorridors(true);
+        const res = await fetch('/api/highways');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.corridors)) {
+          setCorridorsList(data.corridors);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch Master Highways for DLP:', err);
+      } finally {
+        setFetchingCorridors(false);
+      }
+    };
+
+    fetchCorridors();
+  }, [initialMasterCorridors]);
+
+  // Match initialData with master corridors list
+  useEffect(() => {
+    if (corridorsList.length === 0) return;
+
+    if (initialData?.highway_code) {
+      const match =
+        corridorsList.find(
+          (c) =>
+            c.road_code.toUpperCase() === initialData.highway_code?.toUpperCase() &&
+            (!initialData.division_name || c.division_name?.toLowerCase() === initialData.division_name.toLowerCase())
+        ) ||
+        corridorsList.find((c) => c.road_code.toUpperCase() === initialData.highway_code?.toUpperCase());
+
+      if (match) {
+        setSelectedCorridorId(match.id);
+        setSelectedCorridor(match);
+      }
+    }
+  }, [initialData, corridorsList]);
+
+  // Fetch Sub-Chainages when Highway Code changes
   useEffect(() => {
     const code = highwayCode.trim();
     if (!code) {
@@ -125,57 +200,53 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
     fetchSub();
   }, [highwayCode]);
 
-  // Tab 2: Dynamic Sub-Work Stretches
-  const [workStretches, setWorkStretches] = useState<DlpWorkStretch[]>(
-    initialData?.work_stretches || []
-  );
-
-  const [isAddMenuOpen, setIsAddMenuOpen] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitError, setSubmitError] = useState<string | null>(null);
-
-  const divisionOptions = masterData?.divisions || [];
-
   const totalLengthKm =
     fromKm !== '' && toKm !== ''
       ? Math.max(0, Math.round((Number(toKm) - Number(fromKm)) * 1000) / 1000)
       : 0;
 
-  // Tab 1 Validation Check
-  const validateTab1 = (): boolean => {
-    const errs: Record<string, string> = {};
-    if (!divisionName.trim()) errs.divisionName = 'Division selection is required.';
-    if (!highwayCode.trim()) errs.highwayCode = 'Highway Code is required (e.g. NH-44, NH-179A).';
-    if (fromKm === '' || isNaN(Number(fromKm)) || Number(fromKm) < 0) {
-      errs.fromKm = 'Valid starting chainage (From Km) is required.';
-    }
-    if (toKm === '' || isNaN(Number(toKm))) {
-      errs.toKm = 'Valid ending chainage (To Km) is required.';
-    } else if (Number(toKm) < Number(fromKm)) {
-      errs.toKm = 'Ending chainage (To Km) cannot be less than starting chainage.';
-    }
+  // Searchable Options for Master Corridors
+  const corridorOptions = useMemo(() => {
+    return corridorsList.map((c) => {
+      const fromDisplay = c.from_chainage ? `Km ${c.from_chainage}` : `Km 0.000`;
+      const toDisplay = c.to_chainage ? `Km ${c.to_chainage}` : `Km ${c.length_km}`;
+      const roadTitle = c.road_name || (c.from_location && c.to_location ? `${c.from_location} - ${c.to_location}` : '');
+      const divDisplay = c.division_name ? `${c.division_name} Division` : 'General';
+      const label = `${c.road_code} • ${divDisplay} • ${fromDisplay} to ${toDisplay}${roadTitle ? ` (${roadTitle})` : ''}`;
 
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+      return {
+        value: c.id,
+        label,
+      };
+    });
+  }, [corridorsList]);
+
+  const handleSelectCorridor = (corridorId: string) => {
+    setSelectedCorridorId(corridorId);
+    const found = corridorsList.find((c) => c.id === corridorId);
+    if (found) {
+      setSelectedCorridor(found);
+      setHighwayCode(found.road_code);
+      setDivisionName(found.division_name || '');
+      const parsedFrom = parseChainageValue(found.from_chainage, 0);
+      const parsedTo = parseChainageValue(found.to_chainage, Number(found.length_km) || 0);
+      setFromKm(String(parsedFrom));
+      setToKm(String(parsedTo));
+      setIsChangingCorridor(false);
+      if (errors.corridor) {
+        setErrors((prev) => ({ ...prev, corridor: '' }));
+      }
+    }
   };
-
-  const isTab1Valid = Boolean(
-    divisionName.trim() &&
-    highwayCode.trim() &&
-    fromKm !== '' &&
-    toKm !== '' &&
-    Number(toKm) >= Number(fromKm)
-  );
 
   const handleAddWorkStretch = (category: DlpWorkCategory) => {
     const newStretch: DlpWorkStretch = {
       id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       category,
-      chainage_from_km: '' as any,
-      chainage_to_km: '' as any,
-      length_km: 0,
-      road_width_from_m: '' as any,
+      chainage_from_km: fromKm !== '' ? Number(fromKm) : ('' as any),
+      chainage_to_km: toKm !== '' ? Number(toKm) : ('' as any),
+      length_km: totalLengthKm,
+      road_width_from_m: 0.0,
       road_width_to_m: '' as any,
       contractor_name: '',
       work_name: '',
@@ -190,7 +261,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
       status: 'ACTIVE',
     };
 
-    setWorkStretches((prev) => [...prev, newStretch]);
+    setWorkStretches((prev) => [newStretch, ...prev]);
     setIsAddMenuOpen(false);
     setSubmitError(null);
   };
@@ -258,8 +329,26 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
     setSubmitError(null);
   };
 
-  // Validate all Tab 2 sub-work stretches including Road Width Capacity checks
-  const validateStretches = (): { valid: boolean; errorMsg?: string } => {
+  // Validate all sub-work stretches including Road Width Capacity checks
+  const validateForm = (): { valid: boolean; errorMsg?: string } => {
+    const errs: Record<string, string> = {};
+
+    if (!highwayCode.trim() || !divisionName.trim()) {
+      errs.corridor = 'Please select a Master Highway Corridor.';
+    }
+
+    if (fromKm === '' || isNaN(Number(fromKm)) || Number(fromKm) < 0) {
+      errs.corridor = 'Corridor starting chainage is invalid.';
+    }
+    if (toKm === '' || isNaN(Number(toKm)) || Number(toKm) < Number(fromKm)) {
+      errs.corridor = 'Corridor ending chainage is invalid.';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return { valid: false, errorMsg: errs.corridor || 'Please select a valid Master Highway Corridor.' };
+    }
+
     for (let i = 0; i < workStretches.length; i++) {
       const s = workStretches[i];
       const rawFrom = String((s as any).chainage_from_km ?? '').trim();
@@ -286,6 +375,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
         }
       }
     }
+
     return { valid: true };
   };
 
@@ -293,16 +383,9 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
     e.preventDefault();
     setSubmitError(null);
 
-    if (!validateTab1()) {
-      setActiveTab('IDENTITY');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    const stretchValidation = validateStretches();
-    if (!stretchValidation.valid) {
-      setActiveTab('STRETCHES');
-      setSubmitError(stretchValidation.errorMsg || 'Invalid stretch configuration');
+    const validation = validateForm();
+    if (!validation.valid) {
+      setSubmitError(validation.errorMsg || 'Invalid form entries');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -334,11 +417,13 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
     try {
       await onSave(payload);
     } catch (err: any) {
-      setSubmitError(err?.message || 'Failed to save corridor');
+      setSubmitError(err?.message || 'Failed to save DLP record');
     } finally {
       setLoading(false);
     }
   };
+
+  const hasSelectedCorridor = Boolean(highwayCode.trim() && divisionName.trim());
 
   return (
     <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-6 pb-12">
@@ -355,10 +440,10 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-blue-600" />
-              {initialData?.id ? 'Edit DLP Corridor & Maintenance Works' : 'New DLP Corridor & Maintenance Master Entry'}
+              {initialData?.id ? 'Edit DLP Corridor & Maintenance Works' : 'New DLP Maintenance Entry'}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Tamil Nadu National Highways &bull; 2D Spatial Geometry &amp; Lifecycle Management
+              Tamil Nadu National Highways &bull; Linked Master Corridors &amp; 2D Spatial Maintenance Registry
             </p>
           </div>
         </div>
@@ -392,896 +477,764 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
         </div>
       )}
 
-      {/* 2-STAGE STAGE-GATED TAB NAVIGATION */}
-      <div className="bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Tab 1 Pill */}
-          <button
-            type="button"
-            onClick={() => {
-              setErrors({});
-              setActiveTab('IDENTITY');
-            }}
-            className={`flex items-center justify-between p-3.5 rounded-xl text-left transition-all border cursor-pointer ${
-              activeTab === 'IDENTITY'
-                ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-900 dark:text-blue-100 shadow-xs ring-1 ring-blue-500/20'
-                : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${activeTab === 'IDENTITY' ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'}`}>
-                <MapPin className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider block text-blue-600 dark:text-blue-400">
-                  Tab 1 &bull; Baseline Identity
-                </span>
-                <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                  Corridor &amp; Jurisdiction
-                </span>
-              </div>
-            </div>
-            {isTab1Valid ? (
-              <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
-                <Check className="w-3.5 h-3.5" /> Valid
-              </span>
-            ) : null}
-          </button>
-
-          {/* Tab 2 Pill */}
-          <button
-            type="button"
-            onClick={() => {
-              if (validateTab1()) {
-                setErrors({});
-                setActiveTab('STRETCHES');
-              }
-            }}
-            disabled={!isTab1Valid}
-            className={`flex items-center justify-between p-3.5 rounded-xl text-left transition-all border cursor-pointer disabled:cursor-not-allowed ${
-              activeTab === 'STRETCHES'
-                ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-900 dark:text-blue-100 shadow-xs ring-1 ring-blue-500/20'
-                : isTab1Valid
-                ? 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                : 'bg-slate-100/50 dark:bg-slate-900/40 border-slate-200/50 dark:border-slate-800/50 text-slate-400 dark:text-slate-600 opacity-60'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${activeTab === 'STRETCHES' ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'}`}>
-                <Layers className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider block text-blue-600 dark:text-blue-400">
-                  Tab 2 &bull; 2D Work Workspace
-                </span>
-                <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                  Sub-Work Stretches ({workStretches.length} Works)
-                </span>
-              </div>
-            </div>
-            {!isTab1Valid ? (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-600 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                <LockKeyhole className="w-3 h-3" /> Locked
-              </span>
-            ) : workStretches.length > 0 ? (
-              <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-xs font-mono font-bold rounded-md">
-                {workStretches.length} added
-              </span>
-            ) : null}
-          </button>
-        </div>
-      </div>
-
-      {/* Validation Diagnostic Alert Banner */}
-      {Object.keys(errors).length > 0 && (
-        <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl p-4 text-rose-800 dark:text-rose-200 flex items-start gap-3 animate-in fade-in">
-          <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 mt-0.5 shrink-0" />
-          <div className="text-xs">
-            <strong className="font-bold text-sm block mb-1">
-              Please resolve the following required fields:
-            </strong>
-            <ul className="list-disc pl-5 space-y-0.5 font-medium">
-              {Object.entries(errors).map(([key, msg]) => (
-                <li key={key}>{msg}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
-
-      {/* TAB CONTENT PANELS */}
+      {/* ========================================================= */}
+      {/* SECTION 1: MASTER HIGHWAY CORRIDOR SELECTION & PASSPORT */}
+      {/* ========================================================= */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-        {/* ========================================================= */}
-        {/* TAB 1: Corridor & Jurisdiction */}
-        {/* ========================================================= */}
-        {activeTab === 'IDENTITY' && (
-          <div>
-            <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 text-white flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <MapPin className="w-5 h-5 text-blue-300" />
+        {/* If no corridor selected, or in change mode */}
+        {(!hasSelectedCorridor || isChangingCorridor) && !initialData?.id ? (
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-xl text-blue-600 dark:text-blue-400">
+                  <Route className="w-5 h-5" />
+                </div>
                 <div>
-                  <h3 className="font-bold text-sm uppercase tracking-wider text-white">
-                    Tab 1: Corridor Identity &amp; Chainage Bounds
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                    Select Master Highway Corridor <span className="text-rose-500">*</span>
                   </h3>
-                  <span className="text-xs text-blue-200">
-                    Administrative jurisdiction and continuous chainage limits
-                  </span>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Pick an existing highway corridor from the Master Corridors Catalog to link Level 1 identity and chainage limits
+                  </p>
                 </div>
               </div>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Administrative Division <span className="text-rose-500">*</span>
-                  </label>
-                  <SearchableSelect
-                    options={divisionOptions}
-                    value={divisionName}
-                    onChange={(val) => {
-                      setDivisionName(val);
-                      if (errors.divisionName) setErrors((prev) => ({ ...prev, divisionName: '' }));
-                    }}
-                    placeholder="Select Division..."
-                  />
-                  {errors.divisionName && <p className="text-[11px] text-rose-500 mt-1">{errors.divisionName}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    National Highway Number / Code <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={highwayCode}
-                    onChange={(e) => {
-                      setHighwayCode(e.target.value);
-                      if (errors.highwayCode) setErrors((prev) => ({ ...prev, highwayCode: '' }));
-                    }}
-                    placeholder="e.g. NH-179A, NH-44"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  {errors.highwayCode && <p className="text-[11px] text-rose-500 mt-1">{errors.highwayCode}</p>}
-                </div>
-              </div>
-
-              {/* Chainage Limits Grid */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 block">
-                  Corridor Chainage Limits
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      From Chainage (Km) <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      value={fromKm}
-                      onChange={(e) => {
-                        setFromKm(e.target.value);
-                        if (errors.fromKm) setErrors((prev) => ({ ...prev, fromKm: '' }));
-                      }}
-                      placeholder="0.000"
-                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                      required
-                    />
-                    {errors.fromKm && <p className="text-[11px] text-rose-500 mt-1">{errors.fromKm}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      To Chainage (Km) <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      value={toKm}
-                      onChange={(e) => {
-                        setToKm(e.target.value);
-                        if (errors.toKm) setErrors((prev) => ({ ...prev, toKm: '' }));
-                      }}
-                      placeholder="45.000"
-                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                      required
-                    />
-                    {errors.toKm && <p className="text-[11px] text-rose-500 mt-1">{errors.toKm}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Calculated Total Length (Km)
-                    </label>
-                    <div className="px-3.5 py-2.5 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-mono font-bold text-blue-700 dark:text-blue-300">
-                      {totalLengthKm.toFixed(3)} Km
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Corridor Notes &amp; Administrative Remarks (Col AC)
-                </label>
-                <textarea
-                  rows={3}
-                  value={corridorRemarks}
-                  onChange={(e) => setCorridorRemarks(e.target.value)}
-                  placeholder="Enter overall corridor remarks..."
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+              {isChangingCorridor && (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (validateTab1()) {
-                      setActiveTab('STRETCHES');
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                  onClick={() => setIsChangingCorridor(false)}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
                 >
-                  Proceed to Sub-Work Stretches (Tab 2) &rarr;
+                  Keep Current Selection
                 </button>
+              )}
+            </div>
+
+            <div className="max-w-3xl">
+              <SearchableSelect
+                options={corridorOptions}
+                value={selectedCorridorId}
+                onChange={handleSelectCorridor}
+                placeholder={fetchingCorridors ? 'Loading Master Corridors...' : 'Search highway by code, division, or name...'}
+              />
+              {errors.corridor && <p className="text-xs text-rose-500 mt-1.5 font-semibold">{errors.corridor}</p>}
+            </div>
+          </div>
+        ) : (
+          /* High-Density Verified Corridor Passport Banner */
+          <div>
+            <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 p-6 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="px-3 py-1 bg-blue-600 text-white font-extrabold text-xs rounded-lg uppercase tracking-wider shadow-xs">
+                    {highwayCode}
+                  </span>
+                  <span className="px-2.5 py-1 bg-blue-900/80 border border-blue-700 text-blue-200 font-bold text-xs rounded-lg">
+                    {divisionName} Division
+                  </span>
+                  {selectedCorridor?.configuration && (
+                    <span className="px-2.5 py-1 bg-slate-800 border border-slate-700 text-slate-300 font-semibold text-xs rounded-lg">
+                      {selectedCorridor.configuration}
+                    </span>
+                  )}
+                  {initialData?.id && (
+                    <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold rounded-md uppercase">
+                      Active Master Record
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-base font-extrabold text-white">
+                    {selectedCorridor?.road_name || (selectedCorridor?.from_location ? `${selectedCorridor.from_location} - ${selectedCorridor.to_location}` : `${highwayCode} Corridor`)}
+                  </h3>
+                  <p className="text-xs text-blue-200/80 mt-0.5 flex items-center gap-2">
+                    <span>Verified Span: <strong className="text-white font-mono font-bold">Km {Number(fromKm).toFixed(3)}</strong> to <strong className="text-white font-mono font-bold">Km {Number(toKm).toFixed(3)}</strong></span>
+                    <span>&bull;</span>
+                    <span>Total Length: <strong className="text-white font-mono font-bold">{totalLengthKm.toFixed(3)} Km</strong></span>
+                  </p>
+                </div>
               </div>
+
+              {!initialData?.id && (
+                <button
+                  type="button"
+                  onClick={() => setIsChangingCorridor(true)}
+                  className="self-start md:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" /> Change Corridor
+                </button>
+              )}
+            </div>
+
+            {/* Corridor Notes & Administrative Remarks */}
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Corridor Notes &amp; Administrative Remarks (Col AC)
+              </label>
+              <input
+                type="text"
+                value={corridorRemarks}
+                onChange={(e) => setCorridorRemarks(e.target.value)}
+                placeholder="Optional parent corridor remarks or special administrative notations..."
+                className="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
           </div>
         )}
+      </div>
 
-        {/* ========================================================= */}
-        {/* TAB 2: Sub-Work Stretches Workspace */}
-        {/* ========================================================= */}
-        {activeTab === 'STRETCHES' && (
-          <div>
-            <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 text-white flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Layers className="w-5 h-5 text-blue-300" />
-                <div>
-                  <h3 className="font-bold text-sm uppercase tracking-wider text-white">
-                    Tab 2: Granular Sub-Work Stretches Workspace
-                  </h3>
-                  <span className="text-xs text-blue-200">
-                    2D spatial bounds (Chainage &amp; Lateral Road Width) across 5 categories
-                  </span>
-                </div>
+      {/* ========================================================= */}
+      {/* SECTION 2: GRANULAR SUB-WORK STRETCHES WORKSPACE */}
+      {/* ========================================================= */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+        {/* Workspace Top Header Bar */}
+        <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Layers className="w-5 h-5 text-blue-300" />
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-sm uppercase tracking-wider text-white">
+                  Granular Sub-Work Stretches Workspace
+                </h3>
+                <span className="px-2 py-0.5 bg-blue-700 text-blue-100 rounded-md text-[11px] font-bold">
+                  {workStretches.length} {workStretches.length === 1 ? 'Work' : 'Works'}
+                </span>
               </div>
+              <span className="text-xs text-blue-200">
+                2D spatial bounds (Chainage &amp; Lateral Road Width) across 5 maintenance categories
+              </span>
+            </div>
+          </div>
 
-              {/* Dynamic + Add Work Dropdown Menu */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setIsAddMenuOpen((prev) => !prev)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-100 text-blue-900 font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
-                >
-                  <Plus className="w-4 h-4 text-blue-600" />
-                  <span>+ Add Work</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
-                </button>
+          {/* Dynamic + Add Work Dropdown Menu */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsAddMenuOpen((prev) => !prev)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-100 text-blue-900 font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4 text-blue-600" />
+              <span>+ Add Sub-Work Stretch</span>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+            </button>
 
-                {isAddMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 py-1.5 z-20 animate-in fade-in zoom-in-95">
-                    {(['DLP', 'CONSTRUCTION', 'STMC', 'PBMC', 'NO_DLP'] as DlpWorkCategory[]).map((cat) => {
-                      const cfg = CATEGORY_CONFIG[cat];
-                      return (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => handleAddWorkStretch(cat)}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center gap-2.5 cursor-pointer"
-                        >
-                          <span className={`w-2 h-2 rounded-full ${cfg.dotColor}`} />
-                          <span>{cfg.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+            {isAddMenuOpen && (
+              <div className="absolute right-0 mt-2 w-60 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 py-1.5 z-20 animate-in fade-in zoom-in-95">
+                {(['DLP', 'CONSTRUCTION', 'STMC', 'PBMC', 'NO_DLP'] as DlpWorkCategory[]).map((cat) => {
+                  const cfg = CATEGORY_CONFIG[cat];
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => handleAddWorkStretch(cat)}
+                      className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center gap-2.5 cursor-pointer"
+                    >
+                      <span className={`w-2 h-2 rounded-full ${cfg.dotColor}`} />
+                      <span>{cfg.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Workspace Stretches Ledger */}
+        <div className="p-6 space-y-6">
+          {workStretches.length === 0 ? (
+            <div className="py-16 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+              <Layers className="w-10 h-10 text-slate-400 mx-auto mb-3 opacity-60" />
+              <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                No Sub-Work Stretches Added Yet
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+                Click the <strong>&quot;+ Add Sub-Work Stretch&quot;</strong> button above to record stretches under DLP, Construction, STMC, PBMC, or NO DLP.
+              </p>
+              <div className="flex justify-center gap-2 mt-4 flex-wrap">
+                {(['DLP', 'CONSTRUCTION', 'STMC', 'PBMC', 'NO_DLP'] as DlpWorkCategory[]).map((cat) => {
+                  const cfg = CATEGORY_CONFIG[cat];
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => handleAddWorkStretch(cat)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
+                    >
+                      <span className={`w-2 h-2 rounded-full ${cfg.dotColor}`} />
+                      <span>+ {cfg.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
+          ) : (
+            <div className="space-y-4">
+              {workStretches.map((stretch, index) => {
+                const cfg = CATEGORY_CONFIG[stretch.category];
+                const hasEnteredChainages =
+                  String(stretch.chainage_from_km ?? '').trim() !== '' &&
+                  String(stretch.chainage_to_km ?? '').trim() !== '' &&
+                  !isNaN(Number(stretch.chainage_from_km)) &&
+                  !isNaN(Number(stretch.chainage_to_km)) &&
+                  Number(stretch.chainage_to_km) > Number(stretch.chainage_from_km);
 
-            <div className="p-6 space-y-6">
-              {workStretches.length === 0 ? (
-                <div className="py-16 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-6">
-                  <Layers className="w-10 h-10 text-slate-400 mx-auto mb-3 opacity-60" />
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                    No Sub-Work Stretches Added Yet
-                  </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
-                    Click the <strong>&quot;+ Add Work&quot;</strong> button above to add a stretch under DLP, Construction, STMC, PBMC, or NO DLP.
-                  </p>
-                  <div className="flex justify-center gap-2 mt-4 flex-wrap">
-                    {(['DLP', 'CONSTRUCTION', 'STMC', 'PBMC', 'NO_DLP'] as DlpWorkCategory[]).map((cat) => {
-                      const cfg = CATEGORY_CONFIG[cat];
-                      return (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => handleAddWorkStretch(cat)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
-                        >
+                const spanAnalysis = hasEnteredChainages
+                  ? analyzeSpanLaneSubSections(
+                      Number(stretch.chainage_from_km),
+                      Number(stretch.chainage_to_km),
+                      subChainages
+                    )
+                  : {
+                      hasMatches: false,
+                      isUniform: true,
+                      totalSubSections: 0,
+                      subSections: [],
+                      minCenterlineWidthMeters: 3.5,
+                      minCarriagewayWidthMeters: 7.0,
+                      maxCenterlineWidthMeters: 3.5,
+                      maxCarriagewayWidthMeters: 7.0,
+                      bottleneckConfig: '2-Lane',
+                      primaryConfig: '2-Lane',
+                      summaryLabel: '2-Lane',
+                    };
+
+                const capacity =
+                  hasEnteredChainages &&
+                  String(stretch.road_width_to_m ?? '').trim() !== '' &&
+                  !isNaN(Number(stretch.road_width_to_m)) &&
+                  Number(stretch.road_width_to_m) > 0
+                    ? checkSpanWidthCapacity(
+                        Number(stretch.chainage_from_km),
+                        Number(stretch.chainage_to_km),
+                        Number(stretch.road_width_to_m),
+                        subChainages
+                      )
+                    : { valid: true, overlappingCount: 0, bottlenecks: [] };
+
+                return (
+                  <div
+                    key={stretch.id || index}
+                    className={`p-5 rounded-2xl border ${cfg.borderCard} bg-white dark:bg-slate-900/90 shadow-xs space-y-4 relative`}
+                  >
+                    {/* Card Top Row */}
+                    <div className="flex items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className={`px-2.5 py-1 rounded-lg font-extrabold text-xs flex items-center gap-1.5 ${cfg.bgBadge} ${cfg.textBadge}`}>
                           <span className={`w-2 h-2 rounded-full ${cfg.dotColor}`} />
-                          <span>+ {cfg.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {workStretches.map((stretch, index) => {
-                    const cfg = CATEGORY_CONFIG[stretch.category];
-                    const hasEnteredChainages =
-                      String(stretch.chainage_from_km ?? '').trim() !== '' &&
-                      String(stretch.chainage_to_km ?? '').trim() !== '' &&
-                      !isNaN(Number(stretch.chainage_from_km)) &&
-                      !isNaN(Number(stretch.chainage_to_km)) &&
-                      Number(stretch.chainage_to_km) > Number(stretch.chainage_from_km);
+                          {cfg.label}
+                        </span>
+                        <span className="text-xs font-bold text-slate-500 font-mono">
+                          Work Stretch #{index + 1}
+                        </span>
+                      </div>
 
-                    const spanAnalysis = hasEnteredChainages
-                      ? analyzeSpanLaneSubSections(
-                          Number(stretch.chainage_from_km),
-                          Number(stretch.chainage_to_km),
-                          subChainages
-                        )
-                      : {
-                          hasMatches: false,
-                          isUniform: true,
-                          totalSubSections: 0,
-                          subSections: [],
-                          minCenterlineWidthMeters: 3.5,
-                          minCarriagewayWidthMeters: 7.0,
-                          maxCenterlineWidthMeters: 3.5,
-                          maxCarriagewayWidthMeters: 7.0,
-                          bottleneckConfig: '2-Lane',
-                          primaryConfig: '2-Lane',
-                          summaryLabel: '2-Lane',
-                        };
-
-                    const capacity =
-                      hasEnteredChainages &&
-                      String(stretch.road_width_to_m ?? '').trim() !== '' &&
-                      !isNaN(Number(stretch.road_width_to_m)) &&
-                      Number(stretch.road_width_to_m) > 0
-                        ? checkSpanWidthCapacity(
-                            Number(stretch.chainage_from_km),
-                            Number(stretch.chainage_to_km),
-                            Number(stretch.road_width_to_m),
-                            subChainages
-                          )
-                        : { valid: true, overlappingCount: 0, bottlenecks: [] };
-
-                    return (
-                      <div
-                        key={stretch.id || index}
-                        className={`p-5 rounded-2xl border ${cfg.borderCard} bg-white dark:bg-slate-900/90 shadow-xs space-y-4 relative`}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveStretch(index)}
+                        className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg transition-colors cursor-pointer"
+                        title="Remove Work Stretch"
                       >
-                        {/* Card Top Row */}
-                        <div className="flex items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
-                          <div className="flex items-center gap-2.5 flex-wrap">
-                            <span className={`px-2.5 py-1 rounded-lg font-extrabold text-xs flex items-center gap-1.5 ${cfg.bgBadge} ${cfg.textBadge}`}>
-                              <span className={`w-2 h-2 rounded-full ${cfg.dotColor}`} />
-                              {cfg.label}
-                            </span>
-                            <span className="text-xs font-bold text-slate-500 font-mono">
-                              Work Stretch #{index + 1}
-                            </span>
-                          </div>
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
 
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveStretch(index)}
-                            className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg transition-colors cursor-pointer"
-                            title="Remove Work Stretch"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                    {/* 2D Geometry Row: Chainage Limits & Centerline Offsets */}
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-slate-700/60 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                          2D Spatial Coordinates &bull; Longitudinal (Km) &amp; Lateral Width (m)
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          Centerline = 0m
+                        </span>
+                      </div>
 
-                        {/* 2D Geometry Row: Chainage Limits & Centerline Offsets */}
-                        <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-slate-700/60 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                              2D Spatial Coordinates &bull; Longitudinal (Km) &amp; Lateral Width (m)
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              Centerline = 0m
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
-                            <div>
-                              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
-                                Chainage From (Km)
-                              </label>
-                              <input
-                                type="number"
-                                step="0.001"
-                                min="0"
-                                value={stretch.chainage_from_km}
-                                onChange={(e) => handleUpdateStretch(index, 'chainage_from_km', e.target.value)}
-                                className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
-                                Chainage To (Km)
-                              </label>
-                              <input
-                                type="number"
-                                step="0.001"
-                                min="0"
-                                value={stretch.chainage_to_km}
-                                onChange={(e) => handleUpdateStretch(index, 'chainage_to_km', e.target.value)}
-                                className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
-                                Stretch Length (Km)
-                              </label>
-                              <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
-                                {Number(stretch.length_km || 0).toFixed(3)} Km
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
-                                Road Width From (m)
-                              </label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={stretch.road_width_from_m}
-                                onChange={(e) => handleUpdateStretch(index, 'road_width_from_m', e.target.value)}
-                                placeholder="0.00"
-                                className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
-                                Road Width To (m)
-                              </label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={stretch.road_width_to_m}
-                                onChange={(e) => handleUpdateStretch(index, 'road_width_to_m', e.target.value)}
-                                placeholder={hasEnteredChainages && spanAnalysis.hasMatches && spanAnalysis.isUniform ? String(spanAnalysis.minCenterlineWidthMeters) : '0.00'}
-                                className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Level 2 Uniform Span Reference */}
-                          {hasEnteredChainages && spanAnalysis.hasMatches && spanAnalysis.isUniform && (
-                            <div className="mt-2.5 p-2.5 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                              <div className="flex items-center gap-2 text-blue-950 dark:text-blue-200 min-w-0">
-                                <span className="px-2 py-0.5 bg-blue-600 text-white rounded-md text-[10px] font-extrabold uppercase tracking-wider shrink-0">
-                                  Level 2 Micro-Lane
-                                </span>
-                                <span className="font-semibold truncate">
-                                  {spanAnalysis.primaryConfig} &bull; {spanAnalysis.minCarriagewayWidthMeters}m Carriageway &bull; Centerline Width: <strong className="font-bold">0 to {spanAnalysis.minCenterlineWidthMeters}m</strong>
-                                </span>
-                              </div>
-
-                              {(Number(stretch.road_width_from_m || 0) !== 0 || Number(stretch.road_width_to_m || 0) !== spanAnalysis.minCenterlineWidthMeters) && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleUpdateStretch(index, 'road_width_from_m', 0);
-                                    handleUpdateStretch(index, 'road_width_to_m', spanAnalysis.minCenterlineWidthMeters);
-                                  }}
-                                  className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer self-start sm:self-auto shrink-0"
-                                >
-                                  Use Level 2 Width (0 to {spanAnalysis.minCenterlineWidthMeters}m)
-                                </button>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Level 2 Multi-Lane Mixed Span Banner (Pure Auto-Split Focus) */}
-                          {hasEnteredChainages && spanAnalysis.hasMatches && !spanAnalysis.isUniform && (
-                            <div className="mt-2.5 p-3 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                              <div className="space-y-0.5 min-w-0">
-                                <div className="flex items-center gap-2 text-amber-950 dark:text-amber-200 flex-wrap">
-                                  <span className="px-2 py-0.5 bg-amber-600 text-white rounded-md text-[10px] font-extrabold uppercase tracking-wider shrink-0">
-                                    Multi-Lane Span ({spanAnalysis.totalSubSections} Sections)
-                                  </span>
-                                  <span className="font-bold truncate">
-                                    {spanAnalysis.summaryLabel} &bull; Physical lane widths vary across this span
-                                  </span>
-                                </div>
-                                <p className="text-[11px] text-amber-800 dark:text-amber-300">
-                                  This work crosses multiple lane configurations. Click below to automatically split this entry into {spanAnalysis.totalSubSections} discrete sub-sections with their respective Level 2 lane widths.
-                                </p>
-                              </div>
-
-                              <div className="flex items-center gap-2 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => handleAutoSplitStretch(index, spanAnalysis.subSections)}
-                                  className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow-xs transition-colors cursor-pointer"
-                                >
-                                  <Sparkles className="w-4 h-4" /> Auto-Split into {spanAnalysis.totalSubSections} Lane Sections
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Width Capacity Alert if specified width exceeds any overlapping physical carriageway */}
-                          {hasEnteredChainages && !capacity.valid && (
-                            <div className="mt-2.5 p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 rounded-xl flex items-start justify-between gap-3 text-xs text-rose-900 dark:text-rose-200 flex-wrap sm:flex-nowrap">
-                              <div className="flex items-start gap-2.5">
-                                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                                <div>
-                                  <span className="font-bold">Width Exceeds Road Capacity: </span>
-                                  <span>
-                                    Entered centerline width ({stretch.road_width_to_m}m = {(Number(stretch.road_width_to_m) * 2).toFixed(1)}m total) exceeds physical carriageway on{' '}
-                                    {capacity.bottlenecks.map((b, bi) => (
-                                      <strong key={bi} className="font-bold">
-                                        Km {b.overlapFromKm.toFixed(3)}–{b.overlapToKm.toFixed(3)} ({b.laneConfig}: max {b.maxAllowedCenterlineWidth}m centerline = {b.maxAllowedCarriagewayWidth}m total){bi < capacity.bottlenecks.length - 1 ? ', ' : ''}
-                                      </strong>
-                                    ))}.
-                                  </span>
-                                  <p className="mt-1 text-[11px] text-rose-700 dark:text-rose-300 font-semibold">
-                                    Please adjust the width or split this work into separate entries for each road section.
-                                  </p>
-                                </div>
-                              </div>
-
-                              {spanAnalysis.subSections.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleAutoSplitStretch(index, spanAnalysis.subSections)}
-                                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-extrabold shadow-xs transition-colors cursor-pointer self-start"
-                                >
-                                  <Sparkles className="w-3.5 h-3.5" /> Split Stretch
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Category-Specific Dynamic Inputs */}
-                        {stretch.category === 'DLP' && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                Name of Contractor (Col I)
-                              </label>
-                              <input
-                                type="text"
-                                value={stretch.contractor_name || ''}
-                                onChange={(e) => handleUpdateStretch(index, 'contractor_name', e.target.value)}
-                                placeholder="Contractor name..."
-                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                Name of Work (Col J)
-                              </label>
-                              <input
-                                type="text"
-                                value={stretch.work_name || ''}
-                                onChange={(e) => handleUpdateStretch(index, 'work_name', e.target.value)}
-                                placeholder="e.g. Strengthening & Widening..."
-                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                Date of Commencement (Col K)
-                              </label>
-                              <DatePickerInput
-                                value={stretch.commencement_date || ''}
-                                onChange={(val) => handleUpdateStretch(index, 'commencement_date', val)}
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                DLP Till Date (Col L)
-                              </label>
-                              <DatePickerInput
-                                value={stretch.dlp_till_date || ''}
-                                onChange={(val) => handleUpdateStretch(index, 'dlp_till_date', val)}
-                              />
-                            </div>
-
-                            {(() => {
-                              if (!stretch.dlp_till_date) return null;
-                              const d = parseDateString(stretch.dlp_till_date);
-                              if (!d) return null;
-                              d.setHours(0, 0, 0, 0);
-                              const today = new Date();
-                              today.setHours(0, 0, 0, 0);
-                              if (d.getTime() < today.getTime()) {
-                                return (
-                                  <div className="sm:col-span-2 md:col-span-4 p-2 bg-slate-100 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-700 dark:text-slate-300 flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-1.5 font-semibold">
-                                      <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                                      <span>
-                                        DLP Expired on <strong>{formatDateIndian(stretch.dlp_till_date)}</strong> &bull; Automatically categorizes under <strong>No DLP (Annual Work)</strong> on save.
-                                      </span>
-                                    </div>
-                                    <span className="px-2 py-0.5 bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200 text-[10px] font-extrabold rounded-md uppercase tracking-wider shrink-0">
-                                      Expired Warranty
-                                    </span>
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
-                          </div>
-                        )}
-
-                        {stretch.category === 'CONSTRUCTION' && (
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                              <div>
-                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                  Name of Contractor (Col M)
-                                </label>
-                                <input
-                                  type="text"
-                                  value={stretch.contractor_name || ''}
-                                  onChange={(e) => handleUpdateStretch(index, 'contractor_name', e.target.value)}
-                                  placeholder="Contractor name..."
-                                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                  Name of Work (Col N)
-                                </label>
-                                <input
-                                  type="text"
-                                  value={stretch.work_name || ''}
-                                  onChange={(e) => handleUpdateStretch(index, 'work_name', e.target.value)}
-                                  placeholder="e.g. 4-Laning Capital Work..."
-                                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                  Date of Commencement (Col O)
-                                </label>
-                                <DatePickerInput
-                                  value={stretch.commencement_date || ''}
-                                  onChange={(val) => handleUpdateStretch(index, 'commencement_date', val)}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                              <div>
-                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                  Physical Progress % (Col P)
-                                </label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  step="0.1"
-                                  value={stretch.physical_progress_pct ?? 0}
-                                  onChange={(e) => handleUpdateStretch(index, 'physical_progress_pct', e.target.value)}
-                                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                  Actual Date of Completion (Col Q)
-                                </label>
-                                <DatePickerInput
-                                  value={stretch.actual_completion_date || ''}
-                                  onChange={(val) => handleUpdateStretch(index, 'actual_completion_date', val)}
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                  DLP Period in Years (Col R)
-                                </label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max="10"
-                                  value={stretch.dlp_period_years ?? 5}
-                                  onChange={(e) => handleUpdateStretch(index, 'dlp_period_years', e.target.value)}
-                                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold"
-                                />
-                              </div>
-                            </div>
-
-                            {stretch.actual_completion_date && (
-                              <div className="p-2 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-xl text-xs text-blue-900 dark:text-blue-200 flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-1.5 font-semibold">
-                                  <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                                  <span>
-                                    Calculated DLP Expiry: <strong className="font-bold">{formatDateIndian(addYearsToDateString(stretch.actual_completion_date, stretch.dlp_period_years ?? 5))}</strong> ({stretch.dlp_period_years ?? 5} Years from Completion)
-                                  </span>
-                                </div>
-                                {Number(stretch.physical_progress_pct || 0) >= 100 && (
-                                  <span className="px-2 py-0.5 bg-emerald-600 text-white text-[10px] font-extrabold rounded-md uppercase tracking-wider">
-                                    Auto-Graduates to DLP
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {stretch.category === 'STMC' && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                Name of Contractor (Col S)
-                              </label>
-                              <input
-                                type="text"
-                                value={stretch.contractor_name || ''}
-                                onChange={(e) => handleUpdateStretch(index, 'contractor_name', e.target.value)}
-                                placeholder="STMC contractor..."
-                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                Name of Work (Col T)
-                              </label>
-                              <input
-                                type="text"
-                                value={stretch.work_name || ''}
-                                onChange={(e) => handleUpdateStretch(index, 'work_name', e.target.value)}
-                                placeholder="STMC work title..."
-                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                Date of Commencement (Col U)
-                              </label>
-                              <DatePickerInput
-                                value={stretch.commencement_date || ''}
-                                onChange={(val) => handleUpdateStretch(index, 'commencement_date', val)}
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                DLP Till Date (Col V)
-                              </label>
-                              <DatePickerInput
-                                value={stretch.dlp_till_date || ''}
-                                onChange={(val) => handleUpdateStretch(index, 'dlp_till_date', val)}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {stretch.category === 'PBMC' && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                Name of Contractor (Col W)
-                              </label>
-                              <input
-                                type="text"
-                                value={stretch.contractor_name || ''}
-                                onChange={(e) => handleUpdateStretch(index, 'contractor_name', e.target.value)}
-                                placeholder="PBMC contractor..."
-                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                Name of Work (Col X)
-                              </label>
-                              <input
-                                type="text"
-                                value={stretch.work_name || ''}
-                                onChange={(e) => handleUpdateStretch(index, 'work_name', e.target.value)}
-                                placeholder="PBMC work title..."
-                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                Date of Commencement (Col Y)
-                              </label>
-                              <DatePickerInput
-                                value={stretch.commencement_date || ''}
-                                onChange={(val) => handleUpdateStretch(index, 'commencement_date', val)}
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                DLP Till Date (Col Z)
-                              </label>
-                              <DatePickerInput
-                                value={stretch.dlp_till_date || ''}
-                                onChange={(val) => handleUpdateStretch(index, 'dlp_till_date', val)}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {stretch.category === 'NO_DLP' && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                Scheme / Proposed Action (Col AA)
-                              </label>
-                              <input
-                                type="text"
-                                list="dlp-schemes-list"
-                                value={stretch.scheme || ''}
-                                onChange={(e) => handleUpdateStretch(index, 'scheme', e.target.value)}
-                                placeholder="e.g. Proposed under Special Repairs..."
-                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
-                              />
-                              {masterData?.schemes && masterData.schemes.length > 0 && (
-                                <datalist id="dlp-schemes-list">
-                                  {masterData.schemes.map((s) => (
-                                    <option key={s} value={s} />
-                                  ))}
-                                </datalist>
-                              )}
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                DLP Ended On Date (Col AB)
-                              </label>
-                              <DatePickerInput
-                                value={stretch.dlp_ended_on_date || ''}
-                                onChange={(val) => handleUpdateStretch(index, 'dlp_ended_on_date', val)}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Stretch Remarks */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
                         <div>
                           <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
-                            Stretch Remarks (Col AC)
+                            Chainage From (Km)
                           </label>
                           <input
-                            type="text"
-                            value={stretch.remarks || ''}
-                            onChange={(e) => handleUpdateStretch(index, 'remarks', e.target.value)}
-                            placeholder="Stretch-specific remarks..."
-                            className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            value={stretch.chainage_from_km}
+                            onChange={(e) => handleUpdateStretch(index, 'chainage_from_km', e.target.value)}
+                            className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                            Chainage To (Km)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            value={stretch.chainage_to_km}
+                            onChange={(e) => handleUpdateStretch(index, 'chainage_to_km', e.target.value)}
+                            className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                            Stretch Length (Km)
+                          </label>
+                          <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
+                            {Number(stretch.length_km || 0).toFixed(3)} Km
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                            Road Width From (m)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={stretch.road_width_from_m}
+                            onChange={(e) => handleUpdateStretch(index, 'road_width_from_m', e.target.value)}
+                            placeholder="0.00"
+                            className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                            Road Width To (m)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={stretch.road_width_to_m}
+                            onChange={(e) => handleUpdateStretch(index, 'road_width_to_m', e.target.value)}
+                            placeholder={hasEnteredChainages && spanAnalysis.hasMatches && spanAnalysis.isUniform ? String(spanAnalysis.minCenterlineWidthMeters) : '0.00'}
+                            className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold"
                           />
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+
+                      {/* Level 2 Uniform Span Reference */}
+                      {hasEnteredChainages && spanAnalysis.hasMatches && spanAnalysis.isUniform && (
+                        <div className="mt-2.5 p-2.5 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                          <div className="flex items-center gap-2 text-blue-950 dark:text-blue-200 min-w-0">
+                            <span className="px-2 py-0.5 bg-blue-600 text-white rounded-md text-[10px] font-extrabold uppercase tracking-wider shrink-0">
+                              Level 2 Micro-Lane
+                            </span>
+                            <span className="font-semibold truncate">
+                              {spanAnalysis.primaryConfig} &bull; {spanAnalysis.minCarriagewayWidthMeters}m Carriageway &bull; Centerline Width: <strong className="font-bold">0 to {spanAnalysis.minCenterlineWidthMeters}m</strong>
+                            </span>
+                          </div>
+
+                          {(Number(stretch.road_width_from_m || 0) !== 0 || Number(stretch.road_width_to_m || 0) !== spanAnalysis.minCenterlineWidthMeters) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleUpdateStretch(index, 'road_width_from_m', 0);
+                                handleUpdateStretch(index, 'road_width_to_m', spanAnalysis.minCenterlineWidthMeters);
+                              }}
+                              className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer self-start sm:self-auto shrink-0"
+                            >
+                              Use Level 2 Width (0 to {spanAnalysis.minCenterlineWidthMeters}m)
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Level 2 Multi-Lane Mixed Span Banner (Pure Auto-Split Focus) */}
+                      {hasEnteredChainages && spanAnalysis.hasMatches && !spanAnalysis.isUniform && (
+                        <div className="mt-2.5 p-3 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                          <div className="space-y-0.5 min-w-0">
+                            <div className="flex items-center gap-2 text-amber-950 dark:text-amber-200 flex-wrap">
+                              <span className="px-2 py-0.5 bg-amber-600 text-white rounded-md text-[10px] font-extrabold uppercase tracking-wider shrink-0">
+                                Multi-Lane Span ({spanAnalysis.totalSubSections} Sections)
+                              </span>
+                              <span className="font-bold truncate">
+                                {spanAnalysis.summaryLabel} &bull; Physical lane widths vary across this span
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                              This work crosses multiple lane configurations. Click below to automatically split this entry into {spanAnalysis.totalSubSections} discrete sub-sections with their respective Level 2 lane widths.
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleAutoSplitStretch(index, spanAnalysis.subSections)}
+                              className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow-xs transition-colors cursor-pointer"
+                            >
+                              <Sparkles className="w-4 h-4" /> Auto-Split into {spanAnalysis.totalSubSections} Lane Sections
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Width Capacity Alert if specified width exceeds any overlapping physical carriageway */}
+                      {hasEnteredChainages && !capacity.valid && (
+                        <div className="mt-2.5 p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 rounded-xl flex items-start justify-between gap-3 text-xs text-rose-900 dark:text-rose-200 flex-wrap sm:flex-nowrap">
+                          <div className="flex items-start gap-2.5">
+                            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-bold">Width Exceeds Road Capacity: </span>
+                              <span>
+                                Entered centerline width ({stretch.road_width_to_m}m = {(Number(stretch.road_width_to_m) * 2).toFixed(1)}m total) exceeds physical carriageway on{' '}
+                                {capacity.bottlenecks.map((b, bi) => (
+                                  <strong key={bi} className="font-bold">
+                                    Km {b.overlapFromKm.toFixed(3)}–{b.overlapToKm.toFixed(3)} ({b.laneConfig}: max {b.maxAllowedCenterlineWidth}m centerline = {b.maxAllowedCarriagewayWidth}m total){bi < capacity.bottlenecks.length - 1 ? ', ' : ''}
+                                  </strong>
+                                ))}.
+                              </span>
+                              <p className="mt-1 text-[11px] text-rose-700 dark:text-rose-300 font-semibold">
+                                Please adjust the width or split this work into separate entries for each road section.
+                              </p>
+                            </div>
+                          </div>
+
+                          {spanAnalysis.subSections.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleAutoSplitStretch(index, spanAnalysis.subSections)}
+                              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-extrabold shadow-xs transition-colors cursor-pointer self-start"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" /> Split Stretch
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Category-Specific Dynamic Inputs */}
+                    {stretch.category === 'DLP' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Name of Contractor (Col I)
+                          </label>
+                          <input
+                            type="text"
+                            value={stretch.contractor_name || ''}
+                            onChange={(e) => handleUpdateStretch(index, 'contractor_name', e.target.value)}
+                            placeholder="Contractor name..."
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Name of Work (Col J)
+                          </label>
+                          <input
+                            type="text"
+                            value={stretch.work_name || ''}
+                            onChange={(e) => handleUpdateStretch(index, 'work_name', e.target.value)}
+                            placeholder="e.g. Strengthening & Widening..."
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Date of Commencement (Col K)
+                          </label>
+                          <DatePickerInput
+                            value={stretch.commencement_date || ''}
+                            onChange={(val) => handleUpdateStretch(index, 'commencement_date', val)}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            DLP Till Date (Col L)
+                          </label>
+                          <DatePickerInput
+                            value={stretch.dlp_till_date || ''}
+                            onChange={(val) => handleUpdateStretch(index, 'dlp_till_date', val)}
+                          />
+                        </div>
+
+                        {(() => {
+                          if (!stretch.dlp_till_date) return null;
+                          const d = parseDateString(stretch.dlp_till_date);
+                          if (!d) return null;
+                          d.setHours(0, 0, 0, 0);
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          if (d.getTime() < today.getTime()) {
+                            return (
+                              <div className="sm:col-span-2 md:col-span-4 p-2 bg-slate-100 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-700 dark:text-slate-300 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5 font-semibold">
+                                  <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                  <span>
+                                    DLP Expired on <strong>{formatDateIndian(stretch.dlp_till_date)}</strong> &bull; Automatically categorizes under <strong>No DLP (Annual Work)</strong> on save.
+                                  </span>
+                                </div>
+                                <span className="px-2 py-0.5 bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200 text-[10px] font-extrabold rounded-md uppercase tracking-wider shrink-0">
+                                  Expired Warranty
+                                </span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                    )}
+
+                    {stretch.category === 'CONSTRUCTION' && (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              Name of Contractor (Col M)
+                            </label>
+                            <input
+                              type="text"
+                              value={stretch.contractor_name || ''}
+                              onChange={(e) => handleUpdateStretch(index, 'contractor_name', e.target.value)}
+                              placeholder="Contractor name..."
+                              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              Name of Work (Col N)
+                            </label>
+                            <input
+                              type="text"
+                              value={stretch.work_name || ''}
+                              onChange={(e) => handleUpdateStretch(index, 'work_name', e.target.value)}
+                              placeholder="e.g. 4-Laning Capital Work..."
+                              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              Date of Commencement (Col O)
+                            </label>
+                            <DatePickerInput
+                              value={stretch.commencement_date || ''}
+                              onChange={(val) => handleUpdateStretch(index, 'commencement_date', val)}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              Physical Progress % (Col P)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.1"
+                              value={stretch.physical_progress_pct ?? 0}
+                              onChange={(e) => handleUpdateStretch(index, 'physical_progress_pct', e.target.value)}
+                              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              Actual Date of Completion (Col Q)
+                            </label>
+                            <DatePickerInput
+                              value={stretch.actual_completion_date || ''}
+                              onChange={(val) => handleUpdateStretch(index, 'actual_completion_date', val)}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              DLP Period in Years (Col R)
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="10"
+                              value={stretch.dlp_period_years ?? 5}
+                              onChange={(e) => handleUpdateStretch(index, 'dlp_period_years', e.target.value)}
+                              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold"
+                            />
+                          </div>
+                        </div>
+
+                        {stretch.actual_completion_date && (
+                          <div className="p-2 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-xl text-xs text-blue-900 dark:text-blue-200 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 font-semibold">
+                              <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                              <span>
+                                Calculated DLP Expiry: <strong className="font-bold">{formatDateIndian(addYearsToDateString(stretch.actual_completion_date, stretch.dlp_period_years ?? 5))}</strong> ({stretch.dlp_period_years ?? 5} Years from Completion)
+                              </span>
+                            </div>
+                            {Number(stretch.physical_progress_pct || 0) >= 100 && (
+                              <span className="px-2 py-0.5 bg-emerald-600 text-white text-[10px] font-extrabold rounded-md uppercase tracking-wider">
+                                Auto-Graduates to DLP
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {stretch.category === 'STMC' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Name of Contractor (Col S)
+                          </label>
+                          <input
+                            type="text"
+                            value={stretch.contractor_name || ''}
+                            onChange={(e) => handleUpdateStretch(index, 'contractor_name', e.target.value)}
+                            placeholder="STMC contractor..."
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Name of Work (Col T)
+                          </label>
+                          <input
+                            type="text"
+                            value={stretch.work_name || ''}
+                            onChange={(e) => handleUpdateStretch(index, 'work_name', e.target.value)}
+                            placeholder="STMC work title..."
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Date of Commencement (Col U)
+                          </label>
+                          <DatePickerInput
+                            value={stretch.commencement_date || ''}
+                            onChange={(val) => handleUpdateStretch(index, 'commencement_date', val)}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            DLP Till Date (Col V)
+                          </label>
+                          <DatePickerInput
+                            value={stretch.dlp_till_date || ''}
+                            onChange={(val) => handleUpdateStretch(index, 'dlp_till_date', val)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {stretch.category === 'PBMC' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Name of Contractor (Col W)
+                          </label>
+                          <input
+                            type="text"
+                            value={stretch.contractor_name || ''}
+                            onChange={(e) => handleUpdateStretch(index, 'contractor_name', e.target.value)}
+                            placeholder="PBMC contractor..."
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Name of Work (Col X)
+                          </label>
+                          <input
+                            type="text"
+                            value={stretch.work_name || ''}
+                            onChange={(e) => handleUpdateStretch(index, 'work_name', e.target.value)}
+                            placeholder="PBMC work title..."
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Date of Commencement (Col Y)
+                          </label>
+                          <DatePickerInput
+                            value={stretch.commencement_date || ''}
+                            onChange={(val) => handleUpdateStretch(index, 'commencement_date', val)}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            DLP Till Date (Col Z)
+                          </label>
+                          <DatePickerInput
+                            value={stretch.dlp_till_date || ''}
+                            onChange={(val) => handleUpdateStretch(index, 'dlp_till_date', val)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {stretch.category === 'NO_DLP' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Scheme / Proposed Action (Col AA)
+                          </label>
+                          <input
+                            type="text"
+                            list="dlp-schemes-list"
+                            value={stretch.scheme || ''}
+                            onChange={(e) => handleUpdateStretch(index, 'scheme', e.target.value)}
+                            placeholder="e.g. Proposed under Special Repairs..."
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                          />
+                          {masterData?.schemes && masterData.schemes.length > 0 && (
+                            <datalist id="dlp-schemes-list">
+                              {masterData.schemes.map((s) => (
+                                <option key={s} value={s} />
+                              ))}
+                            </datalist>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            DLP Ended On Date (Col AB)
+                          </label>
+                          <DatePickerInput
+                            value={stretch.dlp_ended_on_date || ''}
+                            onChange={(val) => handleUpdateStretch(index, 'dlp_ended_on_date', val)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Stretch Remarks */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                        Stretch Remarks (Col AC)
+                      </label>
+                      <input
+                        type="text"
+                        value={stretch.remarks || ''}
+                        onChange={(e) => handleUpdateStretch(index, 'remarks', e.target.value)}
+                        placeholder="Stretch-specific remarks..."
+                        className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Bottom Action Buttons */}

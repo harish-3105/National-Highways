@@ -20,6 +20,7 @@ export interface HighwayCorridor {
   length_4l?: number;
   length_6l?: number;
   configuration: string;
+  division_name?: string | null;
   status: string;
   start_latitude?: number | null;
   start_longitude?: number | null;
