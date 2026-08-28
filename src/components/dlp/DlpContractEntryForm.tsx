@@ -202,17 +202,18 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
 
   const totalLengthKm =
     fromKm !== '' && toKm !== ''
-      ? Math.max(0, Math.round((Number(toKm) - Number(fromKm)) * 1000) / 1000)
-      : 0;
+      ? Math.round(Math.abs(Number(toKm) - Number(fromKm)) * 1000) / 1000
+      : (selectedCorridor?.length_km || 0);
 
   // Searchable Options for Master Corridors
   const corridorOptions = useMemo(() => {
     return corridorsList.map((c) => {
-      const fromDisplay = c.from_chainage ? `Km ${c.from_chainage}` : `Km 0.000`;
-      const toDisplay = c.to_chainage ? `Km ${c.to_chainage}` : `Km ${c.length_km}`;
+      const fromDisplay = c.from_chainage !== null && c.from_chainage !== undefined && String(c.from_chainage).trim() !== '' ? `Km ${c.from_chainage}` : '';
+      const toDisplay = c.to_chainage !== null && c.to_chainage !== undefined && String(c.to_chainage).trim() !== '' ? `Km ${c.to_chainage}` : '';
+      const spanText = fromDisplay && toDisplay ? `${fromDisplay} to ${toDisplay}` : fromDisplay || toDisplay || `${c.length_km} Km`;
       const roadTitle = c.road_name || (c.from_location && c.to_location ? `${c.from_location} - ${c.to_location}` : '');
       const divDisplay = c.division_name ? `${c.division_name} Division` : 'General';
-      const label = `${c.road_code} • ${divDisplay} • ${fromDisplay} to ${toDisplay}${roadTitle ? ` (${roadTitle})` : ''}`;
+      const label = `${c.road_code} • ${divDisplay} • ${spanText}${roadTitle ? ` (${roadTitle})` : ''}`;
 
       return {
         value: c.id,
@@ -228,10 +229,8 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
       setSelectedCorridor(found);
       setHighwayCode(found.road_code);
       setDivisionName(found.division_name || '');
-      const parsedFrom = parseChainageValue(found.from_chainage, 0);
-      const parsedTo = parseChainageValue(found.to_chainage, Number(found.length_km) || 0);
-      setFromKm(String(parsedFrom));
-      setToKm(String(parsedTo));
+      setFromKm(found.from_chainage !== null && found.from_chainage !== undefined ? String(found.from_chainage) : '');
+      setToKm(found.to_chainage !== null && found.to_chainage !== undefined ? String(found.to_chainage) : '');
       setIsChangingCorridor(false);
       if (errors.corridor) {
         setErrors((prev) => ({ ...prev, corridor: '' }));
@@ -340,8 +339,8 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
     if (fromKm === '' || isNaN(Number(fromKm)) || Number(fromKm) < 0) {
       errs.corridor = 'Corridor starting chainage is invalid.';
     }
-    if (toKm === '' || isNaN(Number(toKm)) || Number(toKm) < Number(fromKm)) {
-      errs.corridor = 'Corridor ending chainage is invalid.';
+    if (toKm === '' || isNaN(Number(toKm)) || Number(toKm) < 0 || Number(toKm) === Number(fromKm)) {
+      errs.corridor = 'Corridor ending chainage is invalid (must be distinct from starting chainage).';
     }
 
     if (Object.keys(errs).length > 0) {
@@ -361,11 +360,13 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
       if (rawFrom === '' || isNaN(sFrom) || sFrom < 0) {
         return { valid: false, errorMsg: `Work Stretch #${i + 1}: Valid starting chainage is required.` };
       }
-      if (rawTo === '' || isNaN(sTo) || sTo <= sFrom) {
-        return { valid: false, errorMsg: `Work Stretch #${i + 1}: Ending chainage must be greater than starting chainage.` };
+      if (rawTo === '' || isNaN(sTo) || sTo === sFrom || sTo < 0) {
+        return { valid: false, errorMsg: `Work Stretch #${i + 1}: Ending chainage must be distinct from starting chainage.` };
       }
       if (rawWidthTo !== '' && !isNaN(wTo) && wTo > 0) {
-        const capacity = checkSpanWidthCapacity(sFrom, sTo, wTo, subChainages);
+        const minKm = Math.min(sFrom, sTo);
+        const maxKm = Math.max(sFrom, sTo);
+        const capacity = checkSpanWidthCapacity(minKm, maxKm, wTo, subChainages);
         if (!capacity.valid) {
           const b = capacity.bottlenecks[0];
           return {

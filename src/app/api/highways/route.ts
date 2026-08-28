@@ -105,8 +105,23 @@ export async function GET(request: Request) {
           });
         }
 
+        const { data: subChainagesData } = await supabase
+          .from('highway_sub_chainages')
+          .select('highway_code, division_name')
+          .not('division_name', 'is', null);
+        const subDivisionMap = new Map<string, string>();
+        if (subChainagesData) {
+          subChainagesData.forEach((s: { highway_code: string; division_name: string }) => {
+            const code = s.highway_code?.toUpperCase();
+            if (code && s.division_name && !subDivisionMap.has(code)) {
+              subDivisionMap.set(code, s.division_name);
+            }
+          });
+        }
+
         allCorridors = allCorridors.map((c) => ({
           ...c,
+          division_name: c.division_name || subDivisionMap.get(c.road_code?.toUpperCase()) || null,
           dlp_count: dlpCountsMap.get(c.road_code?.toUpperCase()) || 0,
         }));
       }
