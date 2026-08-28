@@ -17,6 +17,7 @@ import {
   Maximize2,
   Ruler,
   ArrowUpDown,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { SubChainageStretch } from '@/app/api/sub-chainages/route';
 import { DlpWorkStretch, DlpWorkCategory } from '@/types/dlp';
@@ -52,6 +53,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
   // UI Controls State
   const [viewType, setViewType] = useState<'MICRO_LANE' | 'MACRO_PCU'>('MICRO_LANE');
   const [zoomLevel, setZoomLevel] = useState<number>(1); // 1x, 1.5x, 2x, 3x, 4x
+  const [isReversed, setIsReversed] = useState<boolean>(false); // Normal (From -> To) vs Reversed (To -> From)
   const [showTowns, setShowTowns] = useState<boolean>(true);
   const [showCw, setShowCw] = useState<boolean>(true);
   const [showPcu, setShowPcu] = useState<boolean>(true);
@@ -181,6 +183,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
   // Pre-calculate stretch positions with minimum bar width protection and zero overlaps
   const stretchPositions = useMemo(() => {
+    const normalPosMap = new Map<string | number, { leftPx: number; widthPx: number }>();
     const posMap = new Map<string | number, { leftPx: number; widthPx: number }>();
     let currentLeft = 0;
 
@@ -188,12 +191,26 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
       const propWidth = Math.round(((st.length_km || 1) / totalSpan) * canvasWidthPx);
       const widthPx = Math.max(minBarWidthPx, propWidth);
       const key = st.id || i;
+      normalPosMap.set(key, { leftPx: currentLeft, widthPx });
       posMap.set(key, { leftPx: currentLeft, widthPx });
       currentLeft += widthPx;
     });
 
-    return { posMap, totalCanvasWidth: Math.max(canvasWidthPx, currentLeft) };
-  }, [activeStretches, totalSpan, canvasWidthPx, minBarWidthPx]);
+    const totalCanvasWidth = Math.max(canvasWidthPx, currentLeft);
+
+    if (isReversed) {
+      activeStretches.forEach((st, i) => {
+        const key = st.id || i;
+        const orig = normalPosMap.get(key);
+        if (orig) {
+          const revLeft = totalCanvasWidth - (orig.leftPx + orig.widthPx);
+          posMap.set(key, { leftPx: revLeft, widthPx: orig.widthPx });
+        }
+      });
+    }
+
+    return { posMap, normalPosMap, totalCanvasWidth };
+  }, [activeStretches, totalSpan, canvasWidthPx, minBarWidthPx, isReversed]);
 
   const canvasWidthPxActual = stretchPositions.totalCanvasWidth;
 
@@ -341,7 +358,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
         for (let i = 0; i < activeStretches.length; i++) {
           const st = activeStretches[i];
-          const pos = getStretchPos(st, i);
+          const pos = stretchPositions.normalPosMap.get(st.id || i) || { leftPx: 0, widthPx: 0 };
           if (sFrom >= st.from_km && sFrom <= st.to_km) {
             const ratio = st.to_km > st.from_km ? (sFrom - st.from_km) / (st.to_km - st.from_km) : 0;
             startPx = pos.leftPx + ratio * pos.widthPx;
@@ -354,7 +371,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
         for (let i = 0; i < activeStretches.length; i++) {
           const st = activeStretches[i];
-          const pos = getStretchPos(st, i);
+          const pos = stretchPositions.normalPosMap.get(st.id || i) || { leftPx: 0, widthPx: 0 };
           if (sTo >= st.from_km && sTo <= st.to_km) {
             const ratio = st.to_km > st.from_km ? (sTo - st.from_km) / (st.to_km - st.from_km) : 1;
             endPx = pos.leftPx + ratio * pos.widthPx;
@@ -364,17 +381,34 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
           }
         }
 
-        return { leftPx: startPx, widthPx: Math.max(40, endPx - startPx) };
+        const widthPx = Math.max(40, endPx - startPx);
+
+        if (isReversed) {
+          const revLeft = canvasWidthPxActual - (startPx + widthPx);
+          return { leftPx: revLeft, widthPx };
+        }
+
+        return { leftPx: startPx, widthPx };
       }
 
       const startRatio = totalSpan > 0 ? Math.max(0, sFrom - minKm) / totalSpan : 0;
       const lenRatio = totalSpan > 0 ? Math.min(1, Number(dlp.length_km || 1) / totalSpan) : 1;
+      const widthPx = Math.max(40, lenRatio * canvasWidthPxActual);
+      const normalLeft = startRatio * canvasWidthPxActual;
+
+      if (isReversed) {
+        return {
+          leftPx: canvasWidthPxActual - (normalLeft + widthPx),
+          widthPx,
+        };
+      }
+
       return {
-        leftPx: startRatio * canvasWidthPxActual,
-        widthPx: Math.max(40, lenRatio * canvasWidthPxActual),
+        leftPx: normalLeft,
+        widthPx,
       };
     },
-    [activeStretches, getStretchPos, minKm, totalSpan, canvasWidthPxActual]
+    [activeStretches, stretchPositions, minKm, totalSpan, canvasWidthPxActual, isReversed]
   );
 
   // Unique top-aligned DLP boundary milestone pins
@@ -386,19 +420,27 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
       const sTo = Number(dlp.chainage_to_km || 0);
       const pos = getDlpPosition(dlp);
 
-      // Start Pin (leftPx)
-      if (!Array.from(map.keys()).some((k) => Math.abs(k - sFrom) < 0.005)) {
-        map.set(sFrom, { km: dlp.chainage_from_km, xPx: pos.leftPx });
-      }
-
-      // End Pin (leftPx + widthPx)
-      if (!Array.from(map.keys()).some((k) => Math.abs(k - sTo) < 0.005)) {
-        map.set(sTo, { km: dlp.chainage_to_km, xPx: pos.leftPx + pos.widthPx });
+      if (!isReversed) {
+        // Normal mode: sFrom is on left, sTo is on right
+        if (!Array.from(map.keys()).some((k) => Math.abs(k - sFrom) < 0.005)) {
+          map.set(sFrom, { km: dlp.chainage_from_km, xPx: pos.leftPx });
+        }
+        if (!Array.from(map.keys()).some((k) => Math.abs(k - sTo) < 0.005)) {
+          map.set(sTo, { km: dlp.chainage_to_km, xPx: pos.leftPx + pos.widthPx });
+        }
+      } else {
+        // Reversed mode: sTo is on left, sFrom is on right
+        if (!Array.from(map.keys()).some((k) => Math.abs(k - sTo) < 0.005)) {
+          map.set(sTo, { km: dlp.chainage_to_km, xPx: pos.leftPx });
+        }
+        if (!Array.from(map.keys()).some((k) => Math.abs(k - sFrom) < 0.005)) {
+          map.set(sFrom, { km: dlp.chainage_from_km, xPx: pos.leftPx + pos.widthPx });
+        }
       }
     });
 
     return Array.from(map.values());
-  }, [dlpStretches, getDlpPosition]);
+  }, [dlpStretches, getDlpPosition, isReversed]);
 
   if (loading) {
     return (
@@ -460,7 +502,9 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
           </div>
         </div>
         <div className="mt-3 pt-2 border-t border-slate-300 flex items-center justify-between text-xs text-slate-800 font-semibold">
-          <span>Corridor Span: <strong>Km {minKm} &rarr; Km {maxKm}</strong> ({totalSpan.toFixed(2)} km)</span>
+          <span>Corridor Span: <strong>{isReversed ? `Km ${maxKm} → Km ${minKm}` : `Km ${minKm} → Km ${maxKm}`}</strong> ({totalSpan.toFixed(2)} km)</span>
+          <span>&bull;</span>
+          <span>Direction: <strong>{isReversed ? 'Reverse (Decreasing Chainage)' : 'Normal (Increasing Chainage)'}</strong></span>
           <span>&bull;</span>
           <span>Sub-Chainage Splits: <strong>{activeStretches.length} Stretches</strong></span>
           <span>&bull;</span>
@@ -495,7 +539,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 </h1>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2">
-                <span>Span: <strong>Km {minKm} &rarr; Km {maxKm}</strong> ({totalSpan.toFixed(2)} km)</span>
+                <span>Span: <strong>{isReversed ? `Km ${maxKm} → Km ${minKm}` : `Km ${minKm} → Km ${maxKm}`}</strong> ({totalSpan.toFixed(2)} km)</span>
                 <span>&bull;</span>
                 <span>Sub-Chainage Split Columns: <strong>{activeStretches.length}</strong></span>
               </p>
@@ -529,6 +573,21 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                 <BarChart2 className="w-3.5 h-3.5" /> Macro Census SLD
               </button>
             </div>
+
+            {/* Direction Inversion Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsReversed((prev) => !prev)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xs text-xs font-bold transition-all cursor-pointer border ${
+                isReversed
+                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500 shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+              title={isReversed ? "Switch to Normal Direction (From Km → To Km)" : "Switch to Reverse Direction (To Km → From Km)"}
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5" />
+              <span>{isReversed ? 'Reverse: To → From' : 'Normal: From → To'}</span>
+            </button>
 
             {/* Zoom Controls */}
             <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xs border border-slate-200 dark:border-slate-700">
@@ -812,11 +871,11 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                         setHoveredStretch(st);
                       }}
                     >
-                      <span className="truncate">Km {st.from_km}</span>
+                      <span className="truncate">Km {isReversed ? st.to_km : st.from_km}</span>
                       <span className="text-slate-600 dark:text-slate-400 text-[9px] bg-white dark:bg-slate-900 px-1 py-0.5 rounded-xs border border-slate-200 dark:border-slate-700 shrink-0 font-sans font-semibold">
                         {st.length_km} km
                       </span>
-                      <span className="truncate">Km {st.to_km}</span>
+                      <span className="truncate">Km {isReversed ? st.from_km : st.to_km}</span>
                     </div>
                   );
                 })}
