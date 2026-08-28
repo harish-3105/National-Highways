@@ -814,8 +814,8 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
           {/* RIGHT HORIZONTAL SCROLL AREA: Matrix Tracks Matching Sidebar Rows */}
           <div className="flex-1 overflow-x-auto bg-white dark:bg-slate-900 flex flex-col">
             <div
-              className="relative transition-all duration-300 flex flex-col shrink-0"
-              style={{ width: `${canvasWidthPxActual}px` }}
+              className="relative transition-all duration-300 flex flex-col shrink-0 px-8"
+              style={{ width: `${canvasWidthPxActual + 64}px` }}
             >
               {/* TRACK 1: Important Towns Grid Row (Height 48px / h-12) */}
               {showTowns && (
@@ -882,40 +882,23 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
               </div>
 
               {/* TRACK 3: CENTERLINE-ALIGNED ROAD CORRIDOR */}
-              <div className="relative h-[340px] border-b border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/90 flex items-center shrink-0 overflow-hidden">
+              <div className="relative h-[340px] border-b border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/90 flex items-center shrink-0 overflow-visible">
                 {/* Horizontal Road Centerline Guide Line */}
-                <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-slate-400/40 dark:border-white/25 z-0 pointer-events-none" />
+                <div className="absolute -left-8 -right-8 top-1/2 -translate-y-1/2 border-t border-dashed border-slate-400/40 dark:border-white/25 z-0 pointer-events-none" />
 
                 {/* Top-Ceiling Uniform Milestone Pins for DLP Work Boundaries */}
-                {uniqueDlpPins.map((pin) => {
-                  const isStartEdge = Math.abs(pin.xPx) < 1;
-                  const isEndEdge = Math.abs(pin.xPx - canvasWidthPxActual) < 1;
-
-                  const translateClass = isStartEdge
-                    ? 'translate-x-0 items-start'
-                    : isEndEdge
-                    ? '-translate-x-full items-end'
-                    : '-translate-x-1/2 items-center';
-
-                  const guidelinePos = isStartEdge
-                    ? 'left-0'
-                    : isEndEdge
-                    ? 'right-0'
-                    : 'left-1/2 -translate-x-1/2';
-
-                  return (
-                    <div
-                      key={`dlp-pin-${pin.km}`}
-                      className={`absolute top-2 z-40 pointer-events-none flex flex-col select-none ${translateClass}`}
-                      style={{ left: `${pin.xPx}px` }}
-                    >
-                      <span className="px-1.5 py-0.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 rounded-sm text-[8.5px] font-mono font-black shadow-md flex items-center gap-0.5 whitespace-nowrap border border-white/40">
-                        📍 Km {pin.km}
-                      </span>
-                      <div className={`w-px h-10 border-l border-dashed border-slate-400/60 dark:border-slate-500/60 relative ${guidelinePos}`} />
-                    </div>
-                  );
-                })}
+                {uniqueDlpPins.map((pin) => (
+                  <div
+                    key={`dlp-pin-${pin.km}`}
+                    className="absolute top-2 -translate-x-1/2 z-40 pointer-events-none flex flex-col items-center select-none"
+                    style={{ left: `${pin.xPx}px` }}
+                  >
+                    <span className="px-1.5 py-0.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 rounded-sm text-[8.5px] font-mono font-black shadow-md flex items-center gap-0.5 whitespace-nowrap border border-white/40">
+                      📍 Km {pin.km}
+                    </span>
+                    <div className="w-px h-10 border-l border-dashed border-slate-400/60 dark:border-slate-500/60" />
+                  </div>
+                ))}
 
                 {activeStretches.length === 0 && dlpStretches.length === 0 ? (
                   <div className="w-full text-center text-xs text-slate-400 py-8">
