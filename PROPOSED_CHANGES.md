@@ -83,10 +83,11 @@ This document captures and tracks all proposed changes, architectural pivots, an
   - Clicking any lane badge filters the table to show corridors matching that lane configuration (> 0 km) AND isolates/displays **only the selected lane distance metric** in the table row with a focused highlight badge and percentage share.
   - Clicking active badge or "Reset Filter" restores full multi-lane list view.
 
-### Change 5: Replace "Maintenance DLP Active" KPI Card (Replacement Metric Pending)
+### Change 5: Replace "Maintenance DLP Active" with "Divided Carriageway (4L+)" KPI Card
 - **Module**: Master Corridors (`/highways`)
 - **Component**: [`KpiHeaderCards.tsx`](file:///home/mathir14/nh_proj/src/components/highways/KpiHeaderCards.tsx)
-- **Requested Change**: Remove the **Maintenance DLP Active** KPI card from the corridors dashboard (since DLP is handled separately in `/dlp`). Stakeholders want a different metric in its place; specific replacement KPI metric is to be confirmed by stakeholders.
+- **Status**: ✅ **COMPLETED & DEPLOYED TO PRODUCTION** (August 30, 2026)
+- **Delivered Change**: Replaced the legacy DLP card with the **Divided Carriageway (4L+)** KPI card. Displays combined 4-Lane & 6-Lane high-capacity distance in km, percentage share of the total network (`%`), and sub-breakdown (`4L: X km • 6L: Y km`).
 
 ### Change 6: New Staff Management Module (`/staff`) with Dynamic Master Data Dropdowns
 - **Module**: New Module — Staff Management Portal

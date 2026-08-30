@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Route, Ruler, Layers, ShieldCheck } from 'lucide-react';
+import { Route, Ruler, Layers, TrendingUp } from 'lucide-react';
 
 interface KpiHeaderCardsProps {
   totalCorridors: number;
@@ -14,7 +14,7 @@ interface KpiHeaderCardsProps {
     lane4l: number;
     lane6l: number;
   };
-  corridorsWithDlp: number;
+  corridorsWithDlp?: number;
   loading?: boolean;
   activeLaneFilter?: string | null;
   onSelectLaneFilter?: (laneKey: string | null) => void;
@@ -25,13 +25,18 @@ export const KpiHeaderCards: React.FC<KpiHeaderCardsProps> = ({
   totalLengthKm,
   laneDistribution,
   laneLengthsKm,
-  corridorsWithDlp,
+  corridorsWithDlp: _corridorsWithDlp,
   loading = false,
   activeLaneFilter = null,
   onSelectLaneFilter,
 }) => {
   const formatNumber = (num: number) =>
     num.toLocaleString('en-IN', { maximumFractionDigits: 1 });
+
+  const highCapacityKm =
+    Math.round(((laneLengthsKm?.lane4l || 0) + (laneLengthsKm?.lane6l || 0)) * 1000) / 1000;
+  const highCapacityPercent =
+    totalLengthKm > 0 ? (highCapacityKm / totalLengthKm) * 100 : 0;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -197,27 +202,37 @@ export const KpiHeaderCards: React.FC<KpiHeaderCardsProps> = ({
         </div>
       </div>
 
-      {/* Card 4: Active Maintenance DLP Coverage */}
+      {/* Card 4: High-Capacity / Divided Carriageway Share (4L & 6L) */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Maintenance DLP Active
+            Divided Carriageway (4L+)
           </span>
           <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg text-indigo-600 dark:text-indigo-400">
-            <ShieldCheck className="w-5 h-5" />
+            <TrendingUp className="w-5 h-5" />
           </div>
         </div>
         <div className="mt-3">
           {loading ? (
-            <div className="h-8 w-24 bg-slate-100 dark:bg-slate-800 animate-pulse rounded" />
+            <div className="h-8 w-28 bg-slate-100 dark:bg-slate-800 animate-pulse rounded" />
           ) : (
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              {corridorsWithDlp} <span className="text-sm font-normal text-slate-500">Highways</span>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {formatNumber(highCapacityKm)} <span className="text-sm font-normal text-slate-500">km</span>
+              </span>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                {highCapacityPercent.toFixed(1)}% Share
+              </span>
             </div>
           )}
         </div>
-        <div className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-          Linked Warranty Stretches
+        <div className="mt-2 flex items-center justify-between text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+          <span>High-Capacity 4L & 6L Network</span>
+          {laneLengthsKm && (
+            <span className="text-slate-400 dark:text-slate-500 text-[11px] font-normal">
+              4L: {formatNumber(laneLengthsKm.lane4l)}km • 6L: {formatNumber(laneLengthsKm.lane6l)}km
+            </span>
+          )}
         </div>
       </div>
     </div>
