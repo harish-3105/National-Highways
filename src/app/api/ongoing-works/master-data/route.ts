@@ -17,63 +17,70 @@ function getSupabaseClient() {
 
 export interface MasterConfigItem {
   id: string;
-  category: "division" | "scheme" | "work_stage";
+  category: "circle" | "division" | "scheme" | "work_stage";
   value: string;
+  parent_category?: string | null;
+  parent_value?: string | null;
   created_at?: string;
 }
 
 export interface OngoingWorksMasterData {
   rawItems: MasterConfigItem[];
+  circles: string[];
   divisions: string[];
   schemes: string[];
   workStages: string[];
+  circleDivisionMap: Record<string, string[]>;
 }
 
-const DEFAULT_DIVISIONS = [
-  "Chennai",
-  "Salem",
-  "Madurai",
-  "Coimbatore",
-  "Tirunelveli",
-  "Villupuram",
-  "Tiruchirappalli",
-  "Dharapuram",
-  "Thanjavur",
-];
-
-const DEFAULT_SCHEMES = [
-  "NH(O)",
-  "CRIF",
-  "Annual Plan",
-  "Special Repairs",
-  "State Fund",
-  "EPC Work",
-  "HAM Project",
-];
-
-const DEFAULT_WORK_STAGES = [
-  "IN_PROGRESS",
-  "TENDER_STAGE",
-  "COMPLETED",
-  "DELAYED",
-  "SANCTIONED",
-  "PRE_CONSTRUCTION",
-];
-
 function groupMasterData(items: MasterConfigItem[]): OngoingWorksMasterData {
-  const dbDivisions = Array.from(new Set(items.filter((i) => i.category === "division").map((i) => i.value)));
-  const dbSchemes = Array.from(new Set(items.filter((i) => i.category === "scheme").map((i) => i.value)));
-  const dbStages = Array.from(new Set(items.filter((i) => i.category === "work_stage").map((i) => i.value)));
+  const circles = Array.from(
+    new Set(items.filter((i) => i.category === "circle").map((i) => i.value.trim()))
+  ).sort((a, b) => a.localeCompare(b));
 
-  const divisions = Array.from(new Set([...(dbDivisions.length > 0 ? dbDivisions : DEFAULT_DIVISIONS)])).sort();
-  const schemes = Array.from(new Set([...(dbSchemes.length > 0 ? dbSchemes : DEFAULT_SCHEMES)])).sort();
-  const workStages = Array.from(new Set([...(dbStages.length > 0 ? dbStages : DEFAULT_WORK_STAGES)])).sort();
+  const divisions = Array.from(
+    new Set(items.filter((i) => i.category === "division").map((i) => i.value.trim()))
+  ).sort((a, b) => a.localeCompare(b));
+
+  const schemes = Array.from(
+    new Set(items.filter((i) => i.category === "scheme").map((i) => i.value.trim()))
+  ).sort((a, b) => a.localeCompare(b));
+
+  const workStages = Array.from(
+    new Set(items.filter((i) => i.category === "work_stage").map((i) => i.value.trim()))
+  ).sort((a, b) => a.localeCompare(b));
+
+  const circleDivisionMap: Record<string, string[]> = {};
+  circles.forEach((c) => {
+    circleDivisionMap[c] = [];
+  });
+
+  items
+    .filter((i) => i.category === "division")
+    .forEach((item) => {
+      const parentCircle = item.parent_value?.trim();
+      if (parentCircle) {
+        if (!circleDivisionMap[parentCircle]) {
+          circleDivisionMap[parentCircle] = [];
+        }
+        if (!circleDivisionMap[parentCircle].includes(item.value.trim())) {
+          circleDivisionMap[parentCircle].push(item.value.trim());
+        }
+      }
+    });
+
+  // Sort division arrays inside each circle
+  Object.keys(circleDivisionMap).forEach((circleKey) => {
+    circleDivisionMap[circleKey].sort((a, b) => a.localeCompare(b));
+  });
 
   return {
     rawItems: items,
+    circles,
     divisions,
     schemes,
     workStages,
+    circleDivisionMap,
   };
 }
 
@@ -91,15 +98,15 @@ export async function GET() {
       .order("value", { ascending: true });
 
     if (error) {
-      console.warn("Notice: ongoing_works_master_config DB read, using fallbacks:", error.message);
-      return NextResponse.json(groupMasterData([]));
+      console.error("GET /api/ongoing-works/master-data DB error:", error.message);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json(groupMasterData(data || []));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("GET /api/ongoing-works/master-data error:", msg);
-    return NextResponse.json(groupMasterData([]));
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -110,34 +117,67 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
     }
 
-    const { category, value } = await request.json();
+    const body = await request.json();
+    const { category, value, parent_category, parent_value } = body;
 
     if (!category || !value || typeof value !== "string" || value.trim() === "") {
       return NextResponse.json({ error: "Category and value are required" }, { status: 400 });
     }
 
     const cleanCategory = category.trim().toLowerCase();
-    if (!["division", "scheme", "work_stage"].includes(cleanCategory)) {
-      return NextResponse.json({ error: "Category must be 'division', 'scheme', or 'work_stage'" }, { status: 400 });
+    if (!["circle", "division", "scheme", "work_stage"].includes(cleanCategory)) {
+      return NextResponse.json(
+        { error: "Category must be 'circle', 'division', 'scheme', or 'work_stage'" },
+        { status: 400 }
+      );
     }
 
     const cleanValue = value.trim();
+    const cleanParentCategory = parent_category
+      ? String(parent_category).trim().toLowerCase()
+      : cleanCategory === "division"
+      ? "circle"
+      : null;
+    const cleanParentValue = parent_value ? String(parent_value).trim() : null;
 
     // Check duplicate
-    const { data: existing } = await supabase
+    let checkQuery = supabase
       .from("ongoing_works_master_config")
       .select("id")
       .eq("category", cleanCategory)
-      .ilike("value", cleanValue)
-      .maybeSingle();
+      .ilike("value", cleanValue);
+
+    if (cleanParentValue) {
+      checkQuery = checkQuery.ilike("parent_value", cleanParentValue);
+    }
+
+    const { data: existing, error: checkError } = await checkQuery.maybeSingle();
+    if (checkError) {
+      console.error("Error checking existing option:", checkError);
+      return NextResponse.json({ error: checkError.message }, { status: 500 });
+    }
 
     if (existing) {
-      return NextResponse.json({ error: `Option "${cleanValue}" already exists in ${cleanCategory}` }, { status: 409 });
+      return NextResponse.json(
+        {
+          error: `Option "${cleanValue}" already exists in ${cleanCategory}${
+            cleanParentValue ? ` under ${cleanParentValue}` : ""
+          }`,
+        },
+        { status: 409 }
+      );
     }
 
     const { data, error } = await supabase
       .from("ongoing_works_master_config")
-      .insert([{ category: cleanCategory, value: cleanValue }])
+      .insert([
+        {
+          category: cleanCategory,
+          value: cleanValue,
+          parent_category: cleanParentCategory,
+          parent_value: cleanParentValue,
+        },
+      ])
       .select()
       .single();
 
@@ -161,17 +201,28 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
     }
 
-    const { id, value } = await request.json();
+    const body = await request.json();
+    const { id, value, parent_category, parent_value } = body;
 
-    if (!id || !value || typeof value !== "string" || value.trim() === "") {
-      return NextResponse.json({ error: "ID and updated value are required" }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    const cleanValue = value.trim();
+    const updates: Record<string, unknown> = {};
+
+    if (value && typeof value === "string" && value.trim() !== "") {
+      updates.value = value.trim();
+    }
+    if (parent_category !== undefined) {
+      updates.parent_category = parent_category ? String(parent_category).trim().toLowerCase() : null;
+    }
+    if (parent_value !== undefined) {
+      updates.parent_value = parent_value ? String(parent_value).trim() : null;
+    }
 
     const { data, error } = await supabase
       .from("ongoing_works_master_config")
-      .update({ value: cleanValue })
+      .update(updates)
       .eq("id", id)
       .select()
       .single();
@@ -197,10 +248,19 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    let id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json({ error: "ID query parameter is required" }, { status: 400 });
+      try {
+        const body = await request.json();
+        if (body?.id) id = body.id;
+      } catch {
+        // body was empty or not json
+      }
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: "ID is required to delete option" }, { status: 400 });
     }
 
     const { error } = await supabase

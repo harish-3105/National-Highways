@@ -11,6 +11,7 @@ export interface MajorProjectExportColumn {
 export const MAJOR_PROJECTS_EXPORT_COLUMNS: MajorProjectExportColumn[] = [
   // Core Identification
   { key: 's_no', label: 'S.No', category: 'core', defaultSelected: true },
+  { key: 'circle', label: 'Circle', category: 'core', defaultSelected: true },
   { key: 'division', label: 'Division', category: 'core', defaultSelected: true },
   { key: 'scheme', label: 'Scheme', category: 'core', defaultSelected: true },
   { key: 'name_of_work', label: 'Name of Work', category: 'core', defaultSelected: true },

@@ -12,11 +12,13 @@ import {
   Search,
   CheckCircle2,
   SlidersHorizontal,
+  MapPin,
   Building2,
   FileSpreadsheet,
   Activity,
+  AlertCircle,
 } from 'lucide-react';
-import { OngoingWorksMasterData } from '@/app/api/ongoing-works/master-data/route';
+import { MasterConfigItem, OngoingWorksMasterData } from '@/app/api/ongoing-works/master-data/route';
 
 interface OngoingWorksMasterDataModalProps {
   isOpen: boolean;
@@ -25,7 +27,7 @@ interface OngoingWorksMasterDataModalProps {
   onRefresh: () => void;
 }
 
-type CategoryType = 'division' | 'scheme' | 'work_stage';
+type CategoryType = 'circle' | 'division' | 'scheme' | 'work_stage';
 
 interface CategoryTab {
   id: CategoryType;
@@ -36,9 +38,15 @@ interface CategoryTab {
 
 const CATEGORY_TABS: CategoryTab[] = [
   {
+    id: 'circle',
+    label: 'Administrative Circles',
+    description: 'Regional headquarters and administrative zones',
+    icon: MapPin,
+  },
+  {
     id: 'division',
-    label: 'Divisions',
-    description: 'Divisions executing capital and major works',
+    label: 'Field Divisions',
+    description: 'Operational territorial highway divisions (mapped to Parent Circle)',
     icon: Building2,
   },
   {
@@ -61,8 +69,9 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
   masterData,
   onRefresh,
 }) => {
-  const [activeCategory, setActiveCategory] = useState<CategoryType>('division');
+  const [activeCategory, setActiveCategory] = useState<CategoryType>('circle');
   const [newValue, setNewValue] = useState<string>('');
+  const [newParentCircle, setNewParentCircle] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,43 +80,33 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
   // Inline editing state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
+  const [editingParentCircle, setEditingParentCircle] = useState<string>('');
 
   // Delete confirmation state
-  const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ id?: string; value: string } | null>(null);
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<MasterConfigItem | null>(null);
 
   if (!isOpen) return null;
 
-  const currentCategoryItems: { id: string; category: CategoryType; value: string }[] = (
-    masterData.rawItems || []
-  )
-    .filter((item) => item.category === activeCategory)
-    .map((item) => ({ id: item.id || `raw-${item.value}`, category: item.category, value: item.value }));
-
-  const fallbackArray: string[] =
-    activeCategory === 'division'
-      ? masterData.divisions || []
-      : activeCategory === 'scheme'
-      ? masterData.schemes || []
-      : masterData.workStages || [];
-
-  const displayItems: { id: string; category: CategoryType; value: string }[] =
-    currentCategoryItems.length > 0
-      ? currentCategoryItems
-      : fallbackArray.map((val: string, idx: number) => ({
-          id: `db-${idx}`,
-          category: activeCategory,
-          value: val,
-        }));
-
-  const filteredItems = displayItems.filter((item) =>
-    (item.value || '').toLowerCase().includes(searchTerm.toLowerCase())
+  const currentCategoryItems = (masterData.rawItems || []).filter(
+    (item) => item.category === activeCategory
   );
+
+  const filteredItems = currentCategoryItems.filter((item) => {
+    const matchesValue = (item.value || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesParent = (item.parent_value || '').toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesValue || matchesParent;
+  });
 
   const activeTabMeta = CATEGORY_TABS.find((t) => t.id === activeCategory);
 
   const handleAddOption = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newValue.trim()) return;
+
+    if (activeCategory === 'division' && !newParentCircle.trim()) {
+      setError('Please select a Parent Circle for the new Division.');
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -117,7 +116,12 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
       const res = await fetch('/api/ongoing-works/master-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category: activeCategory, value: newValue.trim() }),
+        body: JSON.stringify({
+          category: activeCategory,
+          value: newValue.trim(),
+          parent_category: activeCategory === 'division' ? 'circle' : undefined,
+          parent_value: activeCategory === 'division' ? newParentCircle.trim() : undefined,
+        }),
       });
 
       const json = await res.json();
@@ -134,9 +138,17 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
     }
   };
 
-  const handleUpdateOption = async (id: string, oldValue: string) => {
-    if (!editingValue.trim() || editingValue.trim() === oldValue) {
-      setEditingId(null);
+  const handleStartEdit = (item: MasterConfigItem) => {
+    setEditingId(item.id);
+    setEditingValue(item.value);
+    setEditingParentCircle(item.parent_value || '');
+    setError(null);
+    setSuccess(null);
+  };
+
+  const handleUpdateOption = async (item: MasterConfigItem) => {
+    if (!editingValue.trim()) {
+      setError('Option value cannot be empty.');
       return;
     }
 
@@ -145,35 +157,19 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
     setSuccess(null);
 
     try {
-      if (id.startsWith('db-')) {
-        const res = await fetch('/api/ongoing-works/master-data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            category: activeCategory,
-            value: editingValue.trim(),
-          }),
-        });
-        if (!res.ok) {
-          const json = await res.json();
-          throw new Error(json.error || 'Failed to save updated option');
-        }
-      } else {
-        const res = await fetch('/api/ongoing-works/master-data', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id,
-            category: activeCategory,
-            oldValue,
-            newValue: editingValue.trim(),
-          }),
-        });
-        if (!res.ok) {
-          const json = await res.json();
-          throw new Error(json.error || 'Failed to update option');
-        }
-      }
+      const res = await fetch('/api/ongoing-works/master-data', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: item.id,
+          value: editingValue.trim(),
+          parent_category: activeCategory === 'division' ? 'circle' : null,
+          parent_value: activeCategory === 'division' ? editingParentCircle.trim() || null : null,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to update option');
 
       setSuccess(`Updated option to "${editingValue.trim()}".`);
       setEditingId(null);
@@ -194,20 +190,14 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
     setSuccess(null);
 
     try {
-      const res = await fetch('/api/ongoing-works/master-data', {
+      const res = await fetch(`/api/ongoing-works/master-data?id=${encodeURIComponent(deleteConfirmItem.id)}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: deleteConfirmItem.id?.startsWith('db-') ? undefined : deleteConfirmItem.id,
-          category: activeCategory,
-          value: deleteConfirmItem.value,
-        }),
+        body: JSON.stringify({ id: deleteConfirmItem.id }),
       });
 
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json.error || 'Failed to delete option');
-      }
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to delete option');
 
       setSuccess(`Deleted "${deleteConfirmItem.value}".`);
       setDeleteConfirmItem(null);
@@ -234,7 +224,7 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
                 Ongoing Works Master Data Configuration
               </h2>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Customize division names, scheme classifications, and work lifecycle stages
+                Centralized database management of Circles, Divisions (with Parent Circle), Schemes, and Work Stages
               </p>
             </div>
           </div>
@@ -246,7 +236,7 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
           </button>
         </div>
 
-        {/* Chat App Two-Column Layout */}
+        {/* Two-Column Layout */}
         <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12">
           {/* Left Sidebar (Categories) */}
           <div className="md:col-span-4 border-r border-slate-100 dark:border-slate-800 overflow-y-auto p-4 space-y-1.5 bg-slate-50/30 dark:bg-slate-900/40">
@@ -255,13 +245,9 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
             </span>
             {CATEGORY_TABS.map((tab) => {
               const Icon = tab.icon;
-              const count = (
-                tab.id === 'division'
-                  ? masterData.divisions
-                  : tab.id === 'scheme'
-                  ? masterData.schemes
-                  : masterData.workStages
-              )?.length || 0;
+              const count = (masterData.rawItems || []).filter(
+                (i) => i.category === tab.id
+              ).length;
 
               const isActive = activeCategory === tab.id;
               return (
@@ -324,7 +310,7 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
                 <p className="text-xs text-slate-500 font-medium">{activeTabMeta?.description}</p>
               </div>
               <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-2.5 py-1 rounded-lg self-start sm:self-auto">
-                {filteredItems.length} option{filteredItems.length === 1 ? '' : 's'} available
+                {filteredItems.length} option{filteredItems.length === 1 ? '' : 's'} configured
               </span>
             </div>
 
@@ -344,21 +330,56 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
             )}
 
             {/* Add New Option Form */}
-            <form onSubmit={handleAddOption} className="flex gap-2">
-              <input
-                type="text"
-                value={newValue}
-                onChange={(e) => setNewValue(e.target.value)}
-                className="flex-1 px-3.5 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="submit"
-                disabled={loading || !newValue.trim()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Option</span>
-              </button>
+            <form onSubmit={handleAddOption} className="space-y-2">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={newValue}
+                  onChange={(e) => setNewValue(e.target.value)}
+                  placeholder={
+                    activeCategory === 'circle'
+                      ? 'Enter administrative circle name (e.g. Chennai, Salem)...'
+                      : activeCategory === 'division'
+                      ? 'Enter division name (e.g. Chengalpattu, Vellore)...'
+                      : activeCategory === 'scheme'
+                      ? 'Enter funding scheme (e.g. NH(O), CRIF, Annual Plan)...'
+                      : 'Enter work stage (e.g. IN_PROGRESS, TENDER_STAGE)...'
+                  }
+                  className="flex-1 px-3.5 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+
+                {activeCategory === 'division' && (
+                  <div className="sm:w-52">
+                    <select
+                      value={newParentCircle}
+                      onChange={(e) => setNewParentCircle(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">-- Select Parent Circle --</option>
+                      {masterData.circles.map((c) => (
+                        <option key={c} value={c}>
+                          Circle: {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading || !newValue.trim()}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Option</span>
+                </button>
+              </div>
+
+              {activeCategory === 'division' && masterData.circles.length === 0 && (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                  ⚠️ No Circles created yet. Please create at least one Administrative Circle first to map divisions.
+                </p>
+              )}
             </form>
 
             {/* Search Filter */}
@@ -368,6 +389,7 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={`Search ${activeTabMeta?.label.toLowerCase()}...`}
                 className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -376,7 +398,9 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
             <div className="flex-1 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 p-1">
               {filteredItems.length === 0 ? (
                 <div className="p-8 text-center text-slate-400 text-xs font-medium">
-                  No options found. Add one above.
+                  {searchTerm
+                    ? `No matching options found for "${searchTerm}".`
+                    : `No ${activeTabMeta?.label.toLowerCase()} configured in database yet. Add one above.`}
                 </div>
               ) : (
                 filteredItems.map((item) => (
@@ -391,14 +415,28 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
                           value={editingValue}
                           onChange={(e) => setEditingValue(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleUpdateOption(item.id, item.value);
+                            if (e.key === 'Enter') handleUpdateOption(item);
                             if (e.key === 'Escape') setEditingId(null);
                           }}
                           className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-blue-500 rounded-lg text-xs font-semibold outline-none"
                           autoFocus
                         />
+                        {activeCategory === 'division' && (
+                          <select
+                            value={editingParentCircle}
+                            onChange={(e) => setEditingParentCircle(e.target.value)}
+                            className="sm:w-44 px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-500 rounded-lg text-xs font-semibold outline-none"
+                          >
+                            <option value="">-- No Circle --</option>
+                            {masterData.circles.map((c) => (
+                              <option key={c} value={c}>
+                                Circle: {c}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                         <button
-                          onClick={() => handleUpdateOption(item.id, item.value)}
+                          onClick={() => handleUpdateOption(item)}
                           className="p-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 cursor-pointer"
                         >
                           <Check className="w-3.5 h-3.5" />
@@ -417,14 +455,22 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
                           <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                             {item.value}
                           </span>
+                          {activeCategory === 'division' && (
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                                item.parent_value
+                                  ? 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                              }`}
+                            >
+                              {item.parent_value ? `Circle: ${item.parent_value}` : 'No Circle assigned'}
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                           <button
-                            onClick={() => {
-                              setEditingId(item.id);
-                              setEditingValue(item.value);
-                            }}
+                            onClick={() => handleStartEdit(item)}
                             className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors cursor-pointer"
                             title="Edit Option"
                           >

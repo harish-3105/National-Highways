@@ -39,9 +39,11 @@ export const MajorProjectsDashboard: React.FC = () => {
   const [projects, setProjects] = useState<MajorProject[]>([]);
   const [masterData, setMasterData] = useState<OngoingWorksMasterData>({
     rawItems: [],
+    circles: [],
     divisions: [],
     schemes: [],
     workStages: [],
+    circleDivisionMap: {},
   });
   const [loading, setLoading] = useState<boolean>(true);
   const [showArchived, setShowArchived] = useState<boolean>(false);
@@ -52,6 +54,7 @@ export const MajorProjectsDashboard: React.FC = () => {
 
   // Filters State
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedCircle, setSelectedCircle] = useState<string>('ALL');
   const [selectedDivision, setSelectedDivision] = useState<string>('ALL');
   const [activeKpiFilter, setActiveKpiFilter] = useState<
     'ACTIVE_ALL' | 'ABOVE_50CR' | 'IN_PROGRESS' | 'TENDER_STAGE' | 'DELAYED' | 'COMPLETED'
@@ -147,14 +150,33 @@ export const MajorProjectsDashboard: React.FC = () => {
     fetchMasterData();
   }, [fetchProjects, fetchMasterData]);
 
-  // Divisions list for filter dropdown (merged master + active project divisions)
+  // Circles list for filter dropdown (merged master + active project circles)
+  const circlesList = useMemo(() => {
+    const set = new Set<string>(masterData.circles || []);
+    projects.forEach((p) => {
+      if (p.circle) set.add(p.circle);
+    });
+    return Array.from(set).sort();
+  }, [projects, masterData.circles]);
+
+  // Divisions list for filter dropdown (hierarchical based on selected Circle)
   const divisionsList = useMemo(() => {
+    if (selectedCircle && selectedCircle !== 'ALL') {
+      const circleDivs = masterData.circleDivisionMap?.[selectedCircle] || [];
+      const set = new Set<string>(circleDivs);
+      projects.forEach((p) => {
+        if ((p.circle || '').toLowerCase() === selectedCircle.toLowerCase() && p.division) {
+          set.add(p.division);
+        }
+      });
+      return Array.from(set).sort();
+    }
     const set = new Set<string>(masterData.divisions || []);
     projects.forEach((p) => {
       if (p.division) set.add(p.division);
     });
     return Array.from(set).sort();
-  }, [projects, masterData.divisions]);
+  }, [projects, masterData.divisions, masterData.circleDivisionMap, selectedCircle]);
 
   // Filtered projects
   const filteredProjects = useMemo(() => {
@@ -186,12 +208,17 @@ export const MajorProjectsDashboard: React.FC = () => {
         if (!isCompleted) return false;
       }
 
-      // 2. Division filter
+      // 2. Circle filter
+      const matchesCircle =
+        selectedCircle === 'ALL' ||
+        (p.circle || '').toLowerCase() === selectedCircle.toLowerCase();
+
+      // 3. Division filter
       const matchesDivision =
         selectedDivision === 'ALL' ||
         (p.division || '').toLowerCase() === selectedDivision.toLowerCase();
 
-      // 3. Delay Range Filter (in years)
+      // 4. Delay Range Filter (in years)
       let matchesDelayRange = true;
       const overrun = delayInfo.delayYears;
       if (delayMin !== '') {
@@ -201,7 +228,7 @@ export const MajorProjectsDashboard: React.FC = () => {
         matchesDelayRange = matchesDelayRange && overrun <= Number(delayMax);
       }
 
-      // 4. Progress Range Filter (in %)
+      // 5. Progress Range Filter (in %)
       let matchesProgressRange = true;
       const prog =
         p.progress_percent !== undefined && p.progress_percent !== null ? Number(p.progress_percent) : 0;
@@ -212,11 +239,12 @@ export const MajorProjectsDashboard: React.FC = () => {
         matchesProgressRange = matchesProgressRange && prog <= Number(progressMax);
       }
 
-      // 5. Search filter
+      // 6. Search filter
       const matchesSearch =
         !searchTerm.trim() ||
         (p.name_of_work || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.scheme || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.circle || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.division || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.pmis_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.job_no || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -232,6 +260,7 @@ export const MajorProjectsDashboard: React.FC = () => {
         (p.issue_others || '').toLowerCase().includes(searchTerm.toLowerCase());
 
       return (
+        matchesCircle &&
         matchesDivision &&
         matchesDelayRange &&
         matchesProgressRange &&
@@ -241,6 +270,7 @@ export const MajorProjectsDashboard: React.FC = () => {
   }, [
     projects,
     activeKpiFilter,
+    selectedCircle,
     selectedDivision,
     delayMin,
     delayMax,
@@ -307,6 +337,7 @@ export const MajorProjectsDashboard: React.FC = () => {
   const hasActiveFilters = useMemo(() => {
     return (
       searchTerm !== '' ||
+      selectedCircle !== 'ALL' ||
       selectedDivision !== 'ALL' ||
       activeKpiFilter !== 'ACTIVE_ALL' ||
       delayMin !== '' ||
@@ -316,6 +347,7 @@ export const MajorProjectsDashboard: React.FC = () => {
     );
   }, [
     searchTerm,
+    selectedCircle,
     selectedDivision,
     activeKpiFilter,
     delayMin,
@@ -326,6 +358,7 @@ export const MajorProjectsDashboard: React.FC = () => {
 
   const handleResetFilters = () => {
     setSearchTerm('');
+    setSelectedCircle('ALL');
     setSelectedDivision('ALL');
     setActiveKpiFilter('ACTIVE_ALL');
     setDelayMin('');
@@ -356,8 +389,10 @@ export const MajorProjectsDashboard: React.FC = () => {
         key={selectedProjectForEdit?.id || 'new-ongoing-work'}
         initialData={selectedProjectForEdit || undefined}
         nextSNo={nextSNo}
+        masterCircles={masterData.circles}
         masterDivisions={masterData.divisions}
         masterSchemes={masterData.schemes}
+        circleDivisionMap={masterData.circleDivisionMap}
         onSave={handleSaveProject}
         onCancel={() => {
           setUiMode('LIST');
@@ -660,10 +695,23 @@ export const MajorProjectsDashboard: React.FC = () => {
             />
           </div>
 
-          {/* Division Filter & 50Cr Button */}
+          {/* Circle & Division Filters & 50Cr Button */}
           <div className="flex items-center gap-2.5 w-full lg:w-auto flex-wrap sm:flex-nowrap">
+            {/* Circle Filter */}
+            <div className="w-full sm:w-48">
+              <SearchableSelect
+                options={['All Circles', ...circlesList]}
+                value={selectedCircle === 'ALL' || !selectedCircle ? 'All Circles' : selectedCircle}
+                onChange={(val) => {
+                  const newCircle = val === 'All Circles' ? 'ALL' : val;
+                  setSelectedCircle(newCircle);
+                  setSelectedDivision('ALL');
+                }}
+              />
+            </div>
+
             {/* Division Filter */}
-            <div className="w-full sm:w-56">
+            <div className="w-full sm:w-48">
               <SearchableSelect
                 options={['All Divisions', ...divisionsList]}
                 value={selectedDivision === 'ALL' || !selectedDivision ? 'All Divisions' : selectedDivision}

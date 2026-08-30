@@ -167,9 +167,16 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
 
                   {/* Division */}
                   <td className="py-3.5 px-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-xs font-bold text-[11px] border ${divBadge} ${isDeleted ? 'line-through' : ''}`}>
-                      {item.division}
-                    </span>
+                    <div className="flex flex-col gap-0.5 items-start">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-xs font-bold text-[11px] border ${divBadge} ${isDeleted ? 'line-through' : ''}`}>
+                        {item.division}
+                      </span>
+                      {item.circle && (
+                        <span className="text-[9.5px] font-medium text-slate-500 dark:text-slate-400">
+                          {item.circle}
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   {/* Scheme */}

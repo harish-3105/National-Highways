@@ -29,8 +29,10 @@ import { calculateProjectDelay } from '@/lib/formatters';
 interface OngoingWorkEntryFormProps {
   initialData?: Partial<MajorProject>;
   nextSNo?: number;
+  masterCircles?: string[];
   masterDivisions?: string[];
   masterSchemes?: string[];
+  circleDivisionMap?: Record<string, string[]>;
   isAdmin?: boolean;
   onSave: (projectData: Partial<MajorProject>) => Promise<void> | void;
   onCancel: () => void;
@@ -100,8 +102,10 @@ const STAGES: StageDefinition[] = [
 export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   initialData,
   nextSNo = 1,
+  masterCircles = [],
   masterDivisions = [],
   masterSchemes = [],
+  circleDivisionMap = {},
   isAdmin = false,
   onSave,
   onCancel,
@@ -136,6 +140,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
 
   // Stage 1: Sanction & Scope
   const [sNo, setSNo] = useState<string>(String(initialData?.s_no || nextSNo));
+  const [circle, setCircle] = useState<string>(initialData?.circle || '');
   const [division, setDivision] = useState<string>(initialData?.division || '');
   const [scheme, setScheme] = useState<string>(initialData?.scheme || '');
   const [nameOfWork, setNameOfWork] = useState<string>(initialData?.name_of_work || '');
@@ -148,6 +153,40 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
       ? String(initialData.length_km)
       : ''
   );
+
+  // Filtered Divisions based on selected Circle
+  const filteredDivisions = useMemo(() => {
+    if (circle && circleDivisionMap[circle] && circleDivisionMap[circle].length > 0) {
+      return circleDivisionMap[circle];
+    }
+    return masterDivisions;
+  }, [circle, circleDivisionMap, masterDivisions]);
+
+  const handleCircleChange = (val: string) => {
+    setCircle(val);
+    if (errors.circle) setErrors((prev) => ({ ...prev, circle: '' }));
+    // If current division doesn't belong to the newly selected circle, clear it
+    if (val && circleDivisionMap[val] && division) {
+      const belongs = circleDivisionMap[val].some((d) => d.toLowerCase() === division.toLowerCase());
+      if (!belongs) {
+        setDivision('');
+      }
+    }
+  };
+
+  const handleDivisionChange = (val: string) => {
+    setDivision(val);
+    if (errors.division) setErrors((prev) => ({ ...prev, division: '' }));
+    // Auto-detect circle if not yet selected
+    if (!circle) {
+      for (const [c, divs] of Object.entries(circleDivisionMap)) {
+        if (divs.some((d) => d.toLowerCase() === val.toLowerCase())) {
+          setCircle(c);
+          break;
+        }
+      }
+    }
+  };
 
   // Stage 2: Contract & Award Execution
   const [loaDate, setLoaDate] = useState<string>(initialData?.loa_date || '');
@@ -471,6 +510,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
     const payload: Partial<MajorProject> & { isAdmin?: boolean } = {
       ...(initialData?.id ? { id: initialData.id } : {}),
       s_no: Number(sNo) || nextSNo,
+      circle: circle.trim() || null,
       division: division.trim(),
       scheme: scheme.trim(),
       name_of_work: nameOfWork.trim(),
@@ -673,7 +713,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
           {/* ========================================================= */}
           {activeStageIndex === 0 && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Serial No (S.No)
@@ -689,15 +729,24 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Administrative Circle
+                  </label>
+                  <SearchableSelect
+                    options={masterCircles}
+                    value={circle}
+                    onChange={handleCircleChange}
+                    disabled={isFieldLocked('circle')}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Administrative Division <span className="text-rose-500">*</span>
                   </label>
                   <SearchableSelect
-                    options={masterDivisions.length > 0 ? masterDivisions : ['Chennai', 'Salem', 'Madurai', 'Coimbatore', 'Trichy', 'Tirunelveli', 'Villupuram']}
+                    options={filteredDivisions}
                     value={division}
-                    onChange={(val) => {
-                      setDivision(val);
-                      if (errors.division) setErrors((prev) => ({ ...prev, division: '' }));
-                    }}
+                    onChange={handleDivisionChange}
                     disabled={isFieldLocked('division')}
                   />
                   {errors.division && <p className="text-[11px] text-rose-500 mt-1">{errors.division}</p>}
@@ -708,7 +757,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                     Scheme Classification <span className="text-rose-500">*</span>
                   </label>
                   <SearchableSelect
-                    options={masterSchemes.length > 0 ? masterSchemes : ['Annual Plan 2025-26', 'EPC Special', 'CRIF', 'Inter-Corridor', 'NHDP', 'Setu Bharatam']}
+                    options={masterSchemes}
                     value={scheme}
                     onChange={(val) => {
                       setScheme(val);

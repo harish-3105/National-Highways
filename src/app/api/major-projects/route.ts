@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 export interface MajorProject {
   id: string;
   s_no: number;
+  circle?: string | null;
   division: string;
   scheme: string;
   name_of_work: string;
@@ -90,6 +91,7 @@ export interface MajorProjectSnapshot {
 // Frozen columns: Columns A to N & Column Z (Write-Once / Freeze-When-Filled for standard users)
 export const FROZEN_PROJECT_COLUMNS = [
   's_no',
+  'circle',
   'name_of_work',
   'pmis_id',
   'old_new_nh',
@@ -131,6 +133,7 @@ export async function GET(request: Request) {
   try {
     const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
+    const circleParam = searchParams.get('circle')?.trim();
     const divisionParam = searchParams.get('division')?.trim();
     const stageParam = searchParams.get('stage')?.trim();
     const searchParam = searchParams.get('search')?.trim().toLowerCase();
@@ -149,6 +152,10 @@ export async function GET(request: Request) {
 
     if (!includeDeleted) {
       query = query.neq('delete_status', 'DELETED');
+    }
+
+    if (circleParam && circleParam !== 'ALL') {
+      query = query.ilike('circle', circleParam);
     }
 
     if (divisionParam && divisionParam !== 'ALL') {
@@ -185,6 +192,7 @@ export async function GET(request: Request) {
         (p: MajorProject) =>
           (p.name_of_work || '').toLowerCase().includes(searchParam) ||
           (p.scheme || '').toLowerCase().includes(searchParam) ||
+          (p.circle || '').toLowerCase().includes(searchParam) ||
           (p.division || '').toLowerCase().includes(searchParam) ||
           (p.pmis_id || '').toLowerCase().includes(searchParam) ||
           (p.job_no || '').toLowerCase().includes(searchParam) ||
@@ -223,6 +231,7 @@ export async function POST(request: Request) {
     const {
       id,
       s_no,
+      circle,
       division,
       scheme,
       name_of_work,
@@ -294,7 +303,8 @@ export async function POST(request: Request) {
 
     const payload: Record<string, unknown> = {
       s_no: Number(s_no) || 1,
-      division: division ? String(division).trim() : 'Chennai',
+      circle: circle ? String(circle).trim() : null,
+      division: division ? String(division).trim() : '',
       scheme: scheme ? String(scheme).trim() : 'Annual Plan 2025-26',
       name_of_work: String(name_of_work).trim(),
       project_cost_cr: project_cost_cr !== undefined && project_cost_cr !== '' && project_cost_cr !== null ? Number(project_cost_cr) : 0,

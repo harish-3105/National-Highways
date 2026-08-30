@@ -416,6 +416,11 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                   <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">
                     {project.division || '—'} Division
                   </p>
+                  {project.circle && (
+                    <span className="text-[10.5px] font-semibold text-blue-600 dark:text-blue-400 block">
+                      Circle: {project.circle}
+                    </span>
+                  )}
                 </div>
 
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
