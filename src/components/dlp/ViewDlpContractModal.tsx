@@ -70,32 +70,35 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ corr
   const stretches = corridor.work_stretches || [];
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col justify-between overflow-hidden animate-in fade-in duration-150">
+      <div className="bg-slate-50 dark:bg-slate-950 w-full h-full flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="w-6 h-6 text-blue-400 shrink-0" />
-            <div>
-              <h3 className="font-extrabold text-base text-white">
-                DLP Corridor Master Record &amp; 2D Work Stretches
-              </h3>
-              <span className="text-xs text-slate-300">
-                {corridor.highway_code} &bull; {corridor.division_name} Division &bull; Km {corridor.from_km} to {corridor.to_km} ({corridor.total_length_km} km)
-              </span>
+        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0 border-b border-slate-800">
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="w-6 h-6 text-blue-400 shrink-0" />
+              <div>
+                <h3 className="font-extrabold text-base text-white">
+                  DLP Corridor Master Record &amp; 2D Work Stretches
+                </h3>
+                <span className="text-xs text-slate-300">
+                  {corridor.highway_code} &bull; {corridor.division_name} Division &bull; Km {corridor.from_km} to {corridor.to_km} ({corridor.total_length_km} km)
+                </span>
+              </div>
             </div>
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-300 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Scrollable Content */}
-        <div className="p-6 overflow-y-auto space-y-6 text-xs text-slate-800 dark:text-slate-200">
-          {/* Corridor Identity Card */}
+        <div className="p-6 md:p-8 overflow-y-auto flex-1 text-xs text-slate-800 dark:text-slate-200">
+          <div className="max-w-7xl mx-auto w-full space-y-6">
+            {/* Corridor Identity Card */}
           <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <strong className="text-slate-500 block">Highway Identifier:</strong>
@@ -283,16 +286,19 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ corr
               </p>
             </div>
           )}
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="bg-slate-50 dark:bg-slate-800/60 p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
-          >
-            Close Window
-          </button>
+        <div className="bg-white dark:bg-slate-900 px-6 py-3 border-t border-slate-200 dark:border-slate-800 shrink-0">
+          <div className="max-w-7xl mx-auto w-full flex justify-end">
+            <button
+              onClick={onClose}
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+            >
+              Close Window
+            </button>
+          </div>
         </div>
       </div>
     </div>

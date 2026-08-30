@@ -186,199 +186,207 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200 print:p-0 print:bg-white print:static"
+      className="fixed inset-0 z-50 bg-slate-950 flex flex-col justify-between overflow-hidden print:p-0 print:bg-white print:static animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-5xl lg:max-w-6xl h-[92vh] max-h-[95vh] overflow-hidden flex flex-col relative print:border-none print:shadow-none print:max-h-none print:h-auto print:w-full"
+        className="bg-slate-50 dark:bg-slate-950 w-full h-full overflow-hidden flex flex-col relative print:border-none print:shadow-none print:max-h-none print:h-auto print:w-full"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-850/80 flex items-start justify-between gap-4 shrink-0">
-          <div className="space-y-1.5 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 bg-blue-600 text-white font-mono font-bold text-xs rounded-md">
-                #{project.s_no}
-              </span>
-              <span className="px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-md border border-slate-200 dark:border-slate-700">
-                {project.division} Division
-              </span>
-              <span className="px-2.5 py-0.5 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-semibold text-xs rounded-md border border-purple-200 dark:border-purple-800">
-                {project.scheme}
-              </span>
-              {project.old_new_nh && (
-                <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-mono text-[11px] rounded-md font-bold">
-                  NH {project.old_new_nh}
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+          <div className="max-w-7xl mx-auto w-full flex items-start justify-between gap-4">
+            <div className="space-y-1.5 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 bg-blue-600 text-white font-mono font-bold text-xs rounded-md">
+                  #{project.s_no}
                 </span>
-              )}
-              {project.pmis_id && (
-                <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-mono text-[11px] rounded-md border border-indigo-200 dark:border-indigo-800">
-                  PMIS: {project.pmis_id}
+                <span className="px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-md border border-slate-200 dark:border-slate-700">
+                  {project.division} Division
                 </span>
-              )}
-              <span
-                className={`px-2.5 py-0.5 rounded-md font-bold text-xs border ${
-                  isCompleted
-                    ? 'bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800'
-                    : isTender
-                    ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                    : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                }`}
-              >
-                {isCompleted ? '✓ Work Completed' : isTender ? 'Tender / Sanction Stage' : 'In Execution'}
-              </span>
-              {effectiveCost >= 50 && (
-                <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold text-[10.5px] rounded-md border border-amber-200 dark:border-amber-800">
-                  ⚡ Mega Project (&ge; ₹50 Cr)
+                <span className="px-2.5 py-0.5 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-semibold text-xs rounded-md border border-purple-200 dark:border-purple-800">
+                  {project.scheme}
                 </span>
-              )}
+                {project.old_new_nh && (
+                  <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-mono text-[11px] rounded-md font-bold">
+                    NH {project.old_new_nh}
+                  </span>
+                )}
+                {project.pmis_id && (
+                  <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-mono text-[11px] rounded-md border border-indigo-200 dark:border-indigo-800">
+                    PMIS: {project.pmis_id}
+                  </span>
+                )}
+                <span
+                  className={`px-2.5 py-0.5 rounded-md font-bold text-xs border ${
+                    isCompleted
+                      ? 'bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800'
+                      : isTender
+                      ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                      : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                  }`}
+                >
+                  {isCompleted ? '✓ Work Completed' : isTender ? 'Tender / Sanction Stage' : 'In Execution'}
+                </span>
+                {effectiveCost >= 50 && (
+                  <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold text-[10.5px] rounded-md border border-amber-200 dark:border-amber-800">
+                    ⚡ Mega Project (&ge; ₹50 Cr)
+                  </span>
+                )}
+              </div>
+
+              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 leading-snug">
+                {project.name_of_work}
+              </h2>
             </div>
 
-            <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 leading-snug">
-              {project.name_of_work}
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-1.5 shrink-0 print:hidden">
-            {onEdit && (
+            <div className="flex items-center gap-2 shrink-0 print:hidden">
+              {onEdit && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onEdit(project);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  <span>Edit Work</span>
+                </button>
+              )}
               <button
-                onClick={() => {
-                  onClose();
-                  onEdit(project);
-                }}
-                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                onClick={handlePrint}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                title="Print Project Passport"
               >
-                <Edit className="w-3.5 h-3.5" />
-                <span>Edit</span>
+                <Printer className="w-4 h-4" />
+                <span>Export / Print</span>
               </button>
-            )}
-            <button
-              onClick={handlePrint}
-              className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
-              title="Print Project Passport"
-            >
-              <Printer className="w-4 h-4" />
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
-              title="Close modal"
-            >
-              <X className="w-5 h-5" />
-            </button>
+              <button
+                onClick={onClose}
+                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                title="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* 5-Metric Quick Header Ribbon */}
-        <div className="px-6 py-3 bg-slate-100/80 dark:bg-slate-850/60 border-b border-slate-200 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs shrink-0">
-          <div>
-            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
-              Sanctioned Cost (TPC)
-            </span>
-            <div className="font-mono font-extrabold text-emerald-700 dark:text-emerald-400 text-sm">
-              ₹ {Number(project.project_cost_cr || 0).toFixed(2)} Cr
-              {project.revised_cost_cr && (
-                <span className="text-[10.5px] font-normal text-slate-500 ml-1">
-                  (Rev: ₹{Number(project.revised_cost_cr).toFixed(2)} Cr)
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
-              Physical Progress
-            </span>
-            <div className="font-mono font-extrabold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-1.5">
-              <span>{isTender ? '—' : `${project.progress_percent || 0}%`}</span>
-              {project.total_completed_length_km ? (
-                <span className="text-[11px] font-normal text-slate-500">
-                  ({project.total_completed_length_km} / {project.length_km || '—'} km)
-                </span>
-              ) : null}
-            </div>
-          </div>
-
-          <div>
-            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
-              Financial Progress (TPC)
-            </span>
-            <div className="font-mono font-extrabold text-blue-700 dark:text-blue-400 text-sm flex items-center gap-1.5">
-              <span>{finProgress !== null ? `${finProgress}%` : '—'}</span>
-              <span className="text-[11px] font-normal text-slate-500">
-                (₹{Number(project.cumm_financial_expenditure_cr || project.expenditure_prior_cr || 0).toFixed(2)} Cr)
+        <div className="px-6 py-3 bg-slate-100/90 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 shrink-0">
+          <div className="max-w-7xl mx-auto w-full grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+            <div>
+              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
+                Sanctioned Cost (TPC)
               </span>
+              <div className="font-mono font-extrabold text-emerald-700 dark:text-emerald-400 text-sm">
+                ₹ {Number(project.project_cost_cr || 0).toFixed(2)} Cr
+                {project.revised_cost_cr && (
+                  <span className="text-[10.5px] font-normal text-slate-500 ml-1">
+                    (Rev: ₹{Number(project.revised_cost_cr).toFixed(2)} Cr)
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div>
-            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
-              Contract Progress
-            </span>
-            <div className="font-mono font-extrabold text-purple-700 dark:text-purple-400 text-sm flex items-center gap-1.5">
-              <span>{contractProgress !== null ? `${contractProgress}%` : '—'}</span>
-              {project.contract_value_cr && (
+            <div>
+              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
+                Physical Progress
+              </span>
+              <div className="font-mono font-extrabold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-1.5">
+                <span>{isTender ? '—' : `${project.progress_percent || 0}%`}</span>
+                {project.total_completed_length_km ? (
+                  <span className="text-[11px] font-normal text-slate-500">
+                    ({project.total_completed_length_km} / {project.length_km || '—'} km)
+                  </span>
+                ) : null}
+              </div>
+            </div>
+
+            <div>
+              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
+                Financial Progress (TPC)
+              </span>
+              <div className="font-mono font-extrabold text-blue-700 dark:text-blue-400 text-sm flex items-center gap-1.5">
+                <span>{finProgress !== null ? `${finProgress}%` : '—'}</span>
                 <span className="text-[11px] font-normal text-slate-500">
-                  (₹{Number(project.contract_cum_expenditure_cr || 0).toFixed(2)} / ₹{Number(project.contract_value_cr).toFixed(2)} Cr)
+                  (₹{Number(project.cumm_financial_expenditure_cr || project.expenditure_prior_cr || 0).toFixed(2)} Cr)
                 </span>
-              )}
+              </div>
             </div>
-          </div>
 
-          <div>
-            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
-              Likely Completion
-            </span>
-            <div className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs flex items-center gap-1.5 flex-wrap">
-              <span>📅 {project.likely_completion_date || project.probable_completion_date || '—'}</span>
-              {delayInfo.isDelayed && (
-                <span className="px-1.5 py-0.5 bg-red-100 text-red-700 dark:bg-red-950/80 dark:text-red-300 text-[10px] font-bold rounded-md font-mono">
-                  ⚠️ {delayInfo.compactText}
-                </span>
-              )}
+            <div>
+              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
+                Contract Progress
+              </span>
+              <div className="font-mono font-extrabold text-purple-700 dark:text-purple-400 text-sm flex items-center gap-1.5">
+                <span>{contractProgress !== null ? `${contractProgress}%` : '—'}</span>
+                {project.contract_value_cr && (
+                  <span className="text-[11px] font-normal text-slate-500">
+                    (₹{Number(project.contract_value_cr).toFixed(2)} Cr)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
+                Likely Completion
+              </span>
+              <div className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs flex items-center gap-1.5 flex-wrap">
+                <span>📅 {project.likely_completion_date || project.probable_completion_date || '—'}</span>
+                {delayInfo.isDelayed && (
+                  <span className="px-1.5 py-0.5 bg-red-100 text-red-700 dark:bg-red-950/80 dark:text-red-300 text-[10px] font-bold rounded-md font-mono">
+                    ⚠️ {delayInfo.compactText}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* 6-STAGE LIFECYCLE SUB-NAVIGATION BAR */}
-        <div className="bg-white dark:bg-slate-900 px-4 py-2 border-b border-slate-200 dark:border-slate-800 shrink-0 print:hidden">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
-            {STAGES.map((stage, idx) => {
-              const Icon = stage.icon;
-              const isActive = activeStageIndex === idx;
+        <div className="bg-white dark:bg-slate-900 px-6 py-2.5 border-b border-slate-200 dark:border-slate-800 shrink-0 print:hidden">
+          <div className="max-w-7xl mx-auto w-full">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+              {STAGES.map((stage, idx) => {
+                const Icon = stage.icon;
+                const isActive = activeStageIndex === idx;
 
-              return (
-                <button
-                  key={stage.id}
-                  type="button"
-                  onClick={() => setActiveStageIndex(idx)}
-                  className={`flex flex-col items-start p-2.5 rounded-xl text-left transition-all border cursor-pointer ${
-                    isActive
-                      ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-900 dark:text-blue-100 shadow-xs ring-1 ring-blue-500/20'
-                      : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full mb-1">
-                    <span
-                      className={`text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded-md ${
-                        isActive
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                      }`}
-                    >
-                      {stage.step}
-                    </span>
-                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
-                  </div>
-                  <span className="text-xs font-bold truncate w-full">{stage.label}</span>
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={stage.id}
+                    type="button"
+                    onClick={() => setActiveStageIndex(idx)}
+                    className={`flex flex-col items-start p-2.5 rounded-xl text-left transition-all border cursor-pointer ${
+                      isActive
+                        ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-900 dark:text-blue-100 shadow-xs ring-1 ring-blue-500/20'
+                        : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span
+                        className={`text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded-md ${
+                          isActive
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                        }`}
+                      >
+                        {stage.step}
+                      </span>
+                      <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
+                    </div>
+                    <span className="text-xs font-bold truncate w-full">{stage.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
         {/* Modal Stage Content Body */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-6 text-xs text-slate-700 dark:text-slate-300 scroll-smooth">
+        <div className="p-6 md:p-8 overflow-y-auto flex-1 text-xs text-slate-800 dark:text-slate-200 print:p-6 print:text-slate-900">
+          <div className="max-w-7xl mx-auto w-full space-y-6">
           {/* ========================================================= */}
           {/* STAGE 1: Sanction & Scope */}
           {/* ========================================================= */}
@@ -926,49 +934,52 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
               )}
             </div>
           )}
+          </div>
         </div>
 
         {/* Footer Navigation Bar */}
-        <div className="bg-slate-50 dark:bg-slate-800/60 px-6 py-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 print:hidden">
-          <div>
-            {activeStageIndex > 0 ? (
-              <button
-                type="button"
-                onClick={handlePrevStage}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
-              >
-                <ChevronLeft className="w-4 h-4" /> Previous: {STAGES[activeStageIndex - 1].label}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
-              >
-                Close Passport
-              </button>
-            )}
-          </div>
+        <div className="bg-white dark:bg-slate-900 px-6 py-3 border-t border-slate-200 dark:border-slate-800 shrink-0 print:hidden">
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+            <div>
+              {activeStageIndex > 0 ? (
+                <button
+                  type="button"
+                  onClick={handlePrevStage}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" /> Previous: {STAGES[activeStageIndex - 1].label}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+                >
+                  Close Passport
+                </button>
+              )}
+            </div>
 
-          <div className="flex items-center gap-2">
-            {activeStageIndex < STAGES.length - 1 ? (
-              <button
-                type="button"
-                onClick={handleNextStage}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600 text-xs font-bold cursor-pointer transition-all"
-              >
-                <span>Next: {STAGES[activeStageIndex + 1].label}</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer"
-              >
-                Done
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {activeStageIndex < STAGES.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={handleNextStage}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600 text-xs font-bold cursor-pointer transition-all"
+                >
+                  <span>Next: {STAGES[activeStageIndex + 1].label}</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer"
+                >
+                  Done
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
