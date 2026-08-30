@@ -419,12 +419,14 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             stageErrors.goDate = 'G.O. Date is required when G.O. is obtained.';
           }
         }
+        const goStatusLower = formData.statusOfObtainingGo?.toLowerCase() || '';
         const isProposal =
           !isObtained &&
           Boolean(formData.statusOfObtainingGo) &&
-          (formData.statusOfObtainingGo?.toLowerCase().includes('proposal') ||
-            formData.statusOfObtainingGo?.toLowerCase().includes('sent') ||
-            formData.statusOfObtainingGo?.toLowerCase().includes('submitted'));
+          !goStatusLower.includes('yet to be') &&
+          (goStatusLower.includes('proposal') ||
+            goStatusLower.includes('sent') ||
+            goStatusLower.includes('submitted'));
         if (isProposal) {
           if (!formData.goReferenceLetterNo?.trim()) {
             stageErrors.goReferenceLetterNo = 'G.O. Proposal Reference Letter Number is required.';
@@ -1132,6 +1134,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
           {(formData.goStatus === 'Yes' || formData.goStatus?.toLowerCase() === 'yes') &&
             Boolean(formData.statusOfObtainingGo) &&
             !formData.statusOfObtainingGo?.toLowerCase().includes('obtained') &&
+            !formData.statusOfObtainingGo?.toLowerCase().includes('yet to be') &&
             (formData.statusOfObtainingGo?.toLowerCase().includes('proposal') ||
               formData.statusOfObtainingGo?.toLowerCase().includes('sent') ||
               formData.statusOfObtainingGo?.toLowerCase().includes('submitted')) && (
@@ -1231,7 +1234,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             <div className="space-y-5 animate-in fade-in">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                 {/* 2. Status of Payment Proposal */}
-                <div className={formData.statusOfPaymentProposal?.toLowerCase().includes('proposal sent') ? 'sm:col-span-2 md:col-span-2' : 'sm:col-span-1 md:col-span-3'}>
+                <div className={formData.statusOfPaymentProposal?.toLowerCase().includes('proposal sent') && !formData.statusOfPaymentProposal?.toLowerCase().includes('yet to be') ? 'sm:col-span-2 md:col-span-2' : 'sm:col-span-1 md:col-span-3'}>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                     Status of Payment Proposal
                   </label>
@@ -1245,6 +1248,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 {/* If proposal sent from... reveal reference letter number and date */}
                 {Boolean(
                   formData.statusOfPaymentProposal &&
+                  !formData.statusOfPaymentProposal.toLowerCase().includes('yet to be') &&
                   (
                     formData.statusOfPaymentProposal.toLowerCase().includes('proposal sent from') ||
                     formData.statusOfPaymentProposal.toLowerCase().includes('proposal sent')
