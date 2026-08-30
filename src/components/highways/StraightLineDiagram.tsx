@@ -928,12 +928,8 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                             setHoveredDlpStretch(null);
                             setHoveredStretch(st);
                           }}
-                          title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.length_km} km, ${st.lane_configuration}) - ${st.dpr_status || st.important_town || 'Baseline Stretch'}`}
-                        >
-                          <span className="text-[10px] font-extrabold font-mono text-slate-800 dark:text-slate-200 print:text-slate-900 truncate select-none px-1">
-                            {st.dpr_status || st.important_town || `${st.lane_configuration} (${st.length_km}km)`}
-                          </span>
-                        </div>
+                          title={`Road Stretch Km ${st.from_km} → Km ${st.to_km} (${st.length_km} km, ${st.lane_configuration})`}
+                        />
                       );
                     })}
 
