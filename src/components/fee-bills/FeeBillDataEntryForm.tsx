@@ -239,15 +239,18 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
   };
 
   const handleCircleChange = (newCircle: string) => {
-    const matchingDivisions = masterData.divisions.filter(
-      (d) => d.circleName === newCircle && d.active
-    );
-    const defaultDiv = matchingDivisions[0]?.name || '';
     setFormData((prev) => ({
       ...prev,
       circle: newCircle,
-      division: defaultDiv,
+      division: '',
     }));
+    if (errors.circle) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.circle;
+        return next;
+      });
+    }
   };
 
   // Lawyer settlement calculations
@@ -712,7 +715,16 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               <SearchableSelect
                 options={availableDivisions.map((d) => d.name)}
                 value={formData.division}
-                onChange={(val) => setFormData((prev) => ({ ...prev, division: val }))}
+                onChange={(val) => {
+                  setFormData((prev) => ({ ...prev, division: val }));
+                  if (errors.division) {
+                    setErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.division;
+                      return next;
+                    });
+                  }
+                }}
                 required
               />
               {errors.division && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.division}</p>}

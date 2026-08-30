@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LegalCategory, LegalMasterData } from '@/app/api/legal/master-data/route';
 import {
   X,
@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Info,
 } from 'lucide-react';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 interface LegalMasterDataModalProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ interface LegalMasterDataModalProps {
 const CATEGORY_TABS: { id: LegalCategory; label: string; description: string }[] = [
   { id: 'case_type', label: 'Case Types', description: 'WP, WA, CRP, OSA, SLP, Contempt, OS...' },
   { id: 'circle', label: 'Circles', description: 'Administrative Circles (Chennai, Madurai, Salem...)' },
-  { id: 'division', label: 'Divisions', description: 'Territorial highway divisions' },
+  { id: 'division', label: 'Divisions', description: 'Territorial highway divisions mapped to Circles' },
   { id: 'court_name', label: 'Court Names', description: 'High Court, District Courts, Sub Courts, NGT...' },
   { id: 'case_pertains_to', label: 'Case Pertains To', description: 'GOTN, MoRTH, Both, NHAI' },
   { id: 'nature_of_case', label: 'Nature of Case', description: 'Work, Tender, Land Acquisition, Encroachment...' },
@@ -48,6 +49,7 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
   const [activeCategory, setActiveCategory] = useState<LegalCategory>('case_type');
   const [searchTerm, setSearchTerm] = useState('');
   const [newValue, setNewValue] = useState('');
+  const [selectedCircleForDiv, setSelectedCircleForDiv] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -55,17 +57,31 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
   // Inline editing state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
+  const [editingParentValue, setEditingParentValue] = useState<string>('');
 
   // Delete confirmation state
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ id?: string; value: string } | null>(null);
 
+  const circleOptions = masterData?.circles || [];
+
+  useEffect(() => {
+    if (circleOptions.length > 0 && !selectedCircleForDiv) {
+      setSelectedCircleForDiv(circleOptions[0]);
+    }
+  }, [circleOptions, selectedCircleForDiv]);
+
   if (!isOpen) return null;
 
-  const currentCategoryItems: { id: string; category: LegalCategory; value: string }[] = (
+  const currentCategoryItems: { id: string; category: LegalCategory; value: string; parent_value?: string | null }[] = (
     masterData.rawItems || []
   )
     .filter((item) => item.category === activeCategory)
-    .map((item) => ({ id: item.id || `raw-${item.value}`, category: item.category, value: item.value }));
+    .map((item) => ({
+      id: item.id || `raw-${item.value}`,
+      category: item.category,
+      value: item.value,
+      parent_value: item.parent_value,
+    }));
 
   const fallbackArray =
     masterData[
@@ -96,17 +112,19 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
         : 'natureOfCases'
     ] || [];
 
-  const displayItems: { id: string; category: LegalCategory; value: string }[] =
+  const displayItems: { id: string; category: LegalCategory; value: string; parent_value?: string | null }[] =
     currentCategoryItems.length > 0
       ? currentCategoryItems
       : fallbackArray.map((val: string, idx: number) => ({
           id: `db-${idx}`,
           category: activeCategory,
           value: val,
+          parent_value: null,
         }));
 
   const filteredItems = displayItems.filter((item) =>
-    (item.value || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (item.value || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.parent_value || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleAddOption = async (e: React.FormEvent) => {
@@ -118,13 +136,19 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
     setSuccess(null);
 
     try {
+      const payload: { category: LegalCategory; value: string; parent_value?: string | null } = {
+        category: activeCategory,
+        value: newValue.trim(),
+      };
+
+      if (activeCategory === 'division') {
+        payload.parent_value = selectedCircleForDiv || circleOptions[0] || null;
+      }
+
       const res = await fetch('/api/legal/master-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          category: activeCategory,
-          value: newValue.trim(),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -144,7 +168,7 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
   };
 
   const handleUpdateOption = async (id: string, oldValue: string) => {
-    if (!editingValue.trim() || editingValue.trim() === oldValue) {
+    if (!editingValue.trim() || (editingValue.trim() === oldValue && !editingParentValue)) {
       setEditingId(null);
       return;
     }
@@ -154,26 +178,34 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
     setSuccess(null);
 
     try {
-      // Delete old & insert new
-      await fetch('/api/legal/master-data', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category: activeCategory, value: oldValue }),
-      });
+      const payload: {
+        id?: string;
+        category: LegalCategory;
+        oldValue: string;
+        value: string;
+        parent_value?: string | null;
+      } = {
+        id: id && !id.startsWith('raw-') && !id.startsWith('db-') ? id : undefined,
+        category: activeCategory,
+        oldValue,
+        value: editingValue.trim(),
+      };
+
+      if (activeCategory === 'division' && editingParentValue) {
+        payload.parent_value = editingParentValue;
+      }
 
       const res = await fetch('/api/legal/master-data', {
-        method: 'POST',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          category: activeCategory,
-          value: editingValue.trim(),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to update option');
 
       setEditingId(null);
+      setEditingParentValue('');
       setSuccess(`Updated option to "${editingValue.trim()}"`);
       onRefresh();
     } catch (err: unknown) {
@@ -308,21 +340,36 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
             )}
 
             {/* Add Option Form */}
-            <form onSubmit={handleAddOption} className="flex gap-2 shrink-0">
-              <input
-                type="text"
-                value={newValue}
-                onChange={(e) => setNewValue(e.target.value)}
-                placeholder={`Add new option to ${activeTabMeta?.label}...`}
-                className="flex-1 px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="submit"
-                disabled={loading || !newValue.trim()}
-                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs disabled:opacity-50 cursor-pointer transition-colors"
-              >
-                <Plus className="w-4 h-4" /> Add Option
-              </button>
+            <form onSubmit={handleAddOption} className="space-y-2 shrink-0">
+              {activeCategory === 'division' && (
+                <div className="space-y-1">
+                  <label className="text-[11px] font-extrabold text-slate-600 dark:text-slate-400">
+                    Select Parent Circle for New Division:
+                  </label>
+                  <SearchableSelect
+                    options={circleOptions}
+                    value={selectedCircleForDiv || circleOptions[0] || ''}
+                    onChange={(val) => setSelectedCircleForDiv(val)}
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newValue}
+                  onChange={(e) => setNewValue(e.target.value)}
+                  placeholder={`Add new option to ${activeTabMeta?.label}...`}
+                  className="flex-1 px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="submit"
+                  disabled={loading || !newValue.trim()}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs disabled:opacity-50 cursor-pointer transition-colors"
+                >
+                  <Plus className="w-4 h-4" /> Add Option
+                </button>
+              </div>
             </form>
 
             {/* Search Filter */}
@@ -351,7 +398,7 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
                     className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xs font-bold text-slate-800 dark:text-slate-200"
                   >
                     {editingId === item.id ? (
-                      <div className="flex items-center gap-2 flex-1 mr-2">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 mr-2">
                         <input
                           type="text"
                           value={editingValue}
@@ -359,29 +406,51 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
                           className="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-blue-500 rounded-lg text-xs font-bold"
                           autoFocus
                         />
-                        <button
-                          onClick={() => handleUpdateOption(item.id, item.value)}
-                          className="p-1 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 cursor-pointer"
-                          title="Save change"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="p-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md hover:bg-slate-300 cursor-pointer"
-                          title="Cancel"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
+                        {activeCategory === 'division' && (
+                          <div className="sm:w-48">
+                            <SearchableSelect
+                              options={circleOptions}
+                              value={editingParentValue || item.parent_value || circleOptions[0] || ''}
+                              onChange={(val) => setEditingParentValue(val)}
+                            />
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1 self-end sm:self-auto">
+                          <button
+                            onClick={() => handleUpdateOption(item.id, item.value)}
+                            className="p-1 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 cursor-pointer"
+                            title="Save change"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingId(null);
+                              setEditingParentValue('');
+                            }}
+                            className="p-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md hover:bg-slate-300 cursor-pointer"
+                            title="Cancel"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <>
-                        <span className="truncate flex-1">{item.value}</span>
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="truncate">{item.value}</span>
+                          {item.parent_value && (
+                            <span className="text-[10px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-md font-mono shrink-0">
+                              Circle: {item.parent_value}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <button
                             onClick={() => {
                               setEditingId(item.id);
                               setEditingValue(item.value);
+                              setEditingParentValue(item.parent_value || '');
                             }}
                             className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors cursor-pointer"
                             title="Edit Option"

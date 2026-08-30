@@ -268,6 +268,22 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     return masterData?.divisions || [];
   }, [masterData?.divisions]);
 
+  const availableDivisions = useMemo(() => {
+    if (!formData.circle) return masterData?.divisions || [];
+    const matched = (masterData?.rawItems || [])
+      .filter((item) => item.category === 'division' && item.parent_value === formData.circle)
+      .map((item) => item.value);
+    return matched.length > 0 ? matched : masterData?.divisions || [];
+  }, [formData.circle, masterData?.divisions, masterData?.rawItems]);
+
+  const availableBaseDivisions = useMemo(() => {
+    if (!formData.baseCircle) return masterData?.divisions || [];
+    const matched = (masterData?.rawItems || [])
+      .filter((item) => item.category === 'division' && item.parent_value === formData.baseCircle)
+      .map((item) => item.value);
+    return matched.length > 0 ? matched : masterData?.divisions || [];
+  }, [formData.baseCircle, masterData?.divisions, masterData?.rawItems]);
+
   // Helper to determine if GP Opinion qualifies for Appeal Filing
   const isAppealRecommended = (opinion: string | undefined): boolean => {
     if (!opinion) return false;
@@ -824,7 +840,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     Division Jurisdiction <span className="text-rose-500">*</span>
                   </label>
                   <SearchableSelect
-                    options={divisions}
+                    options={availableDivisions}
                     value={formData.division}
                     onChange={(val) => handleChange('division', val)}
                   />
@@ -998,7 +1014,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     Division Jurisdiction <span className="text-rose-500">*</span>
                   </label>
                   <SearchableSelect
-                    options={divisions}
+                    options={availableDivisions}
                     value={formData.division}
                     onChange={(val) => handleChange('division', val)}
                   />
@@ -1248,7 +1264,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     Base Division Jurisdiction <span className="text-rose-500">*</span>
                   </label>
                   <SearchableSelect
-                    options={divisions}
+                    options={availableBaseDivisions}
                     value={formData.baseDivision || ''}
                     onChange={(val) => handleChange('baseDivision', val)}
                   />

@@ -37,6 +37,7 @@ export interface LegalMasterConfigItem {
   id: string;
   category: LegalCategory;
   value: string;
+  parent_value?: string | null;
   created_at?: string;
 }
 
@@ -121,7 +122,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
     }
 
-    const { category, value } = await request.json();
+    const body = await request.json();
+    const { category, value, parent_value, parentValue } = body;
 
     if (!category || !value || typeof value !== "string" || value.trim() === "") {
       return NextResponse.json({ error: "Category and value are required" }, { status: 400 });
@@ -151,22 +153,34 @@ export async function POST(request: NextRequest) {
     }
 
     const trimmedValue = value.trim();
+    const cleanParentValue = (parent_value || parentValue || "").toString().trim() || null;
 
     // Check duplicate in database
-    const { data: existing } = await supabase
+    let query = supabase
       .from("legal_master_config")
       .select("id")
       .eq("category", category)
-      .eq("value", trimmedValue)
-      .maybeSingle();
+      .eq("value", trimmedValue);
+
+    if (cleanParentValue) {
+      query = query.eq("parent_value", cleanParentValue);
+    }
+
+    const { data: existing } = await query.maybeSingle();
 
     if (existing) {
       return NextResponse.json({ error: `Option '${trimmedValue}' already exists in '${category}'` }, { status: 409 });
     }
 
+    const insertPayload: { category: string; value: string; parent_value?: string | null } = {
+      category,
+      value: trimmedValue,
+      parent_value: cleanParentValue,
+    };
+
     const { data, error } = await supabase
       .from("legal_master_config")
-      .insert([{ category, value: trimmedValue }])
+      .insert([insertPayload])
       .select()
       .single();
 
@@ -178,6 +192,62 @@ export async function POST(request: NextRequest) {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("POST /api/legal/master-data error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
+    }
+
+    const body = await request.json();
+    const { id, category, oldValue, value, newValue, parent_value, parentValue } = body;
+
+    const valToSet = (value || newValue || "").toString().trim();
+    if (!valToSet) {
+      return NextResponse.json({ error: "Value is required for update" }, { status: 400 });
+    }
+
+    const cleanParent = parent_value !== undefined || parentValue !== undefined
+      ? (parent_value || parentValue || "").toString().trim() || null
+      : undefined;
+
+    const updatePayload: Record<string, any> = { value: valToSet };
+    if (cleanParent !== undefined) {
+      updatePayload.parent_value = cleanParent;
+    }
+
+    if (id) {
+      const { data, error } = await supabase
+        .from("legal_master_config")
+        .update(updatePayload)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true, item: data });
+    }
+
+    if (category && oldValue) {
+      const { data, error } = await supabase
+        .from("legal_master_config")
+        .update(updatePayload)
+        .eq("category", category)
+        .eq("value", oldValue.trim())
+        .select();
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true, items: data });
+    }
+
+    return NextResponse.json({ error: "Provide either 'id' or 'category' and 'oldValue'" }, { status: 400 });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("PUT /api/legal/master-data error:", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

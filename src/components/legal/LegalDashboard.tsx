@@ -101,6 +101,14 @@ export const LegalDashboard: React.FC = () => {
   const [filterDisposedOnly, setFilterDisposedOnly] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
+  const availableFilterDivisions = useMemo(() => {
+    if (!filterCircle) return masterData?.divisions || [];
+    const matched = (masterData?.rawItems || [])
+      .filter((item) => item.category === 'division' && item.parent_value === filterCircle)
+      .map((item) => item.value);
+    return matched.length > 0 ? matched : masterData?.divisions || [];
+  }, [filterCircle, masterData?.divisions, masterData?.rawItems]);
+
   const fetchCases = useCallback(async () => {
     try {
       setLoading(true);
@@ -596,7 +604,7 @@ export const LegalDashboard: React.FC = () => {
 
       {/* FILTER CONTROLS */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
           {/* Search Input */}
           <div className="relative md:col-span-2">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -627,6 +635,15 @@ export const LegalDashboard: React.FC = () => {
                 setFilterCircle(val === 'All Circles' ? '' : val);
                 setFilterDivision('');
               }}
+            />
+          </div>
+
+          {/* Division Filter */}
+          <div>
+            <SearchableSelect
+              options={['All Divisions', ...availableFilterDivisions]}
+              value={filterDivision ? `${filterDivision}` : 'All Divisions'}
+              onChange={(val) => setFilterDivision(val === 'All Divisions' ? '' : val)}
             />
           </div>
 
