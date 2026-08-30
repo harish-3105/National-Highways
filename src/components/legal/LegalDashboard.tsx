@@ -100,8 +100,9 @@ export const LegalDashboard: React.FC = () => {
   const [filterClassification, setFilterClassification] = useState('');
   const [filterCounterStatus, setFilterCounterStatus] = useState('');
   const [filterCurrentStatus, setFilterCurrentStatus] = useState('');
-  const [filterComplianceDueOnly, setFilterComplianceDueOnly] = useState(false);
-  const [filterDisposedOnly, setFilterDisposedOnly] = useState(false);
+  const [activeKpiFilter, setActiveKpiFilter] = useState<
+    'ALL' | 'NORMAL' | 'APPEAL' | 'CA_PENDING' | 'COMPLIANCE_DUE' | 'DISPOSED'
+  >('ALL');
   const [showArchived, setShowArchived] = useState(false);
 
   const availableFilterDivisions = useMemo(() => {
@@ -267,12 +268,54 @@ export const LegalDashboard: React.FC = () => {
   // Client-side filtering
   const filteredCases = useMemo(() => {
     return cases.filter((c) => {
+      // Search term filtering
+      if (searchTerm.trim()) {
+        const q = searchTerm.toLowerCase();
+        const match =
+          c.caseDetails?.toLowerCase().includes(q) ||
+          c.appealCaseDetails?.toLowerCase().includes(q) ||
+          c.nameOfCourt?.toLowerCase().includes(q) ||
+          c.appellateCourt?.toLowerCase().includes(q) ||
+          c.petitionerNames?.toLowerCase().includes(q) ||
+          c.respondentNames?.toLowerCase().includes(q) ||
+          c.briefOfPrayer?.toLowerCase().includes(q) ||
+          c.circle?.toLowerCase().includes(q) ||
+          c.division?.toLowerCase().includes(q);
+        if (!match) return false;
+      }
+
+      // Dropdown filter bar
+      if (filterCircle && c.circle !== filterCircle && c.baseCircle !== filterCircle) return false;
+      if (filterDivision && c.division !== filterDivision && c.baseDivision !== filterDivision) return false;
+      if (filterCurrentStatus && c.currentStatus !== filterCurrentStatus) return false;
+      if (filterClassification && c.caseClassification !== filterClassification) return false;
       if (filterCounterStatus && c.caFiled !== filterCounterStatus) return false;
-      if (filterComplianceDueOnly && !(c.complianceRequired === 'Yes' && c.complianceStatus === 'Pending')) return false;
-      if (filterDisposedOnly && !(c.currentStatus === 'Disposed' || c.finalResult === 'Yes')) return false;
+
+      // Single-Select Mutually Exclusive KPI Filter
+      if (activeKpiFilter === 'NORMAL') {
+        if (c.caseClassification !== 'Normal Case') return false;
+      } else if (activeKpiFilter === 'APPEAL') {
+        if (c.caseClassification !== 'Appeal Case') return false;
+      } else if (activeKpiFilter === 'CA_PENDING') {
+        if (!(c.caRequired === 'Yes' && c.caFiled === 'No')) return false;
+      } else if (activeKpiFilter === 'COMPLIANCE_DUE') {
+        if (!(c.complianceRequired === 'Yes' && c.complianceStatus === 'Pending')) return false;
+      } else if (activeKpiFilter === 'DISPOSED') {
+        if (!(c.currentStatus === 'Disposed' || c.finalResult === 'Yes')) return false;
+      }
+
       return true;
     });
-  }, [cases, filterCounterStatus, filterComplianceDueOnly, filterDisposedOnly]);
+  }, [
+    cases,
+    searchTerm,
+    filterCircle,
+    filterDivision,
+    filterCurrentStatus,
+    filterClassification,
+    filterCounterStatus,
+    activeKpiFilter,
+  ]);
 
   // Executive KPI summary calculations
   const kpiStats = useMemo(() => {
@@ -304,10 +347,7 @@ export const LegalDashboard: React.FC = () => {
   }, [cases]);
 
   const resetAllKpiFilters = () => {
-    setFilterClassification('');
-    setFilterCounterStatus('');
-    setFilterComplianceDueOnly(false);
-    setFilterDisposedOnly(false);
+    setActiveKpiFilter('ALL');
   };
 
   if (uiMode === 'FORM') {
@@ -328,7 +368,7 @@ export const LegalDashboard: React.FC = () => {
     );
   }
 
-  const isAllSelected = !filterClassification && !filterCounterStatus && !filterComplianceDueOnly && !filterDisposedOnly;
+  const isAllSelected = activeKpiFilter === 'ALL';
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -387,6 +427,7 @@ export const LegalDashboard: React.FC = () => {
       </div>
 
       {/* 6 EXECUTIVE KPI QUADRANT CARDS (3 Rows × 2 Columns with interactive filtering) */}
+      {/* 6 EXECUTIVE KPI QUADRANT CARDS (3 Rows × 2 Columns with single-select mutually-exclusive filtering) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* ROW 1 - QUADRANT 1: Total Litigation Dockets */}
         <button
@@ -424,13 +465,9 @@ export const LegalDashboard: React.FC = () => {
         {/* ROW 1 - QUADRANT 2: Normal Cases (Original Jurisdiction) */}
         <button
           type="button"
-          onClick={() => {
-            setFilterClassification((prev) => (prev === 'Normal Case' ? '' : 'Normal Case'));
-            setFilterComplianceDueOnly(false);
-            setFilterDisposedOnly(false);
-          }}
+          onClick={() => setActiveKpiFilter((prev) => (prev === 'NORMAL' ? 'ALL' : 'NORMAL'))}
           className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
-            filterClassification === 'Normal Case'
+            activeKpiFilter === 'NORMAL'
               ? 'border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/40 dark:bg-blue-950/30'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
@@ -438,7 +475,7 @@ export const LegalDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
               <span>Original Petitions & Suits</span>
-              {filterClassification === 'Normal Case' && (
+              {activeKpiFilter === 'NORMAL' && (
                 <span className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950 px-2 py-0.5 rounded-full">
                   Active Filter
                 </span>
@@ -461,13 +498,9 @@ export const LegalDashboard: React.FC = () => {
         {/* ROW 2 - QUADRANT 3: Appellate Proceedings (WA / CMA / SLP) */}
         <button
           type="button"
-          onClick={() => {
-            setFilterClassification((prev) => (prev === 'Appeal Case' ? '' : 'Appeal Case'));
-            setFilterComplianceDueOnly(false);
-            setFilterDisposedOnly(false);
-          }}
+          onClick={() => setActiveKpiFilter((prev) => (prev === 'APPEAL' ? 'ALL' : 'APPEAL'))}
           className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
-            filterClassification === 'Appeal Case'
+            activeKpiFilter === 'APPEAL'
               ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/40 dark:bg-amber-950/30'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
@@ -475,7 +508,7 @@ export const LegalDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
               <span>Appellate Proceedings</span>
-              {filterClassification === 'Appeal Case' && (
+              {activeKpiFilter === 'APPEAL' && (
                 <span className="text-[10px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full">
                   Active Filter
                 </span>
@@ -498,13 +531,9 @@ export const LegalDashboard: React.FC = () => {
         {/* ROW 2 - QUADRANT 4: Counter Affidavit Pending */}
         <button
           type="button"
-          onClick={() => {
-            setFilterCounterStatus((prev) => (prev === 'No' ? '' : 'No'));
-            setFilterComplianceDueOnly(false);
-            setFilterDisposedOnly(false);
-          }}
+          onClick={() => setActiveKpiFilter((prev) => (prev === 'CA_PENDING' ? 'ALL' : 'CA_PENDING'))}
           className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
-            filterCounterStatus === 'No'
+            activeKpiFilter === 'CA_PENDING'
               ? 'border-orange-500 ring-2 ring-orange-500/20 bg-orange-50/40 dark:bg-orange-950/30'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
@@ -512,7 +541,7 @@ export const LegalDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
               <span>Counter Affidavit Pending</span>
-              {filterCounterStatus === 'No' && (
+              {activeKpiFilter === 'CA_PENDING' && (
                 <span className="text-[10px] font-extrabold text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-950 px-2 py-0.5 rounded-full">
                   Active Filter
                 </span>
@@ -535,12 +564,9 @@ export const LegalDashboard: React.FC = () => {
         {/* ROW 3 - QUADRANT 5: Compliance Action Due */}
         <button
           type="button"
-          onClick={() => {
-            setFilterComplianceDueOnly((prev) => !prev);
-            setFilterDisposedOnly(false);
-          }}
+          onClick={() => setActiveKpiFilter((prev) => (prev === 'COMPLIANCE_DUE' ? 'ALL' : 'COMPLIANCE_DUE'))}
           className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
-            filterComplianceDueOnly
+            activeKpiFilter === 'COMPLIANCE_DUE'
               ? 'border-purple-500 ring-2 ring-purple-500/20 bg-purple-50/40 dark:bg-purple-950/30'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
@@ -548,7 +574,7 @@ export const LegalDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
               <span>Compliance Action Due</span>
-              {filterComplianceDueOnly && (
+              {activeKpiFilter === 'COMPLIANCE_DUE' && (
                 <span className="text-[10px] font-extrabold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950 px-2 py-0.5 rounded-full">
                   Active Filter
                 </span>
@@ -571,12 +597,9 @@ export const LegalDashboard: React.FC = () => {
         {/* ROW 3 - QUADRANT 6: Disposed Cases & Adverse Outcomes */}
         <button
           type="button"
-          onClick={() => {
-            setFilterDisposedOnly((prev) => !prev);
-            setFilterComplianceDueOnly(false);
-          }}
+          onClick={() => setActiveKpiFilter((prev) => (prev === 'DISPOSED' ? 'ALL' : 'DISPOSED'))}
           className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
-            filterDisposedOnly
+            activeKpiFilter === 'DISPOSED'
               ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/30'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
@@ -584,7 +607,7 @@ export const LegalDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
               <span>Disposed & Final Orders</span>
-              {filterDisposedOnly && (
+              {activeKpiFilter === 'DISPOSED' && (
                 <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full">
                   Active Filter
                 </span>
