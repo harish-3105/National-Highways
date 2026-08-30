@@ -436,7 +436,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
             onClick={onCancel}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" /> Back to DLP Register
+            <ArrowLeft className="w-4 h-4" /> Cancel
           </button>
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
@@ -449,22 +449,13 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" /> {loading ? 'Saving Master Record...' : 'Save Complete Record'}
-          </button>
-        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+        >
+          <Save className="w-4 h-4" /> {loading ? 'Saving Master Record...' : 'Save Complete Record'}
+        </button>
       </div>
 
       {/* Form Submission Error Banner */}

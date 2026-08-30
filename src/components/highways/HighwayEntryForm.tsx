@@ -411,7 +411,7 @@ export const HighwayEntryForm: React.FC<HighwayEntryFormProps> = ({
             onClick={onCancel}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" /> Back to Corridor Catalog
+            <ArrowLeft className="w-4 h-4" /> Cancel
           </button>
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
@@ -424,22 +424,13 @@ export const HighwayEntryForm: React.FC<HighwayEntryFormProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" /> {loading ? 'Saving Corridor...' : `Save Progress (${currentStage.step})`}
-          </button>
-        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+        >
+          <Save className="w-4 h-4" /> {loading ? 'Saving Corridor...' : `Save Progress (${currentStage.step})`}
+        </button>
       </div>
 
       {/* 4-STAGE LIFECYCLE SUB-NAVIGATION STEPPER BAR */}
@@ -858,48 +849,25 @@ export const HighwayEntryForm: React.FC<HighwayEntryFormProps> = ({
           )}
         </div>
 
-        {/* Bottom Navigation & Save Action Footer */}
-        <div className="bg-slate-50 dark:bg-slate-800/60 px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-3">
-          <div>
-            {activeStageIndex > 0 ? (
-              <button
-                type="button"
-                onClick={handlePrevStage}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
-              >
-                <ChevronLeft className="w-4 h-4" /> Previous: {STAGES[activeStageIndex - 1].label}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onCancel}
-                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
-              >
-                Cancel
-              </button>
-            )}
-          </div>
+        {/* Bottom Navigation Footer */}
+        <div className="bg-slate-50 dark:bg-slate-800/60 px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={handlePrevStage}
+            disabled={activeStageIndex === 0}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" /> Previous Stage
+          </button>
 
-          <div className="flex items-center gap-2.5">
-            {activeStageIndex < STAGES.length - 1 && (
-              <button
-                type="button"
-                onClick={handleNextStage}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600 text-xs font-bold cursor-pointer transition-all"
-              >
-                <span>Next: {STAGES[activeStageIndex + 1].label}</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" /> {loading ? 'Saving Corridor...' : `Save Progress (${currentStage.step})`}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleNextStage}
+            disabled={activeStageIndex === STAGES.length - 1}
+            className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Next Stage <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </form>

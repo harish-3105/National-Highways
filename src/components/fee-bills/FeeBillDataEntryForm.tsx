@@ -567,7 +567,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             onClick={onCancel}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" /> Back to Ledger
+            <ArrowLeft className="w-4 h-4" /> Cancel
           </button>
           <div>
             <div className="flex items-center gap-2">
@@ -585,21 +585,14 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
+        <div className="flex items-center gap-2.5 self-end sm:self-auto">
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs">
             <span className="text-slate-500">Live Total Claim:</span>
             <strong className="text-emerald-600 dark:text-emerald-400 font-black">{formatINR(formData.totalFeeAmount)}</strong>
           </div>
           <button
-            type="button"
-            onClick={onCancel}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
             type="submit"
-            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl shadow-xs transition-all cursor-pointer"
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer"
           >
             <Save className="w-4 h-4" /> Save Record
           </button>
@@ -1569,45 +1562,25 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
         </div>
       )}
 
-      {/* Stepper Navigation Footer & Action Bar */}
+      {/* Stepper Navigation Footer */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-3">
-        <div>
-          {currentTabIndex > 0 ? (
-            <button
-              type="button"
-              onClick={goToPrevTab}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
-            >
-              <ChevronLeft className="w-4 h-4" /> Previous Stage
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 cursor-pointer"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={goToPrevTab}
+          disabled={currentTabIndex === 0}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <ChevronLeft className="w-4 h-4" /> Previous Stage
+        </button>
 
-        <div className="flex items-center gap-2">
-          {currentTabIndex < TABS.length - 1 && (
-            <button
-              type="button"
-              onClick={goToNextTab}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
-            >
-              Next Stage <ChevronRight className="w-4 h-4" />
-            </button>
-          )}
-          <button
-            type="submit"
-            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-xs cursor-pointer"
-          >
-            <Save className="w-4 h-4" /> Save Fee Bill Record
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={goToNextTab}
+          disabled={currentTabIndex === TABS.length - 1}
+          className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Next Stage <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
     </form>
   );

@@ -673,7 +673,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
             onClick={onCancel}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" /> Back to Legal Dockets
+            <ArrowLeft className="w-4 h-4" /> Cancel
           </button>
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
@@ -686,23 +686,14 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            {loading ? 'Saving...' : 'Save Legal Case'}
-          </button>
-        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+        >
+          <Save className="w-4 h-4" />
+          {loading ? 'Saving...' : 'Save Legal Case'}
+        </button>
       </div>
 
       {/* Progressive Stage Stepper Bar */}
@@ -1717,25 +1708,14 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
             <ChevronLeft className="w-4 h-4" /> Previous Stage
           </button>
 
-          <div className="flex items-center gap-2">
-            {activeStageIndex < stages.length - 1 ? (
-              <button
-                type="button"
-                onClick={handleNextStage}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer"
-              >
-                Next Stage <ChevronRight className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center gap-1.5 px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs cursor-pointer disabled:opacity-50"
-              >
-                <CheckCircle2 className="w-4 h-4" /> Complete & Save Docket
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={handleNextStage}
+            disabled={activeStageIndex === stages.length - 1}
+            className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Next Stage <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </form>
