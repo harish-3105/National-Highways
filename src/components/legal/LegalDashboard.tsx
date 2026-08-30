@@ -48,15 +48,18 @@ export const LegalDashboard: React.FC = () => {
     casePertainsTo: [],
     natureOfCases: [],
     courtNames: [],
-    lawOfficers: [],
-    petitionTypes: [],
-    convertedCategories: [],
     appealCaseTypes: [],
     appellateCourts: [],
     condonationOfDelays: [],
     presentStages: [],
     gpOpinions: [],
     complianceStatuses: [],
+    caRequiredOptions: [],
+    caFiledOptions: [],
+    complianceRequiredOptions: [],
+    finalResultOptions: [],
+    adverseToDepartmentOptions: [],
+    appealFiledOptions: [],
   });
 
   const fetchMasterData = useCallback(async () => {

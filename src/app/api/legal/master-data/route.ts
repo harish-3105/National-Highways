@@ -23,15 +23,18 @@ export type LegalCategory =
   | "case_pertains_to"
   | "nature_of_case"
   | "court_name"
-  | "law_officer"
-  | "petition_type"
-  | "converted_category"
   | "appeal_case_type"
   | "appellate_court"
   | "condonation_of_delay"
   | "present_stage"
   | "gp_opinion"
-  | "compliance_status";
+  | "compliance_status"
+  | "ca_required"
+  | "ca_filed"
+  | "compliance_required"
+  | "final_result"
+  | "adverse_to_department"
+  | "appeal_filed";
 
 export interface LegalMasterConfigItem {
   id: string;
@@ -50,15 +53,18 @@ export interface LegalMasterData {
   casePertainsTo: string[];
   natureOfCases: string[];
   courtNames: string[];
-  lawOfficers: string[];
-  petitionTypes: string[];
-  convertedCategories: string[];
   appealCaseTypes: string[];
   appellateCourts: string[];
   condonationOfDelays: string[];
   presentStages: string[];
   gpOpinions: string[];
   complianceStatuses: string[];
+  caRequiredOptions: string[];
+  caFiledOptions: string[];
+  complianceRequiredOptions: string[];
+  finalResultOptions: string[];
+  adverseToDepartmentOptions: string[];
+  appealFiledOptions: string[];
 }
 
 function groupLegalMasterData(items: LegalMasterConfigItem[]): LegalMasterData {
@@ -77,15 +83,18 @@ function groupLegalMasterData(items: LegalMasterConfigItem[]): LegalMasterData {
     casePertainsTo: getVals("case_pertains_to"),
     natureOfCases: getVals("nature_of_case"),
     courtNames: getVals("court_name"),
-    lawOfficers: getVals("law_officer"),
-    petitionTypes: getVals("petition_type"),
-    convertedCategories: getVals("converted_category"),
     appealCaseTypes: getVals("appeal_case_type"),
     appellateCourts: getVals("appellate_court"),
     condonationOfDelays: getVals("condonation_of_delay"),
     presentStages: getVals("present_stage"),
     gpOpinions: getVals("gp_opinion"),
     complianceStatuses: getVals("compliance_status"),
+    caRequiredOptions: getVals("ca_required"),
+    caFiledOptions: getVals("ca_filed"),
+    complianceRequiredOptions: getVals("compliance_required"),
+    finalResultOptions: getVals("final_result"),
+    adverseToDepartmentOptions: getVals("adverse_to_department"),
+    appealFiledOptions: getVals("appeal_filed"),
   };
 }
 
@@ -137,15 +146,18 @@ export async function POST(request: NextRequest) {
       "case_pertains_to",
       "nature_of_case",
       "court_name",
-      "law_officer",
-      "petition_type",
-      "converted_category",
       "appeal_case_type",
       "appellate_court",
       "condonation_of_delay",
       "present_stage",
       "gp_opinion",
       "compliance_status",
+      "ca_required",
+      "ca_filed",
+      "compliance_required",
+      "final_result",
+      "adverse_to_department",
+      "appeal_filed",
     ];
 
     if (!validCategories.includes(category)) {

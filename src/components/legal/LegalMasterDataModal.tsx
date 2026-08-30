@@ -38,6 +38,12 @@ const CATEGORY_TABS: { id: LegalCategory; label: string; description: string }[]
   { id: 'condonation_of_delay', label: 'Condonation of Delay', description: 'Pending, Allowed / Condoned, Dismissed' },
   { id: 'gp_opinion', label: 'GP Opinions', description: 'Opinion Pending, Recommended for Appeal, Not Recommended for Appeal, Not Required' },
   { id: 'compliance_status', label: 'Compliance Status', description: 'Complied, Pending' },
+  { id: 'ca_required', label: 'CA Required', description: 'Counter Affidavit mandate (Yes, No, Not Required)' },
+  { id: 'ca_filed', label: 'CA Filed', description: 'Counter Affidavit filing state (Yes, No, Under Preparation)' },
+  { id: 'compliance_required', label: 'Compliance Required', description: 'Interim compliance mandate (Yes, No, Not Applicable)' },
+  { id: 'final_result', label: 'Case Disposal', description: 'Case Concluded / Disposed (Yes, No)' },
+  { id: 'adverse_to_department', label: 'Adverse Findings', description: 'Adverse to Department (Yes, No, Neutral)' },
+  { id: 'appeal_filed', label: 'Appeal Status', description: 'Appeal Filed Status (Yes, No, Under Proposal)' },
 ];
 
 export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
@@ -109,7 +115,19 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
         ? 'complianceStatuses'
         : activeCategory === 'case_pertains_to'
         ? 'casePertainsTo'
-        : 'natureOfCases'
+        : activeCategory === 'nature_of_case'
+        ? 'natureOfCases'
+        : activeCategory === 'ca_required'
+        ? 'caRequiredOptions'
+        : activeCategory === 'ca_filed'
+        ? 'caFiledOptions'
+        : activeCategory === 'compliance_required'
+        ? 'complianceRequiredOptions'
+        : activeCategory === 'final_result'
+        ? 'finalResultOptions'
+        : activeCategory === 'adverse_to_department'
+        ? 'adverseToDepartmentOptions'
+        : 'appealFiledOptions'
     ] || [];
 
   const displayItems: { id: string; category: LegalCategory; value: string; parent_value?: string | null }[] =

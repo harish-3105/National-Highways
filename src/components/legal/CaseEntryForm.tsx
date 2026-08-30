@@ -257,6 +257,12 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   const condonationDelays = masterData?.condonationOfDelays || [];
   const gpOpinions = masterData?.gpOpinions || [];
   const complianceStatuses = masterData?.complianceStatuses || [];
+  const caRequiredOptions = masterData?.caRequiredOptions || [];
+  const caFiledOptions = masterData?.caFiledOptions || [];
+  const complianceRequiredOptions = masterData?.complianceRequiredOptions || [];
+  const finalResultOptions = masterData?.finalResultOptions || [];
+  const adverseToDepartmentOptions = masterData?.adverseToDepartmentOptions || [];
+  const appealFiledOptions = masterData?.appealFiledOptions || [];
 
   const divisions = useMemo(() => {
     return masterData?.divisions || [];
@@ -1369,7 +1375,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">CA Required</label>
                   <SearchableSelect
-                    options={['Yes', 'No', 'Not Required']}
+                    options={caRequiredOptions}
                     value={formData.caRequired || ''}
                     onChange={(val) => handleChange('caRequired', val)}
                   />
@@ -1389,7 +1395,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">CA Filed</label>
                       <SearchableSelect
-                        options={['Yes', 'No', 'Under Preparation']}
+                        options={caFiledOptions}
                         value={formData.caFiled || ''}
                         onChange={(val) => handleChange('caFiled', val)}
                       />
@@ -1519,7 +1525,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 <div className="max-w-xs">
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Compliance Required</label>
                   <SearchableSelect
-                    options={['Yes', 'No', 'Not Applicable']}
+                    options={complianceRequiredOptions}
                     value={formData.complianceRequired || ''}
                     onChange={(val) => handleChange('complianceRequired', val)}
                   />
@@ -1586,7 +1592,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               <div className="max-w-xs">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Case Concluded / Disposed?</label>
                 <SearchableSelect
-                  options={['Yes', 'No']}
+                  options={finalResultOptions}
                   value={formData.finalResult || ''}
                   onChange={(val) => handleChange('finalResult', val)}
                 />
@@ -1622,7 +1628,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                         Adverse to Department? <span className="text-rose-500">*</span>
                       </label>
                       <SearchableSelect
-                        options={['Yes', 'No', 'Neutral']}
+                        options={adverseToDepartmentOptions}
                         value={formData.adverseToDepartment || ''}
                         onChange={(val) => handleChange('adverseToDepartment', val)}
                       />
@@ -1653,7 +1659,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                               Appeal Filed? <span className="text-rose-500">*</span>
                             </label>
                             <SearchableSelect
-                              options={['Yes', 'No', 'Under Proposal']}
+                              options={appealFiledOptions}
                               value={formData.appealFiled || ''}
                               onChange={(val) => handleChange('appealFiled', val)}
                             />
