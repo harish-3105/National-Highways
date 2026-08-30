@@ -202,12 +202,6 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     appealFiled: initial?.appealFiled || '',
     appealFiledDate: initial?.appealFiledDate || '',
     linkedAppealCaseId: initial?.linkedAppealCaseId || '',
-    finalOrderComplianceActionGiven: initial?.finalOrderComplianceActionGiven || '',
-    finalOrderComplianceAction: initial?.finalOrderComplianceAction || '',
-    finalOrderCompliancePeriod: initial?.finalOrderCompliancePeriod || '',
-    finalOrderComplianceEndDate: initial?.finalOrderComplianceEndDate || '',
-    finalOrderComplianceActionTaken: initial?.finalOrderComplianceActionTaken || '',
-    finalOrderComplianceStatus: initial?.finalOrderComplianceStatus || '',
     finalOrderRemarks: initial?.finalOrderRemarks || '',
   };
 };

@@ -95,12 +95,6 @@ export interface LegalCaseData {
   // System & Audit Metadata
   latestOrderFinalOrder?: string;
   latestOrderDate?: string;
-  finalOrderComplianceActionGiven?: string;
-  finalOrderComplianceAction?: YesNoType;
-  finalOrderCompliancePeriod?: string;
-  finalOrderComplianceEndDate?: string;
-  finalOrderComplianceActionTaken?: string;
-  finalOrderComplianceStatus?: ComplianceStatusType;
   lawyerId?: string;
   lawyerName?: string;
   delete_status?: string;
