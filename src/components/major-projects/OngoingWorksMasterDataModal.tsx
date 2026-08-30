@@ -27,7 +27,7 @@ interface OngoingWorksMasterDataModalProps {
   onRefresh: () => void;
 }
 
-type CategoryType = 'circle' | 'division' | 'scheme' | 'work_stage';
+type CategoryType = 'circle' | 'division' | 'scheme';
 
 interface CategoryTab {
   id: CategoryType;
@@ -54,12 +54,6 @@ const CATEGORY_TABS: CategoryTab[] = [
     label: 'Funding Schemes',
     description: 'NH(O), CRIF, Annual Plan, State Fund, EPC, HAM...',
     icon: FileSpreadsheet,
-  },
-  {
-    id: 'work_stage',
-    label: 'Work Stages',
-    description: 'IN_PROGRESS, TENDER_STAGE, COMPLETED, DELAYED...',
-    icon: Activity,
   },
 ];
 

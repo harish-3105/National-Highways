@@ -42,7 +42,6 @@ export const MajorProjectsDashboard: React.FC = () => {
     circles: [],
     divisions: [],
     schemes: [],
-    workStages: [],
     circleDivisionMap: {},
   });
   const [loading, setLoading] = useState<boolean>(true);

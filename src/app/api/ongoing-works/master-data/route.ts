@@ -17,7 +17,7 @@ function getSupabaseClient() {
 
 export interface MasterConfigItem {
   id: string;
-  category: "circle" | "division" | "scheme" | "work_stage";
+  category: "circle" | "division" | "scheme";
   value: string;
   parent_category?: string | null;
   parent_value?: string | null;
@@ -29,7 +29,6 @@ export interface OngoingWorksMasterData {
   circles: string[];
   divisions: string[];
   schemes: string[];
-  workStages: string[];
   circleDivisionMap: Record<string, string[]>;
 }
 
@@ -44,10 +43,6 @@ function groupMasterData(items: MasterConfigItem[]): OngoingWorksMasterData {
 
   const schemes = Array.from(
     new Set(items.filter((i) => i.category === "scheme").map((i) => i.value.trim()))
-  ).sort((a, b) => a.localeCompare(b));
-
-  const workStages = Array.from(
-    new Set(items.filter((i) => i.category === "work_stage").map((i) => i.value.trim()))
   ).sort((a, b) => a.localeCompare(b));
 
   const circleDivisionMap: Record<string, string[]> = {};
@@ -79,7 +74,6 @@ function groupMasterData(items: MasterConfigItem[]): OngoingWorksMasterData {
     circles,
     divisions,
     schemes,
-    workStages,
     circleDivisionMap,
   };
 }
@@ -125,9 +119,9 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanCategory = category.trim().toLowerCase();
-    if (!["circle", "division", "scheme", "work_stage"].includes(cleanCategory)) {
+    if (!["circle", "division", "scheme"].includes(cleanCategory)) {
       return NextResponse.json(
-        { error: "Category must be 'circle', 'division', 'scheme', or 'work_stage'" },
+        { error: "Category must be 'circle', 'division', or 'scheme'" },
         { status: 400 }
       );
     }
