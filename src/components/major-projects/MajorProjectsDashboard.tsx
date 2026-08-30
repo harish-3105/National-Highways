@@ -53,9 +53,9 @@ export const MajorProjectsDashboard: React.FC = () => {
   // Filters State
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedDivision, setSelectedDivision] = useState<string>('ALL');
-  const [selectedStage, setSelectedStage] = useState<'ALL' | 'IN_PROGRESS' | 'TENDER_STAGE' | 'COMPLETED' | 'DELAYED'>('ALL');
-  const [completionFilter, setCompletionFilter] = useState<'ACTIVE_ONLY' | 'COMPLETED_ONLY' | 'ALL'>('ACTIVE_ONLY');
-  const [costAbove50CrOnly, setCostAbove50CrOnly] = useState<boolean>(false);
+  const [activeKpiFilter, setActiveKpiFilter] = useState<
+    'ACTIVE_ALL' | 'ABOVE_50CR' | 'IN_PROGRESS' | 'TENDER_STAGE' | 'DELAYED' | 'COMPLETED'
+  >('ACTIVE_ALL');
 
   // Range Filters
   const [delayMin, setDelayMin] = useState<string>('');
@@ -160,11 +160,29 @@ export const MajorProjectsDashboard: React.FC = () => {
   const filteredProjects = useMemo(() => {
     return projects.filter((p) => {
       const isCompleted = p.work_stage === 'COMPLETED';
+      const delayInfo = calculateProjectDelay(
+        p.scheduled_completion_date,
+        p.likely_completion_date || p.probable_completion_date,
+        p.progress_percent
+      );
+      const effectiveCost = Number(
+        p.revised_cost_cr && Number(p.revised_cost_cr) > 0
+          ? p.revised_cost_cr
+          : p.project_cost_cr || 0
+      );
 
-      // 1. Completion Filter (Auto-hide completed from default active view)
-      if (completionFilter === 'ACTIVE_ONLY') {
+      // 1. Single Mutually-Exclusive KPI Filter
+      if (activeKpiFilter === 'ACTIVE_ALL') {
         if (isCompleted) return false;
-      } else if (completionFilter === 'COMPLETED_ONLY') {
+      } else if (activeKpiFilter === 'ABOVE_50CR') {
+        if (effectiveCost < 50) return false;
+      } else if (activeKpiFilter === 'IN_PROGRESS') {
+        if (p.work_stage !== 'IN_PROGRESS') return false;
+      } else if (activeKpiFilter === 'TENDER_STAGE') {
+        if (p.work_stage !== 'TENDER_STAGE') return false;
+      } else if (activeKpiFilter === 'DELAYED') {
+        if (!delayInfo.isDelayed) return false;
+      } else if (activeKpiFilter === 'COMPLETED') {
         if (!isCompleted) return false;
       }
 
@@ -173,26 +191,7 @@ export const MajorProjectsDashboard: React.FC = () => {
         selectedDivision === 'ALL' ||
         (p.division || '').toLowerCase() === selectedDivision.toLowerCase();
 
-      // Dynamic Delay Calculation for accurate stage & range filtering
-      const delayInfo = calculateProjectDelay(
-        p.scheduled_completion_date,
-        p.likely_completion_date || p.probable_completion_date,
-        p.progress_percent
-      );
-
-      // 3. Stage filter
-      let matchesStage = true;
-      if (selectedStage === 'IN_PROGRESS') {
-        matchesStage = p.work_stage === 'IN_PROGRESS';
-      } else if (selectedStage === 'TENDER_STAGE') {
-        matchesStage = p.work_stage === 'TENDER_STAGE';
-      } else if (selectedStage === 'COMPLETED') {
-        matchesStage = p.work_stage === 'COMPLETED';
-      } else if (selectedStage === 'DELAYED') {
-        matchesStage = delayInfo.isDelayed;
-      }
-
-      // 4. Delay Range Filter (in years)
+      // 3. Delay Range Filter (in years)
       let matchesDelayRange = true;
       const overrun = delayInfo.delayYears;
       if (delayMin !== '') {
@@ -202,7 +201,7 @@ export const MajorProjectsDashboard: React.FC = () => {
         matchesDelayRange = matchesDelayRange && overrun <= Number(delayMax);
       }
 
-      // 5. Progress Range Filter (in %)
+      // 4. Progress Range Filter (in %)
       let matchesProgressRange = true;
       const prog =
         p.progress_percent !== undefined && p.progress_percent !== null ? Number(p.progress_percent) : 0;
@@ -213,18 +212,7 @@ export const MajorProjectsDashboard: React.FC = () => {
         matchesProgressRange = matchesProgressRange && prog <= Number(progressMax);
       }
 
-      // 6. Cost ≥ ₹50 Cr Filter
-      let matchesCost50Cr = true;
-      if (costAbove50CrOnly) {
-        const effectiveCost = Number(
-          p.revised_cost_cr && Number(p.revised_cost_cr) > 0
-            ? p.revised_cost_cr
-            : p.project_cost_cr || 0
-        );
-        matchesCost50Cr = effectiveCost >= 50;
-      }
-
-      // 7. Search filter
+      // 5. Search filter
       const matchesSearch =
         !searchTerm.trim() ||
         (p.name_of_work || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -245,19 +233,15 @@ export const MajorProjectsDashboard: React.FC = () => {
 
       return (
         matchesDivision &&
-        matchesStage &&
         matchesDelayRange &&
         matchesProgressRange &&
-        matchesCost50Cr &&
         matchesSearch
       );
     });
   }, [
     projects,
-    completionFilter,
+    activeKpiFilter,
     selectedDivision,
-    selectedStage,
-    costAbove50CrOnly,
     delayMin,
     delayMax,
     progressMin,
@@ -324,9 +308,7 @@ export const MajorProjectsDashboard: React.FC = () => {
     return (
       searchTerm !== '' ||
       selectedDivision !== 'ALL' ||
-      selectedStage !== 'ALL' ||
-      completionFilter !== 'ACTIVE_ONLY' ||
-      costAbove50CrOnly ||
+      activeKpiFilter !== 'ACTIVE_ALL' ||
       delayMin !== '' ||
       delayMax !== '' ||
       progressMin !== '' ||
@@ -335,9 +317,7 @@ export const MajorProjectsDashboard: React.FC = () => {
   }, [
     searchTerm,
     selectedDivision,
-    selectedStage,
-    completionFilter,
-    costAbove50CrOnly,
+    activeKpiFilter,
     delayMin,
     delayMax,
     progressMin,
@@ -347,9 +327,7 @@ export const MajorProjectsDashboard: React.FC = () => {
   const handleResetFilters = () => {
     setSearchTerm('');
     setSelectedDivision('ALL');
-    setSelectedStage('ALL');
-    setCompletionFilter('ACTIVE_ONLY');
-    setCostAbove50CrOnly(false);
+    setActiveKpiFilter('ACTIVE_ALL');
     setDelayMin('');
     setDelayMax('');
     setProgressMin('');
@@ -456,19 +434,14 @@ export const MajorProjectsDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 6 Top KPI Quadrant Cards (3 Rows × 2 Columns) */}
+      {/* 6 Executive KPI Summary Quadrant Cards (3 Rows × 2 Columns with single-select mutually-exclusive filtering) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {/* Row 1, Col 1: Active Ongoing Works */}
         <button
           type="button"
-          onClick={() => {
-            setCompletionFilter('ACTIVE_ONLY');
-            setSelectedStage('ALL');
-            setDelayMin('');
-            setCostAbove50CrOnly(false);
-          }}
+          onClick={() => setActiveKpiFilter('ACTIVE_ALL')}
           className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
-            completionFilter === 'ACTIVE_ONLY' && selectedStage === 'ALL' && delayMin === '' && !costAbove50CrOnly
+            activeKpiFilter === 'ACTIVE_ALL'
               ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/40 dark:bg-blue-950/30'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
@@ -476,7 +449,7 @@ export const MajorProjectsDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               Active Ongoing Works
-              {completionFilter === 'ACTIVE_ONLY' && selectedStage === 'ALL' && delayMin === '' && !costAbove50CrOnly && (
+              {activeKpiFilter === 'ACTIVE_ALL' && (
                 <span className="normal-case text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">
                   Active
                 </span>
@@ -501,9 +474,9 @@ export const MajorProjectsDashboard: React.FC = () => {
         {/* Row 1, Col 2: Capital Outlay */}
         <button
           type="button"
-          onClick={() => setCostAbove50CrOnly(!costAbove50CrOnly)}
+          onClick={() => setActiveKpiFilter((prev) => (prev === 'ABOVE_50CR' ? 'ACTIVE_ALL' : 'ABOVE_50CR'))}
           className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
-            costAbove50CrOnly
+            activeKpiFilter === 'ABOVE_50CR'
               ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/30'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
@@ -511,7 +484,7 @@ export const MajorProjectsDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               Capital Outlay Budget
-              {costAbove50CrOnly && (
+              {activeKpiFilter === 'ABOVE_50CR' && (
                 <span className="normal-case text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
                   &ge;₹50 Cr Filter Active
                 </span>
@@ -537,13 +510,9 @@ export const MajorProjectsDashboard: React.FC = () => {
         {/* Row 2, Col 1: Under Execution */}
         <button
           type="button"
-          onClick={() => {
-            setCompletionFilter('ACTIVE_ONLY');
-            setSelectedStage(selectedStage === 'IN_PROGRESS' ? 'ALL' : 'IN_PROGRESS');
-            setDelayMin('');
-          }}
+          onClick={() => setActiveKpiFilter((prev) => (prev === 'IN_PROGRESS' ? 'ACTIVE_ALL' : 'IN_PROGRESS'))}
           className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
-            selectedStage === 'IN_PROGRESS' && completionFilter === 'ACTIVE_ONLY'
+            activeKpiFilter === 'IN_PROGRESS'
               ? 'border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/40 dark:bg-indigo-950/30'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
@@ -551,7 +520,7 @@ export const MajorProjectsDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               Under Active Execution
-              {selectedStage === 'IN_PROGRESS' && completionFilter === 'ACTIVE_ONLY' && (
+              {activeKpiFilter === 'IN_PROGRESS' && (
                 <span className="normal-case text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
                   Active
                 </span>
@@ -574,13 +543,9 @@ export const MajorProjectsDashboard: React.FC = () => {
         {/* Row 2, Col 2: Tender Stage */}
         <button
           type="button"
-          onClick={() => {
-            setCompletionFilter('ACTIVE_ONLY');
-            setSelectedStage(selectedStage === 'TENDER_STAGE' ? 'ALL' : 'TENDER_STAGE');
-            setDelayMin('');
-          }}
+          onClick={() => setActiveKpiFilter((prev) => (prev === 'TENDER_STAGE' ? 'ACTIVE_ALL' : 'TENDER_STAGE'))}
           className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
-            selectedStage === 'TENDER_STAGE'
+            activeKpiFilter === 'TENDER_STAGE'
               ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/40 dark:bg-amber-950/30'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
@@ -588,7 +553,7 @@ export const MajorProjectsDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               Tender & Pre-Construction
-              {selectedStage === 'TENDER_STAGE' && (
+              {activeKpiFilter === 'TENDER_STAGE' && (
                 <span className="normal-case text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
                   Active
                 </span>
@@ -611,18 +576,9 @@ export const MajorProjectsDashboard: React.FC = () => {
         {/* Row 3, Col 1: Delayed Works */}
         <button
           type="button"
-          onClick={() => {
-            setCompletionFilter('ACTIVE_ONLY');
-            if (selectedStage === 'DELAYED') {
-              setSelectedStage('ALL');
-              setDelayMin('');
-            } else {
-              setSelectedStage('DELAYED');
-              setDelayMin('0.01');
-            }
-          }}
+          onClick={() => setActiveKpiFilter((prev) => (prev === 'DELAYED' ? 'ACTIVE_ALL' : 'DELAYED'))}
           className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
-            selectedStage === 'DELAYED' || (delayMin !== '' && Number(delayMin) > 0)
+            activeKpiFilter === 'DELAYED'
               ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/40 dark:bg-rose-950/30'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
@@ -630,7 +586,7 @@ export const MajorProjectsDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               Delayed Works (Time Overrun)
-              {(selectedStage === 'DELAYED' || (delayMin !== '' && Number(delayMin) > 0)) && (
+              {activeKpiFilter === 'DELAYED' && (
                 <span className="normal-case text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950 px-1.5 py-0.5 rounded border border-rose-200 dark:border-rose-800">
                   Active
                 </span>
@@ -653,13 +609,9 @@ export const MajorProjectsDashboard: React.FC = () => {
         {/* Row 3, Col 2: Completed Works */}
         <button
           type="button"
-          onClick={() => {
-            setCompletionFilter(completionFilter === 'COMPLETED_ONLY' ? 'ACTIVE_ONLY' : 'COMPLETED_ONLY');
-            setSelectedStage('ALL');
-            setDelayMin('');
-          }}
+          onClick={() => setActiveKpiFilter((prev) => (prev === 'COMPLETED' ? 'ACTIVE_ALL' : 'COMPLETED'))}
           className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
-            completionFilter === 'COMPLETED_ONLY'
+            activeKpiFilter === 'COMPLETED'
               ? 'border-teal-500 ring-2 ring-teal-500/20 bg-teal-50/40 dark:bg-teal-950/30'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
@@ -667,7 +619,7 @@ export const MajorProjectsDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               Completed Works (100% Done)
-              {completionFilter === 'COMPLETED_ONLY' && (
+              {activeKpiFilter === 'COMPLETED' && (
                 <span className="normal-case text-[10px] font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950 px-1.5 py-0.5 rounded border border-teal-200 dark:border-teal-800">
                   Active
                 </span>
@@ -703,6 +655,7 @@ export const MajorProjectsDashboard: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search ongoing works by name, job no, PMIS ID, contractor..."
               className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
             />
           </div>
@@ -720,9 +673,9 @@ export const MajorProjectsDashboard: React.FC = () => {
 
             {/* ≥ ₹50 Cr Filter Toggle */}
             <button
-              onClick={() => setCostAbove50CrOnly(!costAbove50CrOnly)}
+              onClick={() => setActiveKpiFilter((prev) => (prev === 'ABOVE_50CR' ? 'ACTIVE_ALL' : 'ABOVE_50CR'))}
               className={`px-3.5 py-2.5 rounded-xl transition-all cursor-pointer font-bold text-xs flex items-center gap-1.5 border shrink-0 ${
-                costAbove50CrOnly
+                activeKpiFilter === 'ABOVE_50CR'
                   ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                   : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-500'
               }`}
@@ -731,7 +684,7 @@ export const MajorProjectsDashboard: React.FC = () => {
               <span>⚡ &ge; ₹50 Cr</span>
               <span
                 className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold ${
-                  costAbove50CrOnly
+                  activeKpiFilter === 'ABOVE_50CR'
                     ? 'bg-amber-800 text-white'
                     : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
                 }`}
