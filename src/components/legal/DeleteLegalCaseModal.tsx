@@ -77,10 +77,7 @@ export const DeleteLegalCaseModal: React.FC<DeleteLegalCaseModalProps> = ({
           <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 text-left">
             <div className="flex items-center gap-2 mb-1">
               <span className="px-2 py-0.5 bg-blue-900 text-white rounded font-extrabold text-xs">
-                {caseData.caseNumber}
-              </span>
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                ({caseData.caseYear})
+                {caseData.caseDetails || 'Legal Case'}
               </span>
             </div>
             <p className="text-xs text-slate-700 dark:text-slate-300 font-bold">

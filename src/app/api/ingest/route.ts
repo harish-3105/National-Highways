@@ -235,19 +235,18 @@ export async function POST(request: Request) {
       dbError = result.error;
     } else if (datasetType === 'LEGAL_CASES') {
       const uniqueCasesMap = new Map();
-      const noCaseNumberRows: any[] = [];
+      const noCaseDetailsRows: any[] = [];
       parseResult.data.forEach((item: any) => {
-        if (item.case_number) {
-          uniqueCasesMap.set(item.case_number, item);
+        const key = item.case_details || item.case_number;
+        if (key) {
+          uniqueCasesMap.set(key, item);
         } else {
-          noCaseNumberRows.push(item);
+          noCaseDetailsRows.push(item);
         }
       });
-      const uniqueLegalCases = [...Array.from(uniqueCasesMap.values()), ...noCaseNumberRows];
+      const uniqueLegalCases = [...Array.from(uniqueCasesMap.values()), ...noCaseDetailsRows];
 
-      const result = await batchInsertOrUpsert(supabase, 'legal_cases', uniqueLegalCases, {
-        onConflict: 'case_number',
-      });
+      const result = await batchInsertOrUpsert(supabase, 'legal_cases', uniqueLegalCases);
       insertedCount = result.totalInserted;
       dbError = result.error;
     } else if (datasetType === 'ONGOING_WORKS') {

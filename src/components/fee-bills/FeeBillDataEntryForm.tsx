@@ -54,9 +54,6 @@ const defaultFormState: FeeBillRecord = {
   lawyerName: '',
   lawyerDesignation: '',
   caseDetails: '',
-  caseType: '',
-  caseNumber: '',
-  caseYear: '',
   casePertainsTo: '' as any,
   appearanceAmount: 0,
   appearanceDate: '', // Zero default date
@@ -130,10 +127,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
     ...defaultFormState,
     ...initialData,
     id: initialData?.id || `fb-${Date.now()}`,
-    caseDetails:
-      initialData?.caseDetails ||
-      [initialData?.caseType, initialData?.caseNumber, initialData?.caseYear].filter(Boolean).join(' ') ||
-      '',
+    caseDetails: initialData?.caseDetails || '',
     amountDeposited:
       initialData?.amountDeposited !== undefined
         ? initialData.amountDeposited
@@ -166,7 +160,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
   const lawyerDesignations = masterData.lawyerDesignations || [];
   const assistantDesignations = masterData.assistantDesignations || [];
-  const caseTypes = masterData.caseTypes || [];
   const casePertainsToOptions = masterData.casePertainsTo || [];
   const paymentStatuses = masterData.paymentStatuses || [];
   const statusOfObtainingGoOptions = masterData.statusOfObtainingGoOptions || [];

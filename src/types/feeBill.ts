@@ -34,9 +34,6 @@ export interface FeeBillRecord {
 
   // 4. Case Information
   caseDetails: string; // Unified open text field (e.g. WP 1234/2023)
-  caseType?: string; // Legacy column
-  caseNumber?: string | number; // Legacy column
-  caseYear?: string | number; // Legacy column
   casePertainsTo: CasePertainsToType;
 
   // 5. Fee Bill Amount Details
@@ -157,8 +154,6 @@ export interface FeeBillFilterCriteria {
   division: string;
   lawyerName: string;
   caseDetails?: string;
-  caseType?: string;
-  caseYear?: string;
   casePertainsTo: string;
   paymentStatus: string;
   goStatus: string;

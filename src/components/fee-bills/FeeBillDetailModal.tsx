@@ -155,7 +155,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 </span>
               </div>
               <h3 className="font-extrabold text-sm text-white mt-1">
-                Legal Fee Voucher Record &bull; Case {contract.caseNumber} ({contract.caseYear || ''})
+                Legal Fee Voucher Record &bull; {contract.caseDetails || 'Case Record'}
               </h3>
             </div>
           </div>
@@ -326,7 +326,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Details / Number</span>
                   <span className="font-extrabold text-blue-900 dark:text-blue-300 text-xs mt-0.5 block">
-                    {contract.caseDetails || [contract.caseType, contract.caseNumber, contract.caseYear].filter(Boolean).join(' ') || '—'}
+                    {contract.caseDetails || '—'}
                   </span>
                 </div>
 

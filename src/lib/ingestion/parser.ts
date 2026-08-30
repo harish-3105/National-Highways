@@ -118,7 +118,8 @@ export interface BlackspotRow {
 }
 
 export interface LegalCaseRow {
-  case_number: string;
+  case_details: string;
+  case_number?: string;
   circle?: string;
   division?: string;
   case_year?: string;
@@ -1086,12 +1087,11 @@ function parseLegalCases(rawRows: any[][], result: ParseResult) {
     const row = rawRows[i];
     if (!row || row.length === 0) continue;
 
-    const caseNumber = cleanString(row[0]);
-    if (!caseNumber || caseNumber.toLowerCase().includes('case no')) continue;
+    const caseDetails = cleanString(row[0]);
+    if (!caseDetails || caseDetails.toLowerCase().includes('case no')) continue;
 
     const circle = cleanString(row[1]) || 'Chennai';
     const division = cleanString(row[2]) || 'Chennai City Division';
-    const caseYear = cleanString(row[3]) || '2024';
     const category = cleanString(row[4]) || 'Filed Against Department';
     const courtName = cleanString(row[5]) || cleanString(row[2]) || 'High Court of Madras';
     const respondent = cleanString(row[6]) || 'Chief Engineer NH';
@@ -1103,10 +1103,9 @@ function parseLegalCases(rawRows: any[][], result: ParseResult) {
     const status = cleanString(row[12]).toUpperCase() || 'PENDING';
 
     parsedData.push({
-      case_number: caseNumber,
+      case_details: caseDetails,
       circle: circle,
       division: division,
-      case_year: caseYear,
       category: category,
       name_of_court: courtName,
       name_of_respondent: respondent,

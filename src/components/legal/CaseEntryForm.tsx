@@ -141,16 +141,10 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     appealInfo: initial?.appealInfo
       ? {
           ...initial.appealInfo,
-          appealCaseDetails:
-            initial.appealInfo.appealCaseDetails ||
-            [initial.appealInfo.appealCaseType, initial.appealInfo.appealCaseNumber, initial.appealInfo.appealYear].filter(Boolean).join(' ') ||
-            '',
+          appealCaseDetails: initial.appealInfo.appealCaseDetails || '',
         }
       : {
           appealCaseDetails: '',
-          appealCaseType: '',
-          appealCaseNumber: '',
-          appealYear: '',
           appellateCourt: '',
           appealFilingDate: '',
           limitationDueDate: '',
@@ -158,16 +152,10 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
           delayPeriodDays: 0,
           condonationOfDelay: '',
         },
-    caseDetails:
-      initial?.caseDetails ||
-      [initial?.caseType, initial?.caseNumber, initial?.caseYear].filter(Boolean).join(' ') ||
-      '',
+    caseDetails: initial?.caseDetails || '',
     appealCaseDetails: initial?.appealCaseDetails || '',
-    caseType: initial?.caseType || '',
     circle: initial?.circle || '',
     division: initial?.division || '',
-    caseNumber: initial?.caseNumber || '',
-    caseYear: initial?.caseYear || '',
     nameOfCourt: initial?.nameOfCourt || '',
     petitionerNames: initial?.petitionerNames || '',
     respondentNames: initial?.respondentNames || '',
@@ -178,13 +166,7 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     baseCircle: initial?.baseCircle || '',
     baseDivision: initial?.baseDivision || '',
     baseCourtName: initial?.baseCourtName || '',
-    baseCaseDetails:
-      initial?.baseCaseDetails ||
-      [initial?.baseCaseType, initial?.baseCaseNumber, initial?.baseCaseYear].filter(Boolean).join(' ') ||
-      '',
-    baseCaseType: initial?.baseCaseType || '',
-    baseCaseNumber: initial?.baseCaseNumber || '',
-    baseCaseYear: initial?.baseCaseYear || '',
+    baseCaseDetails: initial?.baseCaseDetails || '',
     basePetitionerNames: initial?.basePetitionerNames || '',
     baseRespondentNames: initial?.baseRespondentNames || '',
     baseCasePertainsTo: initial?.baseCasePertainsTo || '',
@@ -272,13 +254,11 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
   // Dynamic Master Data Options directly from database (zero hardcoded defaults)
   const circles = masterData?.circles || [];
-  const caseTypes = masterData?.caseTypes || [];
   const courts = masterData?.courtNames || [];
   const casePertainsToList = masterData?.casePertainsTo || [];
   const natureOfCasesList = masterData?.natureOfCases || [];
   const presentStages = masterData?.presentStages || [];
   const currentStatuses = masterData?.caseStatuses || [];
-  const appealCaseTypes = masterData?.appealCaseTypes || [];
   const appellateCourts = masterData?.appellateCourts || [];
   const condonationDelays = masterData?.condonationOfDelays || [];
   const gpOpinions = masterData?.gpOpinions || [];
@@ -385,20 +365,12 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
     const matched = existingCases.find((c) => c.id === caseId);
     if (matched) {
-      const bCaseDetails =
-        matched.caseDetails ||
-        [matched.caseType, matched.caseNumber, matched.caseYear].filter(Boolean).join(' ') ||
-        '';
-
       setFormData((prev) => ({
         ...prev,
         baseCircle: matched.circle || '',
         baseDivision: matched.division || '',
         baseCourtName: matched.nameOfCourt || '',
-        baseCaseDetails: bCaseDetails,
-        baseCaseType: matched.caseType || '',
-        baseCaseNumber: matched.caseNumber || '',
-        baseCaseYear: matched.caseYear || '',
+        baseCaseDetails: matched.caseDetails || '',
         basePetitionerNames: matched.petitionerNames || '',
         baseRespondentNames: matched.respondentNames || '',
         baseCasePertainsTo: matched.casePertainsTo || '',
@@ -415,9 +387,6 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
           'baseDivision',
           'baseCourtName',
           'baseCaseDetails',
-          'baseCaseType',
-          'baseCaseNumber',
-          'baseCaseYear',
           'basePetitionerNames',
           'baseRespondentNames',
           'baseCasePertainsTo',
@@ -658,12 +627,11 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
     setLoading(true);
     try {
-      // Sync caseNumber and nameOfCourt for appeal cases if needed
+      // Sync caseDetails and nameOfCourt for appeal cases if needed
       const payloadToSave: LegalCaseData = { ...formData };
       if (isAppeal && formData.appealInfo) {
         payloadToSave.caseDetails = formData.appealInfo.appealCaseDetails || formData.caseDetails;
         payloadToSave.appealCaseDetails = formData.appealInfo.appealCaseDetails || formData.appealCaseDetails;
-        payloadToSave.caseNumber = formData.appealInfo.appealCaseDetails || formData.caseNumber;
         payloadToSave.nameOfCourt = formData.appealInfo.appellateCourt || formData.nameOfCourt;
       }
       onSave(payloadToSave);
@@ -1234,7 +1202,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     options={[
                       '-- Select Existing Case to Auto-Fill --',
                       ...existingCases.map(
-                        (c) => `${c.caseDetails || `${c.caseNumber} (${c.caseYear})`} - ${c.nameOfCourt || 'Court'} - ${c.petitionerNames || ''}`
+                        (c) => `${c.caseDetails || 'Legal Case'} - ${c.nameOfCourt || 'Court'} - ${c.petitionerNames || ''}`
                       ),
                     ]}
                     value={
@@ -1242,7 +1210,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                         ? (() => {
                             const match = existingCases.find((c) => c.id === selectedExistingCaseId);
                             return match
-                              ? `${match.caseDetails || `${match.caseNumber} (${match.caseYear})`} - ${match.nameOfCourt || 'Court'} - ${match.petitionerNames || ''}`
+                              ? `${match.caseDetails || 'Legal Case'} - ${match.nameOfCourt || 'Court'} - ${match.petitionerNames || ''}`
                               : '-- Select Existing Case to Auto-Fill --';
                           })()
                         : '-- Select Existing Case to Auto-Fill --'
@@ -1252,7 +1220,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                         setSelectedExistingCaseId('');
                       } else {
                         const match = existingCases.find(
-                          (c) => `${c.caseDetails || `${c.caseNumber} (${c.caseYear})`} - ${c.nameOfCourt || 'Court'} - ${c.petitionerNames || ''}` === val
+                          (c) => `${c.caseDetails || 'Legal Case'} - ${c.nameOfCourt || 'Court'} - ${c.petitionerNames || ''}` === val
                         );
                         if (match?.id) handleAutoFillFromExisting(match.id);
                       }

@@ -211,7 +211,7 @@ export const FeeBillPendencyTracker: React.FC<FeeBillPendencyTrackerProps> = ({
                               {b.lawyerName}
                             </p>
                             <div className="flex items-center justify-between text-[10px] text-slate-500 font-medium pt-0.5">
-                              <span>Case: {b.caseNumber}</span>
+                              <span className="truncate max-w-[150px]">{b.caseDetails || '—'}</span>
                               <span>{b.division}</span>
                             </div>
                             {b.letterNumber && (
@@ -309,7 +309,7 @@ export const FeeBillPendencyTracker: React.FC<FeeBillPendencyTrackerProps> = ({
                               {b.lawyerName}
                             </p>
                             <div className="flex items-center justify-between text-[10px] text-slate-500 font-medium pt-0.5">
-                              <span>Case: {b.caseNumber}</span>
+                              <span className="truncate max-w-[150px]">{b.caseDetails || '—'}</span>
                               <span>{b.division}</span>
                             </div>
                             {b.goNumber && (

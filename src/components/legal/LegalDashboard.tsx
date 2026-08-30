@@ -205,9 +205,6 @@ export const LegalDashboard: React.FC = () => {
         caseClassification: 'Appeal Case',
         appealInfo: {
           appealCaseDetails: '',
-          appealCaseType: '',
-          appealCaseNumber: '',
-          appealYear: '',
           appellateCourt: '',
           appealFilingDate: savedData.appealFiledDate || '',
           limitationDueDate: '',
@@ -215,26 +212,20 @@ export const LegalDashboard: React.FC = () => {
           delayPeriodDays: 0,
           condonationOfDelay: '',
         },
-        caseType: '',
         circle: savedData.circle || '',
         division: savedData.division || '',
         caseDetails: '',
         appealCaseDetails: '',
-        caseNumber: '',
-        caseYear: '',
         nameOfCourt: '',
         petitionerNames: savedData.respondentNames || '',
         respondentNames: savedData.petitionerNames || '',
         casePertainsTo: savedData.casePertainsTo || '',
         natureOfCase: savedData.natureOfCase || '',
-        briefOfPrayer: `Appeal in ${savedData.caseDetails || savedData.caseNumber || 'case'}: ${savedData.briefOfPrayer}`,
+        briefOfPrayer: `Appeal in ${savedData.caseDetails || 'case'}: ${savedData.briefOfPrayer}`,
         baseCircle: savedData.circle || '',
         baseDivision: savedData.division || '',
         baseCourtName: savedData.nameOfCourt || '',
-        baseCaseDetails: savedData.caseDetails || [savedData.caseType, savedData.caseNumber, savedData.caseYear].filter(Boolean).join(' ') || '',
-        baseCaseType: savedData.caseType || '',
-        baseCaseNumber: savedData.caseNumber || '',
-        baseCaseYear: savedData.caseYear || '',
+        baseCaseDetails: savedData.caseDetails || '',
         basePetitionerNames: savedData.petitionerNames || '',
         baseRespondentNames: savedData.respondentNames || '',
         baseCasePertainsTo: savedData.casePertainsTo || '',
@@ -707,7 +698,7 @@ export const LegalDashboard: React.FC = () => {
                       {/* Case No & Type */}
                       <td className="py-3.5 px-5">
                         <div className="font-extrabold text-blue-600 dark:text-blue-400 text-sm">
-                          {item.caseDetails || item.caseNumber}
+                          {item.caseDetails || '—'}
                         </div>
                         <div className="flex items-center gap-1.5 mt-1">
                           <span
@@ -719,7 +710,6 @@ export const LegalDashboard: React.FC = () => {
                           >
                             {item.caseClassification}
                           </span>
-                          {item.caseYear && <span className="text-slate-400 font-mono text-[11px]">Yr {item.caseYear}</span>}
                         </div>
                       </td>
 

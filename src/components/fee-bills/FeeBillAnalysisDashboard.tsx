@@ -34,11 +34,8 @@ import { ExportFeeBillsModal } from './ExportFeeBillsModal';
 export type PivotDimensionKey =
   | 'lawyerName'
   | 'caseDetails'
-  | 'caseNumber'
   | 'circle'
   | 'division'
-  | 'caseType'
-  | 'caseYear'
   | 'currentPendency'
   | 'paymentStatus'
   | 'goStatus'
@@ -129,7 +126,7 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
   const unsettledAmount = unsettledBills.reduce((acc, b) => acc + (Number(b.totalFeeAmount) || 0), 0);
 
   const distinctCases = useMemo(() => {
-    return new Set(activeBills.map((b) => String(b.caseDetails || b.caseNumber || '').trim().toUpperCase()).filter(Boolean)).size;
+    return new Set(activeBills.map((b) => String(b.caseDetails || '').trim().toUpperCase()).filter(Boolean)).size;
   }, [activeBills]);
 
   const distinctLawyers = useMemo(() => {
@@ -142,8 +139,8 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
     if (key === 'paymentStatus') {
       return bill.paymentStatus === 'Settled' ? 'Settled' : 'Unsettled';
     }
-    if (key === 'caseDetails' || key === 'caseNumber') {
-      const val = bill.caseDetails || (bill.caseNumber ? `Case ${bill.caseNumber}` : '');
+    if (key === 'caseDetails') {
+      const val = bill.caseDetails;
       return val ? String(val).trim() : 'Unspecified Court Case Particulars';
     }
     const val = (bill as unknown as Record<string, unknown>)[key];
@@ -876,7 +873,7 @@ export const FeeBillAnalysisDashboard: React.FC<FeeBillAnalysisDashboardProps> =
                       </span>
                       <span className="text-slate-400 text-xs">&bull;</span>
                       <span className="font-bold text-xs text-slate-800 dark:text-slate-200">
-                        {bill.caseNumber}
+                        {bill.caseDetails || 'Case Record'}
                       </span>
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${

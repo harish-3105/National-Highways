@@ -30,9 +30,7 @@ All fee bill data is persisted in **Supabase PostgreSQL** across two core tables
 | `lawyer_name` | `VARCHAR(255)` | `NOT NULL` | Full name of the primary Law Officer / Advocate. |
 | `lawyer_designation` | `VARCHAR(100)` | `NOT NULL` | Designation (e.g. Senior Advocate, Additional Advocate General, Government Pleader). |
 | `case_pertains_to` | `VARCHAR(50)` | `DEFAULT 'GOTN'` | Jurisdiction domain: `'GOTN'`, `'MoRTH'`, or `'BOTH'`. |
-| `case_type` | `VARCHAR(100)` | `NOT NULL` | Classification (e.g. `Writ Petition (WP)`, `Writ Appeal (WA)`, `SLP`, `LAOP`, `Arbitration Case`). |
-| `case_number` | `NUMERIC` | `NOT NULL` | Strict numeric case registration number (e.g. `1234`). Non-numeric characters stripped. |
-| `case_year` | `INTEGER` | `NOT NULL` | Strict 4-digit filing year (e.g. `2024`, up to current year). |
+| `case_details` | `TEXT` | `NOT NULL` | Court case particulars (e.g. `WP 1234/2023`, `WA 567/2024`). |
 | `assistant_name` | `VARCHAR(255)` | `NULL` | Full name of the Assistant Law Officer (mandatory if appearance fee is claimed). |
 | `assistant_designation`| `VARCHAR(100)` | `NULL` | Designation of the Assistant Law Officer. |
 | `appearance_amount` | `DECIMAL(12, 2)` | `DEFAULT 0` | Claimed appearance fee. Triggers mandatory assistance calculation. |
@@ -165,11 +163,9 @@ The form is partitioned into 5 sequential lifecycle tabs. It follows **Progressi
   1. Lawyer / Advocate Name (`lawyerName`) &mdash; Mandatory text.
   2. Lawyer Designation (`lawyerDesignation`) &mdash; Mandatory dropdown.
   3. Case Pertains To (`casePertainsTo`) &mdash; Mandatory dropdown (`GOTN` / `MoRTH` / `BOTH`).
-  4. Case Type (`caseType`) &mdash; Mandatory dropdown (`WP`, `WA`, `SLP`, etc.).
-  5. Case Number (`caseNumber`) &mdash; Mandatory numeric input (only digits permitted).
-  6. Case Year (`caseYear`) &mdash; Mandatory numeric 4-digit input (between `1900` and current year).
-  7. Assistant Law Officer Toggle (`hasAssistant`) &mdash; Optional checkbox.
-  8. Assistant Law Officer Name (`assistantName`) & Designation (`assistantDesignation`).
+  4. Case Details / Number (`caseDetails`) &mdash; Mandatory unified text input (e.g. `WP 1234/2023`).
+  5. Assistant Law Officer Toggle (`hasAssistant`) &mdash; Optional checkbox.
+  6. Assistant Law Officer Name (`assistantName`) & Designation (`assistantDesignation`).
 
 ### 4.3 Stage 3: Fee Breakdown & Assistance Calculation
 - **Fields**:

@@ -21,9 +21,6 @@ export const FEE_BILL_EXPORT_COLUMNS: FeeBillExportColumn[] = [
   { key: 'feeBillDate', label: 'Fee Bill Date', category: 'identification', defaultSelected: true },
   { key: 'receiptDate', label: 'Receipt Date in Office', category: 'identification', defaultSelected: true },
   { key: 'caseDetails', label: 'Court Case Details / Particulars', category: 'identification', defaultSelected: true },
-  { key: 'caseNumber', label: 'Court Case Number (Legacy)', category: 'identification', defaultSelected: false },
-  { key: 'caseYear', label: 'Case Year (Legacy)', category: 'identification', defaultSelected: false },
-  { key: 'caseType', label: 'Case Type (Legacy)', category: 'identification', defaultSelected: false },
   { key: 'casePertainsTo', label: 'Case Pertains To', category: 'identification', defaultSelected: true },
 
   // 2. Counsel & Jurisdiction

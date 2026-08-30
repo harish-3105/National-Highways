@@ -37,12 +37,11 @@ All legal cases are persisted in **Supabase PostgreSQL** in `public.legal_cases`
 |---|---|---|---|
 | `id` | `UUID` | `PRIMARY KEY DEFAULT gen_random_uuid()` | Unique immutable system identifier for the case docket. |
 | `case_classification` | `VARCHAR(50)` | `NOT NULL DEFAULT 'Normal Case'` | Top-level case tier: `'Normal Case'` or `'Appeal Case'`. |
-| `appeal_info` | `JSONB` | `NULL` | Appellate forum particulars (Case type, number, court, filing date, limitation, condonation). |
-| `case_type` | `VARCHAR(50)` | `NOT NULL` | Case type (e.g. `WP`, `WA`, `CRP`, `OSA`, `SLP`, `OS`, `LAOP`, `EP`). |
+| `case_details` | `TEXT` | `NOT NULL` | Court case particulars / registration number (e.g. `WP 1234/2023`). |
+| `appeal_case_details` | `TEXT` | `NULL` | Appeal case particulars (e.g. `WA 567/2024`) for appeal cases. |
+| `appeal_info` | `JSONB` | `NULL` | Appellate forum particulars (court, filing date, limitation, condonation). |
 | `circle` | `VARCHAR(100)` | `NOT NULL` | Administrative Circle (e.g. Chennai, Madurai, Salem, Coimbatore, Tiruchirappalli). |
 | `division` | `VARCHAR(100)` | `NOT NULL` | Division office jurisdiction under the selected Circle. |
-| `case_number` | `VARCHAR(100)` | `NOT NULL` | Official case registration number (e.g. `WP 1234/2023`). |
-| `case_year` | `VARCHAR(10)` | `NOT NULL` | Strict 4-digit filing year (e.g. `2024`, up to current year). |
 | `category` | `VARCHAR(50)` | `NULL DEFAULT NULL` | Legacy field relaxed to NULL in Migration 0027. Removed from UI. |
 | `name_of_court` | `VARCHAR(255)` | `NOT NULL` | Judicial forum (e.g. High Court of Madras, Madurai Bench, District Court). |
 | `petitioner_names` | `TEXT` | `NOT NULL` | Full names of Petitioner(s) / Appellant(s). |
@@ -54,9 +53,7 @@ All legal cases are persisted in **Supabase PostgreSQL** in `public.legal_cases`
 | `base_circle` | `VARCHAR(100)` | `NULL` | Administrative Circle of the original lower court case (Appeal Stage 2). |
 | `base_division` | `VARCHAR(100)` | `NULL` | Division office of the original lower court case (Appeal Stage 2). |
 | `base_court_name` | `VARCHAR(255)` | `NULL` | Lower / Original Court Name (e.g. Madras High Court Single Bench, Sub Court). |
-| `base_case_type` | `VARCHAR(100)` | `NULL` | Original Case Type (e.g. `WP`, `OS`, `LAOP`). |
-| `base_case_number` | `VARCHAR(100)` | `NULL` | Original Case Registration Number. |
-| `base_case_year` | `VARCHAR(10)` | `NULL` | Original Case Filing Year (4 digits). |
+| `base_case_details` | `TEXT` | `NULL` | Original Case Particulars / Number (e.g. `WP 1234/2023`). |
 | `base_petitioner_names` | `TEXT` | `NULL` | Original Petitioner Name(s). |
 | `base_respondent_names` | `TEXT` | `NULL` | Original Respondent Name(s). |
 | `base_case_pertains_to` | `VARCHAR(50)` | `NULL` | Original Case Jurisdiction domain (`GOTN`, `MoRTH`, `Both`). |
@@ -158,9 +155,7 @@ $$\text{delayDays} = \max\left(0, \left\lfloor \frac{\text{appealFilingDate} - \
   - `baseCircle` $\leftarrow$ `matched.circle`
   - `baseDivision` $\leftarrow$ `matched.division`
   - `baseCourtName` $\leftarrow$ `matched.nameOfCourt`
-  - `baseCaseType` $\leftarrow$ `matched.caseType`
-  - `baseCaseNumber` $\leftarrow$ `matched.caseNumber`
-  - `baseCaseYear` $\leftarrow$ `matched.caseYear`
+  - `baseCaseDetails` $\leftarrow$ `matched.caseDetails`
   - `basePetitionerNames` $\leftarrow$ `matched.petitionerNames`
   - `baseRespondentNames` $\leftarrow$ `matched.respondentNames`
   - `baseCasePertainsTo` $\leftarrow$ `matched.casePertainsTo`

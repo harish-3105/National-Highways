@@ -57,11 +57,8 @@ export async function GET(request: Request) {
             circle: item.circle,
             division: item.division,
             lawyerName: item.lawyer_name,
-            lawyerDesignation: item.lawyer_designation,
-            caseDetails: item.case_details || [item.case_type, item.case_number, item.case_year].filter(Boolean).join(' ') || '',
-            caseType: item.case_type,
-            caseNumber: item.case_number,
-            caseYear: item.case_year,
+            lawyerDesignation: item.lawyer_designation || '',
+            caseDetails: item.case_details || '',
             casePertainsTo: item.case_pertains_to || '',
             appearanceAmount: Number(item.appearance_amount) || 0,
             appearanceDate: item.appearance_date,
@@ -120,7 +117,7 @@ export async function GET(request: Request) {
           if (paymentStatus && paymentStatus !== 'ALL' && b.paymentStatus !== paymentStatus) return false;
           if (pendencyStatus && pendencyStatus !== 'ALL' && b.currentPendency !== pendencyStatus) return false;
           if (search) {
-            const str = [b.feeBillNumber, b.lawyerName, b.caseDetails, String(b.caseNumber || ''), b.division, b.circle].filter(Boolean).join(' ').toLowerCase();
+            const str = [b.feeBillNumber, b.lawyerName, b.caseDetails, b.division, b.circle].filter(Boolean).join(' ').toLowerCase();
             if (!str.includes(search)) return false;
           }
           return true;
@@ -138,7 +135,7 @@ export async function GET(request: Request) {
       if (paymentStatus && paymentStatus !== 'ALL' && b.paymentStatus !== paymentStatus) return false;
       if (pendencyStatus && pendencyStatus !== 'ALL' && b.currentPendency !== pendencyStatus) return false;
       if (search) {
-        const str = [b.feeBillNumber, b.lawyerName, b.caseDetails, String(b.caseNumber || ''), b.division, b.circle].filter(Boolean).join(' ').toLowerCase();
+        const str = [b.feeBillNumber, b.lawyerName, b.caseDetails, b.division, b.circle].filter(Boolean).join(' ').toLowerCase();
         if (!str.includes(search)) return false;
       }
       return true;
@@ -169,7 +166,7 @@ export async function POST(request: Request) {
 
     const record: FeeBillRecord = {
       ...body,
-      caseDetails: body.caseDetails || [body.caseType, body.caseNumber, body.caseYear].filter(Boolean).join(' ') || '',
+      caseDetails: (body.caseDetails || '').trim(),
       feeBillNumber: trimmedFeeBillNumber,
       id: body.id && String(body.id).startsWith('fb-') ? body.id : (body.id || `fb-${Date.now()}`),
       currentPendency: derivedPendency,
@@ -211,9 +208,6 @@ export async function POST(request: Request) {
         lawyer_name: record.lawyerName,
         lawyer_designation: record.lawyerDesignation,
         case_details: record.caseDetails || null,
-        case_type: record.caseType || null,
-        case_number: record.caseNumber ? (isNaN(Number(record.caseNumber)) ? null : Number(record.caseNumber)) : null,
-        case_year: record.caseYear ? (isNaN(Number(record.caseYear)) ? null : Number(record.caseYear)) : null,
         case_pertains_to: record.casePertainsTo || 'GOTN',
         appearance_amount: Number(record.appearanceAmount) || 0,
         appearance_date: record.appearanceDate || null,
@@ -275,8 +269,6 @@ export async function POST(request: Request) {
           delete fallbackPayload.assistant_payment_status;
           delete fallbackPayload.go_reference_letter_no;
           delete fallbackPayload.go_reference_letter_date;
-          fallbackPayload.case_number = String(record.caseNumber || '');
-          fallbackPayload.case_year = String(record.caseYear || '');
           fallbackPayload.proposal_movement = {
             ...(typeof record.proposalMovement === 'object' ? record.proposalMovement : {}),
             _ext: {
@@ -318,8 +310,6 @@ export async function POST(request: Request) {
           delete fallbackPayload.assistant_payment_status;
           delete fallbackPayload.go_reference_letter_no;
           delete fallbackPayload.go_reference_letter_date;
-          fallbackPayload.case_number = String(record.caseNumber || '');
-          fallbackPayload.case_year = String(record.caseYear || '');
           fallbackPayload.proposal_movement = {
             ...(typeof record.proposalMovement === 'object' ? record.proposalMovement : {}),
             _ext: {

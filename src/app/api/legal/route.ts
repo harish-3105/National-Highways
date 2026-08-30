@@ -23,14 +23,13 @@ function mapDbRowToLegalCase(item: Record<string, unknown>): LegalCaseData {
         appealCaseDetails:
           appealInfo.appealCaseDetails ||
           getStr(item.appeal_case_details) ||
-          [appealInfo.appealCaseType, appealInfo.appealCaseNumber, appealInfo.appealYear].filter(Boolean).join(' ') ||
           '',
       }
     : undefined;
 
-  const caseDetailsStr = getStr(item.case_details) || [item.case_type, item.case_number, item.case_year].filter(Boolean).join(' ') || '';
+  const caseDetailsStr = getStr(item.case_details) || getStr(item.case_number) || '';
   const appealCaseDetailsStr = getStr(item.appeal_case_details) || (appealInfoObj?.appealCaseDetails || '');
-  const baseCaseDetailsStr = getStr(item.base_case_details) || [item.base_case_type, item.base_case_number, item.base_case_year].filter(Boolean).join(' ') || '';
+  const baseCaseDetailsStr = getStr(item.base_case_details) || getStr(item.base_case_number) || '';
 
   return {
     id: item.id ? String(item.id) : `lc-${Date.now()}`,
@@ -39,11 +38,8 @@ function mapDbRowToLegalCase(item: Record<string, unknown>): LegalCaseData {
     caseDetails: caseDetailsStr,
     appealCaseDetails: appealCaseDetailsStr,
     baseCaseDetails: baseCaseDetailsStr,
-    caseType: getStr(item.case_type),
     circle: getStr(item.circle),
     division: getStr(item.division),
-    caseNumber: getStr(item.case_number) || caseDetailsStr,
-    caseYear: getStr(item.case_year),
     category: getStr(item.category),
     nameOfCourt: getStr(item.name_of_court),
     petitionerNames: getStr(item.petitioner_names || item.petitioner_name || item.name_of_petitioner),
@@ -55,9 +51,6 @@ function mapDbRowToLegalCase(item: Record<string, unknown>): LegalCaseData {
     baseCircle: getStr(item.base_circle),
     baseDivision: getStr(item.base_division),
     baseCourtName: getStr(item.base_court_name),
-    baseCaseType: getStr(item.base_case_type),
-    baseCaseNumber: getStr(item.base_case_number) || baseCaseDetailsStr,
-    baseCaseYear: getStr(item.base_case_year),
     basePetitionerNames: getStr(item.base_petitioner_names),
     baseRespondentNames: getStr(item.base_respondent_names),
     baseCasePertainsTo: getStr(item.base_case_pertains_to),
@@ -172,7 +165,6 @@ export async function GET(req: NextRequest) {
               (c.caseDetails && c.caseDetails.toLowerCase().includes(term)) ||
               (c.appealCaseDetails && c.appealCaseDetails.toLowerCase().includes(term)) ||
               (c.baseCaseDetails && c.baseCaseDetails.toLowerCase().includes(term)) ||
-              (c.caseNumber && c.caseNumber.toLowerCase().includes(term)) ||
               c.nameOfCourt.toLowerCase().includes(term) ||
               c.petitionerNames.toLowerCase().includes(term) ||
               c.respondentNames.toLowerCase().includes(term) ||
@@ -214,18 +206,15 @@ export async function POST(req: NextRequest) {
         (body.caseClassification === 'Appeal Case'
           ? body.appealCaseDetails || body.appealInfo?.appealCaseDetails
           : '') ||
-        [body.caseType, body.caseNumber, body.caseYear].filter(Boolean).join(' ') ||
         null;
 
       const computedAppealCaseDetails =
         body.appealCaseDetails ||
         body.appealInfo?.appealCaseDetails ||
-        [body.appealInfo?.appealCaseType, body.appealInfo?.appealCaseNumber, body.appealInfo?.appealYear].filter(Boolean).join(' ') ||
         null;
 
       const computedBaseCaseDetails =
         body.baseCaseDetails ||
-        [body.baseCaseType, body.baseCaseNumber, body.baseCaseYear].filter(Boolean).join(' ') ||
         null;
 
       const payload: Record<string, unknown> = {
@@ -234,11 +223,8 @@ export async function POST(req: NextRequest) {
         case_details: computedCaseDetails,
         appeal_case_details: computedAppealCaseDetails,
         base_case_details: computedBaseCaseDetails,
-        case_type: body.caseType || '',
         circle: body.circle,
         division: body.division,
-        case_number: body.caseNumber || computedCaseDetails || '',
-        case_year: body.caseYear || '',
         category: body.category || '',
         name_of_court: body.nameOfCourt,
         petitioner_names: body.petitionerNames,
@@ -250,9 +236,6 @@ export async function POST(req: NextRequest) {
         base_circle: body.baseCircle || null,
         base_division: body.baseDivision || null,
         base_court_name: body.baseCourtName || null,
-        base_case_type: body.baseCaseType || null,
-        base_case_number: body.baseCaseNumber || null,
-        base_case_year: body.baseCaseYear || null,
         base_petitioner_names: body.basePetitionerNames || null,
         base_respondent_names: body.baseRespondentNames || null,
         base_case_pertains_to: body.baseCasePertainsTo || null,
