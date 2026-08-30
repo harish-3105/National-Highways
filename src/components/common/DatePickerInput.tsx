@@ -200,7 +200,7 @@ export const DatePickerInput: React.FC<DatePickerInputProps> = ({
           max={max ? normalizeToYmd(max) : maxToday ? todayYmd : undefined}
           onChange={handlePickerChange}
           disabled={disabled}
-          className="absolute inset-0 opacity-0 pointer-events-none w-0 h-0"
+          className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
         />
 
         <button
