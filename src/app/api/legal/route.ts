@@ -13,27 +13,48 @@ function mapDbRowToLegalCase(item: Record<string, unknown>): LegalCaseData {
     return String(val);
   };
 
-  const appealInfo = (item.appeal_info as LegalCaseData['appealInfo']) || undefined;
+  const rawAppealInfo = (item.appeal_info as Record<string, unknown>) || undefined;
   const postHearing = (item.post_hearing_details as Record<string, unknown>) || undefined;
   const caDetails = (item.counter_affidavit_details as Record<string, unknown>) || undefined;
 
-  const appealInfoObj = appealInfo
+  const appellateCourt = getStr(item.appellate_court) || (rawAppealInfo ? getStr(rawAppealInfo.appellateCourt) : '');
+  const appealCaseDetailsStr = getStr(item.appeal_case_details) || (rawAppealInfo ? getStr(rawAppealInfo.appealCaseDetails) : '');
+  const appealFilingDate = getStr(item.appeal_filing_date) || (rawAppealInfo ? getStr(rawAppealInfo.appealFilingDate) : '');
+  const limitationDueDate = getStr(item.limitation_due_date) || (rawAppealInfo ? getStr(rawAppealInfo.limitationDueDate) : '');
+  const delayInFilingAppeal = getStr(item.delay_in_filing_appeal, rawAppealInfo ? getStr(rawAppealInfo.delayInFilingAppeal, 'No') : 'No');
+  const delayPeriodDays = item.delay_period_days !== null && item.delay_period_days !== undefined
+    ? Number(item.delay_period_days)
+    : rawAppealInfo && rawAppealInfo.delayPeriodDays !== undefined && rawAppealInfo.delayPeriodDays !== null
+    ? Number(rawAppealInfo.delayPeriodDays)
+    : 0;
+  const condonationOfDelay = getStr(item.condonation_of_delay) || (rawAppealInfo ? getStr(rawAppealInfo.condonationOfDelay) : '');
+
+  const isAppealClassification = getStr(item.case_classification) === 'Appeal Case' || Boolean(rawAppealInfo);
+
+  const appealInfoObj: LegalCaseData['appealInfo'] = isAppealClassification
     ? {
-        ...appealInfo,
-        appealCaseDetails:
-          appealInfo.appealCaseDetails ||
-          getStr(item.appeal_case_details) ||
-          '',
+        appellateCourt,
+        appealCaseDetails: appealCaseDetailsStr,
+        appealFilingDate,
+        limitationDueDate,
+        delayInFilingAppeal: (delayInFilingAppeal as any) || 'No',
+        delayPeriodDays,
+        condonationOfDelay: (condonationOfDelay as any) || '',
       }
     : undefined;
 
   const caseDetailsStr = getStr(item.case_details) || getStr(item.case_number) || '';
-  const appealCaseDetailsStr = getStr(item.appeal_case_details) || (appealInfoObj?.appealCaseDetails || '');
   const baseCaseDetailsStr = getStr(item.base_case_details) || getStr(item.base_case_number) || '';
 
   return {
     id: item.id ? String(item.id) : `lc-${Date.now()}`,
-    caseClassification: getStr(item.case_classification, item.appeal_info ? 'Appeal Case' : 'Normal Case') as LegalCaseData['caseClassification'],
+    caseClassification: (isAppealClassification ? 'Appeal Case' : 'Normal Case') as LegalCaseData['caseClassification'],
+    appellateCourt: appellateCourt || undefined,
+    appealFilingDate: appealFilingDate || undefined,
+    limitationDueDate: limitationDueDate || undefined,
+    delayInFilingAppeal: (delayInFilingAppeal as any) || 'No',
+    delayPeriodDays,
+    condonationOfDelay: condonationOfDelay || undefined,
     appealInfo: appealInfoObj,
     caseDetails: caseDetailsStr,
     appealCaseDetails: appealCaseDetailsStr,
@@ -177,6 +198,13 @@ export async function GET(req: NextRequest) {
   }
 }
 
+function parseUuidOrNull(val: unknown): string | null {
+  if (typeof val !== 'string' || !val) return null;
+  const trimmed = val.trim();
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(trimmed) ? trimmed : null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body: LegalCaseData = await req.json();
@@ -207,15 +235,53 @@ export async function POST(req: NextRequest) {
         body.appealInfo?.appealCaseDetails ||
         null;
 
+      const computedAppellateCourt =
+        body.appellateCourt ||
+        body.appealInfo?.appellateCourt ||
+        (body.caseClassification === 'Appeal Case' ? body.nameOfCourt : null) ||
+        null;
+
+      const computedAppealFilingDate =
+        body.appealFilingDate ||
+        body.appealInfo?.appealFilingDate ||
+        null;
+
+      const computedLimitationDueDate =
+        body.limitationDueDate ||
+        body.appealInfo?.limitationDueDate ||
+        null;
+
+      const computedDelayInFilingAppeal =
+        body.delayInFilingAppeal ||
+        body.appealInfo?.delayInFilingAppeal ||
+        'No';
+
+      const computedDelayPeriodDays =
+        body.delayPeriodDays !== undefined && body.delayPeriodDays !== null
+          ? Number(body.delayPeriodDays)
+          : body.appealInfo?.delayPeriodDays !== undefined && body.appealInfo?.delayPeriodDays !== null
+          ? Number(body.appealInfo.delayPeriodDays)
+          : 0;
+
+      const computedCondonationOfDelay =
+        body.condonationOfDelay ||
+        body.appealInfo?.condonationOfDelay ||
+        null;
+
       const computedBaseCaseDetails =
         body.baseCaseDetails ||
         null;
 
       const payload: Record<string, unknown> = {
         case_classification: body.caseClassification || 'Normal Case',
-        appeal_info: body.appealInfo || null,
         case_details: computedCaseDetails,
         appeal_case_details: computedAppealCaseDetails,
+        appellate_court: computedAppellateCourt,
+        appeal_filing_date: computedAppealFilingDate,
+        limitation_due_date: computedLimitationDueDate,
+        delay_in_filing_appeal: computedDelayInFilingAppeal,
+        delay_period_days: computedDelayPeriodDays,
+        condonation_of_delay: computedCondonationOfDelay,
         base_case_details: computedBaseCaseDetails,
         circle: body.circle,
         division: body.division,
@@ -235,12 +301,12 @@ export async function POST(req: NextRequest) {
         base_case_pertains_to: body.baseCasePertainsTo || null,
         base_nature_of_case: body.baseNatureOfCase || null,
         base_brief_of_prayer: body.baseBriefOfPrayer || null,
-        linked_base_case_id: body.linkedBaseCaseId || null,
+        linked_base_case_id: parseUuidOrNull(body.linkedBaseCaseId),
         financial_implication: body.financialImplication ? String(body.financialImplication) : null,
-        present_stage: body.presentStage,
-        current_status: body.currentStatus,
-        ca_required: body.caRequired,
-        ca_filed: body.caFiled,
+        present_stage: body.presentStage || 'Hearing',
+        current_status: body.currentStatus || 'Pending',
+        ca_required: body.caRequired || 'Yes',
+        ca_filed: body.caFiled || 'No',
         ca_due_date: body.caDueDate || null,
         ca_filed_date: body.caFiledDate || null,
         last_hearing_date: body.lastHearingDate || null,
@@ -250,7 +316,7 @@ export async function POST(req: NextRequest) {
         interim_order_date: body.interimOrderDate || null,
         latest_order_final_order: body.latestOrderFinalOrder || null,
         latest_order_date: body.latestOrderDate || null,
-        compliance_required: body.complianceRequired,
+        compliance_required: body.complianceRequired || 'No',
         compliance_action: body.complianceAction || null,
         compliance_period: body.compliancePeriod || null,
         compliance_end_date: body.complianceEndDate || null,
@@ -264,7 +330,7 @@ export async function POST(req: NextRequest) {
         gp_opinion: body.gpOpinion || 'Pending',
         appeal_filed: body.appealFiled || 'No',
         appeal_filed_date: body.appealFiledDate || null,
-        linked_appeal_case_id: body.linkedAppealCaseId || null,
+        linked_appeal_case_id: parseUuidOrNull(body.linkedAppealCaseId),
         final_order_remarks: body.finalOrderRemarks || null,
         delete_status: body.delete_status || 'ACTIVE',
         updated_at: nowIso,

@@ -27,14 +27,20 @@ export interface LegalCaseData {
   // 0. Top Level Case Classification
   caseClassification: CaseClassificationType; // 'Normal Case' | 'Appeal Case'
 
-  // A. Appeal Case Information (Present only if caseClassification === 'Appeal Case')
+  // A. Appeal Case Dedicated Columns (1:1 with PostgreSQL)
+  appellateCourt?: string;
+  appealCaseDetails?: string;
+  appealFilingDate?: string;
+  limitationDueDate?: string;
+  delayInFilingAppeal?: YesNoType;
+  delayPeriodDays?: number;
+  condonationOfDelay?: string;
   appealInfo?: AppealCaseInformation;
 
   // B.1. Case Information (Stage 1: Registry)
   caseDetails: string; // Unified open text field (e.g. WP 1234/2023)
   circle: CircleType; // Dropdown: Chennai, Salem, Madurai, etc.
   division: string; // Dropdown: Cascading division
-  appealCaseDetails?: string; // Dedicated column for appeal cases
   category?: string; // Optional legacy column
   nameOfCourt: string; // Dropdown: High Court of Madras, Madurai Bench, District Court, etc.
   petitionerNames: string; // Text field (Name of Petitioner(s))

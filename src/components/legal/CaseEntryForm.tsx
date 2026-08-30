@@ -552,9 +552,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
         formData.circle &&
         formData.division &&
         formData.nameOfCourt &&
-        formData.petitionerNames.trim() &&
-        formData.respondentNames.trim() &&
-        formData.briefOfPrayer.trim() &&
+        formData.petitionerNames?.trim() &&
+        formData.respondentNames?.trim() &&
+        formData.briefOfPrayer?.trim() &&
         Object.keys(validateSingleStage(stageIdx)).length === 0
       );
     }
@@ -562,9 +562,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       return Boolean(
         formData.appealInfo?.appealCaseDetails?.trim() &&
         formData.appealInfo?.appellateCourt &&
-        formData.petitionerNames.trim() &&
-        formData.respondentNames.trim() &&
-        formData.briefOfPrayer.trim() &&
+        formData.petitionerNames?.trim() &&
+        formData.respondentNames?.trim() &&
+        formData.briefOfPrayer?.trim() &&
         Object.keys(validateSingleStage(stageIdx)).length === 0
       );
     }
