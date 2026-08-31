@@ -526,6 +526,24 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 </div>
               </div>
 
+              {/* Base Final Order & Date */}
+              {(caseData.baseFinalOrder || caseData.baseFinalOrderDate) && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2 p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Final Order / Direction</span>
+                    <p className="text-slate-900 dark:text-slate-100 text-xs font-medium leading-relaxed">
+                      {caseData.baseFinalOrder || '—'}
+                    </p>
+                  </div>
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Final Order Date</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                      📅 {formatDateIndian(caseData.baseFinalOrderDate)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {caseData.baseBriefOfPrayer && (
                 <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Brief of Prayer</span>

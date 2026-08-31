@@ -172,6 +172,8 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     baseCasePertainsTo: initial?.baseCasePertainsTo || '',
     baseNatureOfCase: initial?.baseNatureOfCase || '',
     baseBriefOfPrayer: initial?.baseBriefOfPrayer || '',
+    baseFinalOrder: initial?.baseFinalOrder || '',
+    baseFinalOrderDate: initial?.baseFinalOrderDate || '',
     linkedBaseCaseId: initial?.linkedBaseCaseId || '',
     financialImplication: initial?.financialImplication || '',
     presentStage: initial?.presentStage || '',
@@ -392,6 +394,8 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
         baseCasePertainsTo: matched.casePertainsTo || '',
         baseNatureOfCase: matched.natureOfCase || '',
         baseBriefOfPrayer: matched.briefOfPrayer || '',
+        baseFinalOrder: matched.finalResultOrder || matched.latestOrderFinalOrder || '',
+        baseFinalOrderDate: matched.finalOrderDate || matched.latestOrderDate || '',
         linkedBaseCaseId: matched.id || '',
       }));
 
@@ -408,6 +412,8 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
           'baseCasePertainsTo',
           'baseNatureOfCase',
           'baseBriefOfPrayer',
+          'baseFinalOrder',
+          'baseFinalOrderDate',
         ].forEach((k) => delete next[k]);
         return next;
       });
@@ -1361,6 +1367,33 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                   required
                 />
                 {errors.baseBriefOfPrayer && <p className="text-[11px] text-rose-500 mt-1">{errors.baseBriefOfPrayer}</p>}
+              </div>
+
+              {/* Base Final Order & Final Order Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Base / Lower Court Final Order / Direction
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter lower court final judgment/order details..."
+                    value={formData.baseFinalOrder || ''}
+                    onChange={(e) => handleChange('baseFinalOrder', e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                  />
+                  {errors.baseFinalOrder && <p className="text-[11px] text-rose-500 mt-1">{errors.baseFinalOrder}</p>}
+                </div>
+
+                <div>
+                  <DatePickerInput
+                    label="Base Final Order Date"
+                    value={formData.baseFinalOrderDate || ''}
+                    onChange={(val) => handleChange('baseFinalOrderDate', val)}
+                    error={errors.baseFinalOrderDate}
+                    placeholder="DD/MM/YYYY"
+                  />
+                </div>
               </div>
             </div>
           )}

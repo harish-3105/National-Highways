@@ -60,6 +60,8 @@ export interface LegalCaseData {
   baseCasePertainsTo?: CasePertainsToType; // Dropdown: GOTN | MoRTH | Both | NHAI
   baseNatureOfCase?: NatureOfCaseType; // Dropdown
   baseBriefOfPrayer?: string; // Textarea: Original Prayer
+  baseFinalOrder?: string; // Text field: Lower court final order/direction
+  baseFinalOrderDate?: string; // Date field: Lower court final order date (YYYY-MM-DD)
   linkedBaseCaseId?: string; // Foreign key / ID of the linked original case in legal_cases
 
   // B.2. Counter Affidavit (CA) & Financial Implication
