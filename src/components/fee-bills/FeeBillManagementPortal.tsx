@@ -18,7 +18,6 @@ import {
   Plus,
   Clock,
   PieChart,
-  Settings,
   Search,
   AlertTriangle,
   Archive,
@@ -265,35 +264,6 @@ export function FeeBillManagementPortal() {
           label: "New Fee Bill Voucher",
         }}
       />
-
-      {/* Main Top Navigation Tabs */}
-      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab('workspace')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'workspace'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>Fee Claims Workspace ({bills.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'settings'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            <span>Master Data Config</span>
-          </button>
-        </div>
-      </div>
 
       {/* WORKSPACE AREA */}
       {activeTab === 'workspace' && (
