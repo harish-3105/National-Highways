@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, X, LayoutGrid, Table, ArrowUpDown, Filter, Archive } from 'lucide-react';
+import { Search, X, LayoutGrid, Table, ArrowUpDown, Filter } from 'lucide-react';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 interface FilterControlsProps {
@@ -14,8 +14,6 @@ interface FilterControlsProps {
   viewMode: 'table' | 'grid';
   onViewModeChange: (mode: 'table' | 'grid') => void;
   totalResults: number;
-  showArchived?: boolean;
-  onToggleArchived?: () => void;
 }
 
 export const FilterControls: React.FC<FilterControlsProps> = ({
@@ -28,8 +26,6 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
   viewMode,
   onViewModeChange,
   totalResults,
-  showArchived = false,
-  onToggleArchived,
 }) => {
   const configOptions = [
     { label: 'All Lanes', value: 'ALL' },
@@ -85,24 +81,8 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
         })}
       </div>
 
-      {/* Right Controls: Sort, Archive & View Toggle */}
+      {/* Right Controls: Sort & View Toggle */}
       <div className="flex items-center gap-3">
-        {/* Archive Toggle */}
-        {onToggleArchived && (
-          <button
-            onClick={onToggleArchived}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-              showArchived
-                ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-            }`}
-            title={showArchived ? 'Hide Deleted Corridors' : 'Show Deleted Corridors'}
-          >
-            <Archive className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{showArchived ? 'Hide Archived' : 'Show Archived'}</span>
-          </button>
-        )}
-
         {/* Sort Selector */}
         <div className="w-48">
           <SearchableSelect

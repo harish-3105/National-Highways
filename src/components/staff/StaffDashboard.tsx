@@ -454,15 +454,7 @@ export const StaffDashboard: React.FC = () => {
               </div>
 
               {/* Quadrant 4: Archived Records */}
-              <button
-                type="button"
-                onClick={() => setShowArchived(!showArchived)}
-                className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
-                  showArchived
-                    ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/30 dark:bg-amber-950/20"
-                    : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-                }`}
-              >
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                     Archived Personnel
@@ -483,9 +475,9 @@ export const StaffDashboard: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-semibold">
-                  Soft-Deleted Personnel &bull; Click to toggle archive view
+                  Soft-Deleted Personnel &bull; Managed via Top Header Toggle
                 </div>
-              </button>
+              </div>
             </div>
 
             {/* Smart Search & 7-Level Cascading Hierarchy Filters */}

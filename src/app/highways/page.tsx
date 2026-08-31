@@ -279,8 +279,6 @@ export default function HighwaysPage() {
                     viewMode={viewMode}
                     onViewModeChange={setViewMode}
                     totalResults={displayedCorridors.length}
-                    showArchived={showArchived}
-                    onToggleArchived={() => setShowArchived((v) => !v)}
                   />
                 </div>
 
