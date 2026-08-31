@@ -423,11 +423,11 @@ export function FeeBillManagementPortal() {
 
           {/* Symmetrical Single-Bar Toolbar (Option A Layout) */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-xs mb-6">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3.5">
               {/* Left Side: Search + Circle + Division Filters */}
               <div className="flex flex-1 flex-wrap items-center gap-2.5">
                 {/* Search Bar with Quick Clear */}
-                <div className="relative flex-1 min-w-[220px] max-w-sm">
+                <div className="relative flex-1 min-w-[260px]">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
@@ -449,7 +449,7 @@ export function FeeBillManagementPortal() {
                 </div>
 
                 {/* Circle Select */}
-                <div className="w-40">
+                <div className="w-full sm:w-48">
                   <SearchableSelect
                     options={['All Circles', ...(masterData.circles || []).filter((c) => c.active).map((c) => c.name)]}
                     value={selectedCircle ? `${selectedCircle}` : 'All Circles'}
@@ -462,7 +462,7 @@ export function FeeBillManagementPortal() {
                 </div>
 
                 {/* Division Select */}
-                <div className="w-44">
+                <div className="w-full sm:w-52">
                   <SearchableSelect
                     options={['All Divisions', ...availableDivisions.map((d) => d.name)]}
                     value={selectedDivision ? `${selectedDivision}` : 'All Divisions'}
@@ -476,7 +476,7 @@ export function FeeBillManagementPortal() {
                   <button
                     type="button"
                     onClick={handleResetFilters}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition-all cursor-pointer"
                     title="Reset all filters and search"
                   >
                     <RotateCcw className="w-3 h-3" />
@@ -486,44 +486,44 @@ export function FeeBillManagementPortal() {
               </div>
 
               {/* Right Side: Segmented View Mode Switcher */}
-              <div className="flex items-center gap-1.5 shrink-0 self-start lg:self-auto">
-                <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 gap-1">
+              <div className="flex items-center gap-1.5 shrink-0 self-start xl:self-auto">
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 gap-1.5">
                   <button
                     type="button"
                     onClick={() => setViewMode('ledger')}
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       viewMode === 'ledger'
                         ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
-                    <FileText className="w-3.5 h-3.5" />
+                    <FileText className="w-4 h-4" />
                     <span>Ledger</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setViewMode('analytics')}
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       viewMode === 'analytics'
                         ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
-                    <PieChart className="w-3.5 h-3.5" />
+                    <PieChart className="w-4 h-4" />
                     <span>Analytics</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setViewMode('pendency')}
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       viewMode === 'pendency'
                         ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
-                    <Clock className="w-3.5 h-3.5" />
+                    <Clock className="w-4 h-4" />
                     <span>Pendency</span>
                   </button>
                 </div>

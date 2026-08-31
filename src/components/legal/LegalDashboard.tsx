@@ -627,8 +627,8 @@ export const LegalDashboard: React.FC = () => {
       {/* FILTER CONTROLS (Option A Proportional Layout) */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-xs space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-12 gap-2.5 items-center">
-          {/* Search Input (3 cols on lg) */}
-          <div className="relative col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-3">
+          {/* Search Input (4 cols on lg) */}
+          <div className="relative col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -646,16 +646,6 @@ export const LegalDashboard: React.FC = () => {
                 <X className="w-4 h-4" />
               </button>
             )}
-          </div>
-
-          {/* Classification Filter (2 cols) */}
-          <div className="col-span-1 md:col-span-1 lg:col-span-2">
-            <SearchableSelect
-              options={['All Classifications', 'Normal Case', 'Appeal Case']}
-              value={filterClassification || 'All Classifications'}
-              onChange={(val) => setFilterClassification(val === 'All Classifications' ? '' : val)}
-              placeholder="Classification..."
-            />
           </div>
 
           {/* Circle Filter (2 cols) */}
@@ -691,23 +681,23 @@ export const LegalDashboard: React.FC = () => {
             />
           </div>
 
-          {/* Counter Status Filter (1 col on lg) */}
-          <div className="col-span-1 md:col-span-1 lg:col-span-1">
+          {/* Counter Status Filter (2 cols on lg) */}
+          <div className="col-span-1 md:col-span-1 lg:col-span-2">
             <SearchableSelect
-              options={['All CA', 'CA Filed', 'CA Pending']}
+              options={['All CA Statuses', 'CA Filed (Yes)', 'CA Pending (No)']}
               value={
                 filterCounterStatus === 'Yes'
-                  ? 'CA Filed'
+                  ? 'CA Filed (Yes)'
                   : filterCounterStatus === 'No'
-                  ? 'CA Pending'
-                  : 'All CA'
+                  ? 'CA Pending (No)'
+                  : 'All CA Statuses'
               }
               onChange={(val) => {
-                if (val.includes('Filed')) setFilterCounterStatus('Yes');
-                else if (val.includes('Pending')) setFilterCounterStatus('No');
+                if (val.includes('Yes')) setFilterCounterStatus('Yes');
+                else if (val.includes('No')) setFilterCounterStatus('No');
                 else setFilterCounterStatus('');
               }}
-              placeholder="CA State..."
+              placeholder="Counter Affidavit..."
             />
           </div>
         </div>

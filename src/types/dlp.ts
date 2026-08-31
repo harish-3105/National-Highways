@@ -41,6 +41,7 @@ export interface DlpCorridor {
   created_at?: string;
   updated_at?: string;
   work_stretches?: DlpWorkStretch[];
+  all_work_stretches?: DlpWorkStretch[];
 }
 
 export type DlpMasterConfigCategory = 'circle' | 'division' | 'scheme';

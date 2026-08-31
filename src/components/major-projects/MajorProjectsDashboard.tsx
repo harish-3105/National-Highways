@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   RotateCcw,
   Percent,
+  DollarSign,
   X,
   History,
   Download,
@@ -65,6 +66,8 @@ export const MajorProjectsDashboard: React.FC = () => {
   const [delayMax, setDelayMax] = useState<string>('');
   const [progressMin, setProgressMin] = useState<string>('');
   const [progressMax, setProgressMax] = useState<string>('');
+  const [financialProgressMin, setFinancialProgressMin] = useState<string>('');
+  const [financialProgressMax, setFinancialProgressMax] = useState<string>('');
 
   // Modals state
   const [isMasterModalOpen, setIsMasterModalOpen] = useState<boolean>(false);
@@ -228,7 +231,7 @@ export const MajorProjectsDashboard: React.FC = () => {
         matchesDelayRange = matchesDelayRange && overrun <= Number(delayMax);
       }
 
-      // 5. Progress Range Filter (in %)
+      // 5. Physical Progress Range Filter (in %)
       let matchesProgressRange = true;
       const prog =
         p.progress_percent !== undefined && p.progress_percent !== null ? Number(p.progress_percent) : 0;
@@ -239,7 +242,24 @@ export const MajorProjectsDashboard: React.FC = () => {
         matchesProgressRange = matchesProgressRange && prog <= Number(progressMax);
       }
 
-      // 6. Search filter
+      // 6. Financial Progress Range Filter (in %)
+      let matchesFinancialProgressRange = true;
+      const finProg =
+        calculateFinancialProgress(
+          p.cumm_financial_expenditure_cr,
+          p.revised_cost_cr,
+          p.project_cost_cr
+        ) ?? 0;
+      if (financialProgressMin !== '') {
+        matchesFinancialProgressRange =
+          matchesFinancialProgressRange && finProg >= Number(financialProgressMin);
+      }
+      if (financialProgressMax !== '') {
+        matchesFinancialProgressRange =
+          matchesFinancialProgressRange && finProg <= Number(financialProgressMax);
+      }
+
+      // 7. Search filter
       const matchesSearch =
         !searchTerm.trim() ||
         (p.name_of_work || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -264,6 +284,7 @@ export const MajorProjectsDashboard: React.FC = () => {
         matchesDivision &&
         matchesDelayRange &&
         matchesProgressRange &&
+        matchesFinancialProgressRange &&
         matchesSearch
       );
     });
@@ -276,6 +297,8 @@ export const MajorProjectsDashboard: React.FC = () => {
     delayMax,
     progressMin,
     progressMax,
+    financialProgressMin,
+    financialProgressMax,
     searchTerm,
   ]);
 
@@ -343,7 +366,9 @@ export const MajorProjectsDashboard: React.FC = () => {
       delayMin !== '' ||
       delayMax !== '' ||
       progressMin !== '' ||
-      progressMax !== ''
+      progressMax !== '' ||
+      financialProgressMin !== '' ||
+      financialProgressMax !== ''
     );
   }, [
     searchTerm,
@@ -354,6 +379,8 @@ export const MajorProjectsDashboard: React.FC = () => {
     delayMax,
     progressMin,
     progressMax,
+    financialProgressMin,
+    financialProgressMax,
   ]);
 
   const handleResetFilters = () => {
@@ -365,6 +392,8 @@ export const MajorProjectsDashboard: React.FC = () => {
     setDelayMax('');
     setProgressMin('');
     setProgressMax('');
+    setFinancialProgressMin('');
+    setFinancialProgressMax('');
   };
 
   const handleToggleSelect = (id: string) => {
@@ -665,22 +694,22 @@ export const MajorProjectsDashboard: React.FC = () => {
 
       {/* Comprehensive 2-Tier Filter Panel (Option A) */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
-        {/* Tier 1: Search Bar, Circle & Division Cascade, and Mega Projects Filter */}
+        {/* Tier 1: Search Bar, Circle & Division Cascade */}
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
           {/* Search Bar */}
-          <div className="relative flex-1 min-w-[260px]">
+          <div className="relative flex-1 min-w-[280px]">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search works by name, job number, PMIS ID, contractor..."
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
+              className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 title="Clear search"
               >
                 <X className="w-4 h-4" />
@@ -688,10 +717,10 @@ export const MajorProjectsDashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Circle & Division Cascading Selects & 50Cr Button */}
+          {/* Circle & Division Cascading Selects */}
           <div className="flex items-center gap-2.5 w-full lg:w-auto flex-wrap sm:flex-nowrap shrink-0">
             {/* Circle Filter */}
-            <div className="w-full sm:w-44">
+            <div className="w-full sm:w-48">
               <SearchableSelect
                 options={['All Circles', ...circlesList]}
                 value={selectedCircle === 'ALL' || !selectedCircle ? 'All Circles' : selectedCircle}
@@ -705,7 +734,7 @@ export const MajorProjectsDashboard: React.FC = () => {
             </div>
 
             {/* Division Filter */}
-            <div className="w-full sm:w-44">
+            <div className="w-full sm:w-48">
               <SearchableSelect
                 options={['All Divisions', ...divisionsList]}
                 value={selectedDivision === 'ALL' || !selectedDivision ? 'All Divisions' : selectedDivision}
@@ -713,33 +742,11 @@ export const MajorProjectsDashboard: React.FC = () => {
                 placeholder="Division..."
               />
             </div>
-
-            {/* ≥ ₹50 Cr Mega Works Toggle */}
-            <button
-              onClick={() => setActiveKpiFilter((prev) => (prev === 'ABOVE_50CR' ? 'ACTIVE_ALL' : 'ABOVE_50CR'))}
-              className={`px-3 py-2 rounded-xl transition-all cursor-pointer font-bold text-xs flex items-center gap-1.5 border shrink-0 ${
-                activeKpiFilter === 'ABOVE_50CR'
-                  ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                  : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-500'
-              }`}
-              title="Toggle filter for Mega Projects (Cost ≥ ₹50 Cr)"
-            >
-              <span>⚡ &ge; ₹50 Cr</span>
-              <span
-                className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold ${
-                  activeKpiFilter === 'ABOVE_50CR'
-                    ? 'bg-amber-800 text-white'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
-                }`}
-              >
-                {above50CrCount}
-              </span>
-            </button>
           </div>
         </div>
 
-        {/* Tier 2: Delay (Yrs) & Physical Progress (%) Range Sliders + Result Counts & Reset */}
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+        {/* Tier 2: Delay (Yrs), Physical Progress (%), and Financial Progress (%) Range Sliders */}
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-3 flex-wrap">
             {/* 1. Delay (Years) Range Filter */}
             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/70">
@@ -783,11 +790,11 @@ export const MajorProjectsDashboard: React.FC = () => {
               )}
             </div>
 
-            {/* 2. Progress (%) Range Filter */}
+            {/* 2. Physical Progress (%) Range Filter */}
             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/70">
               <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 text-[11px]">
                 <Percent className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Progress (%):</span>
+                <span>Physical (%):</span>
               </span>
               <div className="flex items-center gap-1.5 font-mono">
                 <input
@@ -818,7 +825,49 @@ export const MajorProjectsDashboard: React.FC = () => {
                     setProgressMax('');
                   }}
                   className="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                  title="Clear Progress Filter"
+                  title="Clear Physical Progress Filter"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* 3. Financial Progress (%) Range Filter */}
+            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/70">
+              <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 text-[11px]">
+                <DollarSign className="w-3.5 h-3.5 text-blue-500" />
+                <span>Financial (%):</span>
+              </span>
+              <div className="flex items-center gap-1.5 font-mono">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="0%"
+                  value={financialProgressMin}
+                  onChange={(e) => setFinancialProgressMin(e.target.value)}
+                  className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
+                />
+                <span className="text-slate-400 font-normal text-[11px]">to</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="100%"
+                  value={financialProgressMax}
+                  onChange={(e) => setFinancialProgressMax(e.target.value)}
+                  className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              {(financialProgressMin !== '' || financialProgressMax !== '') && (
+                <button
+                  onClick={() => {
+                    setFinancialProgressMin('');
+                    setFinancialProgressMax('');
+                  }}
+                  className="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  title="Clear Financial Progress Filter"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -827,7 +876,7 @@ export const MajorProjectsDashboard: React.FC = () => {
           </div>
 
           {/* Results Badge & Reset Action */}
-          <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+          <div className="flex items-center justify-between xl:justify-end gap-3 shrink-0">
             <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700">
               Showing {filteredProjects.length} work{filteredProjects.length === 1 ? '' : 's'}
             </span>

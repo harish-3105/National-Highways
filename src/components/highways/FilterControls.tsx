@@ -32,8 +32,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
     { label: '2-Lane', value: '2-Lane' },
     { label: '2-Lane (PS)', value: '2-Lane (Paved Shoulder)' },
     { label: '4-Lane', value: '4-Lane' },
-    { label: '4-Lane (PS)', value: '4-Lane (Paved Shoulder)' },
-    { label: '6-Lane+', value: '6-Lane' },
+    { label: '6-Lane', value: '6-Lane' },
   ];
 
   return (

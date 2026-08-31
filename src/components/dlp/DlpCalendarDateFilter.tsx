@@ -26,6 +26,16 @@ const formatDateToLocalIso = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
+const formatIsoToDdMmYyyy = (iso: string | null): string => {
+  if (!iso) return '';
+  const parts = iso.split('-');
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    return `${d}/${m}/${y}`;
+  }
+  return iso;
+};
+
 export const DlpCalendarDateFilter: React.FC<DlpCalendarDateFilterProps> = ({
   dateRange,
   onChangeDateRange,
@@ -122,7 +132,7 @@ export const DlpCalendarDateFilter: React.FC<DlpCalendarDateFilterProps> = ({
               {dateRange.preset
                 ? `Expiry: ${dateRange.preset}`
                 : dateRange.startDate && dateRange.endDate
-                ? `${dateRange.startDate} → ${dateRange.endDate}`
+                ? `${formatIsoToDdMmYyyy(dateRange.startDate)} → ${formatIsoToDdMmYyyy(dateRange.endDate)}`
                 : 'Manual Date Filter'}
             </span>
           </div>

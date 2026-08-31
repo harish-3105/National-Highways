@@ -225,6 +225,7 @@ export default function DlpPage() {
 
         return {
           ...c,
+          all_work_stretches: c.all_work_stretches || c.work_stretches || [],
           work_stretches: matchingStretches,
         };
       })
@@ -1020,6 +1021,7 @@ export default function DlpPage() {
 
                               <td className="py-4 px-6">
                                 {(() => {
+                                  const rawStretches = item.all_work_stretches || item.work_stretches || [];
                                   const catSums: Record<DlpWorkCategory, number> = {
                                     DLP: 0,
                                     CONSTRUCTION: 0,
@@ -1027,7 +1029,7 @@ export default function DlpPage() {
                                     PBMC: 0,
                                     NO_DLP: 0,
                                   };
-                                  (item.work_stretches || []).forEach((s) => {
+                                  rawStretches.forEach((s) => {
                                     if (catSums[s.category] !== undefined) {
                                       catSums[s.category] += Number(s.length_km || 0);
                                     }

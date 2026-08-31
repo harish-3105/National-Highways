@@ -180,7 +180,35 @@ export async function GET(request: Request) {
     }
 
     if (configFilter && configFilter !== 'ALL') {
-      filtered = filtered.filter((c) => c.configuration === configFilter);
+      if (configFilter === '4-Lane') {
+        filtered = filtered.filter(
+          (c) =>
+            c.configuration === '4-Lane' ||
+            c.configuration === '4-Lane (Paved Shoulder)' ||
+            (Number(c.length_4l) || 0) > 0
+        );
+      } else if (configFilter === '6-Lane') {
+        filtered = filtered.filter(
+          (c) =>
+            c.configuration === '6-Lane' ||
+            c.configuration === '6-Lane+' ||
+            (Number(c.length_6l) || 0) > 0
+        );
+      } else if (configFilter === '2-Lane (Paved Shoulder)') {
+        filtered = filtered.filter(
+          (c) =>
+            c.configuration === '2-Lane (Paved Shoulder)' ||
+            (Number(c.length_2l_ps) || 0) > 0
+        );
+      } else if (configFilter === '2-Lane') {
+        filtered = filtered.filter(
+          (c) =>
+            c.configuration === '2-Lane' ||
+            (Number(c.length_2l) || 0) > 0
+        );
+      } else {
+        filtered = filtered.filter((c) => c.configuration === configFilter);
+      }
     }
 
     if (sortBy === 'length_desc') {
