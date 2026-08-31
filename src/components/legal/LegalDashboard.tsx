@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { ModulePageHeader } from '@/components/common/ModulePageHeader';
+import { formatDateIndian } from '@/lib/formatters';
 
 export const LegalDashboard: React.FC = () => {
   const [cases, setCases] = useState<LegalCaseData[]>([]);
@@ -797,12 +798,12 @@ export const LegalDashboard: React.FC = () => {
                         {item.caFiled === 'Yes' ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold rounded-md border border-emerald-200 dark:border-emerald-800 text-[11px]">
                             <CheckCircle2 className="w-3 h-3" />
-                            <span>Filed {item.caFiledDate ? `(${item.caFiledDate})` : ''}</span>
+                            <span>Filed {item.caFiledDate ? `(${formatDateIndian(item.caFiledDate)})` : ''}</span>
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-bold rounded-md border border-amber-200 dark:border-amber-800 text-[11px]">
                             <AlertCircle className="w-3 h-3" />
-                            <span>Pending {item.caDueDate ? `Due: ${item.caDueDate}` : ''}</span>
+                            <span>Pending {item.caDueDate ? `Due: ${formatDateIndian(item.caDueDate)}` : ''}</span>
                           </span>
                         )}
                       </td>

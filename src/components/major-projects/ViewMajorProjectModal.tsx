@@ -31,6 +31,7 @@ import {
   calculateProjectDelay,
   calculateFinancialProgress,
   calculateContractProgress,
+  formatDateIndian,
 } from '@/lib/formatters';
 
 interface ViewMajorProjectModalProps {
@@ -448,7 +449,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                     Sanction Date
                   </span>
                   <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    📅 {project.sanction_date || '—'}
+                    📅 {formatDateIndian(project.sanction_date)}
                   </p>
                 </div>
 
@@ -538,7 +539,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                     Date of LOA
                   </span>
                   <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    📅 {project.loa_date || '—'}
+                    📅 {formatDateIndian(project.loa_date)}
                   </p>
                 </div>
 
@@ -547,7 +548,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                     Date of Agreement
                   </span>
                   <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    📅 {project.agreement_date || '—'}
+                    📅 {formatDateIndian(project.agreement_date)}
                   </p>
                 </div>
 
@@ -556,7 +557,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                     Site Handover Date
                   </span>
                   <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    📅 {project.site_handover_date || '—'}
+                    📅 {formatDateIndian(project.site_handover_date)}
                   </p>
                 </div>
 
@@ -565,7 +566,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                     Appointed Date
                   </span>
                   <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    📅 {project.appointed_date || '—'}
+                    📅 {formatDateIndian(project.appointed_date)}
                   </p>
                 </div>
 
@@ -574,7 +575,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                     Scheduled Completion
                   </span>
                   <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    📅 {project.scheduled_completion_date || '—'}
+                    📅 {formatDateIndian(project.scheduled_completion_date)}
                   </p>
                 </div>
               </div>
@@ -762,7 +763,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                     Scheduled Completion
                   </span>
                   <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    📅 {project.scheduled_completion_date || '—'}
+                    📅 {formatDateIndian(project.scheduled_completion_date)}
                   </p>
                 </div>
 
@@ -771,7 +772,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                     Likely Completion Date
                   </span>
                   <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    📅 {project.likely_completion_date || '—'}
+                    📅 {formatDateIndian(project.likely_completion_date)}
                   </p>
                 </div>
 
@@ -780,7 +781,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                     Probable Completion Date
                   </span>
                   <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    📅 {project.probable_completion_date || '—'}
+                    📅 {formatDateIndian(project.probable_completion_date)}
                   </p>
                 </div>
               </div>
@@ -800,7 +801,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                     EOT Granted Till
                   </span>
                   <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    📅 {project.eot_granted_till || '—'}
+                    📅 {formatDateIndian(project.eot_granted_till)}
                   </p>
                 </div>
 
@@ -832,7 +833,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
                       Schedule Analysis & Delay Status
                     </span>
                     <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Target Completion: {project.scheduled_completion_date || 'Not specified'}
+                      Target Completion: {formatDateIndian(project.scheduled_completion_date)}
                     </span>
                   </div>
                   <span className={`px-3 py-1.5 rounded-xl text-xs font-bold ${delayInfo.isDelayed ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800' : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'}`}>
@@ -934,7 +935,7 @@ export const ViewMajorProjectModal: React.FC<ViewMajorProjectModalProps> = ({
               {project.updated_division_date && (
                 <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-800 text-xs text-blue-900 dark:text-blue-200 flex items-center justify-between">
                   <span className="font-bold">Division Progress Ledger Update Date:</span>
-                  <span className="font-mono font-extrabold">📅 {project.updated_division_date}</span>
+                  <span className="font-mono font-extrabold">📅 {formatDateIndian(project.updated_division_date)}</span>
                 </div>
               )}
             </div>

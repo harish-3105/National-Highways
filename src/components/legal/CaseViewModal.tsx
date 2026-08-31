@@ -16,6 +16,7 @@ import {
   Edit,
   Link as LinkIcon,
 } from 'lucide-react';
+import { formatDateIndian } from '@/lib/formatters';
 
 interface CaseViewModalProps {
   caseData: LegalCaseData;
@@ -401,11 +402,11 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-400 font-semibold uppercase block">Filing Date</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">📅 {caseData.appealInfo.appealFilingDate || '—'}</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">📅 {formatDateIndian(caseData.appealInfo.appealFilingDate)}</span>
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-400 font-semibold uppercase block">Limitation Due Date</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">📅 {caseData.appealInfo.limitationDueDate || '—'}</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">📅 {formatDateIndian(caseData.appealInfo.limitationDueDate)}</span>
                     </div>
                   </div>
                   {caseData.appealInfo.delayInFilingAppeal === 'Yes' && (
@@ -554,7 +555,7 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">CA Due Date</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {caseData.caDueDate || '—'}
+                    📅 {formatDateIndian(caseData.caDueDate)}
                   </span>
                 </div>
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
@@ -566,7 +567,7 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">CA Filed Date</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {caseData.caFiledDate || '—'}
+                    📅 {formatDateIndian(caseData.caFiledDate)}
                   </span>
                 </div>
               </div>
@@ -609,13 +610,13 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Last Hearing Date</span>
                   <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    📅 {caseData.lastHearingDate || '—'}
+                    📅 {formatDateIndian(caseData.lastHearingDate)}
                   </p>
                 </div>
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Next Hearing Date</span>
                   <p className="font-mono font-bold text-blue-700 dark:text-blue-300 text-xs">
-                    📅 {caseData.nextHearingDate || '—'}
+                    📅 {formatDateIndian(caseData.nextHearingDate)}
                   </p>
                 </div>
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
@@ -650,7 +651,7 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Interim Order Date</span>
                   <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                    📅 {caseData.interimOrderDate || '—'}
+                    📅 {formatDateIndian(caseData.interimOrderDate)}
                   </p>
                 </div>
               </div>
@@ -667,7 +668,7 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Compliance End Date</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {caseData.complianceEndDate || '—'}
+                    📅 {formatDateIndian(caseData.complianceEndDate)}
                   </span>
                 </div>
               </div>
@@ -705,7 +706,7 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Final Order Date</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {caseData.finalOrderDate || '—'}
+                    📅 {formatDateIndian(caseData.finalOrderDate)}
                   </span>
                 </div>
               </div>
@@ -731,7 +732,7 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Appeal Filed Date</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
-                    📅 {caseData.appealFiledDate}
+                    📅 {formatDateIndian(caseData.appealFiledDate)}
                   </span>
                 </div>
               )}

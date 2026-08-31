@@ -7,6 +7,7 @@ import {
   calculateProjectDelay,
   calculateFinancialProgress,
   calculateContractProgress,
+  formatDateIndian,
 } from '@/lib/formatters';
 
 interface MajorProjectsTableProps {
@@ -241,7 +242,7 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
                           </div>
                           {item.likely_completion_date || item.probable_completion_date ? (
                             <span className="font-mono text-[10.5px] font-bold text-teal-700 dark:text-teal-300">
-                              📅 {item.likely_completion_date || item.probable_completion_date}
+                              📅 {formatDateIndian(item.likely_completion_date || item.probable_completion_date)}
                             </span>
                           ) : null}
                         </div>
@@ -311,7 +312,7 @@ export const MajorProjectsTable: React.FC<MajorProjectsTableProps> = ({
                       <td className="py-3.5 px-3 font-mono font-bold text-slate-800 dark:text-slate-200 text-[11px]">
                         <div className="flex flex-col gap-1">
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded-xs border border-slate-200 dark:border-slate-700 w-fit">
-                            📅 {item.likely_completion_date || item.probable_completion_date || '—'}
+                            📅 {formatDateIndian(item.likely_completion_date || item.probable_completion_date)}
                           </span>
                           {delayInfo.isDelayed && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 dark:text-rose-400 font-mono">
