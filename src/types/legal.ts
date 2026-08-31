@@ -89,7 +89,6 @@ export interface LegalCaseData {
   complianceAction?: string; // Text field (Compliance Action Directed by Court)
   compliancePeriod?: string; // Text field (e.g. 8 weeks, 3 months)
   complianceEndDate?: string; // Date field (YYYY-MM-DD)
-  cedComplaintSentDate?: string; // Date field (YYYY-MM-DD) for CED Complaint / Compliance Sent Date
   actionTakenDetailsForCompliance?: string; // Text field
   complianceStatus?: ComplianceStatusType; // Dropdown: Complied | Pending
   remarks?: string; // Text field

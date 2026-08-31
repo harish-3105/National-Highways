@@ -197,7 +197,6 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     complianceAction: initial?.complianceAction || '',
     compliancePeriod: initial?.compliancePeriod || '',
     complianceEndDate: initial?.complianceEndDate || '',
-    cedComplaintSentDate: initial?.cedComplaintSentDate || '',
     actionTakenDetailsForCompliance: initial?.actionTakenDetailsForCompliance || '',
     complianceStatus: initial?.complianceStatus || '',
     remarks: initial?.remarks || '',
@@ -1830,7 +1829,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     {errors.complianceAction && <p className="text-[11px] text-rose-500 mt-1">{errors.complianceAction}</p>}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         Compliance Period (Text)
@@ -1850,20 +1849,12 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                         value={formData.complianceEndDate || ''}
                         onChange={(val) => handleChange('complianceEndDate', val)}
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">CED Complaint Sent Date</label>
-                      <DatePickerInput
-                        value={formData.cedComplaintSentDate || ''}
-                        onChange={(val) => handleChange('cedComplaintSentDate', val)}
-                      />
-                      {formData.cedComplaintSentDate && formData.complianceEndDate && formData.cedComplaintSentDate > formData.complianceEndDate && (
+                      {formData.complianceEndDate && new Date().toISOString().split('T')[0] > formData.complianceEndDate && (
                         <div className="flex items-center gap-1.5 mt-1.5 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-[11px] font-bold text-amber-800 dark:text-amber-300 animate-in fade-in">
                           <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                           <span>
-                            Delayed by {Math.ceil((new Date(formData.cedComplaintSentDate).getTime() - new Date(formData.complianceEndDate).getTime()) / (1000 * 60 * 60 * 24))} day
-                            {Math.ceil((new Date(formData.cedComplaintSentDate).getTime() - new Date(formData.complianceEndDate).getTime()) / (1000 * 60 * 60 * 24)) > 1 ? 's' : ''}.
+                            Delayed by {Math.ceil((new Date(new Date().toISOString().split('T')[0]).getTime() - new Date(formData.complianceEndDate).getTime()) / (1000 * 60 * 60 * 24))} day
+                            {Math.ceil((new Date(new Date().toISOString().split('T')[0]).getTime() - new Date(formData.complianceEndDate).getTime()) / (1000 * 60 * 60 * 24)) > 1 ? 's' : ''}.
                           </span>
                         </div>
                       )}
