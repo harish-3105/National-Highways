@@ -45,14 +45,30 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Normalize options to { label, value } format
+  // Normalize options to { label, value } format and sort in alphabetical order
   const normalizedOptions = useMemo(() => {
-    return options.map((opt) => {
+    const raw = options.map((opt) => {
       if (typeof opt === 'string') {
         return { label: opt, value: opt };
       }
       return opt;
     });
+
+    const topItems: Array<{ label: string; value: string }> = [];
+    const restItems: Array<{ label: string; value: string }> = [];
+
+    raw.forEach((item) => {
+      const lower = item.label.toLowerCase().trim();
+      if (lower.startsWith('all ') || lower === 'all' || lower.startsWith('--') || lower === '') {
+        topItems.push(item);
+      } else {
+        restItems.push(item);
+      }
+    });
+
+    restItems.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' }));
+
+    return [...topItems, ...restItems];
   }, [options]);
 
   const filteredOptions = useMemo(() => {

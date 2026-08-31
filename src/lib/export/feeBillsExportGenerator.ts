@@ -64,6 +64,7 @@ export const FEE_BILL_EXPORT_COLUMNS: FeeBillExportColumn[] = [
   { key: 'assistantUtrRbiReference', label: 'Assistant UTR / RBI Ref No.', category: 'settlement', defaultSelected: false },
   { key: 'assistantPaymentDate', label: 'Assistant Payment Date', category: 'settlement', defaultSelected: false },
   { key: 'currentPendency', label: 'Current Pendency Stage', category: 'settlement', defaultSelected: true },
+  { key: 'remarks', label: 'Remarks / Notes', category: 'settlement', defaultSelected: false },
 ];
 
 export const ALL_FEE_BILL_COLUMNS = FEE_BILL_EXPORT_COLUMNS;

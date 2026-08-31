@@ -97,6 +97,9 @@ export interface FeeBillRecord {
   // 12. System Computed Pendency
   currentPendency: string; // e.g., 'Settled', 'Payment Sanctioned', 'G.O. Obtained', 'Pending with DE'
 
+  // 13. General Remarks
+  remarks?: string;
+
   // Audit & Soft Delete
   delete_status?: string;
   isDeleted?: boolean;

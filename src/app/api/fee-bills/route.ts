@@ -101,6 +101,7 @@ export async function GET(request: Request) {
             letterNumber: item.letter_number || '',
             letterDate: item.letter_date || '',
             currentPendency: item.current_pendency || '',
+            remarks: item.remarks || '',
             delete_status: item.delete_status || 'ACTIVE',
             isDeleted: item.delete_status === 'DELETED' || item.delete_status === 'SOFT_DELETE',
             createdBy: item.created_by || 'System Admin',
@@ -250,6 +251,7 @@ export async function POST(request: Request) {
         letter_number: record.letterNumber || null,
         letter_date: record.letterDate || null,
         current_pendency: derivedPendency,
+        remarks: record.remarks || null,
         delete_status: record.delete_status || 'ACTIVE',
         updated_at: new Date().toISOString(),
       };

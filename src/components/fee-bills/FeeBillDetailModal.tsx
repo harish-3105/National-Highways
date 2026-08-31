@@ -662,6 +662,16 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Remarks Field (Stage 5 / Final Field) */}
+              {contract.remarks && (
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Remarks / Notes</span>
+                  <p className="text-xs text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap">
+                    {contract.remarks}
+                  </p>
+                </div>
+              )}
             </div>
           )}
           </div>
