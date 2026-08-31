@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar as CalendarIcon, Filter, X } from 'lucide-react';
+import { DatePickerInput } from '@/components/common/DatePickerInput';
 
 export interface DateRangeState {
   startDate: string | null;
@@ -215,41 +216,39 @@ export const DlpCalendarDateFilter: React.FC<DlpCalendarDateFilterProps> = ({
             </div>
           </div>
 
-          {/* Manual Date Inputs */}
+          {/* Manual Date Inputs using shared DatePickerInput */}
           <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <span className="text-[10px] uppercase font-extrabold text-slate-400 block tracking-wider">
               Custom Expiry Date Range
             </span>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 mb-1">From Date</label>
-                <input
-                  type="date"
+                <DatePickerInput
+                  label="From Date"
                   value={dateRange.startDate || ''}
-                  onChange={(e) =>
+                  onChange={(val) =>
                     onChangeDateRange({
                       ...dateRange,
-                      startDate: e.target.value || null,
+                      startDate: val || null,
                       preset: null,
                     })
                   }
-                  className="w-full py-1 px-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-medium"
+                  placeholder="DD/MM/YYYY"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 mb-1">To Date</label>
-                <input
-                  type="date"
+                <DatePickerInput
+                  label="To Date"
                   value={dateRange.endDate || ''}
-                  onChange={(e) =>
+                  onChange={(val) =>
                     onChangeDateRange({
                       ...dateRange,
-                      endDate: e.target.value || null,
+                      endDate: val || null,
                       preset: null,
                     })
                   }
-                  className="w-full py-1 px-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-medium"
+                  placeholder="DD/MM/YYYY"
                 />
               </div>
             </div>
