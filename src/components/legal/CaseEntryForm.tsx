@@ -477,6 +477,8 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       if (!formData.baseCasePertainsTo?.trim()) stageErrors.baseCasePertainsTo = 'Case Pertains To is required.';
       if (!formData.baseNatureOfCase?.trim()) stageErrors.baseNatureOfCase = 'Nature of Case is required.';
       if (!formData.baseBriefOfPrayer?.trim()) stageErrors.baseBriefOfPrayer = 'Brief of Prayer is required.';
+      if (!formData.baseFinalOrder?.trim()) stageErrors.baseFinalOrder = 'Final Order / Direction is required.';
+      if (!formData.baseFinalOrderDate?.trim()) stageErrors.baseFinalOrderDate = 'Final Order Date is required.';
     } else if (stageDef.id === 'counter_affidavit') {
       // Counter Affidavit (CA)
       if (formData.caRequired === 'Yes') {
@@ -587,6 +589,8 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
         formData.basePetitionerNames?.trim() &&
         formData.baseRespondentNames?.trim() &&
         formData.baseBriefOfPrayer?.trim() &&
+        formData.baseFinalOrder?.trim() &&
+        formData.baseFinalOrderDate?.trim() &&
         Object.keys(validateSingleStage(stageIdx)).length === 0
       );
     }
@@ -1373,7 +1377,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Final Order / Direction
+                    Final Order / Direction <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -1381,6 +1385,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     value={formData.baseFinalOrder || ''}
                     onChange={(e) => handleChange('baseFinalOrder', e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                    required
                   />
                   {errors.baseFinalOrder && <p className="text-[11px] text-rose-500 mt-1">{errors.baseFinalOrder}</p>}
                 </div>
@@ -1392,6 +1397,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     onChange={(val) => handleChange('baseFinalOrderDate', val)}
                     error={errors.baseFinalOrderDate}
                     placeholder="DD/MM/YYYY"
+                    required
                   />
                 </div>
               </div>
