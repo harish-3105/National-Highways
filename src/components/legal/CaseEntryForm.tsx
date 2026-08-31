@@ -157,6 +157,7 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     circle: initial?.circle || '',
     division: initial?.division || '',
     nameOfCourt: initial?.nameOfCourt || '',
+    specifyNameOfCourt: initial?.specifyNameOfCourt || '',
     petitionerNames: initial?.petitionerNames || '',
     respondentNames: initial?.respondentNames || '',
     casePertainsTo: initial?.casePertainsTo || '',
@@ -166,11 +167,14 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     baseCircle: initial?.baseCircle || '',
     baseDivision: initial?.baseDivision || '',
     baseCourtName: initial?.baseCourtName || '',
+    specifyBaseCourtName: initial?.specifyBaseCourtName || '',
+    specifyAppellateCourt: initial?.specifyAppellateCourt || '',
     baseCaseDetails: initial?.baseCaseDetails || '',
     basePetitionerNames: initial?.basePetitionerNames || '',
     baseRespondentNames: initial?.baseRespondentNames || '',
     baseCasePertainsTo: initial?.baseCasePertainsTo || '',
     baseNatureOfCase: initial?.baseNatureOfCase || '',
+    specifyBaseNatureOfCase: initial?.specifyBaseNatureOfCase || '',
     baseBriefOfPrayer: initial?.baseBriefOfPrayer || '',
     baseFinalOrder: initial?.baseFinalOrder || '',
     baseFinalOrderDate: initial?.baseFinalOrderDate || '',
@@ -193,6 +197,7 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     complianceAction: initial?.complianceAction || '',
     compliancePeriod: initial?.compliancePeriod || '',
     complianceEndDate: initial?.complianceEndDate || '',
+    cedComplaintSentDate: initial?.cedComplaintSentDate || '',
     actionTakenDetailsForCompliance: initial?.actionTakenDetailsForCompliance || '',
     complianceStatus: initial?.complianceStatus || '',
     remarks: initial?.remarks || '',
@@ -248,14 +253,26 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     return isAppeal ? APPEAL_CASE_STAGES : NORMAL_CASE_STAGES;
   }, [isAppeal]);
 
-  // Dynamic Master Data Options directly from database (zero hardcoded defaults)
+  // Dynamic Master Data Options directly from database (with Others included)
   const circles = masterData?.circles || [];
-  const courts = masterData?.courtNames || [];
+  const courts = useMemo(() => {
+    const list = masterData?.courtNames || [];
+    return list.includes('Others') ? list : [...list, 'Others'];
+  }, [masterData?.courtNames]);
+
+  const appellateCourts = useMemo(() => {
+    const list = masterData?.appellateCourts || [];
+    return list.includes('Others') ? list : [...list, 'Others'];
+  }, [masterData?.appellateCourts]);
+
   const casePertainsToList = masterData?.casePertainsTo || [];
-  const natureOfCasesList = masterData?.natureOfCases || [];
+  const natureOfCasesList = useMemo(() => {
+    const list = masterData?.natureOfCases || [];
+    return list.includes('Others') ? list : [...list, 'Others'];
+  }, [masterData?.natureOfCases]);
+
   const presentStages = masterData?.presentStages || [];
   const currentStatuses = masterData?.caseStatuses || [];
-  const appellateCourts = masterData?.appellateCourts || [];
   const condonationDelays = masterData?.condonationOfDelays || [];
   const gpOpinions = masterData?.gpOpinions || [];
   const complianceStatuses = masterData?.complianceStatuses || [];
@@ -329,6 +346,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
         );
         updatedAppeal.delayInFilingAppeal = isDelayed;
         updatedAppeal.delayPeriodDays = delayDays;
+        if (isDelayed === 'No') {
+          updatedAppeal.condonationOfDelay = '';
+        }
       }
 
       return {
@@ -420,6 +440,20 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     }
   };
 
+  // Helper to auto-save newly specified options into Master Data
+  const saveCustomMasterOption = async (category: string, value: string) => {
+    if (!value || !value.trim()) return;
+    try {
+      await fetch('/api/legal/master-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, value: value.trim() }),
+      });
+    } catch (err) {
+      console.warn(`Note: Auto-saving custom master option for ${category}:`, err);
+    }
+  };
+
   // -------------------------------------------------------------
   // STAGE-GATED PROGRESSIVE VALIDATION ENGINE
   // -------------------------------------------------------------
@@ -433,6 +467,12 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       if (!formData.circle?.trim()) stageErrors.circle = 'Circle Jurisdiction is required.';
       if (!formData.division?.trim()) stageErrors.division = 'Division Jurisdiction is required.';
       if (!formData.nameOfCourt?.trim()) stageErrors.nameOfCourt = 'Name of Court / Forum is required.';
+      const isCourtOther =
+        formData.nameOfCourt?.toLowerCase() === 'others' ||
+        formData.nameOfCourt?.toLowerCase() === 'other';
+      if (isCourtOther && !formData.specifyNameOfCourt?.trim()) {
+        stageErrors.specifyNameOfCourt = 'Please specify the custom Court Name.';
+      }
       if (!formData.caseDetails?.trim()) stageErrors.caseDetails = 'Case Details / Particulars is required.';
       if (!formData.petitionerNames?.trim()) stageErrors.petitionerNames = 'Petitioner Name(s) is required.';
       if (!formData.respondentNames?.trim()) stageErrors.respondentNames = 'Respondent Name(s) is required.';
@@ -448,10 +488,28 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     } else if (stageDef.id === 'appeal_registry') {
       // Stage 1 for Appeal Case (Fully Mandatory)
       if (!formData.appealInfo?.appellateCourt?.trim()) stageErrors.appellateCourt = 'Appellate Court is required.';
+      const isAppellateOther =
+        formData.appealInfo?.appellateCourt?.toLowerCase() === 'others' ||
+        formData.appealInfo?.appellateCourt?.toLowerCase() === 'other' ||
+        formData.appellateCourt?.toLowerCase() === 'others' ||
+        formData.appellateCourt?.toLowerCase() === 'other';
+      if (isAppellateOther && !formData.specifyAppellateCourt?.trim()) {
+        stageErrors.specifyAppellateCourt = 'Please specify the custom Appellate Court.';
+      }
       if (!formData.appealInfo?.appealCaseDetails?.trim()) stageErrors.appealCaseDetails = 'Appeal Case Details / Particulars is required.';
       if (!formData.appealInfo?.appealFilingDate?.trim()) stageErrors.appealFilingDate = 'Appeal Filing Date is required.';
       if (!formData.appealInfo?.limitationDueDate?.trim()) stageErrors.limitationDueDate = 'Limitation Due Date is required.';
-      if (!formData.appealInfo?.condonationOfDelay?.trim()) stageErrors.condonationOfDelay = 'Condonation of Delay is required.';
+
+      // Condonation of Delay is ONLY displayed and mandatory when appeal filing is delayed
+      const appealDelay = calculateAppealDelay(
+        formData.appealInfo?.appealFilingDate,
+        formData.appealInfo?.limitationDueDate
+      );
+      if (appealDelay.isDelayed === 'Yes') {
+        if (!formData.appealInfo?.condonationOfDelay?.trim()) {
+          stageErrors.condonationOfDelay = 'Condonation of Delay is required when appeal filing is delayed.';
+        }
+      }
 
       if (!formData.circle?.trim()) stageErrors.circle = 'Appeal Circle Jurisdiction is required.';
       if (!formData.division?.trim()) stageErrors.division = 'Appeal Division Jurisdiction is required.';
@@ -471,14 +529,33 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       if (!formData.baseCircle?.trim()) stageErrors.baseCircle = 'Circle Jurisdiction is required.';
       if (!formData.baseDivision?.trim()) stageErrors.baseDivision = 'Division Jurisdiction is required.';
       if (!formData.baseCourtName?.trim()) stageErrors.baseCourtName = 'Name of Court is required.';
+      const isBaseCourtOther =
+        formData.baseCourtName?.toLowerCase() === 'others' ||
+        formData.baseCourtName?.toLowerCase() === 'other';
+      if (isBaseCourtOther && !formData.specifyBaseCourtName?.trim()) {
+        stageErrors.specifyBaseCourtName = 'Please specify the custom Base Court Name.';
+      }
       if (!formData.baseCaseDetails?.trim()) stageErrors.baseCaseDetails = 'Case Details / Number is required.';
       if (!formData.basePetitionerNames?.trim()) stageErrors.basePetitionerNames = 'Petitioner Name(s) is required.';
       if (!formData.baseRespondentNames?.trim()) stageErrors.baseRespondentNames = 'Respondent Name(s) is required.';
       if (!formData.baseCasePertainsTo?.trim()) stageErrors.baseCasePertainsTo = 'Case Pertains To is required.';
       if (!formData.baseNatureOfCase?.trim()) stageErrors.baseNatureOfCase = 'Nature of Case is required.';
+      const isBaseNatureOther =
+        formData.baseNatureOfCase?.toLowerCase() === 'others' ||
+        formData.baseNatureOfCase?.toLowerCase() === 'other';
+      if (isBaseNatureOther && !formData.specifyBaseNatureOfCase?.trim()) {
+        stageErrors.specifyBaseNatureOfCase = 'Please specify the custom Base Nature of Case.';
+      }
       if (!formData.baseBriefOfPrayer?.trim()) stageErrors.baseBriefOfPrayer = 'Brief of Prayer is required.';
       if (!formData.baseFinalOrder?.trim()) stageErrors.baseFinalOrder = 'Final Order / Direction is required.';
-      if (!formData.baseFinalOrderDate?.trim()) stageErrors.baseFinalOrderDate = 'Final Order Date is required.';
+      if (!formData.baseFinalOrderDate?.trim()) {
+        stageErrors.baseFinalOrderDate = 'Final Order Date is required.';
+      } else if (
+        formData.appealInfo?.limitationDueDate &&
+        formData.baseFinalOrderDate > formData.appealInfo.limitationDueDate
+      ) {
+        stageErrors.baseFinalOrderDate = `Base Case Final Order Date (${formData.baseFinalOrderDate}) cannot be later than Appeal Filing Limitation Due Date (${formData.appealInfo.limitationDueDate}).`;
+      }
     } else if (stageDef.id === 'counter_affidavit') {
       // Counter Affidavit (CA)
       if (formData.caRequired === 'Yes') {
@@ -514,7 +591,14 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       }
     } else if (stageDef.id === 'interim_compliance') {
       // Interim Orders & Compliance
+      if (formData.interimOrderDate && formData.caFiledDate && formData.interimOrderDate < formData.caFiledDate) {
+        stageErrors.interimOrderDate = `Interim Order Date (${formData.interimOrderDate}) cannot be earlier than CA Filed Date (${formData.caFiledDate}).`;
+      }
+
       if (formData.complianceRequired === 'Yes') {
+        if (!formData.complianceAction?.trim()) {
+          stageErrors.complianceAction = 'Compliance Action Directed by Court is required when Compliance is required.';
+        }
         if (!formData.complianceStatus) {
           stageErrors.complianceStatus = 'Compliance Status is required when Compliance is required.';
         }
@@ -536,8 +620,12 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
             if (!formData.appealFiled) {
               stageErrors.appealFiled = 'Appeal Filed selection is required.';
             }
-            if (formData.appealFiled === 'Yes' && !formData.appealFiledDate) {
-              stageErrors.appealFiledDate = 'Appeal Filed Date is required when Appeal is Filed.';
+            if (formData.appealFiled === 'Yes') {
+              if (!formData.appealFiledDate) {
+                stageErrors.appealFiledDate = 'Appeal Filed Date is required when Appeal is Filed.';
+              } else if (formData.finalOrderDate && formData.appealFiledDate < formData.finalOrderDate) {
+                stageErrors.appealFiledDate = `Appeal Filed Date (${formData.appealFiledDate}) cannot be earlier than Final Order Date (${formData.finalOrderDate}).`;
+              }
             }
           }
         }
@@ -644,7 +732,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateUpToStage(activeStageIndex)) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -653,13 +741,75 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
     setLoading(true);
     try {
-      // Sync caseDetails and nameOfCourt for appeal cases if needed
       const payloadToSave: LegalCaseData = { ...formData };
-      if (isAppeal && formData.appealInfo) {
-        payloadToSave.caseDetails = formData.appealInfo.appealCaseDetails || formData.caseDetails;
-        payloadToSave.appealCaseDetails = formData.appealInfo.appealCaseDetails || formData.appealCaseDetails;
-        payloadToSave.nameOfCourt = formData.appealInfo.appellateCourt || formData.nameOfCourt;
+      const savePromises: Promise<void>[] = [];
+
+      // 1. Auto-save custom Court Name in Stage 1 Normal Case
+      if (
+        (payloadToSave.nameOfCourt?.toLowerCase() === 'others' || payloadToSave.nameOfCourt?.toLowerCase() === 'other') &&
+        payloadToSave.specifyNameOfCourt?.trim()
+      ) {
+        const customCourt = payloadToSave.specifyNameOfCourt.trim();
+        payloadToSave.nameOfCourt = customCourt;
+        savePromises.push(saveCustomMasterOption('court_name', customCourt));
       }
+
+      // 2. Auto-save custom Appellate Court in Stage 1 Appeal Case
+      const isAppellateOther =
+        payloadToSave.appealInfo?.appellateCourt?.toLowerCase() === 'others' ||
+        payloadToSave.appealInfo?.appellateCourt?.toLowerCase() === 'other' ||
+        payloadToSave.appellateCourt?.toLowerCase() === 'others' ||
+        payloadToSave.appellateCourt?.toLowerCase() === 'other';
+      if (isAppellateOther && payloadToSave.specifyAppellateCourt?.trim()) {
+        const customAppellate = payloadToSave.specifyAppellateCourt.trim();
+        payloadToSave.appellateCourt = customAppellate;
+        if (payloadToSave.appealInfo) {
+          payloadToSave.appealInfo.appellateCourt = customAppellate;
+        }
+        savePromises.push(saveCustomMasterOption('appellate_court', customAppellate));
+      }
+
+      // 3. Auto-save custom Base Court Name in Stage 2 Appeal Case
+      if (
+        (payloadToSave.baseCourtName?.toLowerCase() === 'others' || payloadToSave.baseCourtName?.toLowerCase() === 'other') &&
+        payloadToSave.specifyBaseCourtName?.trim()
+      ) {
+        const customBaseCourt = payloadToSave.specifyBaseCourtName.trim();
+        payloadToSave.baseCourtName = customBaseCourt;
+        savePromises.push(saveCustomMasterOption('court_name', customBaseCourt));
+      }
+
+      // 4. Auto-save custom Nature of Case in Stage 1 (Normal / Appeal)
+      if (
+        (payloadToSave.natureOfCase?.toLowerCase() === 'others' || payloadToSave.natureOfCase?.toLowerCase() === 'other') &&
+        payloadToSave.specifyNatureOfCase?.trim()
+      ) {
+        const customNature = payloadToSave.specifyNatureOfCase.trim();
+        payloadToSave.natureOfCase = customNature;
+        savePromises.push(saveCustomMasterOption('nature_of_case', customNature));
+      }
+
+      // 5. Auto-save custom Base Nature of Case in Stage 2 Appeal Case
+      if (
+        (payloadToSave.baseNatureOfCase?.toLowerCase() === 'others' || payloadToSave.baseNatureOfCase?.toLowerCase() === 'other') &&
+        payloadToSave.specifyBaseNatureOfCase?.trim()
+      ) {
+        const customBaseNature = payloadToSave.specifyBaseNatureOfCase.trim();
+        payloadToSave.baseNatureOfCase = customBaseNature;
+        savePromises.push(saveCustomMasterOption('nature_of_case', customBaseNature));
+      }
+
+      // Sync caseDetails and nameOfCourt for appeal cases
+      if (isAppeal && payloadToSave.appealInfo) {
+        payloadToSave.caseDetails = payloadToSave.appealInfo.appealCaseDetails || payloadToSave.caseDetails;
+        payloadToSave.appealCaseDetails = payloadToSave.appealInfo.appealCaseDetails || payloadToSave.appealCaseDetails;
+        payloadToSave.nameOfCourt = payloadToSave.appealInfo.appellateCourt || payloadToSave.nameOfCourt;
+      }
+
+      if (savePromises.length > 0) {
+        await Promise.allSettled(savePromises);
+      }
+
       onSave(payloadToSave);
     } finally {
       setLoading(false);
@@ -861,6 +1011,24 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
+              {/* Conditional Specify Name of Court for Others */}
+              {(formData.nameOfCourt?.toLowerCase() === 'others' || formData.nameOfCourt?.toLowerCase() === 'other') && (
+                <div className="animate-in fade-in">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Specify Court Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter specific court name..."
+                    value={formData.specifyNameOfCourt || ''}
+                    onChange={(e) => handleChange('specifyNameOfCourt', e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                    required
+                  />
+                  {errors.specifyNameOfCourt && <p className="text-[11px] text-rose-500 mt-1">{errors.specifyNameOfCourt}</p>}
+                </div>
+              )}
+
               {/* Case Details / Number */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -1056,7 +1224,28 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Conditional Specify Appellate Court for Others */}
+                {(formData.appealInfo?.appellateCourt?.toLowerCase() === 'others' ||
+                  formData.appealInfo?.appellateCourt?.toLowerCase() === 'other' ||
+                  formData.appellateCourt?.toLowerCase() === 'others' ||
+                  formData.appellateCourt?.toLowerCase() === 'other') && (
+                  <div className="animate-in fade-in">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Specify Appellate Court Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter specific appellate court name..."
+                      value={formData.specifyAppellateCourt || ''}
+                      onChange={(e) => handleChange('specifyAppellateCourt', e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                      required
+                    />
+                    {errors.specifyAppellateCourt && <p className="text-[11px] text-rose-500 mt-1">{errors.specifyAppellateCourt}</p>}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Appeal Filing Date <span className="text-rose-500">*</span>
@@ -1079,17 +1268,19 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     {errors.limitationDueDate && <p className="text-[11px] text-rose-500 mt-1">{errors.limitationDueDate}</p>}
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Condonation of Delay <span className="text-rose-500">*</span>
-                    </label>
-                    <SearchableSelect
-                      options={condonationDelays}
-                      value={formData.appealInfo?.condonationOfDelay || ''}
-                      onChange={(val) => handleAppealInfoChange('condonationOfDelay', val)}
-                    />
-                    {errors.condonationOfDelay && <p className="text-[11px] text-rose-500 mt-1">{errors.condonationOfDelay}</p>}
-                  </div>
+                  {formData.appealInfo?.delayInFilingAppeal === 'Yes' && (
+                    <div className="animate-in fade-in">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Condonation of Delay <span className="text-rose-500">*</span>
+                      </label>
+                      <SearchableSelect
+                        options={condonationDelays}
+                        value={formData.appealInfo?.condonationOfDelay || ''}
+                        onChange={(val) => handleAppealInfoChange('condonationOfDelay', val)}
+                      />
+                      {errors.condonationOfDelay && <p className="text-[11px] text-rose-500 mt-1">{errors.condonationOfDelay}</p>}
+                    </div>
+                  )}
                 </div>
 
                 {formData.appealInfo?.delayInFilingAppeal === 'Yes' && (
@@ -1285,6 +1476,24 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
+              {/* Conditional Specify Base Court for Others */}
+              {(formData.baseCourtName?.toLowerCase() === 'others' || formData.baseCourtName?.toLowerCase() === 'other') && (
+                <div className="animate-in fade-in">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Specify Base Court Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter specific base court name..."
+                    value={formData.specifyBaseCourtName || ''}
+                    onChange={(e) => handleChange('specifyBaseCourtName', e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                    required
+                  />
+                  {errors.specifyBaseCourtName && <p className="text-[11px] text-rose-500 mt-1">{errors.specifyBaseCourtName}</p>}
+                </div>
+              )}
+
               {/* Case Details / Number */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -1358,6 +1567,24 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
+              {/* Conditional Specify Base Nature of Case for Others */}
+              {(formData.baseNatureOfCase?.toLowerCase() === 'others' || formData.baseNatureOfCase?.toLowerCase() === 'other') && (
+                <div className="animate-in fade-in">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Specify Base Nature of Case <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter specific base nature of case..."
+                    value={formData.specifyBaseNatureOfCase || ''}
+                    onChange={(e) => handleChange('specifyBaseNatureOfCase', e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                    required
+                  />
+                  {errors.specifyBaseNatureOfCase && <p className="text-[11px] text-rose-500 mt-1">{errors.specifyBaseNatureOfCase}</p>}
+                </div>
+              )}
+
               {/* Brief of Prayer */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -1394,6 +1621,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                   <DatePickerInput
                     label="Final Order Date"
                     value={formData.baseFinalOrderDate || ''}
+                    max={formData.appealInfo?.limitationDueDate || undefined}
                     onChange={(val) => handleChange('baseFinalOrderDate', val)}
                     error={errors.baseFinalOrderDate}
                     placeholder="DD/MM/YYYY"
@@ -1446,12 +1674,23 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 {/* Step 3: If CA Filed = Yes -> Show CA Filed Date */}
                 {formData.caRequired === 'Yes' && formData.caFiled === 'Yes' && (
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">CA Filed Date</label>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      CA Filed Date <span className="text-rose-500">*</span>
+                    </label>
                     <DatePickerInput
                       value={formData.caFiledDate || ''}
                       onChange={(val) => handleChange('caFiledDate', val)}
                     />
                     {errors.caFiledDate && <p className="text-[11px] text-rose-500 mt-1">{errors.caFiledDate}</p>}
+                    {formData.caFiledDate && formData.caDueDate && formData.caFiledDate > formData.caDueDate && (
+                      <div className="flex items-center gap-1.5 mt-1.5 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-[11px] font-bold text-amber-800 dark:text-amber-300 animate-in fade-in">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span>
+                          Delayed by {Math.ceil((new Date(formData.caFiledDate).getTime() - new Date(formData.caDueDate).getTime()) / (1000 * 60 * 60 * 24))} day
+                          {Math.ceil((new Date(formData.caFiledDate).getTime() - new Date(formData.caDueDate).getTime()) / (1000 * 60 * 60 * 24)) > 1 ? 's' : ''}.
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1554,8 +1793,10 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Interim Order Date</label>
                   <DatePickerInput
                     value={formData.interimOrderDate || ''}
+                    min={formData.caFiledDate || undefined}
                     onChange={(val) => handleChange('interimOrderDate', val)}
                   />
+                  {errors.interimOrderDate && <p className="text-[11px] text-rose-500 mt-1">{errors.interimOrderDate}</p>}
                 </div>
               </div>
 
@@ -1571,16 +1812,32 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
-              {/* If Compliance Required = Yes -> reveal Compliance Period, Compliance End Date, Status & Action Taken */}
+              {/* If Compliance Required = Yes -> reveal Compliance Action Directed by Court, Period, End Date, CED Complaint Sent Date, Status & Action Taken */}
               {formData.complianceRequired === 'Yes' && (
                 <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800 animate-in fade-in">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Compliance Action Directed by Court <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter compliance action directed by court..."
+                      value={formData.complianceAction || ''}
+                      onChange={(e) => handleChange('complianceAction', e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                      required
+                    />
+                    {errors.complianceAction && <p className="text-[11px] text-rose-500 mt-1">{errors.complianceAction}</p>}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         Compliance Period (Text)
                       </label>
                       <input
                         type="text"
+                        placeholder="e.g. 8 weeks, 3 months"
                         value={formData.compliancePeriod || ''}
                         onChange={(e) => handleChange('compliancePeriod', e.target.value)}
                         className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
@@ -1593,6 +1850,23 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                         value={formData.complianceEndDate || ''}
                         onChange={(val) => handleChange('complianceEndDate', val)}
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">CED Complaint Sent Date</label>
+                      <DatePickerInput
+                        value={formData.cedComplaintSentDate || ''}
+                        onChange={(val) => handleChange('cedComplaintSentDate', val)}
+                      />
+                      {formData.cedComplaintSentDate && formData.complianceEndDate && formData.cedComplaintSentDate > formData.complianceEndDate && (
+                        <div className="flex items-center gap-1.5 mt-1.5 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-[11px] font-bold text-amber-800 dark:text-amber-300 animate-in fade-in">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span>
+                            Delayed by {Math.ceil((new Date(formData.cedComplaintSentDate).getTime() - new Date(formData.complianceEndDate).getTime()) / (1000 * 60 * 60 * 24))} day
+                            {Math.ceil((new Date(formData.cedComplaintSentDate).getTime() - new Date(formData.complianceEndDate).getTime()) / (1000 * 60 * 60 * 24)) > 1 ? 's' : ''}.
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -1714,6 +1988,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                                 </label>
                                 <DatePickerInput
                                   value={formData.appealFiledDate || ''}
+                                  min={formData.finalOrderDate || undefined}
                                   onChange={(val) => handleChange('appealFiledDate', val)}
                                 />
                                 {errors.appealFiledDate && <p className="text-[11px] text-rose-500 mt-1">{errors.appealFiledDate}</p>}

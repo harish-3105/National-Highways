@@ -187,7 +187,7 @@ export const LegalDashboard: React.FC = () => {
       });
       const data = await res.json();
       if (data.success) {
-        await fetchCases();
+        await Promise.all([fetchCases(), fetchMasterData()]);
         setUiMode('LIST');
         setSelectedCaseForEdit(null);
       } else {
@@ -214,6 +214,7 @@ export const LegalDashboard: React.FC = () => {
         alert('Database / Save Error: ' + (data.error || data.message || 'Failed to save base case before creating appeal.'));
         return;
       }
+      await fetchMasterData();
 
       // 2. Prepare pre-filled Appeal Case (unforced dropdowns so user selects)
       const appealCaseInit: Partial<LegalCaseData> = {

@@ -43,6 +43,7 @@ export interface LegalCaseData {
   division: string; // Dropdown: Cascading division
   category?: string; // Optional legacy column
   nameOfCourt: string; // Dropdown: High Court of Madras, Madurai Bench, District Court, etc.
+  specifyNameOfCourt?: string; // Custom court name when nameOfCourt = 'Others'
   petitionerNames: string; // Text field (Name of Petitioner(s))
   respondentNames: string; // Text field (Name of Respondent(s))
   casePertainsTo: CasePertainsToType; // Dropdown: GOTN | MoRTH | Both | NHAI
@@ -54,11 +55,14 @@ export interface LegalCaseData {
   baseCircle?: CircleType; // Dropdown: Chennai, Salem, Madurai, etc.
   baseDivision?: string; // Dropdown: Cascading division
   baseCourtName?: string; // Dropdown / Text: Original Court Name
+  specifyBaseCourtName?: string; // Custom court name when baseCourtName = 'Others'
+  specifyAppellateCourt?: string; // Custom court name when appellateCourt = 'Others'
   baseCaseDetails?: string; // Unified open text field (e.g. WP 1234/2023)
   basePetitionerNames?: string; // Text field: Original Petitioner(s)
   baseRespondentNames?: string; // Text field: Original Respondent(s)
   baseCasePertainsTo?: CasePertainsToType; // Dropdown: GOTN | MoRTH | Both | NHAI
   baseNatureOfCase?: NatureOfCaseType; // Dropdown
+  specifyBaseNatureOfCase?: string; // Custom description when baseNatureOfCase = 'Others'
   baseBriefOfPrayer?: string; // Textarea: Original Prayer
   baseFinalOrder?: string; // Text field: Lower court final order/direction
   baseFinalOrderDate?: string; // Date field: Lower court final order date (YYYY-MM-DD)
@@ -82,9 +86,10 @@ export interface LegalCaseData {
   interimOrderDirection?: string; // Text field
   interimOrderDate?: string; // Date field (YYYY-MM-DD)
   complianceRequired: YesNoType; // Dropdown: Yes | No | Not Applicable
-  complianceAction?: string; // Text field
+  complianceAction?: string; // Text field (Compliance Action Directed by Court)
   compliancePeriod?: string; // Text field (e.g. 8 weeks, 3 months)
   complianceEndDate?: string; // Date field (YYYY-MM-DD)
+  cedComplaintSentDate?: string; // Date field (YYYY-MM-DD) for CED Complaint / Compliance Sent Date
   actionTakenDetailsForCompliance?: string; // Text field
   complianceStatus?: ComplianceStatusType; // Dropdown: Complied | Pending
   remarks?: string; // Text field

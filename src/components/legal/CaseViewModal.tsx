@@ -587,6 +587,12 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
                     📅 {formatDateIndian(caseData.caFiledDate)}
                   </span>
+                  {caseData.caFiledDate && caseData.caDueDate && caseData.caFiledDate > caseData.caDueDate && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      Delayed by {Math.ceil((new Date(caseData.caFiledDate).getTime() - new Date(caseData.caDueDate).getTime()) / (1000 * 60 * 60 * 24))}d
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -674,7 +680,16 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              {caseData.complianceAction && (
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Compliance Action Directed by Court</span>
+                  <p className="font-semibold text-slate-900 dark:text-slate-100 text-xs leading-relaxed">
+                    {caseData.complianceAction}
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Compliance Required</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.complianceRequired || '—'}</span>
@@ -688,6 +703,18 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
                     📅 {formatDateIndian(caseData.complianceEndDate)}
                   </span>
+                </div>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">CED Complaint Sent Date</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
+                    📅 {formatDateIndian(caseData.cedComplaintSentDate)}
+                  </span>
+                  {caseData.cedComplaintSentDate && caseData.complianceEndDate && caseData.cedComplaintSentDate > caseData.complianceEndDate && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      Delayed by {Math.ceil((new Date(caseData.cedComplaintSentDate).getTime() - new Date(caseData.complianceEndDate).getTime()) / (1000 * 60 * 60 * 24))}d
+                    </span>
+                  )}
                 </div>
               </div>
 
