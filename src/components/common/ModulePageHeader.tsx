@@ -91,6 +91,11 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
 }) => {
   const PrimaryIcon = primaryAction?.icon || Plus;
 
+  const ACTION_BTN_BASE =
+    'w-[140px] sm:w-[150px] h-9 inline-flex items-center justify-center gap-1.5 px-2.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer select-none shrink-0';
+  const DISABLED_BTN_BASE =
+    'w-[140px] sm:w-[150px] h-9 inline-flex items-center justify-center gap-1.5 px-2.5 rounded-xl text-xs font-semibold opacity-40 cursor-not-allowed select-none shrink-0 border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 text-slate-400 dark:text-slate-600';
+
   return (
     <div
       className={`mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-5 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 p-5 rounded-2xl shadow-xs transition-all ${className}`}
@@ -120,8 +125,8 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
         {extraContent && <div className="mt-2">{extraContent}</div>}
       </div>
 
-      {/* Right: Symmetrical 3-Column × 2-Row Action Grid */}
-      <div className="shrink-0">
+      {/* Right: Symmetrical 3-Column × 2-Row Action Grid with Fixed Dimensions */}
+      <div className="shrink-0 self-start lg:self-auto">
         <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
           {/* ================= COLUMN 1 ================= */}
           {/* Col 1, Row 1: Refresh Button */}
@@ -131,13 +136,13 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
               onClick={onRefresh}
               disabled={isLoading}
               title="Refresh Live Data"
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`${ACTION_BTN_BASE} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              <RefreshCw className={`w-3.5 h-3.5 text-slate-500 dark:text-slate-400 ${isLoading ? 'animate-spin text-blue-600 dark:text-blue-400' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 shrink-0 text-slate-500 dark:text-slate-400 ${isLoading ? 'animate-spin text-blue-600 dark:text-blue-400' : ''}`} />
               <span className="truncate">{refreshLabel}</span>
             </button>
           ) : (
-            <div className="invisible" />
+            <div className="invisible w-[140px] sm:w-[150px] h-9" />
           )}
 
           {/* ================= COLUMN 2 ================= */}
@@ -148,9 +153,9 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
               onClick={masterConfig.onClick}
               disabled={masterConfig.disabled}
               title={masterConfig.title || 'Configure Master Dropdown Options'}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className={`${ACTION_BTN_BASE} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed`}
             >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <SlidersHorizontal className="w-3.5 h-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
               <span className="truncate">{masterConfig.label || 'Master Config'}</span>
             </button>
           ) : (
@@ -158,9 +163,9 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
               type="button"
               disabled
               title="Master configuration not applicable"
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-50 dark:bg-slate-900/40 border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600 text-xs font-semibold rounded-xl opacity-40 cursor-not-allowed"
+              className={DISABLED_BTN_BASE}
             >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">Master Config</span>
             </button>
           )}
@@ -172,13 +177,13 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
               type="button"
               onClick={primaryAction.onClick}
               disabled={primaryAction.disabled}
-              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`${ACTION_BTN_BASE} bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               <PrimaryIcon className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">{primaryAction.label}</span>
             </button>
           ) : (
-            <div className="invisible" />
+            <div className="invisible w-[140px] sm:w-[150px] h-9" />
           )}
 
           {/* ================= COLUMN 1 (Row 2) ================= */}
@@ -193,16 +198,16 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
                   ? 'Hide Deleted / Archived Records'
                   : 'Show Deleted / Archived Records'
               }
-              className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer border ${
+              className={`${ACTION_BTN_BASE} border ${
                 archiveToggle.showArchived
                   ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900'
                   : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {archiveToggle.showArchived ? (
-                <EyeOff className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <EyeOff className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
               ) : (
-                <Archive className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                <Archive className="w-3.5 h-3.5 shrink-0 text-slate-500 dark:text-slate-400" />
               )}
               <span className="truncate">
                 {archiveToggle.showArchived
@@ -218,9 +223,9 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
               type="button"
               disabled
               title="Archive toggle not applicable"
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-50 dark:bg-slate-900/40 border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600 text-xs font-semibold rounded-xl opacity-40 cursor-not-allowed"
+              className={DISABLED_BTN_BASE}
             >
-              <Archive className="w-3.5 h-3.5" />
+              <Archive className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">Archived</span>
             </button>
           )}
@@ -232,9 +237,9 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
               type="button"
               onClick={importAction.onClick}
               title="Import Data File"
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+              className={`${ACTION_BTN_BASE} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300`}
             >
-              <Upload className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <Upload className="w-3.5 h-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
               <span className="truncate">{importAction.label || 'Import Data'}</span>
             </button>
           ) : (
@@ -242,9 +247,9 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
               type="button"
               disabled
               title={importAction?.disabledReason || 'Module Import coming soon'}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-50 dark:bg-slate-900/40 border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600 text-xs font-semibold rounded-xl opacity-40 cursor-not-allowed"
+              className={DISABLED_BTN_BASE}
             >
-              <Upload className="w-3.5 h-3.5" />
+              <Upload className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">{importAction?.label || 'Import Data'}</span>
             </button>
           )}
@@ -256,9 +261,9 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
               type="button"
               onClick={exportAction.onClick}
               title="Export Module Data"
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+              className={`${ACTION_BTN_BASE} bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300`}
             >
-              <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <Download className="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <span className="truncate">{exportAction.label || 'Export Data'}</span>
             </button>
           ) : (
@@ -266,9 +271,9 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
               type="button"
               disabled
               title={exportAction?.disabledReason || 'Module Export coming soon'}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-50 dark:bg-slate-900/40 border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600 text-xs font-semibold rounded-xl opacity-40 cursor-not-allowed"
+              className={DISABLED_BTN_BASE}
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">{exportAction?.label || 'Export Data'}</span>
             </button>
           )}
