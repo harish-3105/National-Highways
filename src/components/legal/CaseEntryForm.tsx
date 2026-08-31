@@ -468,15 +468,15 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       if (!formData.briefOfPrayer?.trim()) stageErrors.briefOfPrayer = 'Appeal Prayer / Grounds is required.';
     } else if (stageDef.id === 'base_case_details') {
       // Stage 2 for Appeal Case (Base / Original Case Details - Fully Mandatory)
-      if (!formData.baseCircle?.trim()) stageErrors.baseCircle = 'Base Circle Jurisdiction is required.';
-      if (!formData.baseDivision?.trim()) stageErrors.baseDivision = 'Base Division Jurisdiction is required.';
-      if (!formData.baseCourtName?.trim()) stageErrors.baseCourtName = 'Base / Lower Court Name is required.';
-      if (!formData.baseCaseDetails?.trim()) stageErrors.baseCaseDetails = 'Base / Original Case Details is required.';
-      if (!formData.basePetitionerNames?.trim()) stageErrors.basePetitionerNames = 'Base Petitioner Name(s) is required.';
-      if (!formData.baseRespondentNames?.trim()) stageErrors.baseRespondentNames = 'Base Respondent Name(s) is required.';
-      if (!formData.baseCasePertainsTo?.trim()) stageErrors.baseCasePertainsTo = 'Base Case Pertains To is required.';
-      if (!formData.baseNatureOfCase?.trim()) stageErrors.baseNatureOfCase = 'Base Nature of Case is required.';
-      if (!formData.baseBriefOfPrayer?.trim()) stageErrors.baseBriefOfPrayer = 'Base Brief of Prayer is required.';
+      if (!formData.baseCircle?.trim()) stageErrors.baseCircle = 'Circle Jurisdiction is required.';
+      if (!formData.baseDivision?.trim()) stageErrors.baseDivision = 'Division Jurisdiction is required.';
+      if (!formData.baseCourtName?.trim()) stageErrors.baseCourtName = 'Name of Court is required.';
+      if (!formData.baseCaseDetails?.trim()) stageErrors.baseCaseDetails = 'Case Details / Number is required.';
+      if (!formData.basePetitionerNames?.trim()) stageErrors.basePetitionerNames = 'Petitioner Name(s) is required.';
+      if (!formData.baseRespondentNames?.trim()) stageErrors.baseRespondentNames = 'Respondent Name(s) is required.';
+      if (!formData.baseCasePertainsTo?.trim()) stageErrors.baseCasePertainsTo = 'Case Pertains To is required.';
+      if (!formData.baseNatureOfCase?.trim()) stageErrors.baseNatureOfCase = 'Nature of Case is required.';
+      if (!formData.baseBriefOfPrayer?.trim()) stageErrors.baseBriefOfPrayer = 'Brief of Prayer is required.';
     } else if (stageDef.id === 'counter_affidavit') {
       // Counter Affidavit (CA)
       if (formData.caRequired === 'Yes') {
@@ -1242,11 +1242,11 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
-              {/* Base Administrative Jurisdiction */}
+              {/* Administrative Jurisdiction */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Base Circle Jurisdiction <span className="text-rose-500">*</span>
+                    Circle Jurisdiction <span className="text-rose-500">*</span>
                   </label>
                   <SearchableSelect
                     options={circles}
@@ -1258,7 +1258,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Base Division Jurisdiction <span className="text-rose-500">*</span>
+                    Division Jurisdiction <span className="text-rose-500">*</span>
                   </label>
                   <SearchableSelect
                     options={availableBaseDivisions}
@@ -1270,7 +1270,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Base / Lower Court Name <span className="text-rose-500">*</span>
+                    Name of Court <span className="text-rose-500">*</span>
                   </label>
                   <SearchableSelect
                     options={courts}
@@ -1281,10 +1281,10 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
-              {/* Base Case Details / Number */}
+              {/* Case Details / Number */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Base / Original Case Details / Number <span className="text-rose-500">*</span>
+                  Case Details / Number <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1296,11 +1296,11 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 {errors.baseCaseDetails && <p className="text-[11px] text-rose-500 mt-1">{errors.baseCaseDetails}</p>}
               </div>
 
-              {/* Base Litigant Parties */}
+              {/* Litigant Parties */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Base Petitioner Name(s) <span className="text-rose-500">*</span>
+                    Petitioner Name(s) <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -1314,7 +1314,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Base Respondent Name(s) <span className="text-rose-500">*</span>
+                    Respondent Name(s) <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -1327,11 +1327,11 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
-              {/* Base Jurisdiction & Nature */}
+              {/* Jurisdiction & Nature */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Base Case Pertains To <span className="text-rose-500">*</span>
+                    Case Pertains To <span className="text-rose-500">*</span>
                   </label>
                   <SearchableSelect
                     options={casePertainsToList}
@@ -1343,7 +1343,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Base Nature of Case <span className="text-rose-500">*</span>
+                    Nature of Case <span className="text-rose-500">*</span>
                   </label>
                   <SearchableSelect
                     options={natureOfCasesList}
@@ -1354,10 +1354,10 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               </div>
 
-              {/* Base Brief of Prayer */}
+              {/* Brief of Prayer */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Base Brief of Prayer <span className="text-rose-500">*</span>
+                  Brief of Prayer <span className="text-rose-500">*</span>
                 </label>
                 <textarea
                   rows={3}
@@ -1369,15 +1369,15 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 {errors.baseBriefOfPrayer && <p className="text-[11px] text-rose-500 mt-1">{errors.baseBriefOfPrayer}</p>}
               </div>
 
-              {/* Base Final Order & Final Order Date */}
+              {/* Final Order & Final Order Date */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Base / Lower Court Final Order / Direction
+                    Final Order / Direction
                   </label>
                   <input
                     type="text"
-                    placeholder="Enter lower court final judgment/order details..."
+                    placeholder="Enter final judgment/order details..."
                     value={formData.baseFinalOrder || ''}
                     onChange={(e) => handleChange('baseFinalOrder', e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
@@ -1387,7 +1387,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
                 <div>
                   <DatePickerInput
-                    label="Base Final Order Date"
+                    label="Final Order Date"
                     value={formData.baseFinalOrderDate || ''}
                     onChange={(val) => handleChange('baseFinalOrderDate', val)}
                     error={errors.baseFinalOrderDate}

@@ -476,67 +476,67 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                 )}
               </div>
 
-              {/* Base Case Particulars Grid */}
+              {/* Case Particulars Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Case Details / No</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Details / Number</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
                     {caseData.baseCaseDetails || '—'}
                   </span>
                 </div>
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Court / Forum</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Court / Forum</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.baseCourtName || '—'}</span>
                 </div>
               </div>
 
-              {/* Base Jurisdiction */}
+              {/* Administrative Jurisdiction */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Circle</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Circle Jurisdiction</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.baseCircle || '—'}</span>
                 </div>
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Division</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Division Jurisdiction</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.baseDivision || '—'}</span>
                 </div>
               </div>
 
-              {/* Base Litigants */}
+              {/* Litigants */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Petitioner(s)</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Petitioner(s)</span>
                   <p className="font-bold text-slate-900 dark:text-slate-100 text-xs leading-relaxed">{caseData.basePetitionerNames || '—'}</p>
                 </div>
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Respondent(s)</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Respondent(s)</span>
                   <p className="font-bold text-slate-900 dark:text-slate-100 text-xs leading-relaxed">{caseData.baseRespondentNames || '—'}</p>
                 </div>
               </div>
 
-              {/* Base Nature & Pertains */}
+              {/* Nature & Pertains */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Case Pertains To</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Pertains To</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.baseCasePertainsTo || '—'}</span>
                 </div>
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Nature of Case</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Nature of Case</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">{caseData.baseNatureOfCase || '—'}</span>
                 </div>
               </div>
 
-              {/* Base Final Order & Date */}
+              {/* Final Order & Date */}
               {(caseData.baseFinalOrder || caseData.baseFinalOrderDate) && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="sm:col-span-2 p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
-                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Final Order / Direction</span>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Final Order / Direction</span>
                     <p className="text-slate-900 dark:text-slate-100 text-xs font-medium leading-relaxed">
                       {caseData.baseFinalOrder || '—'}
                     </p>
                   </div>
                   <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Final Order Date</span>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Final Order Date</span>
                     <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
                       📅 {formatDateIndian(caseData.baseFinalOrderDate)}
                     </span>
@@ -546,7 +546,7 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
 
               {caseData.baseBriefOfPrayer && (
                 <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-1">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Brief of Prayer</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Brief of Prayer</span>
                   <p className="text-slate-800 dark:text-slate-200 text-xs leading-relaxed">{caseData.baseBriefOfPrayer}</p>
                 </div>
               )}
