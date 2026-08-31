@@ -500,19 +500,6 @@ export const DlpMasterDataModal: React.FC<DlpMasterDataModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between">
-          <span className="text-[11px] text-slate-400">
-            Records stored centrally in <code className="font-mono text-slate-600 dark:text-slate-300">public.dlp_master_config</code>
-          </span>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs rounded-xl transition-colors cursor-pointer"
-          >
-            Close Master Config
-          </button>
-        </div>
-
         {/* Delete Confirmation Modal Overlay */}
         {deleteConfirmItem && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in">

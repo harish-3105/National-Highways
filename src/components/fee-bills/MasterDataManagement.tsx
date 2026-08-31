@@ -8,7 +8,6 @@ import {
   Edit2,
   Trash2,
   Check,
-  RotateCcw,
   Building,
   MapPin,
   Briefcase,
@@ -23,11 +22,11 @@ import {
   X,
 } from 'lucide-react';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
-import { EMPTY_MASTER_DATA } from '@/lib/feeBillMasterData';
 
 interface MasterDataManagementProps {
   masterData: FeeBillMasterDataConfig;
   onUpdateMasterData: (newData: FeeBillMasterDataConfig) => void;
+  onClose?: () => void;
 }
 
 type TabType =
@@ -122,6 +121,7 @@ const CATEGORY_TABS: CategoryTab[] = [
 export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
   masterData,
   onUpdateMasterData,
+  onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('circles');
   const [newTextValue, setNewTextValue] = useState('');
@@ -317,14 +317,6 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
     setTimeout(() => setSuccessMsg(null), 3000);
   };
 
-  const handleResetToDefaults = () => {
-    if (window.confirm('Clear all Fee Bill master configuration options?')) {
-      onUpdateMasterData(EMPTY_MASTER_DATA);
-      setSuccessMsg('Cleared master configuration options.');
-      setTimeout(() => setSuccessMsg(null), 3000);
-    }
-  };
-
   const activeTabMeta = CATEGORY_TABS.find((t) => t.id === activeTab);
 
   // Render items based on activeTab
@@ -380,14 +372,17 @@ export const MasterDataManagement: React.FC<MasterDataManagementProps> = ({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleResetToDefaults}
-          className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-rose-600 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-rose-300 rounded-xl transition-all shadow-xs self-start sm:self-auto cursor-pointer"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Reset All Defaults</span>
-        </button>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
+            title="Back to Fee Claims"
+          >
+            <X className="w-4 h-4" />
+            <span>Back to Fee Claims</span>
+          </button>
+        )}
       </div>
 
       {/* Chat App Two-Column Layout */}

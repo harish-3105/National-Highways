@@ -585,6 +585,7 @@ export function FeeBillManagementPortal() {
         <MasterDataManagement
           masterData={masterData}
           onUpdateMasterData={(newData) => handleUpdateMasterData(newData)}
+          onClose={() => setActiveTab('workspace')}
         />
       )}
 
