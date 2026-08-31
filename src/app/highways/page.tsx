@@ -77,8 +77,8 @@ export default function HighwaysPage() {
   // Archive Toggle
   const [showArchived, setShowArchived] = useState(false);
 
-  // Screen State: 'LIST' | 'FORM'
-  const [uiMode, setUiMode] = useState<'LIST' | 'FORM'>('LIST');
+  // Screen State: 'LIST' | 'FORM' | 'MASTER_DATA'
+  const [uiMode, setUiMode] = useState<'LIST' | 'FORM' | 'MASTER_DATA'>('LIST');
   const [selectedHighwayForEdit, setSelectedHighwayForEdit] = useState<HighwayCorridor | null>(null);
 
   // Modal Visibility States
@@ -212,9 +212,9 @@ export default function HighwaysPage() {
               isLoading={loading}
               refreshLabel="Refresh"
               masterConfig={{
-                onClick: () => setIsMasterModalOpen(true),
-                label: "Master Config",
-                title: "Configure Corridor Dropdown Options",
+                onClick: () => setUiMode(uiMode === 'MASTER_DATA' ? 'LIST' : 'MASTER_DATA'),
+                label: uiMode === 'MASTER_DATA' ? 'Corridors' : 'Master Config',
+                title: uiMode === 'MASTER_DATA' ? 'Back to Corridors Catalog' : 'Configure Corridor Dropdown Options',
               }}
               archiveToggle={{
                 showArchived,
@@ -239,65 +239,83 @@ export default function HighwaysPage() {
               }}
             />
 
-        {/* Section A: KPI Summary Cards */}
-        <KpiHeaderCards
-          totalCorridors={aggregates.totalCorridors}
-          totalLengthKm={aggregates.totalLengthKm}
-          laneDistribution={aggregates.laneDistribution}
-          laneLengthsKm={aggregates.laneLengthsKm}
-          corridorsWithDlp={aggregates.corridorsWithDlp}
-          loading={loading && corridors.length === 0}
-          activeLaneFilter={activeLaneFilter}
-          onSelectLaneFilter={(key) => setActiveLaneFilter((prev) => prev === key ? null : key)}
-        />
+            {/* In-Page Master Data Config Mode */}
+            {uiMode === 'MASTER_DATA' && (
+              <HighwayMasterDataModal
+                isPageMode
+                onClose={() => setUiMode('LIST')}
+                masterData={masterData}
+                onRefresh={() => {
+                  fetchMasterData();
+                  fetchHighways();
+                }}
+              />
+            )}
 
-        {/* Section B: Filter & Search Bar */}
-        <div className="print:hidden">
-          <FilterControls
-            search={search}
-            onSearchChange={setSearch}
-            activeConfig={activeConfig}
-            onConfigChange={setActiveConfig}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            totalResults={displayedCorridors.length}
-            showArchived={showArchived}
-            onToggleArchived={() => setShowArchived((v) => !v)}
-          />
-        </div>
+            {/* Main Corridors List Mode */}
+            {uiMode === 'LIST' && (
+              <>
+                {/* Section A: KPI Summary Cards */}
+                <KpiHeaderCards
+                  totalCorridors={aggregates.totalCorridors}
+                  totalLengthKm={aggregates.totalLengthKm}
+                  laneDistribution={aggregates.laneDistribution}
+                  laneLengthsKm={aggregates.laneLengthsKm}
+                  corridorsWithDlp={aggregates.corridorsWithDlp}
+                  loading={loading && corridors.length === 0}
+                  activeLaneFilter={activeLaneFilter}
+                  onSelectLaneFilter={(key) => setActiveLaneFilter((prev) => prev === key ? null : key)}
+                />
 
-        {/* Section C: Master Catalog View */}
-        {viewMode === 'table' ? (
-          <HighwaysTable
-            corridors={displayedCorridors}
-            loading={loading}
-            selectedIds={selectedIds}
-            onToggleSelect={handleToggleSelect}
-            onSelectAll={handleSelectAll}
-            onView={(h) => setViewingHighway(h)}
-            onEdit={(h) => {
-              setSelectedHighwayForEdit(h);
-              setUiMode('FORM');
-            }}
-            onDelete={(h) => setDeletingHighway(h)}
-            activeLaneFilter={activeLaneFilter}
-          />
-        ) : (
-          <HighwaysGrid
-            corridors={displayedCorridors}
-            loading={loading}
-            selectedIds={selectedIds}
-            onToggleSelect={handleToggleSelect}
-            onView={(h) => setViewingHighway(h)}
-            onEdit={(h) => {
-              setSelectedHighwayForEdit(h);
-              setUiMode('FORM');
-            }}
-            onDelete={(h) => setDeletingHighway(h)}
-          />
-        )}
+                {/* Section B: Filter & Search Bar */}
+                <div className="print:hidden">
+                  <FilterControls
+                    search={search}
+                    onSearchChange={setSearch}
+                    activeConfig={activeConfig}
+                    onConfigChange={setActiveConfig}
+                    sortBy={sortBy}
+                    onSortChange={setSortBy}
+                    viewMode={viewMode}
+                    onViewModeChange={setViewMode}
+                    totalResults={displayedCorridors.length}
+                    showArchived={showArchived}
+                    onToggleArchived={() => setShowArchived((v) => !v)}
+                  />
+                </div>
+
+                {/* Section C: Master Catalog View */}
+                {viewMode === 'table' ? (
+                  <HighwaysTable
+                    corridors={displayedCorridors}
+                    loading={loading}
+                    selectedIds={selectedIds}
+                    onToggleSelect={handleToggleSelect}
+                    onSelectAll={handleSelectAll}
+                    onView={(h) => setViewingHighway(h)}
+                    onEdit={(h) => {
+                      setSelectedHighwayForEdit(h);
+                      setUiMode('FORM');
+                    }}
+                    onDelete={(h) => setDeletingHighway(h)}
+                    activeLaneFilter={activeLaneFilter}
+                  />
+                ) : (
+                  <HighwaysGrid
+                    corridors={displayedCorridors}
+                    loading={loading}
+                    selectedIds={selectedIds}
+                    onToggleSelect={handleToggleSelect}
+                    onView={(h) => setViewingHighway(h)}
+                    onEdit={(h) => {
+                      setSelectedHighwayForEdit(h);
+                      setUiMode('FORM');
+                    }}
+                    onDelete={(h) => setDeletingHighway(h)}
+                  />
+                )}
+              </>
+            )}
           </>
         )}
       </main>
@@ -327,16 +345,6 @@ export default function HighwaysPage() {
         selectedIds={selectedIds}
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-      />
-
-      <HighwayMasterDataModal
-        isOpen={isMasterModalOpen}
-        onClose={() => setIsMasterModalOpen(false)}
-        masterData={masterData}
-        onRefresh={() => {
-          fetchMasterData();
-          fetchHighways();
-        }}
       />
     </div>
   );

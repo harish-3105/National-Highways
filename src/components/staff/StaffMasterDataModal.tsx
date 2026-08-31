@@ -21,7 +21,8 @@ import {
 import { StaffMasterConfig, StaffMasterItem } from './StaffTypes';
 
 interface StaffMasterDataModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
+  isPageMode?: boolean;
   onClose: () => void;
   masterConfig: StaffMasterConfig;
   onRefresh: () => void;
@@ -90,7 +91,8 @@ const CATEGORY_TABS: CategoryMeta[] = [
 ];
 
 export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
-  isOpen,
+  isOpen = true,
+  isPageMode = false,
   onClose,
   masterConfig,
   onRefresh,
@@ -253,31 +255,32 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-md">
-              <Settings className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                Staff Master Data Configuration
-              </h2>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Manage relational 6-tier posting hierarchy, administrative units, and staff designations
-              </p>
-            </div>
+  const content = (
+    <div className={`bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm w-full flex flex-col overflow-hidden relative ${isPageMode ? 'min-h-[620px]' : 'max-w-5xl max-h-[90vh]'}`}>
+      {/* Header */}
+      <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-md">
+            <Settings className="w-5 h-5" />
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div>
+            <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
+              Staff Master Data Configuration
+            </h2>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              Manage relational 6-tier posting hierarchy, administrative units, and staff designations
+            </p>
+          </div>
         </div>
+        <button
+          onClick={onClose}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
+          title="Back to Staff Directory"
+        >
+          <X className="w-4 h-4" />
+          <span>Back to Roster</span>
+        </button>
+      </div>
 
         {/* Two-Column Layout */}
         <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12">
@@ -554,6 +557,17 @@ export const StaffMasterDataModal: React.FC<StaffMasterDataModalProps> = ({
             </div>
           </div>
         )}
+    </div>
+  );
+
+  if (isPageMode) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-5xl max-h-[90vh]">
+        {content}
       </div>
     </div>
   );

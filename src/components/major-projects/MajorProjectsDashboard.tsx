@@ -48,8 +48,8 @@ export const MajorProjectsDashboard: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [showArchived, setShowArchived] = useState<boolean>(false);
 
-  // Screen state: 'LIST' | 'FORM'
-  const [uiMode, setUiMode] = useState<'LIST' | 'FORM'>('LIST');
+  // Screen state: 'LIST' | 'FORM' | 'MASTER_DATA'
+  const [uiMode, setUiMode] = useState<'LIST' | 'FORM' | 'MASTER_DATA'>('LIST');
   const [selectedProjectForEdit, setSelectedProjectForEdit] = useState<MajorProject | null>(null);
 
   // Filters State
@@ -413,9 +413,9 @@ export const MajorProjectsDashboard: React.FC = () => {
         isLoading={loading}
         refreshLabel="Refresh"
         masterConfig={{
-          onClick: () => setIsMasterModalOpen(true),
-          label: "Master Config",
-          title: "Configure Division & Scheme Dropdown Options",
+          onClick: () => setUiMode(uiMode === 'MASTER_DATA' ? 'LIST' : 'MASTER_DATA'),
+          label: uiMode === 'MASTER_DATA' ? 'Works List' : 'Master Config',
+          title: uiMode === 'MASTER_DATA' ? 'Back to Ongoing Works' : 'Configure Division & Scheme Dropdown Options',
         }}
         archiveToggle={{
           showArchived,
@@ -440,14 +440,27 @@ export const MajorProjectsDashboard: React.FC = () => {
         }}
       />
 
-      {/* 6 Executive KPI Summary Quadrant Cards (3 Rows × 2 Columns with single-select mutually-exclusive filtering) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {/* Row 1, Col 1: Active Ongoing Works */}
-        <button
-          type="button"
-          onClick={() => setActiveKpiFilter('ACTIVE_ALL')}
-          className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
-            activeKpiFilter === 'ACTIVE_ALL'
+      {/* In-Page Master Data Config Mode */}
+      {uiMode === 'MASTER_DATA' && (
+        <OngoingWorksMasterDataModal
+          isPageMode
+          onClose={() => setUiMode('LIST')}
+          masterData={masterData}
+          onRefresh={fetchMasterData}
+        />
+      )}
+
+      {/* Main Works List Mode */}
+      {uiMode === 'LIST' && (
+        <>
+          {/* 6 Executive KPI Summary Quadrant Cards (3 Rows × 2 Columns with single-select mutually-exclusive filtering) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {/* Row 1, Col 1: Active Ongoing Works */}
+            <button
+              type="button"
+              onClick={() => setActiveKpiFilter('ACTIVE_ALL')}
+              className={`bg-white dark:bg-slate-900 border rounded-xl p-5 shadow-sm hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+                activeKpiFilter === 'ACTIVE_ALL'
               ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/40 dark:bg-blue-950/30'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
           }`}
@@ -864,6 +877,9 @@ export const MajorProjectsDashboard: React.FC = () => {
         onClose={() => setIsExportModalOpen(false)}
       />
 
+        </>
+      )}
+
       {/* View Modal */}
       <ViewMajorProjectModal
         project={viewingProject}
@@ -885,14 +901,6 @@ export const MajorProjectsDashboard: React.FC = () => {
           setDeletingProject(null);
           fetchProjects();
         }}
-      />
-
-      {/* Master Data Config Modal */}
-      <OngoingWorksMasterDataModal
-        isOpen={isMasterModalOpen}
-        onClose={() => setIsMasterModalOpen(false)}
-        masterData={masterData}
-        onRefresh={fetchMasterData}
       />
 
       {/* Historical Snapshot Timeline & Trendline Modal */}

@@ -54,8 +54,8 @@ export const StaffDashboard: React.FC = () => {
   const [showArchived, setShowArchived] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Screen state: 'LIST' | 'FORM'
-  const [uiMode, setUiMode] = useState<'LIST' | 'FORM'>('LIST');
+  // Screen state: 'LIST' | 'FORM' | 'MASTER_DATA'
+  const [uiMode, setUiMode] = useState<'LIST' | 'FORM' | 'MASTER_DATA'>('LIST');
   const [selectedStaffForEdit, setSelectedStaffForEdit] = useState<StaffMember | null>(null);
 
   // Search & Filter state for ALL 7 Master Data categories
@@ -327,9 +327,9 @@ export const StaffDashboard: React.FC = () => {
               isLoading={loading}
               refreshLabel="Refresh"
               masterConfig={{
-                onClick: () => setIsMasterDataOpen(true),
-                label: "Master Config",
-                title: "Configure Staff Master Dropdown Options",
+                onClick: () => setUiMode(uiMode === 'MASTER_DATA' ? 'LIST' : 'MASTER_DATA'),
+                label: uiMode === 'MASTER_DATA' ? 'Staff Roster' : 'Master Config',
+                title: uiMode === 'MASTER_DATA' ? 'Back to Staff Directory' : 'Configure Staff Master Dropdown Options',
               }}
               archiveToggle={{
                 showArchived,
@@ -356,8 +356,21 @@ export const StaffDashboard: React.FC = () => {
               }}
             />
 
-            {/* 4 Interactive KPI Quadrant Cards (2 Rows × 2 Columns) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* In-Page Master Data Config Mode */}
+            {uiMode === 'MASTER_DATA' && (
+              <StaffMasterDataModal
+                isPageMode
+                onClose={() => setUiMode('LIST')}
+                masterConfig={masterConfig}
+                onRefresh={fetchStaffData}
+              />
+            )}
+
+            {/* Main Staff List Mode */}
+            {uiMode === 'LIST' && (
+              <>
+                {/* 4 Interactive KPI Quadrant Cards (2 Rows × 2 Columns) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Quadrant 1: Active Deployable Officers */}
               <button
                 type="button"
@@ -617,43 +630,37 @@ export const StaffDashboard: React.FC = () => {
                 onRestore={handleRestoreStaff}
               />
             )}
-          </div>
+          </>
         )}
-      </main>
+      </div>
+    )}
+  </main>
 
-      {/* View Staff Modal */}
-      <ViewStaffModal
-        isOpen={isViewOpen}
-        onClose={() => {
-          setIsViewOpen(false);
-          setSelectedStaff(null);
-        }}
-        staff={selectedStaff}
-      />
+  {/* View Staff Modal */}
+  <ViewStaffModal
+    isOpen={isViewOpen}
+    onClose={() => {
+      setIsViewOpen(false);
+      setSelectedStaff(null);
+    }}
+    staff={selectedStaff}
+  />
 
-      {/* Delete Staff Modal */}
-      <DeleteStaffModal
-        isOpen={isDeleteOpen}
-        onClose={() => {
-          setIsDeleteOpen(false);
-          setSelectedStaff(null);
-        }}
-        staff={selectedStaff}
-        onSuccess={() => {
-          fetchStaffData();
-          setIsDeleteOpen(false);
-          setSelectedStaff(null);
-        }}
-      />
-
-      {/* Master Data Management Modal */}
-      <StaffMasterDataModal
-        isOpen={isMasterDataOpen}
-        onClose={() => setIsMasterDataOpen(false)}
-        masterConfig={masterConfig}
-        onRefresh={fetchStaffData}
-      />
-    </div>
+  {/* Delete Staff Modal */}
+  <DeleteStaffModal
+    isOpen={isDeleteOpen}
+    onClose={() => {
+      setIsDeleteOpen(false);
+      setSelectedStaff(null);
+    }}
+    staff={selectedStaff}
+    onSuccess={() => {
+      fetchStaffData();
+      setIsDeleteOpen(false);
+      setSelectedStaff(null);
+    }}
+  />
+</div>
   );
 };
 

@@ -19,7 +19,8 @@ import {
 import { HighwayMasterData } from '@/app/api/highways/master-data/route';
 
 interface HighwayMasterDataModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
+  isPageMode?: boolean;
   onClose: () => void;
   masterData: HighwayMasterData;
   onRefresh: () => void;
@@ -56,7 +57,8 @@ const CATEGORY_TABS: CategoryTab[] = [
 ];
 
 export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
-  isOpen,
+  isOpen = true,
+  isPageMode = false,
   onClose,
   masterData,
   onRefresh,
@@ -100,7 +102,7 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
         }));
 
   const filteredItems = displayItems.filter((item) =>
-    (item.value || '').toLowerCase().includes(searchTerm.toLowerCase())
+    item.value.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const activeTabMeta = CATEGORY_TABS.find((t) => t.id === activeTab);
@@ -123,8 +125,10 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to add option');
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to add option');
+      }
 
       setNewValue('');
       setSuccessMsg(`Added "${newValue.trim()}" to ${activeTabMeta?.label}.`);
@@ -197,14 +201,14 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
     setSuccessMsg(null);
 
     try {
-      const res = await fetch('/api/highways/master-data', {
+      const params = new URLSearchParams({
+        id: deleteConfirmItem.id?.startsWith('db-') ? '' : (deleteConfirmItem.id || ''),
+        category: activeTab,
+        value: deleteConfirmItem.value,
+      });
+
+      const res = await fetch(`/api/highways/master-data?${params.toString()}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: deleteConfirmItem.id?.startsWith('db-') ? undefined : deleteConfirmItem.id,
-          category: activeTab,
-          value: deleteConfirmItem.value,
-        }),
       });
 
       if (!res.ok) {
@@ -212,7 +216,7 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
         throw new Error(data.error || 'Failed to delete option');
       }
 
-      setSuccessMsg(`Deleted "${deleteConfirmItem.value}".`);
+      setSuccessMsg(`Removed "${deleteConfirmItem.value}" from ${activeTabMeta?.label}.`);
       setDeleteConfirmItem(null);
       onRefresh();
     } catch (err: unknown) {
@@ -223,39 +227,40 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-md">
-              <SlidersHorizontal className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                Highways & Corridors Master Configuration
-              </h2>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Customize administrative circles, divisions, and carriageway configurations
-              </p>
-            </div>
+  const content = (
+    <div className={`bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm w-full flex flex-col overflow-hidden relative ${isPageMode ? 'min-h-[620px]' : 'max-w-5xl max-h-[90vh]'}`}>
+      {/* Header */}
+      <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-md">
+            <SlidersHorizontal className="w-5 h-5" />
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div>
+            <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
+              Highways & Corridors Master Configuration
+            </h2>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              Customize administrative circles, divisions, and carriageway configurations
+            </p>
+          </div>
         </div>
+        <button
+          onClick={onClose}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
+          title="Back to Corridors Catalog"
+        >
+          <X className="w-4 h-4" />
+          <span>Back to Catalog</span>
+        </button>
+      </div>
 
-        {/* Chat App Two-Column Layout */}
-        <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12">
-          {/* Left Sidebar (Categories) */}
-          <div className="md:col-span-4 border-r border-slate-100 dark:border-slate-800 overflow-y-auto p-4 space-y-1.5 bg-slate-50/30 dark:bg-slate-900/40">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1 block">
-              Categories ({CATEGORY_TABS.length})
-            </span>
+      {/* Chat App Two-Column Layout */}
+      <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12">
+        {/* Left Sidebar (Categories) */}
+        <div className="md:col-span-4 border-r border-slate-100 dark:border-slate-800 overflow-y-auto p-4 space-y-1.5 bg-slate-50/30 dark:bg-slate-900/40">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1 block">
+            Categories ({CATEGORY_TABS.length})
+          </span>
             {CATEGORY_TABS.map((tab) => {
               const Icon = tab.icon;
               const count = (
@@ -484,6 +489,17 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
             </div>
           </div>
         )}
+    </div>
+  );
+
+  if (isPageMode) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-5xl max-h-[90vh]">
+        {content}
       </div>
     </div>
   );

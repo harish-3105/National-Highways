@@ -21,7 +21,8 @@ import {
 import { MasterConfigItem, OngoingWorksMasterData } from '@/app/api/ongoing-works/master-data/route';
 
 interface OngoingWorksMasterDataModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
+  isPageMode?: boolean;
   onClose: () => void;
   masterData: OngoingWorksMasterData;
   onRefresh: () => void;
@@ -58,7 +59,8 @@ const CATEGORY_TABS: CategoryTab[] = [
 ];
 
 export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalProps> = ({
-  isOpen,
+  isOpen = true,
+  isPageMode = false,
   onClose,
   masterData,
   onRefresh,
@@ -204,31 +206,32 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-md">
-              <SlidersHorizontal className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                Ongoing Works Master Data Configuration
-              </h2>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Centralized database management of Circles, Divisions (with Parent Circle), Schemes, and Work Stages
-              </p>
-            </div>
+  const content = (
+    <div className={`bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm w-full flex flex-col overflow-hidden relative ${isPageMode ? 'min-h-[620px]' : 'max-w-5xl max-h-[90vh]'}`}>
+      {/* Header */}
+      <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-md">
+            <SlidersHorizontal className="w-5 h-5" />
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div>
+            <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
+              Ongoing Works Master Data Configuration
+            </h2>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              Centralized database management of Circles, Divisions (with Parent Circle), Schemes, and Work Stages
+            </p>
+          </div>
         </div>
+        <button
+          onClick={onClose}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
+          title="Back to Works List"
+        >
+          <X className="w-4 h-4" />
+          <span>Back to Works</span>
+        </button>
+      </div>
 
         {/* Two-Column Layout */}
         <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12">
@@ -519,6 +522,17 @@ export const OngoingWorksMasterDataModal: React.FC<OngoingWorksMasterDataModalPr
             </div>
           </div>
         )}
+    </div>
+  );
+
+  if (isPageMode) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-5xl max-h-[90vh]">
+        {content}
       </div>
     </div>
   );

@@ -18,7 +18,8 @@ import {
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 interface LegalMasterDataModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
+  isPageMode?: boolean;
   onClose: () => void;
   masterData: LegalMasterData;
   onRefresh: () => void;
@@ -47,7 +48,8 @@ const CATEGORY_TABS: { id: LegalCategory; label: string; description: string }[]
 ];
 
 export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
-  isOpen,
+  isOpen = true,
+  isPageMode = false,
   onClose,
   masterData,
   onRefresh,
@@ -267,32 +269,33 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
 
   const activeTabMeta = CATEGORY_TABS.find((t) => t.id === activeCategory);
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95">
-        {/* Top Header */}
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/20">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-extrabold text-base text-white flex items-center gap-2">
-                Legal Cases Master Data Management
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Configure dropdown values & legal categories across the departmental portal
-              </p>
-            </div>
+  const content = (
+    <div className={`bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm w-full flex flex-col overflow-hidden relative ${isPageMode ? 'min-h-[620px]' : 'max-w-4xl max-h-[90vh]'}`}>
+      {/* Top Header */}
+      <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/20">
+            <Layers className="w-5 h-5" />
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div>
+            <h3 className="font-extrabold text-base text-white flex items-center gap-2">
+              Legal Cases Master Data Management
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Configure dropdown values & legal categories across the departmental portal
+            </p>
+          </div>
         </div>
+        <button
+          onClick={onClose}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer border border-slate-700"
+          title="Back to Legal Cases"
+        >
+          <X className="w-4 h-4" />
+          <span>Back to Cases</span>
+        </button>
+      </div>
 
         {/* Content Body Layout */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
@@ -524,6 +527,17 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
             </div>
           </div>
         )}
+    </div>
+  );
+
+  if (isPageMode) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="max-w-4xl w-full max-h-[90vh]">
+        {content}
       </div>
     </div>
   );

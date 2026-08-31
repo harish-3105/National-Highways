@@ -32,8 +32,8 @@ export const LegalDashboard: React.FC = () => {
   const [cases, setCases] = useState<LegalCaseData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // UI Screen state: 'LIST' | 'FORM'
-  const [uiMode, setUiMode] = useState<'LIST' | 'FORM'>('LIST');
+  // UI Screen state: 'LIST' | 'FORM' | 'MASTER_DATA'
+  const [uiMode, setUiMode] = useState<'LIST' | 'FORM' | 'MASTER_DATA'>('LIST');
   const [selectedCaseForEdit, setSelectedCaseForEdit] = useState<LegalCaseData | null>(null);
   const [selectedCaseForView, setSelectedCaseForView] = useState<LegalCaseData | null>(null);
   const [selectedCaseForDelete, setSelectedCaseForDelete] = useState<LegalCaseData | null>(null);
@@ -382,9 +382,9 @@ export const LegalDashboard: React.FC = () => {
         isLoading={loading}
         refreshLabel="Refresh"
         masterConfig={{
-          onClick: () => setIsMasterModalOpen(true),
-          label: "Master Config",
-          title: "Configure Dropdown Master Options",
+          onClick: () => setUiMode(uiMode === 'MASTER_DATA' ? 'LIST' : 'MASTER_DATA'),
+          label: uiMode === 'MASTER_DATA' ? 'Legal Cases' : 'Master Config',
+          title: uiMode === 'MASTER_DATA' ? 'Back to Legal Cases' : 'Configure Dropdown Master Options',
         }}
         archiveToggle={{
           showArchived,
@@ -406,9 +406,24 @@ export const LegalDashboard: React.FC = () => {
         }}
       />
 
-      {/* 6 EXECUTIVE KPI QUADRANT CARDS (3 Rows × 2 Columns with interactive filtering) */}
-      {/* 6 EXECUTIVE KPI QUADRANT CARDS (3 Rows × 2 Columns with single-select mutually-exclusive filtering) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* In-Page Master Data Config Mode */}
+      {uiMode === 'MASTER_DATA' && (
+        <LegalMasterDataModal
+          isPageMode
+          onClose={() => setUiMode('LIST')}
+          masterData={masterData}
+          onRefresh={() => {
+            fetchMasterData();
+            fetchCases();
+          }}
+        />
+      )}
+
+      {/* Main Cases List Mode */}
+      {uiMode === 'LIST' && (
+        <>
+          {/* 6 EXECUTIVE KPI QUADRANT CARDS (3 Rows × 2 Columns with single-select mutually-exclusive filtering) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* ROW 1 - QUADRANT 1: Total Litigation Dockets */}
         <button
           type="button"
@@ -850,6 +865,8 @@ export const LegalDashboard: React.FC = () => {
           </table>
         </div>
       </div>
+        </>
+      )}
 
       {/* View Detail Modal */}
       {selectedCaseForView && (
@@ -869,17 +886,6 @@ export const LegalDashboard: React.FC = () => {
         isOpen={!!selectedCaseForDelete}
         onClose={() => setSelectedCaseForDelete(null)}
         onSuccess={() => fetchCases()}
-      />
-
-      {/* Master Data Configuration Modal */}
-      <LegalMasterDataModal
-        isOpen={isMasterModalOpen}
-        onClose={() => setIsMasterModalOpen(false)}
-        masterData={masterData}
-        onRefresh={() => {
-          fetchMasterData();
-          fetchCases();
-        }}
       />
     </div>
   );

@@ -69,7 +69,7 @@ export default function DlpPage() {
   };
 
   // Screen state: 'LIST' | 'FORM'
-  const [uiMode, setUiMode] = useState<'LIST' | 'FORM'>('LIST');
+  const [uiMode, setUiMode] = useState<'LIST' | 'FORM' | 'MASTER_DATA'>('LIST');
 
   // Master Data Configuration State
   const [isMasterModalOpen, setIsMasterModalOpen] = useState<boolean>(false);
@@ -446,9 +446,9 @@ export default function DlpPage() {
               isLoading={loading}
               refreshLabel="Refresh"
               masterConfig={{
-                onClick: () => setIsMasterModalOpen(true),
-                label: "Master Config",
-                title: "Configure DLP Master Options",
+                onClick: () => setUiMode(uiMode === 'MASTER_DATA' ? 'LIST' : 'MASTER_DATA'),
+                label: uiMode === 'MASTER_DATA' ? 'DLP Portal' : 'Master Config',
+                title: uiMode === 'MASTER_DATA' ? 'Back to DLP Portal' : 'Configure DLP Master Options',
               }}
               archiveToggle={{
                 showArchived,
@@ -473,8 +473,24 @@ export default function DlpPage() {
               }}
             />
 
-            {/* 6 Executive KPI Cards (3 Rows × 2 Columns) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {/* In-Page Master Data Config Mode */}
+            {uiMode === 'MASTER_DATA' && (
+              <DlpMasterDataModal
+                isPageMode
+                onClose={() => setUiMode('LIST')}
+                masterData={masterData}
+                onRefresh={() => {
+                  fetchMasterData();
+                  fetchDlpCorridors();
+                }}
+              />
+            )}
+
+            {/* Main Corridors List Mode */}
+            {uiMode === 'LIST' && (
+              <>
+                {/* 6 Executive KPI Cards (3 Rows × 2 Columns) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               {/* ROW 1, COL 1: Expiry & Warranty Alerts */}
               <button
                 type="button"
@@ -1274,32 +1290,23 @@ export default function DlpPage() {
             </div>
           </>
         )}
-      </main>
+      </>
+    )}
+  </main>
 
-      {/* View Modal */}
-      <ViewDlpContractModal
-        corridor={selectedCorridorForView}
-        onClose={() => setSelectedCorridorForView(null)}
-      />
+  {/* View Modal */}
+  <ViewDlpContractModal
+    corridor={selectedCorridorForView}
+    onClose={() => setSelectedCorridorForView(null)}
+  />
 
-      {/* Delete Confirmation Modal */}
-      <DeleteDlpContractModal
-        corridor={selectedCorridorForDelete}
-        isOpen={!!selectedCorridorForDelete}
-        onClose={() => setSelectedCorridorForDelete(null)}
-        onSuccess={() => fetchDlpCorridors()}
-      />
-
-      {/* Master Data Configuration Modal */}
-      <DlpMasterDataModal
-        isOpen={isMasterModalOpen}
-        onClose={() => setIsMasterModalOpen(false)}
-        masterData={masterData}
-        onRefresh={() => {
-          fetchMasterData();
-          fetchDlpCorridors();
-        }}
-      />
-    </div>
+  {/* Delete Confirmation Modal */}
+  <DeleteDlpContractModal
+    corridor={selectedCorridorForDelete}
+    isOpen={!!selectedCorridorForDelete}
+    onClose={() => setSelectedCorridorForDelete(null)}
+    onSuccess={() => fetchDlpCorridors()}
+  />
+</div>
   );
 }
