@@ -13,7 +13,8 @@ import { ViewHighwayModal } from '@/components/highways/ViewHighwayModal';
 import { DeleteHighwayModal } from '@/components/highways/DeleteHighwayModal';
 import { ExportHighwayModal } from '@/components/highways/ExportHighwayModal';
 import { NavigationHeader } from '@/components/NavigationHeader';
-import { Route, RefreshCw, Plus, Download, SlidersHorizontal } from 'lucide-react';
+import { ModulePageHeader } from '@/components/common/ModulePageHeader';
+import { Route } from 'lucide-react';
 
 export default function HighwaysPage() {
   const [allCorridors, setAllCorridors] = useState<HighwayCorridor[]>([]);
@@ -202,55 +203,41 @@ export default function HighwaysPage() {
           />
         ) : (
           <>
-            {/* Page Header Title */}
-            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-                  <Route className="w-6 h-6 text-blue-600" />
-                  Master Corridor Catalog & Management
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Verified Level 1 ground-truth inventory with Old/New NH numbers, multi-lane breakdown, Add, Edit, Print, and Data Export.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <button
-                  onClick={() => fetchHighways()}
-                  disabled={loading}
-                  className="p-2.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
-                  title="Refresh Catalog"
-                >
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                </button>
-
-                <button
-                  onClick={() => setIsMasterModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
-                  title="Configure Corridor Dropdown Options"
-                >
-                  <SlidersHorizontal className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <span>Master Config</span>
-                </button>
-
-                <button
-                  onClick={() => setIsExportModalOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
-                >
-                  <Download className="w-4 h-4" /> Export Catalog
-                </button>
-
-                <button
-                  onClick={() => {
-                    setSelectedHighwayForEdit(null);
-                    setUiMode('FORM');
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" /> Add Highway
-                </button>
-              </div>
-            </div>
+            {/* Unified Module Page Header */}
+            <ModulePageHeader
+              icon={Route}
+              title="Master Corridor Catalog & Management"
+              subtitle="Verified Level 1 ground-truth inventory with Old/New NH numbers, multi-lane breakdown, Add, Edit, Print, and Data Export."
+              onRefresh={() => fetchHighways()}
+              isLoading={loading}
+              refreshLabel="Refresh"
+              masterConfig={{
+                onClick: () => setIsMasterModalOpen(true),
+                label: "Master Config",
+                title: "Configure Corridor Dropdown Options",
+              }}
+              archiveToggle={{
+                showArchived,
+                onToggle: () => setShowArchived((v) => !v),
+                activeLabel: "Hide Archived",
+                inactiveLabel: "Show Archived",
+              }}
+              importAction={{
+                disabled: true,
+                disabledReason: "Highways Excel Import coming soon",
+              }}
+              exportAction={{
+                onClick: () => setIsExportModalOpen(true),
+                label: "Export Catalog",
+              }}
+              primaryAction={{
+                onClick: () => {
+                  setSelectedHighwayForEdit(null);
+                  setUiMode('FORM');
+                },
+                label: "Add Highway",
+              }}
+            />
 
         {/* Section A: KPI Summary Cards */}
         <KpiHeaderCards

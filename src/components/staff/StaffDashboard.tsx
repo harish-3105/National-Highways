@@ -29,6 +29,7 @@ import { ViewStaffModal } from "./ViewStaffModal";
 import { DeleteStaffModal } from "./DeleteStaffModal";
 import { StaffMasterDataModal } from "./StaffMasterDataModal";
 import { SearchableSelect } from "@/components/common/SearchableSelect";
+import { ModulePageHeader } from "@/components/common/ModulePageHeader";
 import {
   getCascadingDivisions,
   getCascadingSubDivisions,
@@ -317,60 +318,43 @@ export const StaffDashboard: React.FC = () => {
           />
         ) : (
           <div className="space-y-6">
-            {/* Top Dashboard Title & Action Ribbon */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
-                    <Users className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                      Staff Directory & Hierarchy
-                    </h1>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Personnel management across 6-tier departmental deployment structure
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5 flex-wrap">
-                {/* Archived Records Toggle */}
-                <button
-                  onClick={() => setShowArchived(!showArchived)}
-                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition cursor-pointer ${
-                    showArchived
-                      ? "bg-amber-500 text-white border-amber-600 shadow-sm"
-                      : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
-                  }`}
-                >
-                  {showArchived ? <EyeOff className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
-                  <span>{showArchived ? "Hide Archived" : `Archived (${archivedStaffCount})`}</span>
-                </button>
-
-                {/* Master Data Config Action */}
-                <button
-                  onClick={() => setIsMasterDataOpen(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold transition shadow-xs cursor-pointer"
-                >
-                  <Settings className="w-4 h-4 text-slate-500" />
-                  <span>Master Config</span>
-                </button>
-
-                {/* Add New Staff Button */}
-                <button
-                  onClick={() => {
-                    setSelectedStaffForEdit(null);
-                    setUiMode("FORM");
-                  }}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-md shadow-blue-500/20 cursor-pointer"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  <span>New Staff Officer</span>
-                </button>
-              </div>
-            </div>
+            {/* Unified Module Page Header */}
+            <ModulePageHeader
+              icon={Users}
+              title="Staff Directory & Hierarchy"
+              subtitle="Personnel management across 6-tier departmental deployment structure"
+              onRefresh={fetchStaffData}
+              isLoading={loading}
+              refreshLabel="Refresh"
+              masterConfig={{
+                onClick: () => setIsMasterDataOpen(true),
+                label: "Master Config",
+                title: "Configure Staff Master Dropdown Options",
+              }}
+              archiveToggle={{
+                showArchived,
+                onToggle: () => setShowArchived(!showArchived),
+                archivedCount: archivedStaffCount,
+                activeLabel: "Hide Archived",
+                inactiveLabel: `Archived (${archivedStaffCount})`,
+              }}
+              importAction={{
+                disabled: true,
+                disabledReason: "Staff Excel Import coming soon",
+              }}
+              exportAction={{
+                disabled: true,
+                disabledReason: "Staff Excel Export coming soon",
+              }}
+              primaryAction={{
+                onClick: () => {
+                  setSelectedStaffForEdit(null);
+                  setUiMode("FORM");
+                },
+                label: "New Staff Officer",
+                icon: UserPlus,
+              }}
+            />
 
             {/* 4 Interactive KPI Quadrant Cards (2 Rows × 2 Columns) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

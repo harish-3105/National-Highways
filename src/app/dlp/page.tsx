@@ -10,6 +10,7 @@ import ViewDlpContractModal from '@/components/dlp/ViewDlpContractModal';
 import { getCircleForDivision } from '@/lib/dlp/masterData';
 import { formatDateIndian } from '@/lib/formatters';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { ModulePageHeader } from '@/components/common/ModulePageHeader';
 import { DlpCorridor, DlpWorkStretch, DlpWorkCategory, DlpMasterData } from '@/types/dlp';
 import {
   ShieldCheck,
@@ -436,61 +437,41 @@ export default function DlpPage() {
               </div>
             )}
 
-            {/* Header Banner */}
-            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-                  <ShieldCheck className="w-6 h-6 text-blue-600" />
-                  Defect Liability Period (DLP) &amp; Maintenance Portal
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  2D Continuous Coordinates &bull; Rows 7&ndash;12 Granular Format &bull; Automated Lifecycle Tracking
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={() => fetchDlpCorridors()}
-                  disabled={loading}
-                  className="p-2.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
-                  title="Refresh Records"
-                >
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                </button>
-
-                <button
-                  onClick={() => setIsMasterModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
-                  title="Configure DLP Master Options"
-                >
-                  <SlidersHorizontal className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <span>Master Config</span>
-                </button>
-
-                <button
-                  onClick={() => setShowArchived((v) => !v)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                    showArchived
-                      ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                  title={showArchived ? 'Hide Archived Records' : 'Show Archived Records'}
-                >
-                  <Archive className="w-4 h-4" />
-                  {showArchived ? 'Hide Archived' : 'Show Archived'}
-                </button>
-
-                <button
-                  onClick={() => {
-                    setSelectedCorridorForEdit(null);
-                    setUiMode('FORM');
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" /> New Corridor Entry
-                </button>
-              </div>
-            </div>
+            {/* Unified Module Page Header */}
+            <ModulePageHeader
+              icon={ShieldCheck}
+              title="Defect Liability Period (DLP) & Maintenance Portal"
+              subtitle="2D Continuous Coordinates • Rows 7–12 Granular Format • Automated Lifecycle Tracking"
+              onRefresh={() => fetchDlpCorridors()}
+              isLoading={loading}
+              refreshLabel="Refresh"
+              masterConfig={{
+                onClick: () => setIsMasterModalOpen(true),
+                label: "Master Config",
+                title: "Configure DLP Master Options",
+              }}
+              archiveToggle={{
+                showArchived,
+                onToggle: () => setShowArchived((v) => !v),
+                activeLabel: "Hide Archived",
+                inactiveLabel: "Show Archived",
+              }}
+              importAction={{
+                disabled: true,
+                disabledReason: "DLP Excel Import coming soon",
+              }}
+              exportAction={{
+                disabled: true,
+                disabledReason: "DLP Excel Export coming soon",
+              }}
+              primaryAction={{
+                onClick: () => {
+                  setSelectedCorridorForEdit(null);
+                  setUiMode('FORM');
+                },
+                label: "New Corridor Entry",
+              }}
+            />
 
             {/* 6 Executive KPI Cards (3 Rows × 2 Columns) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">

@@ -28,6 +28,7 @@ import { OngoingWorksMasterData } from '@/app/api/ongoing-works/master-data/rout
 import { calculateProjectDelay, calculateFinancialProgress } from '@/lib/formatters';
 import { MajorProjectsTable } from './MajorProjectsTable';
 import { OngoingWorkEntryForm } from './OngoingWorkEntryForm';
+import { ModulePageHeader } from '@/components/common/ModulePageHeader';
 import { ViewMajorProjectModal } from './ViewMajorProjectModal';
 import { DeleteMajorProjectModal } from './DeleteMajorProjectModal';
 import { OngoingWorksMasterDataModal } from './OngoingWorksMasterDataModal';
@@ -403,70 +404,41 @@ export const MajorProjectsDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2.5 py-0.5 bg-blue-600 text-white font-extrabold text-xs rounded-md uppercase tracking-wider">
-              Works Module
-            </span>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-              Ongoing Works
-            </h1>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Capital infrastructure works, bypasses, ROBs, flyovers, and four-laning projects across Tamil Nadu divisions.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 self-start md:self-auto flex-wrap">
-          <button
-            onClick={fetchProjects}
-            className="p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-blue-600 rounded-xl transition-colors shadow-xs cursor-pointer"
-            title="Refresh Data"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setIsExportModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
-            title="Custom Export Ongoing Works (Select rows, columns & format)"
-          >
-            <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Custom Export</span>
-          </button>
-          <button
-            onClick={() => setShowArchived((v) => !v)}
-            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-              showArchived
-                ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
-            }`}
-            title={showArchived ? 'Hide Archived Records' : 'Show Archived Records'}
-          >
-            <Archive className="w-4 h-4" />
-            <span>{showArchived ? 'Hide Archived' : 'Show Archived'}</span>
-          </button>
-          <button
-            onClick={() => setIsMasterModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
-            title="Configure Division & Scheme Dropdown Options"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span>Master Config</span>
-          </button>
-          <button
-            onClick={() => {
-              setSelectedProjectForEdit(null);
-              setUiMode('FORM');
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Work</span>
-          </button>
-        </div>
-      </div>
+      {/* Unified Module Page Header */}
+      <ModulePageHeader
+        badge="Works Module"
+        title="Ongoing Works"
+        subtitle="Capital infrastructure works, bypasses, ROBs, flyovers, and four-laning projects across Tamil Nadu divisions."
+        onRefresh={fetchProjects}
+        isLoading={loading}
+        refreshLabel="Refresh"
+        masterConfig={{
+          onClick: () => setIsMasterModalOpen(true),
+          label: "Master Config",
+          title: "Configure Division & Scheme Dropdown Options",
+        }}
+        archiveToggle={{
+          showArchived,
+          onToggle: () => setShowArchived((v) => !v),
+          activeLabel: "Hide Archived",
+          inactiveLabel: "Show Archived",
+        }}
+        importAction={{
+          disabled: true,
+          disabledReason: "Works Excel Import coming soon",
+        }}
+        exportAction={{
+          onClick: () => setIsExportModalOpen(true),
+          label: "Custom Export",
+        }}
+        primaryAction={{
+          onClick: () => {
+            setSelectedProjectForEdit(null);
+            setUiMode('FORM');
+          },
+          label: "Add Work",
+        }}
+      />
 
       {/* 6 Executive KPI Summary Quadrant Cards (3 Rows × 2 Columns with single-select mutually-exclusive filtering) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">

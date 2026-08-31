@@ -12,6 +12,7 @@ import { FeeBillDetailModal } from './FeeBillDetailModal';
 import { FeeBillAuditModal } from './FeeBillAuditModal';
 import { ExportFeeBillsModal } from './ExportFeeBillsModal';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { ModulePageHeader } from '@/components/common/ModulePageHeader';
 import {
   FileText,
   Plus,
@@ -227,56 +228,43 @@ export function FeeBillManagementPortal() {
 
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-black shadow-md text-lg">
-            ₹
-          </div>
-          <div>
-            <h1 className="font-extrabold text-xl text-slate-900 dark:text-slate-100">
-              Legal & Lawyer Fee Bill Portal
-            </h1>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Highways Department &bull; G.O. Claims, Assistance Fee Calculator & Pendency Audit System
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={() => {
-              fetchMasterData();
-              fetchFeeBills();
-            }}
-            disabled={loading}
-            className="p-2.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
-            title="Refresh Data"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-
-          <button
-            onClick={() => setIsExportModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
-            title="Custom Export Legal Fee Bills"
-          >
-            <Download className="w-4 h-4" />
-            <span>Export Excel</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setEditingBill(null);
-              setActiveTab('create');
-            }}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md transition-colors cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Fee Bill Voucher</span>
-          </button>
-        </div>
-      </div>
+      {/* Unified Module Page Header */}
+      <ModulePageHeader
+        title="Legal & Lawyer Fee Bill Portal"
+        subtitle="Highways Department • G.O. Claims, Assistance Fee Calculator & Pendency Audit System"
+        onRefresh={() => {
+          fetchMasterData();
+          fetchFeeBills();
+        }}
+        isLoading={loading}
+        refreshLabel="Refresh"
+        masterConfig={{
+          onClick: () => setActiveTab(activeTab === 'settings' ? 'workspace' : 'settings'),
+          label: activeTab === 'settings' ? 'Fee Claims' : 'Master Config',
+          title: "Configure Fee Bill Master Data Options",
+        }}
+        archiveToggle={{
+          showArchived,
+          onToggle: () => setShowArchived((v) => !v),
+          activeLabel: "Hide Archived",
+          inactiveLabel: "Show Archived",
+        }}
+        importAction={{
+          disabled: true,
+          disabledReason: "Fee Bills Excel Import coming soon",
+        }}
+        exportAction={{
+          onClick: () => setIsExportModalOpen(true),
+          label: "Export Excel",
+        }}
+        primaryAction={{
+          onClick: () => {
+            setEditingBill(null);
+            setActiveTab('create');
+          },
+          label: "New Fee Bill Voucher",
+        }}
+      />
 
       {/* Main Top Navigation Tabs */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto">

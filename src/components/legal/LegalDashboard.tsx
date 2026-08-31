@@ -26,6 +26,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { ModulePageHeader } from '@/components/common/ModulePageHeader';
 
 export const LegalDashboard: React.FC = () => {
   const [cases, setCases] = useState<LegalCaseData[]>([]);
@@ -372,59 +373,38 @@ export const LegalDashboard: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            <Scale className="w-7 h-7 text-blue-600 dark:text-blue-400" />
-            <span>Legal Cases & Court Proceedings Portal</span>
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
-            Madras High Court, Appellate Division, NGT, and Subordinate Courts Litigation Docket & Compliance Tracking
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={() => fetchCases()}
-            disabled={loading}
-            className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
-            title="Refresh Cases"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-
-          <button
-            onClick={() => setIsMasterModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
-            title="Configure Dropdown Master Options"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span>Master Config</span>
-          </button>
-
-          <button
-            onClick={() => setShowArchived((v) => !v)}
-            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-              showArchived
-                ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-            title={showArchived ? 'Hide Deleted Cases' : 'Show Deleted Cases'}
-          >
-            <Archive className="w-4 h-4" />
-            <span>{showArchived ? 'Hide Archived' : 'Show Archived'}</span>
-          </button>
-
-          <button
-            onClick={handleCreateNew}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Legal Case</span>
-          </button>
-        </div>
-      </div>
+      {/* Unified Module Page Header */}
+      <ModulePageHeader
+        icon={Scale}
+        title="Legal Cases & Court Proceedings Portal"
+        subtitle="Madras High Court, Appellate Division, NGT, and Subordinate Courts Litigation Docket & Compliance Tracking"
+        onRefresh={() => fetchCases()}
+        isLoading={loading}
+        refreshLabel="Refresh"
+        masterConfig={{
+          onClick: () => setIsMasterModalOpen(true),
+          label: "Master Config",
+          title: "Configure Dropdown Master Options",
+        }}
+        archiveToggle={{
+          showArchived,
+          onToggle: () => setShowArchived((v) => !v),
+          activeLabel: "Hide Archived",
+          inactiveLabel: "Show Archived",
+        }}
+        importAction={{
+          disabled: true,
+          disabledReason: "Legal Cases Import coming soon",
+        }}
+        exportAction={{
+          disabled: true,
+          disabledReason: "Legal Cases Export coming soon",
+        }}
+        primaryAction={{
+          onClick: handleCreateNew,
+          label: "New Legal Case",
+        }}
+      />
 
       {/* 6 EXECUTIVE KPI QUADRANT CARDS (3 Rows × 2 Columns with interactive filtering) */}
       {/* 6 EXECUTIVE KPI QUADRANT CARDS (3 Rows × 2 Columns with single-select mutually-exclusive filtering) */}
