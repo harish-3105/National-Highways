@@ -480,120 +480,138 @@ export const StaffDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Smart Search & 7-Level Cascading Hierarchy Filters */}
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
-              {/* Row 1: Search & Filter Summary */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="relative w-full sm:max-w-md">
+            {/* Smart Search & 2-Tier Hierarchy Filters (Option A Layout) */}
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5 mb-6">
+              {/* Tier 1: Search, Cadre / Designation, Office Type, & Active Filter Summary */}
+              <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+                {/* Search Bar */}
+                <div className="relative flex-1 min-w-[260px]">
                   <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                    placeholder="Search personnel by name, designation, phone, email, office..."
+                    className="w-full pl-10 pr-8 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold transition-all"
                   />
-                </div>
-
-                <div className="flex items-center gap-2 self-end sm:self-auto">
-                  <span className="text-xs font-semibold text-slate-500">
-                    Showing <strong className="text-slate-900 dark:text-slate-100">{filteredStaff.length}</strong> of {activeStaffCount} personnel
-                  </span>
-                  {hasActiveFilters && (
+                  {searchQuery && (
                     <button
-                      onClick={handleClearAllFilters}
-                      className="inline-flex items-center gap-1 text-xs text-rose-600 hover:text-rose-700 font-bold px-2 py-1 bg-rose-50 dark:bg-rose-950/60 rounded-lg transition-colors cursor-pointer"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                      title="Clear search"
                     >
-                      <RotateCcw className="w-3 h-3" />
-                      <span>Reset Filters</span>
+                      <X className="w-4 h-4" />
                     </button>
                   )}
                 </div>
+
+                {/* Cadre Designation & Office Filter Selects */}
+                <div className="flex items-center gap-2.5 w-full lg:w-auto flex-wrap sm:flex-nowrap shrink-0">
+                  <div className="w-full sm:w-44">
+                    <SearchableSelect
+                      options={['All Cadres', ...masterConfig.designations]}
+                      value={selectedDesignation ? `${selectedDesignation}` : 'All Cadres'}
+                      onChange={(val) => setSelectedDesignation(val === 'All Cadres' ? '' : val)}
+                      placeholder="Cadre / Post..."
+                    />
+                  </div>
+
+                  <div className="w-full sm:w-40">
+                    <SearchableSelect
+                      options={['All Offices', ...masterConfig.offices]}
+                      value={selectedOffice ? `${selectedOffice}` : 'All Offices'}
+                      onChange={(val) => setSelectedOffice(val === 'All Offices' ? '' : val)}
+                      placeholder="Office Type..."
+                    />
+                  </div>
+
+                  {/* Filter Count Badge & Reset Action */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                      {filteredStaff.length} / {activeStaffCount}
+                    </span>
+
+                    {hasActiveFilters && (
+                      <button
+                        onClick={handleClearAllFilters}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 text-rose-700 dark:text-rose-300 text-xs font-bold rounded-xl transition-all cursor-pointer border border-rose-200 dark:border-rose-800"
+                        title="Reset all search and dropdown filters"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        <span>Reset</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* Row 2: All 7 Master Data Dropdowns Grid with Smart Cascading */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 pt-1">
-                {/* 1. Office Filter */}
-                <div>
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
-                    Office
-                  </label>
-                  <SearchableSelect
-                    options={['All Offices', ...masterConfig.offices]}
-                    value={selectedOffice ? `${selectedOffice}` : 'All Offices'}
-                    onChange={(val) => setSelectedOffice(val === 'All Offices' ? '' : val)}
-                  />
-                </div>
+              {/* Tier 2: 5-Level Geographic Cascade Hierarchy (Circle ➔ Division ➔ Sub-Div ➔ Section ➔ Sub-Section) */}
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 items-center">
+                  {/* 1. Circle Filter */}
+                  <div>
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
+                      1. Circle
+                    </label>
+                    <SearchableSelect
+                      options={['All Circles', ...masterConfig.circles]}
+                      value={selectedCircle ? `${selectedCircle}` : 'All Circles'}
+                      onChange={handleFilterCircleChange}
+                      placeholder="Select Circle..."
+                    />
+                  </div>
 
-                {/* 2. Circle Filter */}
-                <div>
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
-                    Circle
-                  </label>
-                  <SearchableSelect
-                    options={['All Circles', ...masterConfig.circles]}
-                    value={selectedCircle ? `${selectedCircle}` : 'All Circles'}
-                    onChange={handleFilterCircleChange}
-                  />
-                </div>
+                  {/* 2. Division Filter */}
+                  <div>
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
+                      2. Division {selectedCircle && <span className="text-blue-600 font-bold truncate">({selectedCircle})</span>}
+                    </label>
+                    <SearchableSelect
+                      options={['All Divisions', ...availableFilterDivisions]}
+                      value={selectedDivision ? `${selectedDivision}` : 'All Divisions'}
+                      onChange={handleFilterDivisionChange}
+                      placeholder="Select Division..."
+                    />
+                  </div>
 
-                {/* 3. Division Filter */}
-                <div>
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
-                    Division {selectedCircle && <span className="text-blue-600 font-normal">({selectedCircle})</span>}
-                  </label>
-                  <SearchableSelect
-                    options={['All Divisions', ...availableFilterDivisions]}
-                    value={selectedDivision ? `${selectedDivision}` : 'All Divisions'}
-                    onChange={handleFilterDivisionChange}
-                  />
-                </div>
+                  {/* 3. Sub-Division Filter */}
+                  <div>
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
+                      3. Sub-Division {selectedDivision && <span className="text-blue-600 font-bold truncate">({selectedDivision})</span>}
+                    </label>
+                    <SearchableSelect
+                      options={['All Sub-Divisions', ...availableFilterSubDivisions]}
+                      value={selectedSubDivision ? `${selectedSubDivision}` : 'All Sub-Divisions'}
+                      onChange={handleFilterSubDivisionChange}
+                      placeholder="Select Sub-Div..."
+                    />
+                  </div>
 
-                {/* 4. Sub-Division Filter */}
-                <div>
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
-                    Sub-Division {selectedDivision && <span className="text-blue-600 font-normal">({selectedDivision})</span>}
-                  </label>
-                  <SearchableSelect
-                    options={['All Sub-Divisions', ...availableFilterSubDivisions]}
-                    value={selectedSubDivision ? `${selectedSubDivision}` : 'All Sub-Divisions'}
-                    onChange={handleFilterSubDivisionChange}
-                  />
-                </div>
+                  {/* 4. Section Filter */}
+                  <div>
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
+                      4. Section {selectedSubDivision && <span className="text-blue-600 font-bold truncate">({selectedSubDivision})</span>}
+                    </label>
+                    <SearchableSelect
+                      options={['All Sections', ...availableFilterSections]}
+                      value={selectedSection ? `${selectedSection}` : 'All Sections'}
+                      onChange={handleFilterSectionChange}
+                      placeholder="Select Section..."
+                    />
+                  </div>
 
-                {/* 5. Section Filter */}
-                <div>
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
-                    Section {selectedSubDivision && <span className="text-blue-600 font-normal">({selectedSubDivision})</span>}
-                  </label>
-                  <SearchableSelect
-                    options={['All Sections', ...availableFilterSections]}
-                    value={selectedSection ? `${selectedSection}` : 'All Sections'}
-                    onChange={handleFilterSectionChange}
-                  />
-                </div>
-
-                {/* 6. Sub-Section Filter */}
-                <div>
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
-                    Sub-Section {selectedSection && <span className="text-blue-600 font-normal">({selectedSection})</span>}
-                  </label>
-                  <SearchableSelect
-                    options={['All Sub-Sections', ...availableFilterSubSections]}
-                    value={selectedSubSection ? `${selectedSubSection}` : 'All Sub-Sections'}
-                    onChange={(val) => setSelectedSubSection(val === 'All Sub-Sections' ? '' : val)}
-                  />
-                </div>
-
-                {/* 7. Designation Filter */}
-                <div>
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
-                    Designation
-                  </label>
-                  <SearchableSelect
-                    options={['All Designations', ...masterConfig.designations]}
-                    value={selectedDesignation ? `${selectedDesignation}` : 'All Designations'}
-                    onChange={(val) => setSelectedDesignation(val === 'All Designations' ? '' : val)}
-                  />
+                  {/* 5. Sub-Section Filter */}
+                  <div>
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 block">
+                      5. Sub-Section {selectedSection && <span className="text-blue-600 font-bold truncate">({selectedSection})</span>}
+                    </label>
+                    <SearchableSelect
+                      options={['All Sub-Sections', ...availableFilterSubSections]}
+                      value={selectedSubSection ? `${selectedSubSection}` : 'All Sub-Sections'}
+                      onChange={(val) => setSelectedSubSection(val === 'All Sub-Sections' ? '' : val)}
+                      placeholder="Select Sub-Sec..."
+                    />
+                  </div>
                 </div>
               </div>
             </div>

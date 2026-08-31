@@ -24,6 +24,7 @@ import {
   Gavel,
   AlertTriangle,
   Clock,
+  X,
 } from 'lucide-react';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { ModulePageHeader } from '@/components/common/ModulePageHeader';
@@ -623,32 +624,42 @@ export const LegalDashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* FILTER CONTROLS */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
-          {/* Search Input */}
-          <div className="relative md:col-span-2">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+      {/* FILTER CONTROLS (Option A Proportional Layout) */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-xs space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-12 gap-2.5 items-center">
+          {/* Search Input (3 cols on lg) */}
+          <div className="relative col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-3">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by case no, court, petitioner, prayer..."
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                title="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
-          {/* Classification Filter */}
-          <div>
+          {/* Classification Filter (2 cols) */}
+          <div className="col-span-1 md:col-span-1 lg:col-span-2">
             <SearchableSelect
               options={['All Classifications', 'Normal Case', 'Appeal Case']}
               value={filterClassification || 'All Classifications'}
               onChange={(val) => setFilterClassification(val === 'All Classifications' ? '' : val)}
+              placeholder="Classification..."
             />
           </div>
 
-          {/* Circle Filter */}
-          <div>
+          {/* Circle Filter (2 cols) */}
+          <div className="col-span-1 md:col-span-1 lg:col-span-2">
             <SearchableSelect
               options={['All Circles', ...(masterData?.circles || [])]}
               value={filterCircle ? `${filterCircle}` : 'All Circles'}
@@ -656,43 +667,47 @@ export const LegalDashboard: React.FC = () => {
                 setFilterCircle(val === 'All Circles' ? '' : val);
                 setFilterDivision('');
               }}
+              placeholder="Circle..."
             />
           </div>
 
-          {/* Division Filter */}
-          <div>
+          {/* Division Filter (2 cols) */}
+          <div className="col-span-1 md:col-span-1 lg:col-span-2">
             <SearchableSelect
               options={['All Divisions', ...availableFilterDivisions]}
               value={filterDivision ? `${filterDivision}` : 'All Divisions'}
               onChange={(val) => setFilterDivision(val === 'All Divisions' ? '' : val)}
+              placeholder="Division..."
             />
           </div>
 
-          {/* Status Filter */}
-          <div>
+          {/* Status Filter (2 cols) */}
+          <div className="col-span-1 md:col-span-1 lg:col-span-2">
             <SearchableSelect
               options={['All Statuses', ...(masterData?.caseStatuses || [])]}
               value={filterCurrentStatus || 'All Statuses'}
               onChange={(val) => setFilterCurrentStatus(val === 'All Statuses' ? '' : val)}
+              placeholder="Status..."
             />
           </div>
 
-          {/* Counter Status Filter */}
-          <div>
+          {/* Counter Status Filter (1 col on lg) */}
+          <div className="col-span-1 md:col-span-1 lg:col-span-1">
             <SearchableSelect
-              options={['All CA Statuses', 'CA Filed (Yes)', 'CA Pending (No)']}
+              options={['All CA', 'CA Filed', 'CA Pending']}
               value={
                 filterCounterStatus === 'Yes'
-                  ? 'CA Filed (Yes)'
+                  ? 'CA Filed'
                   : filterCounterStatus === 'No'
-                  ? 'CA Pending (No)'
-                  : 'All CA Statuses'
+                  ? 'CA Pending'
+                  : 'All CA'
               }
               onChange={(val) => {
-                if (val.includes('Yes')) setFilterCounterStatus('Yes');
-                else if (val.includes('No')) setFilterCounterStatus('No');
+                if (val.includes('Filed')) setFilterCounterStatus('Yes');
+                else if (val.includes('Pending')) setFilterCounterStatus('No');
                 else setFilterCounterStatus('');
               }}
+              placeholder="CA State..."
             />
           </div>
         </div>

@@ -26,6 +26,8 @@ import {
   DollarSign,
   CheckCircle2,
   Scale,
+  X,
+  RotateCcw,
 } from 'lucide-react';
 
 type PortalTab = 'workspace' | 'create' | 'settings';
@@ -419,27 +421,29 @@ export function FeeBillManagementPortal() {
             </button>
           </div>
 
-          {/* Streamlined Single-Bar Toolbar (Layout A) */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-xs">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-              {/* Left Side: Compact Search + Circle + Division Filters */}
+          {/* Symmetrical Single-Bar Toolbar (Option A Layout) */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-xs mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+              {/* Left Side: Search + Circle + Division Filters */}
               <div className="flex flex-1 flex-wrap items-center gap-2.5">
                 {/* Search Bar with Quick Clear */}
-                <div className="relative flex-1 min-w-[200px] max-w-sm">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <div className="relative flex-1 min-w-[220px] max-w-sm">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
+                    placeholder="Search by advocate, case no, voucher..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   />
                   {searchTerm && (
                     <button
                       type="button"
                       onClick={() => setSearchTerm('')}
-                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+                      className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                      title="Clear search"
                     >
-                      ✕
+                      <X className="w-4 h-4" />
                     </button>
                   )}
                 </div>
@@ -453,6 +457,7 @@ export function FeeBillManagementPortal() {
                       setSelectedCircle(val === 'All Circles' ? '' : val);
                       setSelectedDivision('');
                     }}
+                    placeholder="Circle..."
                   />
                 </div>
 
@@ -462,6 +467,7 @@ export function FeeBillManagementPortal() {
                     options={['All Divisions', ...availableDivisions.map((d) => d.name)]}
                     value={selectedDivision ? `${selectedDivision}` : 'All Divisions'}
                     onChange={(val) => setSelectedDivision(val === 'All Divisions' ? '' : val)}
+                    placeholder="Division..."
                   />
                 </div>
 
@@ -470,18 +476,18 @@ export function FeeBillManagementPortal() {
                   <button
                     type="button"
                     onClick={handleResetFilters}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition-all cursor-pointer"
                     title="Reset all filters and search"
                   >
+                    <RotateCcw className="w-3 h-3" />
                     <span>Reset Filters</span>
                   </button>
                 )}
               </div>
 
-              {/* Right Side: View Switcher + Show Archived */}
-              <div className="flex items-center gap-2 flex-wrap self-start lg:self-auto">
-                {/* Segmented View Switcher */}
-                <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl gap-1">
+              {/* Right Side: Segmented View Mode Switcher */}
+              <div className="flex items-center gap-1.5 shrink-0 self-start lg:self-auto">
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 gap-1">
                   <button
                     type="button"
                     onClick={() => setViewMode('ledger')}

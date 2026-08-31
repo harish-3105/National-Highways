@@ -663,26 +663,35 @@ export const MajorProjectsDashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* Comprehensive Filter Panel */}
+      {/* Comprehensive 2-Tier Filter Panel (Option A) */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
-        {/* Tier 1: Search Bar, Division Filter & 50Cr Button */}
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-3">
+        {/* Tier 1: Search Bar, Circle & Division Cascade, and Mega Projects Filter */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
           {/* Search Bar */}
-          <div className="relative flex-1 min-w-[240px]">
+          <div className="relative flex-1 min-w-[260px]">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search ongoing works by name, job no, PMIS ID, contractor..."
-              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
+              placeholder="Search works by name, job number, PMIS ID, contractor..."
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                title="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
-          {/* Circle & Division Filters & 50Cr Button */}
-          <div className="flex items-center gap-2.5 w-full lg:w-auto flex-wrap sm:flex-nowrap">
+          {/* Circle & Division Cascading Selects & 50Cr Button */}
+          <div className="flex items-center gap-2.5 w-full lg:w-auto flex-wrap sm:flex-nowrap shrink-0">
             {/* Circle Filter */}
-            <div className="w-full sm:w-48">
+            <div className="w-full sm:w-44">
               <SearchableSelect
                 options={['All Circles', ...circlesList]}
                 value={selectedCircle === 'ALL' || !selectedCircle ? 'All Circles' : selectedCircle}
@@ -691,22 +700,24 @@ export const MajorProjectsDashboard: React.FC = () => {
                   setSelectedCircle(newCircle);
                   setSelectedDivision('ALL');
                 }}
+                placeholder="Circle..."
               />
             </div>
 
             {/* Division Filter */}
-            <div className="w-full sm:w-48">
+            <div className="w-full sm:w-44">
               <SearchableSelect
                 options={['All Divisions', ...divisionsList]}
                 value={selectedDivision === 'ALL' || !selectedDivision ? 'All Divisions' : selectedDivision}
                 onChange={(val) => setSelectedDivision(val === 'All Divisions' ? 'ALL' : val)}
+                placeholder="Division..."
               />
             </div>
 
-            {/* ≥ ₹50 Cr Filter Toggle */}
+            {/* ≥ ₹50 Cr Mega Works Toggle */}
             <button
               onClick={() => setActiveKpiFilter((prev) => (prev === 'ABOVE_50CR' ? 'ACTIVE_ALL' : 'ABOVE_50CR'))}
-              className={`px-3.5 py-2.5 rounded-xl transition-all cursor-pointer font-bold text-xs flex items-center gap-1.5 border shrink-0 ${
+              className={`px-3 py-2 rounded-xl transition-all cursor-pointer font-bold text-xs flex items-center gap-1.5 border shrink-0 ${
                 activeKpiFilter === 'ABOVE_50CR'
                   ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                   : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-500'
@@ -727,12 +738,12 @@ export const MajorProjectsDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Tier 2: Range Filters for Delay & Physical Progress */}
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-3 text-xs flex-wrap">
-          <div className="flex items-center gap-3 flex-wrap w-full md:w-auto">
+        {/* Tier 2: Delay (Yrs) & Physical Progress (%) Range Sliders + Result Counts & Reset */}
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* 1. Delay (Years) Range Filter */}
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
-              <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/70">
+              <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 text-[11px]">
                 <Clock className="w-3.5 h-3.5 text-rose-500" />
                 <span>Delay (Yrs):</span>
               </span>
@@ -741,18 +752,20 @@ export const MajorProjectsDashboard: React.FC = () => {
                   type="number"
                   step="0.1"
                   min="0"
+                  placeholder="Min"
                   value={delayMin}
                   onChange={(e) => setDelayMin(e.target.value)}
-                  className="w-16 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-rose-500"
+                  className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-rose-500 text-slate-900 dark:text-slate-100"
                 />
-                <span className="text-slate-400 font-normal">to</span>
+                <span className="text-slate-400 font-normal text-[11px]">to</span>
                 <input
                   type="number"
                   step="0.1"
                   min="0"
+                  placeholder="Max"
                   value={delayMax}
                   onChange={(e) => setDelayMax(e.target.value)}
-                  className="w-16 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-rose-500"
+                  className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-rose-500 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
@@ -762,7 +775,7 @@ export const MajorProjectsDashboard: React.FC = () => {
                     setDelayMin('');
                     setDelayMax('');
                   }}
-                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  className="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                   title="Clear Delay Filter"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -771,8 +784,8 @@ export const MajorProjectsDashboard: React.FC = () => {
             </div>
 
             {/* 2. Progress (%) Range Filter */}
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
-              <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/70">
+              <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 text-[11px]">
                 <Percent className="w-3.5 h-3.5 text-emerald-500" />
                 <span>Progress (%):</span>
               </span>
@@ -781,18 +794,20 @@ export const MajorProjectsDashboard: React.FC = () => {
                   type="number"
                   min="0"
                   max="100"
+                  placeholder="0%"
                   value={progressMin}
                   onChange={(e) => setProgressMin(e.target.value)}
-                  className="w-16 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-emerald-500"
+                  className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-emerald-500 text-slate-900 dark:text-slate-100"
                 />
-                <span className="text-slate-400 font-normal">to</span>
+                <span className="text-slate-400 font-normal text-[11px]">to</span>
                 <input
                   type="number"
                   min="0"
                   max="100"
+                  placeholder="100%"
                   value={progressMax}
                   onChange={(e) => setProgressMax(e.target.value)}
-                  className="w-16 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-emerald-500"
+                  className="w-14 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-emerald-500 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
@@ -802,7 +817,7 @@ export const MajorProjectsDashboard: React.FC = () => {
                     setProgressMin('');
                     setProgressMax('');
                   }}
-                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  className="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                   title="Clear Progress Filter"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -811,15 +826,22 @@ export const MajorProjectsDashboard: React.FC = () => {
             </div>
           </div>
 
-          {hasActiveFilters && (
-            <button
-              onClick={handleResetFilters}
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset All Filters</span>
-            </button>
-          )}
+          {/* Results Badge & Reset Action */}
+          <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+            <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700">
+              Showing {filteredProjects.length} work{filteredProjects.length === 1 ? '' : 's'}
+            </span>
+
+            {hasActiveFilters && (
+              <button
+                onClick={handleResetFilters}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-bold rounded-xl transition-all cursor-pointer border border-rose-200 dark:border-rose-800"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset Filters</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
