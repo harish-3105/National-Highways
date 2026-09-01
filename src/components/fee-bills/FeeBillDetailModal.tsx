@@ -523,7 +523,13 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {contract.letterNumber && (
                     <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Reference Letter No</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                        {contract.statusOfPaymentProposal?.toLowerCase().includes('proceeding')
+                          ? 'Proceeding No'
+                          : contract.statusOfPaymentProposal?.toLowerCase().includes('approval')
+                          ? 'Approval / Letter No'
+                          : 'Reference Letter No'}
+                      </span>
                       <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
                         {contract.letterNumber}
                       </span>
@@ -531,7 +537,13 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
                   )}
                   {contract.letterDate && (
                     <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Reference Letter Date</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                        {contract.statusOfPaymentProposal?.toLowerCase().includes('proceeding')
+                          ? 'Date for Proceeding'
+                          : contract.statusOfPaymentProposal?.toLowerCase().includes('approval')
+                          ? 'Approval Date'
+                          : 'Reference Letter Date'}
+                      </span>
                       <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
                         📅 {formatDateDMY(contract.letterDate)}
                       </span>

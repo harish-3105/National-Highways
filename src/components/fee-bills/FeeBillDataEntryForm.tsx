@@ -177,9 +177,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
   );
 
   const baseStatusOfObtainingGo = [
-    'Approval Accorded',
     'GO Obtained',
-    'Proceeding',
     'Proposal Sent From',
     'Proposal Yet to be Sent',
   ];
@@ -187,9 +185,15 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
     new Set([...(masterData.statusOfObtainingGoOptions || []), ...baseStatusOfObtainingGo])
   ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
-  const statusOfPaymentProposalOptions = [...(masterData.statusOfPaymentProposalOptions || [])].sort((a, b) =>
-    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
-  );
+  const baseStatusOfPaymentProposal = [
+    'Approval accorded by MoRTH',
+    'Proceeding issued by CE',
+    'Proposal Sent From',
+    'Proposal Yet to be Sent',
+  ];
+  const statusOfPaymentProposalOptions = Array.from(
+    new Set([...(masterData.statusOfPaymentProposalOptions || []), ...baseStatusOfPaymentProposal])
+  ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
   const goStatusOptions = [...(masterData.goStatusOptions || [])].sort((a, b) =>
     a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
   );
@@ -462,28 +466,20 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             stageErrors.goDate = 'G.O. Date is required when G.O. is obtained.';
           }
         }
-        const isProposalOrProceeding =
+        const isProposal =
           !isObtained &&
           Boolean(formData.statusOfObtainingGo) &&
           !goStatusLower.includes('yet to be') &&
           (goStatusLower.includes('proposal') ||
             goStatusLower.includes('sent') ||
-            goStatusLower.includes('submitted') ||
-            goStatusLower.includes('approval') ||
-            goStatusLower.includes('accorded') ||
-            goStatusLower.includes('proceeding'));
+            goStatusLower.includes('submitted'));
 
-        if (isProposalOrProceeding) {
-          const isProc = goStatusLower.includes('proceeding');
+        if (isProposal) {
           if (!formData.goReferenceLetterNo?.trim()) {
-            stageErrors.goReferenceLetterNo = isProc
-              ? 'Proceeding Number is required.'
-              : 'Reference Letter Number is required.';
+            stageErrors.goReferenceLetterNo = 'G.O. Proposal Reference Letter Number is required.';
           }
           if (!formData.goReferenceLetterDate?.trim()) {
-            stageErrors.goReferenceLetterDate = isProc
-              ? 'Date for Proceeding is required.'
-              : 'Reference Letter Date is required.';
+            stageErrors.goReferenceLetterDate = 'G.O. Proposal Reference Letter Date is required.';
           }
         }
       }
@@ -552,8 +548,37 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
         }
       } else {
         // Pending Status proposal tracking validations
+        const paymentPropLower = formData.statusOfPaymentProposal?.toLowerCase().trim() || '';
+        const isPendingWithLetter =
+          Boolean(formData.statusOfPaymentProposal) &&
+          !paymentPropLower.includes('yet to be') &&
+          (paymentPropLower.includes('proceeding') ||
+            paymentPropLower.includes('approval') ||
+            paymentPropLower.includes('proposal') ||
+            paymentPropLower.includes('sent') ||
+            paymentPropLower.includes('submitted'));
+
+        if (isPendingWithLetter) {
+          const isProc = paymentPropLower.includes('proceeding');
+          const isApproval = paymentPropLower.includes('approval') || paymentPropLower.includes('morth');
+          if (!formData.letterNumber?.trim()) {
+            stageErrors.letterNumber = isProc
+              ? 'Proceeding Number is required.'
+              : isApproval
+              ? 'Approval / Letter Number is required.'
+              : 'Reference Letter Number is required.';
+          }
+          if (!formData.letterDate?.trim()) {
+            stageErrors.letterDate = isProc
+              ? 'Date for Proceeding is required.'
+              : isApproval
+              ? 'Approval Date is required.'
+              : 'Reference Letter Date is required.';
+          }
+        }
+
         if (formData.letterDate && formData.letterDate > todayStr) {
-          stageErrors.letterDate = 'Reference Letter Date cannot be a future date.';
+          stageErrors.letterDate = 'Letter / Proceeding Date cannot be a future date.';
         }
         if (formData.proceedingLetterDate && formData.proceedingLetterDate > todayStr) {
           stageErrors.proceedingLetterDate = 'Proceeding Date cannot be a future date.';
@@ -1247,7 +1272,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             </div>
           )}
 
-          {/* Conditional Branch: If G.O. Required == YES and Status is Proposal Sent / Approval Accorded / Proceeding */}
+          {/* Conditional Branch: If G.O. Required == YES and Status is Proposal Sent / Submitted */}
           {(formData.goStatus === 'Yes' || formData.goStatus?.toLowerCase() === 'yes') &&
             Boolean(formData.statusOfObtainingGo) &&
             !formData.statusOfObtainingGo?.toLowerCase().includes('obtained') &&
@@ -1255,35 +1280,23 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             (
               formData.statusOfObtainingGo?.toLowerCase().includes('proposal') ||
               formData.statusOfObtainingGo?.toLowerCase().includes('sent') ||
-              formData.statusOfObtainingGo?.toLowerCase().includes('submitted') ||
-              formData.statusOfObtainingGo?.toLowerCase().includes('approval') ||
-              formData.statusOfObtainingGo?.toLowerCase().includes('accorded') ||
-              formData.statusOfObtainingGo?.toLowerCase().includes('proceeding')
+              formData.statusOfObtainingGo?.toLowerCase().includes('submitted')
             ) && (
             <div className="p-5 bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl space-y-3 text-xs animate-in fade-in">
               <div className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
                 <FileText className="w-4 h-4 text-amber-600" />
-                {formData.statusOfObtainingGo?.toLowerCase().includes('proceeding')
-                  ? 'G.O. Proceeding Particulars'
-                  : 'G.O. Proposal / Approval Particulars'}
+                G.O. Proposal Reference Particulars
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    {formData.statusOfObtainingGo?.toLowerCase().includes('proceeding')
-                      ? 'Proceeding Number'
-                      : 'Letter Number'}{' '}
-                    <span className="text-red-500">*</span>
+                    Reference Letter Number <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.goReferenceLetterNo || ''}
                     onChange={(e) => setFormData((prev) => ({ ...prev, goReferenceLetterNo: e.target.value }))}
-                    placeholder={
-                      formData.statusOfObtainingGo?.toLowerCase().includes('proceeding')
-                        ? 'e.g. Proc. No. 1284/GO/2026'
-                        : 'e.g. Lr. No. 1284/GO/2026'
-                    }
+                    placeholder="e.g. Lr. No. 1284/GO/2026"
                     className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
                   />
                   {errors.goReferenceLetterNo && (
@@ -1292,11 +1305,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 </div>
                 <div>
                   <DatePickerInput
-                    label={
-                      formData.statusOfObtainingGo?.toLowerCase().includes('proceeding')
-                        ? 'Date for Proceeding'
-                        : 'Date'
-                    }
+                    label="Reference Letter Date"
                     required
                     max={todayStr}
                     value={formData.goReferenceLetterDate || ''}
@@ -1370,7 +1379,20 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
             <div className="space-y-5 animate-in fade-in">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                 {/* 2. Status of Payment Proposal */}
-                <div className={formData.statusOfPaymentProposal?.toLowerCase().includes('proposal sent') && !formData.statusOfPaymentProposal?.toLowerCase().includes('yet to be') ? 'sm:col-span-2 md:col-span-2' : 'sm:col-span-1 md:col-span-3'}>
+                <div className={
+                  Boolean(
+                    formData.statusOfPaymentProposal &&
+                    !formData.statusOfPaymentProposal.toLowerCase().includes('yet to be') &&
+                    (
+                      formData.statusOfPaymentProposal.toLowerCase().includes('proceeding') ||
+                      formData.statusOfPaymentProposal.toLowerCase().includes('approval') ||
+                      formData.statusOfPaymentProposal.toLowerCase().includes('proposal') ||
+                      formData.statusOfPaymentProposal.toLowerCase().includes('sent')
+                    )
+                  )
+                    ? 'sm:col-span-2 md:col-span-2'
+                    : 'sm:col-span-1 md:col-span-3'
+                }>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                     Status of Payment Proposal
                   </label>
@@ -1381,32 +1403,54 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   />
                 </div>
 
-                {/* If proposal sent from... reveal reference letter number and date */}
+                {/* If Proceeding issued by CE / Approval accorded by MoRTH / Proposal sent */}
                 {Boolean(
                   formData.statusOfPaymentProposal &&
                   !formData.statusOfPaymentProposal.toLowerCase().includes('yet to be') &&
                   (
-                    formData.statusOfPaymentProposal.toLowerCase().includes('proposal sent from') ||
-                    formData.statusOfPaymentProposal.toLowerCase().includes('proposal sent')
+                    formData.statusOfPaymentProposal.toLowerCase().includes('proceeding') ||
+                    formData.statusOfPaymentProposal.toLowerCase().includes('approval') ||
+                    formData.statusOfPaymentProposal.toLowerCase().includes('proposal') ||
+                    formData.statusOfPaymentProposal.toLowerCase().includes('sent')
                   )
                 ) && (
                   <>
                     <div>
                       <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                        Reference Letter Number <span className="text-red-500">*</span>
+                        {formData.statusOfPaymentProposal?.toLowerCase().includes('proceeding')
+                          ? 'Proceeding Number'
+                          : formData.statusOfPaymentProposal?.toLowerCase().includes('approval')
+                          ? 'Approval / Letter Number'
+                          : 'Reference Letter Number'}{' '}
+                        <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={formData.letterNumber || ''}
                         onChange={(e) => setFormData((prev) => ({ ...prev, letterNumber: e.target.value }))}
-                        placeholder="e.g. Lr. No. 4521/2026/A2"
+                        placeholder={
+                          formData.statusOfPaymentProposal?.toLowerCase().includes('proceeding')
+                            ? 'e.g. Proc. No. 1284/2026/CE'
+                            : formData.statusOfPaymentProposal?.toLowerCase().includes('approval')
+                            ? 'e.g. Lr. No. RW/NH/2026'
+                            : 'e.g. Lr. No. 4521/2026/A2'
+                        }
                         className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
                       />
+                      {errors.letterNumber && (
+                        <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.letterNumber}</p>
+                      )}
                     </div>
 
                     <div>
                       <DatePickerInput
-                        label="Reference Letter Date"
+                        label={
+                          formData.statusOfPaymentProposal?.toLowerCase().includes('proceeding')
+                            ? 'Date for Proceeding'
+                            : formData.statusOfPaymentProposal?.toLowerCase().includes('approval')
+                            ? 'Approval Date'
+                            : 'Reference Letter Date'
+                        }
                         required
                         max={todayStr}
                         value={formData.letterDate || ''}
