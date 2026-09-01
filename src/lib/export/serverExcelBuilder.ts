@@ -114,10 +114,29 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
     const worksheet = workbook.addWorksheet(sheetName, {
       views: [{ state: 'frozen', ySplit: 1 }], // Freeze header row
-      properties: { defaultRowHeight: 22 },
+      properties: { defaultRowHeight: 20 },
     });
 
-    // 1. Calculate dynamic auto-fit column widths based on headers and data contents
+    // Native Excel Print Setup (Fits all columns on 1 page wide in Landscape A4)
+    worksheet.pageSetup = {
+      orientation: 'landscape',
+      paperSize: 9, // A4 Paper
+      fitToPage: true,
+      fitToWidth: 1, // Fit all columns onto 1 page horizontally
+      fitToHeight: 0, // Allow data rows to flow naturally across vertical pages
+      margins: {
+        left: 0.25, // Narrow 0.25" margins to maximize printable width
+        right: 0.25,
+        top: 0.4,
+        bottom: 0.4,
+        header: 0.2,
+        footer: 0.2,
+      },
+      printTitlesRow: '1:1', // Repeat cream header row on every printed page
+      showGridLines: true,
+    };
+
+    // 1. Calculate snug, print-optimized auto-fit column widths (no extra padding)
     const columnWidths = activeColumns.map((col) => {
       let maxLen = col.header.length;
 
@@ -134,8 +153,8 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
         }
       }
 
-      // Add padding for cell breathing room & Excel auto-filter dropdown arrows
-      const paddedWidth = maxLen + 4;
+      // Snug +1 character padding (zero wasted horizontal space for printable sheets)
+      const snugWidth = maxLen + 1;
 
       const isLongTextCol =
         col.category === 'remarks' ||
@@ -150,19 +169,19 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
       let optimalWidth: number;
       if (isLongTextCol) {
-        // For long text fields, allow them to expand generously up to 60 chars
-        const minW = col.width ? Math.min(col.width, 35) : 25;
-        optimalWidth = Math.min(Math.max(paddedWidth, minW), 60);
+        // For long text fields, cap at 30-34 chars to preserve horizontal print budget
+        const minW = col.width ? Math.min(col.width, 22) : 18;
+        optimalWidth = Math.min(Math.max(snugWidth, minW), 32);
       } else {
         // For regular fields (codes, numbers, dates, short names, statuses), fit snugly
-        const minW = Math.max(col.width || 12, col.header.length + 4, 12);
-        optimalWidth = Math.min(Math.max(paddedWidth, minW), 45);
+        const minW = Math.min(Math.max(col.width || 10, col.header.length + 1, 8), 24);
+        optimalWidth = Math.min(Math.max(snugWidth, minW), 28);
       }
 
       return optimalWidth;
     });
 
-    // Configure Header Columns with dynamic auto-fit widths
+    // Configure Header Columns with snug print-optimized widths
     worksheet.columns = activeColumns.map((col, idx) => ({
       header: col.header,
       key: col.key,
@@ -171,7 +190,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
     // Style Header Row (Row 1)
     const headerRow = worksheet.getRow(1);
-    headerRow.height = 28;
+    headerRow.height = 26;
     headerRow.eachCell((cell) => {
       cell.fill = CREAM_HEADER_FILL;
       cell.font = HEADER_FONT;
@@ -225,7 +244,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
           const rawLines = strVal.split(/\r?\n/);
           let cellLines = 0;
           for (const line of rawLines) {
-            const effectiveW = Math.max(colWidth - 2, 8);
+            const effectiveW = Math.max(colWidth - 1, 6);
             const wrappedCount = Math.max(1, Math.ceil(line.length / effectiveW));
             cellLines += wrappedCount;
           }
@@ -239,10 +258,10 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
       // Dynamically auto-fit row height
       if (maxLinesInRow === 1) {
-        addedRow.height = 22; // Clean default height with good vertical padding
+        addedRow.height = 20; // Snug, clean default height
       } else {
-        // 18pt per line + 6pt padding, capped safely at 180pt
-        addedRow.height = Math.min(Math.max(24, maxLinesInRow * 18 + 6), 180);
+        // 16pt per line + 4pt padding, capped safely at 160pt
+        addedRow.height = Math.min(Math.max(22, maxLinesInRow * 16 + 4), 160);
       }
 
       // Style Data Cells

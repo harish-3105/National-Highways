@@ -140,12 +140,12 @@ export function generateMajorProjectsExportFile(
           if (line.length > maxLen) maxLen = line.length;
         }
       }
-      return { wch: Math.min(Math.max(maxLen + 4, 14), 60) };
+      return { wch: Math.min(Math.max(maxLen + 1, 10), 32) };
     });
     worksheet['!cols'] = colWidths;
 
     const rowHeights = [
-      { hpt: 28 }, // Header Row
+      { hpt: 26 }, // Header Row
       ...formattedData.map((r) => {
         let maxLines = 1;
         activeColumns.forEach((col, cIdx) => {
@@ -155,15 +155,19 @@ export function generateMajorProjectsExportFile(
             const rawLines = str.split(/\r?\n/);
             let cellLines = 0;
             for (const line of rawLines) {
-              cellLines += Math.max(1, Math.ceil(line.length / Math.max(w - 2, 8)));
+              cellLines += Math.max(1, Math.ceil(line.length / Math.max(w - 1, 6)));
             }
             if (cellLines > maxLines) maxLines = cellLines;
           }
         });
-        return { hpt: maxLines > 1 ? Math.min(Math.max(24, maxLines * 18 + 6), 180) : 22 };
+        return { hpt: maxLines > 1 ? Math.min(Math.max(22, maxLines * 16 + 4), 160) : 20 };
       }),
     ];
     worksheet['!rows'] = rowHeights;
+
+    // Print setup for Landscape A4 & Narrow Margins
+    worksheet['!margins'] = { left: 0.25, right: 0.25, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 };
+    worksheet['!pageSetup'] = { orientation: 'landscape', scale: 100, fitToWidth: 1, fitToHeight: 0 };
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Ongoing Works');
