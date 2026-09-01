@@ -40,6 +40,7 @@ interface DlpContractEntryFormProps {
   initialData?: Partial<DlpCorridor>;
   masterData?: DlpMasterData;
   masterCorridors?: HighwayCorridor[];
+  existingDlpCorridors?: DlpCorridor[];
   onSave: (corridorData: Partial<DlpCorridor>) => Promise<void> | void;
   onCancel: () => void;
 }
@@ -97,6 +98,7 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
   initialData,
   masterData,
   masterCorridors: initialMasterCorridors,
+  existingDlpCorridors,
   onSave,
   onCancel,
 }) => {
@@ -105,6 +107,52 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
   const [fetchingCorridors, setFetchingCorridors] = useState<boolean>(!initialMasterCorridors || initialMasterCorridors.length === 0);
   const [selectedCorridorId, setSelectedCorridorId] = useState<string>('');
   const [selectedCorridor, setSelectedCorridor] = useState<HighwayCorridor | null>(null);
+
+  // Existing DLP Corridors state to prevent picking duplicates
+  const [existingDlpList, setExistingDlpList] = useState<DlpCorridor[]>(existingDlpCorridors || []);
+
+  useEffect(() => {
+    if (existingDlpCorridors && existingDlpCorridors.length > 0) {
+      setExistingDlpList(existingDlpCorridors);
+      return;
+    }
+
+    const fetchExistingDlp = async () => {
+      try {
+        const res = await fetch('/api/dlp');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.corridors)) {
+          setExistingDlpList(data.corridors);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch existing DLP corridors:', err);
+      }
+    };
+
+    fetchExistingDlp();
+  }, [existingDlpCorridors]);
+
+  // Keys of corridors already registered in DLP
+  const registeredDlpKeys = useMemo(() => {
+    const keys = new Set<string>();
+    existingDlpList.forEach((c) => {
+      // If editing, allow current corridor to remain selectable
+      if (
+        initialData?.id &&
+        (c.id === initialData.id ||
+          (initialData.highway_code &&
+            c.highway_code?.toUpperCase() === initialData.highway_code.toUpperCase() &&
+            c.division_name?.toLowerCase() === (initialData.division_name || '').toLowerCase()))
+      ) {
+        return;
+      }
+      if (c.highway_code) {
+        const key = `${c.highway_code.trim().toUpperCase()}__${(c.division_name || '').trim().toLowerCase()}`;
+        keys.add(key);
+      }
+    });
+    return keys;
+  }, [existingDlpList, initialData?.id, initialData?.highway_code, initialData?.division_name]);
 
   // Selected Corridor Level 1 Identity
   const [divisionName, setDivisionName] = useState<string>(initialData?.division_name || '');
@@ -205,22 +253,27 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
       ? Math.round(Math.abs(Number(toKm) - Number(fromKm)) * 1000) / 1000
       : (selectedCorridor?.length_km || 0);
 
-  // Searchable Options for Master Corridors
+  // Searchable Options for Master Corridors (filtered to exclude corridors already registered in DLP)
   const corridorOptions = useMemo(() => {
-    return corridorsList.map((c) => {
-      const fromDisplay = c.from_chainage !== null && c.from_chainage !== undefined && String(c.from_chainage).trim() !== '' ? `Km ${c.from_chainage}` : '';
-      const toDisplay = c.to_chainage !== null && c.to_chainage !== undefined && String(c.to_chainage).trim() !== '' ? `Km ${c.to_chainage}` : '';
-      const spanText = fromDisplay && toDisplay ? `${fromDisplay} to ${toDisplay}` : fromDisplay || toDisplay || `${c.length_km} Km`;
-      const roadTitle = c.road_name || (c.from_location && c.to_location ? `${c.from_location} - ${c.to_location}` : '');
-      const divDisplay = c.division_name ? `${c.division_name} Division` : 'General';
-      const label = `${c.road_code} • ${divDisplay} • ${spanText}${roadTitle ? ` (${roadTitle})` : ''}`;
+    return corridorsList
+      .filter((c) => {
+        const key = `${c.road_code.trim().toUpperCase()}__${(c.division_name || '').trim().toLowerCase()}`;
+        return !registeredDlpKeys.has(key);
+      })
+      .map((c) => {
+        const fromDisplay = c.from_chainage !== null && c.from_chainage !== undefined && String(c.from_chainage).trim() !== '' ? `Km ${c.from_chainage}` : '';
+        const toDisplay = c.to_chainage !== null && c.to_chainage !== undefined && String(c.to_chainage).trim() !== '' ? `Km ${c.to_chainage}` : '';
+        const spanText = fromDisplay && toDisplay ? `${fromDisplay} to ${toDisplay}` : fromDisplay || toDisplay || `${c.length_km} Km`;
+        const roadTitle = c.road_name || (c.from_location && c.to_location ? `${c.from_location} - ${c.to_location}` : '');
+        const divDisplay = c.division_name ? `${c.division_name} Division` : 'General';
+        const label = `${c.road_code} • ${divDisplay} • ${spanText}${roadTitle ? ` (${roadTitle})` : ''}`;
 
-      return {
-        value: c.id,
-        label,
-      };
-    });
-  }, [corridorsList]);
+        return {
+          value: c.id,
+          label,
+        };
+      });
+  }, [corridorsList, registeredDlpKeys]);
 
   const handleSelectCorridor = (corridorId: string) => {
     setSelectedCorridorId(corridorId);
@@ -334,6 +387,11 @@ export const DlpContractEntryForm: React.FC<DlpContractEntryFormProps> = ({
 
     if (!highwayCode.trim() || !divisionName.trim()) {
       errs.corridor = 'Please select a Master Highway Corridor.';
+    } else if (!initialData?.id) {
+      const key = `${highwayCode.trim().toUpperCase()}__${divisionName.trim().toLowerCase()}`;
+      if (registeredDlpKeys.has(key)) {
+        errs.corridor = `Corridor ${highwayCode} (${divisionName} Division) already has an active DLP entry. Please edit the existing entry instead of creating a duplicate.`;
+      }
     }
 
     if (fromKm === '' || isNaN(Number(fromKm)) || Number(fromKm) < 0) {

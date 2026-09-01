@@ -121,11 +121,6 @@ export default function DlpPage() {
       const data = await res.json();
       if (data.success && Array.isArray(data.corridors)) {
         setCorridors(data.corridors);
-        const initExpanded: Record<string, boolean> = {};
-        data.corridors.forEach((c: DlpCorridor) => {
-          initExpanded[c.id] = true;
-        });
-        setExpandedRows(initExpanded);
       }
     } catch (err) {
       console.error('Failed to fetch DLP corridors:', err);
@@ -427,6 +422,7 @@ export default function DlpPage() {
           <DlpContractEntryForm
             initialData={selectedCorridorForEdit || undefined}
             masterData={masterData}
+            existingDlpCorridors={corridors}
             onSave={handleSaveCorridor}
             onCancel={() => {
               setUiMode('LIST');

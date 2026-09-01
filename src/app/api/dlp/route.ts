@@ -230,6 +230,25 @@ export async function POST(req: NextRequest) {
     const numTo = Number(to_km || 0);
     const numLength = Number(total_length_km || Math.abs(numTo - numFrom));
 
+    // Prevent duplicate corridor entries for the same road code & division in DLP
+    const { data: existingCorridor } = await supabase
+      .from('dlp_corridors')
+      .select('id, highway_code, division_name')
+      .neq('status', 'DELETED')
+      .ilike('highway_code', highway_code.trim())
+      .ilike('division_name', division_name.trim())
+      .maybeSingle();
+
+    if (existingCorridor) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `A DLP entry for corridor '${highway_code}' in '${division_name}' division already exists. Please edit the existing entry instead of creating a duplicate.`,
+        },
+        { status: 409 }
+      );
+    }
+
     // 1. Insert Parent Corridor
     const { data: corridorData, error: corridorError } = await supabase
       .from('dlp_corridors')
