@@ -174,7 +174,7 @@ export const ONGOING_WORKS_COLUMNS: ExportColumnDef[] = [
 // -----------------------------------------------------------------------------
 export const LEGAL_CASES_COLUMNS: ExportColumnDef[] = [
   { key: 'caseClassification', header: 'Case Classification', category: 'core', dataType: 'string', align: 'center', defaultSelected: true, width: 20 },
-  { key: 'caseDetails', header: 'Case Number / Details', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 28 },
+  { key: 'caseDetails', header: 'Case Number / Year', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 28 },
   { key: 'circle', header: 'Circle', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 18 },
   { key: 'division', header: 'Division', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 18 },
   { key: 'category', header: 'Category', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 20 },
@@ -202,7 +202,7 @@ export const LEGAL_CASES_COLUMNS: ExportColumnDef[] = [
   { key: 'adverseToDepartment', header: 'Adverse to Department', category: 'status', dataType: 'string', align: 'center', defaultSelected: false, width: 22 },
   { key: 'gpOpinion', header: 'GP Opinion', category: 'status', dataType: 'string', align: 'left', defaultSelected: false, width: 18 },
   { key: 'appealFiled', header: 'Appeal Filed', category: 'status', dataType: 'string', align: 'center', defaultSelected: false, width: 16 },
-  { key: 'appealCaseDetails', header: 'Appeal Case Details', category: 'core', dataType: 'string', align: 'left', defaultSelected: false, width: 25 },
+  { key: 'appealCaseDetails', header: 'Appeal Case Number / Year', category: 'core', dataType: 'string', align: 'left', defaultSelected: false, width: 25 },
   { key: 'appellateCourt', header: 'Appellate Court', category: 'core', dataType: 'string', align: 'left', defaultSelected: false, width: 25 },
   { key: 'remarks', header: 'General Remarks', category: 'remarks', dataType: 'string', align: 'left', defaultSelected: false, width: 40 },
 ];
@@ -218,7 +218,7 @@ export const FEE_BILLS_COLUMNS: ExportColumnDef[] = [
   { key: 'division', header: 'Division', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 18 },
   { key: 'lawyerName', header: 'Senior Advocate / Lawyer Name', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 28 },
   { key: 'lawyerDesignation', header: 'Advocate Designation', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 22 },
-  { key: 'caseDetails', header: 'Case Details / WP No.', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 30 },
+  { key: 'caseDetails', header: 'Case Number / Year', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 30 },
   { key: 'casePertainsTo', header: 'Case Pertains To', category: 'core', dataType: 'string', align: 'center', defaultSelected: false, width: 18 },
   { key: 'appearanceAmount', header: 'Appearance Fee (Rs.)', category: 'financial', dataType: 'currency', align: 'right', defaultSelected: true, width: 20 },
   { key: 'conferenceAmount', header: 'Conference Fee (Rs.)', category: 'financial', dataType: 'currency', align: 'right', defaultSelected: false, width: 20 },

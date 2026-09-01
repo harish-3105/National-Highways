@@ -472,7 +472,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       if (isCourtOther && !formData.specifyNameOfCourt?.trim()) {
         stageErrors.specifyNameOfCourt = 'Please specify the custom Court Name.';
       }
-      if (!formData.caseDetails?.trim()) stageErrors.caseDetails = 'Case Details / Particulars is required.';
+      if (!formData.caseDetails?.trim()) stageErrors.caseDetails = 'Case Number / Year is required.';
       if (!formData.petitionerNames?.trim()) stageErrors.petitionerNames = 'Petitioner Name(s) is required.';
       if (!formData.respondentNames?.trim()) stageErrors.respondentNames = 'Respondent Name(s) is required.';
       if (!formData.casePertainsTo?.trim()) stageErrors.casePertainsTo = 'Case Pertains To is required.';
@@ -495,7 +495,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       if (isAppellateOther && !formData.specifyAppellateCourt?.trim()) {
         stageErrors.specifyAppellateCourt = 'Please specify the custom Appellate Court.';
       }
-      if (!formData.appealInfo?.appealCaseDetails?.trim()) stageErrors.appealCaseDetails = 'Appeal Case Details / Particulars is required.';
+      if (!formData.appealInfo?.appealCaseDetails?.trim()) stageErrors.appealCaseDetails = 'Appeal Case Number / Year is required.';
       if (!formData.appealInfo?.appealFilingDate?.trim()) stageErrors.appealFilingDate = 'Appeal Filing Date is required.';
       if (!formData.appealInfo?.limitationDueDate?.trim()) stageErrors.limitationDueDate = 'Limitation Due Date is required.';
 
@@ -534,7 +534,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       if (isBaseCourtOther && !formData.specifyBaseCourtName?.trim()) {
         stageErrors.specifyBaseCourtName = 'Please specify the custom Base Court Name.';
       }
-      if (!formData.baseCaseDetails?.trim()) stageErrors.baseCaseDetails = 'Case Details / Number is required.';
+      if (!formData.baseCaseDetails?.trim()) stageErrors.baseCaseDetails = 'Base Case Number / Year is required.';
       if (!formData.basePetitionerNames?.trim()) stageErrors.basePetitionerNames = 'Petitioner Name(s) is required.';
       if (!formData.baseRespondentNames?.trim()) stageErrors.baseRespondentNames = 'Respondent Name(s) is required.';
       if (!formData.baseCasePertainsTo?.trim()) stageErrors.baseCasePertainsTo = 'Case Pertains To is required.';
@@ -1028,14 +1028,14 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               )}
 
-              {/* Case Details / Number */}
+              {/* Case Number / Year */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Case Details / Number <span className="text-rose-500">*</span>
+                  Case Number / Year <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="W.P (MD) No.12345/2024"
+                  placeholder="e.g. W.P (MD) No.12345/2024"
                   value={formData.caseDetails || ''}
                   onChange={(e) => handleChange('caseDetails', e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
@@ -1211,11 +1211,11 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Appeal Case Details / Number <span className="text-rose-500">*</span>
+                      Appeal Case Number / Year <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
-                      placeholder="W.P (MD) No.12345/2024"
+                      placeholder="e.g. W.P (MD) No.12345/2024"
                       value={formData.appealInfo?.appealCaseDetails || ''}
                       onChange={(e) => handleAppealInfoChange('appealCaseDetails', e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
@@ -1495,14 +1495,14 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </div>
               )}
 
-              {/* Case Details / Number */}
+              {/* Case Number / Year */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Case Details / Number <span className="text-rose-500">*</span>
+                  Case Number / Year <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="W.P (MD) No.12345/2024"
+                  placeholder="e.g. W.P (MD) No.12345/2024"
                   value={formData.baseCaseDetails || ''}
                   onChange={(e) => handleChange('baseCaseDetails', e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"

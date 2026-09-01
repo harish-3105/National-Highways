@@ -391,7 +391,7 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div>
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Appeal Case Details / No</span>
+                      <span className="text-[10px] text-slate-400 font-semibold uppercase block">Appeal Case Number / Year</span>
                       <span className="font-bold text-slate-900 dark:text-slate-100">
                         {caseData.appealInfo.appealCaseDetails || '—'}
                       </span>
@@ -479,7 +479,7 @@ export const CaseViewModal: React.FC<CaseViewModalProps> = ({ caseData, onClose,
               {/* Case Particulars Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Details / Number</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Number / Year</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-xs mt-0.5 block">
                     {caseData.baseCaseDetails || '—'}
                   </span>

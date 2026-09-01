@@ -329,7 +329,7 @@ export const FeeBillDetailModal: React.FC<FeeBillDetailModalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Details / Number</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Case Number / Year</span>
                   <span className="font-extrabold text-blue-900 dark:text-blue-300 text-xs mt-0.5 block">
                     {contract.caseDetails || '—'}
                   </span>

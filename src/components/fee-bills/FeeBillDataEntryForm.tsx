@@ -176,24 +176,13 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
     a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
   );
 
-  const baseStatusOfObtainingGo = [
-    'GO Obtained',
-    'Proposal Sent From',
-    'Proposal Yet to be Sent',
-  ];
-  const statusOfObtainingGoOptions = Array.from(
-    new Set([...(masterData.statusOfObtainingGoOptions || []), ...baseStatusOfObtainingGo])
-  ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  const statusOfObtainingGoOptions = [...(masterData.statusOfObtainingGoOptions || [])].sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+  );
 
-  const baseStatusOfPaymentProposal = [
-    'Approval accorded by MoRTH',
-    'Proceeding issued by CE',
-    'Proposal Sent From',
-    'Proposal Yet to be Sent',
-  ];
-  const statusOfPaymentProposalOptions = Array.from(
-    new Set([...(masterData.statusOfPaymentProposalOptions || []), ...baseStatusOfPaymentProposal])
-  ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  const statusOfPaymentProposalOptions = [...(masterData.statusOfPaymentProposalOptions || [])].sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+  );
   const goStatusOptions = [...(masterData.goStatusOptions || [])].sort((a, b) =>
     a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
   );
@@ -390,7 +379,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
         stageErrors.casePertainsTo = 'Case Pertains To jurisdiction is required (Stage 2).';
       }
       if (!formData.caseDetails || !formData.caseDetails.trim()) {
-        stageErrors.caseDetails = 'Case Details / Particulars is required (Stage 2).';
+        stageErrors.caseDetails = 'Case Number / Year is required (Stage 2).';
       }
 
       // Assistant Law Officer Validation & Co-dependency
@@ -481,13 +470,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
           if (!formData.goReferenceLetterDate?.trim()) {
             stageErrors.goReferenceLetterDate = 'G.O. Proposal Reference Letter Date is required.';
           }
-        }
-      }
-      if (formData.goDate) {
-        if (formData.goDate > todayStr) {
-          stageErrors.goDate = 'G.O. Date cannot be a future date.';
-        } else if (formData.feeBillDate && formData.goDate < formData.feeBillDate) {
-          stageErrors.goDate = `G.O. Date cannot be earlier than Fee Bill Date (${formData.feeBillDate}).`;
         }
       }
       if (formData.goReferenceLetterDate && formData.goReferenceLetterDate > todayStr) {
@@ -872,7 +854,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                 type="text"
                 value={formData.feeBillNumber}
                 onChange={(e) => handleFeeBillNoChange(e.target.value)}
-                placeholder="W.P (MD) No.12345/2024"
                 className={`w-full h-10 px-3 bg-slate-50 dark:bg-slate-800/60 border rounded-xl font-bold uppercase outline-none focus:ring-2 ${
                   errors.feeBillNumber || duplicateError
                     ? 'border-red-500 focus:ring-red-500 bg-red-50/20'
@@ -976,14 +957,14 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               {errors.casePertainsTo && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.casePertainsTo}</p>}
             </div>
 
-            {/* 4. Case Details / Number */}
+            {/* 4. Case Number / Year */}
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Case Details / Number <span className="text-red-500">*</span>
+                Case Number / Year <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                placeholder="W.P (MD) No.12345/2024"
+                placeholder="e.g. W.P (MD) No.12345/2024"
                 value={formData.caseDetails || ''}
                 onChange={(e) => setFormData((prev) => ({ ...prev, caseDetails: e.target.value }))}
                 className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500"
@@ -1253,7 +1234,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                     type="text"
                     value={formData.goNumber || ''}
                     onChange={(e) => setFormData((prev) => ({ ...prev, goNumber: e.target.value }))}
-                    placeholder="G.O. (Rt) No.99, Highways and Minor Ports (HV2) Department"
+                    placeholder="e.g. G.O. (Rt) No.99, Highways and Minor Ports (HV2) Department"
                     className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
                   />
                   {errors.goNumber && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.goNumber}</p>}
@@ -1262,8 +1243,6 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
                   <DatePickerInput
                     label="G.O. Date"
                     required
-                    min={formData.feeBillDate || undefined}
-                    max={todayStr}
                     value={formData.goDate || ''}
                     onChange={(val) => setFormData((prev) => ({ ...prev, goDate: val }))}
                     error={errors.goDate}
