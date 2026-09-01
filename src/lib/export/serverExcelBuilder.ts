@@ -112,8 +112,10 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
     if (activeColumns.length === 0) continue;
 
+    const has2TierHeader = activeColumns.some((col) => Boolean(col.groupHeader));
+
     const worksheet = workbook.addWorksheet(sheetName, {
-      views: [{ state: 'frozen', ySplit: 1 }], // Freeze header row
+      views: [{ state: 'frozen', ySplit: has2TierHeader ? 2 : 1 }], // Freeze header row(s)
       properties: { defaultRowHeight: 20 },
     });
 
@@ -132,7 +134,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
         header: 0.2,
         footer: 0.2,
       },
-      printTitlesRow: '1:1', // Repeat cream header row on every printed page
+      printTitlesRow: has2TierHeader ? '1:2' : '1:1', // Repeat cream header row(s) on every printed page
       showGridLines: true,
     };
 
@@ -171,6 +173,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
         col.category === 'issues' ||
         col.key.includes('details') ||
         col.key.includes('name_of_work') ||
+        col.key.includes('work_name') ||
         col.key.includes('prayer') ||
         col.key.includes('stretch_name') ||
         col.key.includes('petitioner') ||
@@ -191,7 +194,6 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
     // Configure Header Columns with data-driven snug widths
     worksheet.columns = activeColumns.map((col, idx) => ({
-      header: col.header,
       key: col.key,
       width: columnWidths[idx],
     }));
@@ -217,24 +219,85 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       }
     });
 
-    // Style Header Row (Row 1) with dynamic vertical height to display tall multi-line headers
-    const headerRow = worksheet.getRow(1);
-    headerRow.height = Math.min(Math.max(26, maxHeaderLines * 14 + 10), 75);
-    headerRow.eachCell((cell) => {
-      cell.fill = CREAM_HEADER_FILL;
-      cell.font = HEADER_FONT;
-      cell.alignment = {
-        vertical: 'middle',
-        horizontal: 'center',
-        wrapText: true,
-      };
-      cell.border = CELL_BORDERS;
-    });
+    if (has2TierHeader) {
+      // -----------------------------------------------------------------------
+      // 2-TIER DEPARTMENTAL HEADER (Row 1: Category Groups, Row 2: Sub-headers)
+      // -----------------------------------------------------------------------
+      const row1 = worksheet.getRow(1);
+      row1.height = 24;
+      const row2 = worksheet.getRow(2);
+      row2.height = Math.min(Math.max(24, maxHeaderLines * 13 + 6), 65);
+
+      let currentGroup = '';
+      let groupStartCol = 1;
+
+      activeColumns.forEach((col, idx) => {
+        const colNum = idx + 1;
+        const grp = col.groupHeader || col.header;
+
+        // Set sub-header in Row 2
+        const cell2 = worksheet.getCell(2, colNum);
+        cell2.value = col.header;
+        cell2.fill = CREAM_HEADER_FILL;
+        cell2.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FF334155' } };
+        cell2.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        cell2.border = CELL_BORDERS;
+
+        if (idx === 0) {
+          currentGroup = grp;
+          groupStartCol = 1;
+        } else if (grp !== currentGroup) {
+          if (groupStartCol < colNum - 1) {
+            worksheet.mergeCells(1, groupStartCol, 1, colNum - 1);
+          }
+          const cell1 = worksheet.getCell(1, groupStartCol);
+          cell1.value = currentGroup;
+          currentGroup = grp;
+          groupStartCol = colNum;
+        }
+
+        if (idx === activeColumns.length - 1) {
+          if (groupStartCol < colNum) {
+            worksheet.mergeCells(1, groupStartCol, 1, colNum);
+          }
+          const cell1 = worksheet.getCell(1, groupStartCol);
+          cell1.value = currentGroup;
+        }
+      });
+
+      // Style all cells in Row 1
+      for (let c = 1; c <= activeColumns.length; c++) {
+        const cell1 = worksheet.getCell(1, c);
+        cell1.fill = CREAM_HEADER_FILL;
+        cell1.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+        cell1.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        cell1.border = CELL_BORDERS;
+      }
+    } else {
+      // -----------------------------------------------------------------------
+      // 1-TIER STANDARD HEADER (Row 1 only)
+      // -----------------------------------------------------------------------
+      const headerRow = worksheet.getRow(1);
+      headerRow.height = Math.min(Math.max(26, maxHeaderLines * 14 + 10), 75);
+      activeColumns.forEach((col, idx) => {
+        const cell = worksheet.getCell(1, idx + 1);
+        cell.value = col.header;
+        cell.fill = CREAM_HEADER_FILL;
+        cell.font = HEADER_FONT;
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: 'center',
+          wrapText: true,
+        };
+        cell.border = CELL_BORDERS;
+      });
+    }
 
     // 2. Populate Data Rows with Dynamic Auto Row Height Fit
     data.forEach((item) => {
       const rowValues: Record<string, unknown> = {};
       let maxLinesInRow = 1;
+      const isParentRow = Boolean(item._isParent);
 
       activeColumns.forEach((col, colIdx) => {
         let val = item[col.key];
@@ -286,10 +349,11 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       const addedRow = worksheet.addRow(rowValues);
 
       // Dynamically auto-fit row height
-      if (maxLinesInRow === 1) {
-        addedRow.height = 20; // Snug, clean default height
+      if (isParentRow) {
+        addedRow.height = 22;
+      } else if (maxLinesInRow === 1) {
+        addedRow.height = 20;
       } else {
-        // 16pt per line + 4pt padding, capped safely at 160pt
         addedRow.height = Math.min(Math.max(22, maxLinesInRow * 16 + 4), 160);
       }
 
@@ -299,7 +363,12 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
         const colWidth = columnWidths[colNumber - 1] || 15;
         if (!colDef) return;
 
-        cell.font = DATA_FONT;
+        if (isParentRow) {
+          cell.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+        } else {
+          cell.font = DATA_FONT;
+        }
         cell.border = CELL_BORDERS;
 
         const cellValStr = cell.value !== null && cell.value !== undefined ? String(cell.value) : '';
@@ -331,9 +400,10 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
     // 3. Auto-filter across all columns
     if (activeColumns.length > 0) {
+      const headerRowIdx = has2TierHeader ? 2 : 1;
       worksheet.autoFilter = {
-        from: { row: 1, column: 1 },
-        to: { row: Math.max(data.length + 1, 1), column: activeColumns.length },
+        from: { row: headerRowIdx, column: 1 },
+        to: { row: Math.max(data.length + headerRowIdx, headerRowIdx), column: activeColumns.length },
       };
     }
   }
@@ -359,11 +429,20 @@ export function buildCsvBuffer(sheetPayload: SheetExportPayload): Buffer {
     return `"${str}"`;
   };
 
-  const headerRow = activeColumns.map((c) => escapeCsv(c.header)).join(',');
-  const dataRows = data.map((row) =>
-    activeColumns.map((c) => escapeCsv(row[c.key])).join(',')
-  );
+  const has2TierHeader = activeColumns.some((col) => Boolean(col.groupHeader));
+  const rows: string[] = [];
 
-  const csvContent = [headerRow, ...dataRows].join('\r\n');
-  return Buffer.from(csvContent, 'utf-8');
+  if (has2TierHeader) {
+    const groupRow = activeColumns.map((c) => escapeCsv(c.groupHeader || c.header)).join(',');
+    rows.push(groupRow);
+  }
+
+  const headerRow = activeColumns.map((c) => escapeCsv(c.header)).join(',');
+  rows.push(headerRow);
+
+  data.forEach((row) => {
+    rows.push(activeColumns.map((c) => escapeCsv(row[c.key])).join(','));
+  });
+
+  return Buffer.from(rows.join('\r\n'), 'utf-8');
 }

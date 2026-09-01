@@ -11,6 +11,7 @@ export interface ExportColumnDef {
   align: 'left' | 'center' | 'right';
   defaultSelected: boolean;
   width?: number;
+  groupHeader?: string;
 }
 
 // -----------------------------------------------------------------------------
@@ -70,26 +71,53 @@ export const HIGHWAYS_L2_MICRO_COLUMNS: ExportColumnDef[] = [
 ];
 
 // -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // MODULE 2: DLP & MAINTENANCE CONTRACTS (/dlp)
+// Canonical 2-Tier Departmental Structure (Corridor Parent + Child Stretches)
 // -----------------------------------------------------------------------------
 export const DLP_COLUMNS: ExportColumnDef[] = [
-  { key: 'highway_code', header: 'NH No. / Road Code', category: 'core', dataType: 'string', align: 'center', defaultSelected: true, width: 16 },
-  { key: 'division_name', header: 'Division', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 20 },
-  { key: 'category', header: 'Category (DLP/STMC/PBMC/Construction/No DLP)', category: 'core', dataType: 'string', align: 'center', defaultSelected: true, width: 24 },
-  { key: 'work_name', header: 'Name of Work / Contract Title', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 45 },
-  { key: 'contractor_name', header: 'Contractor / Agency', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 30 },
-  { key: 'chainage_from_km', header: 'Chainage From (Km)', category: 'technical', dataType: 'number', align: 'right', defaultSelected: true, width: 18 },
-  { key: 'chainage_to_km', header: 'Chainage To (Km)', category: 'technical', dataType: 'number', align: 'right', defaultSelected: true, width: 18 },
-  { key: 'length_km', header: 'Length (Km)', category: 'technical', dataType: 'number', align: 'right', defaultSelected: true, width: 16 },
-  { key: 'commencement_date', header: 'Commencement Date', category: 'dates', dataType: 'date', align: 'center', defaultSelected: true, width: 18 },
-  { key: 'dlp_till_date', header: 'DLP / Contract End Date', category: 'dates', dataType: 'date', align: 'center', defaultSelected: true, width: 22 },
-  { key: 'dlp_period_years', header: 'DLP Period (Years)', category: 'technical', dataType: 'integer', align: 'right', defaultSelected: false, width: 18 },
-  { key: 'physical_progress_pct', header: 'Physical Progress (%)', category: 'technical', dataType: 'percent', align: 'right', defaultSelected: false, width: 20 },
-  { key: 'actual_completion_date', header: 'Actual Completion Date', category: 'dates', dataType: 'date', align: 'center', defaultSelected: false, width: 22 },
-  { key: 'scheme', header: 'Scheme / Project Type', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 25 },
-  { key: 'computed_status', header: 'Warranty Status', category: 'status', dataType: 'string', align: 'center', defaultSelected: true, width: 18 },
-  { key: 'days_remaining', header: 'Days Remaining', category: 'status', dataType: 'integer', align: 'right', defaultSelected: true, width: 16 },
-  { key: 'remarks', header: 'Remarks / Special Notes', category: 'remarks', dataType: 'string', align: 'left', defaultSelected: false, width: 40 },
+  // 1. Corridor & Geometry
+  { key: 's_no', header: 'S. No', groupHeader: 'Corridor Identification', category: 'core', dataType: 'integer', align: 'center', defaultSelected: true, width: 8 },
+  { key: 'division_name', header: 'Division', groupHeader: 'Corridor Identification', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 18 },
+  { key: 'highway_code', header: 'NH No.', groupHeader: 'Corridor Identification', category: 'core', dataType: 'string', align: 'center', defaultSelected: true, width: 12 },
+  { key: 'chainage_from_km', header: 'From', groupHeader: 'Chainage (km)', category: 'core', dataType: 'string', align: 'center', defaultSelected: true, width: 12 },
+  { key: 'chainage_to_km', header: 'To', groupHeader: 'Chainage (km)', category: 'core', dataType: 'string', align: 'center', defaultSelected: true, width: 12 },
+  { key: 'length_km', header: 'Total Length', groupHeader: 'Total Length (km)', category: 'core', dataType: 'number', align: 'right', defaultSelected: true, width: 14 },
+  { key: 'road_width_from_m', header: 'From', groupHeader: 'Road Width (m)', category: 'technical', dataType: 'number', align: 'right', defaultSelected: true, width: 10 },
+  { key: 'road_width_to_m', header: 'To', groupHeader: 'Road Width (m)', category: 'technical', dataType: 'number', align: 'right', defaultSelected: true, width: 10 },
+
+  // 2. Under DLP
+  { key: 'dlp_contractor_name', header: 'Name of Contractor', groupHeader: 'Under DLP', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 22 },
+  { key: 'dlp_work_name', header: 'Name of Work', groupHeader: 'Under DLP', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 28 },
+  { key: 'dlp_commencement_date', header: 'Date of Commencement', groupHeader: 'Under DLP', category: 'dates', dataType: 'date', align: 'center', defaultSelected: true, width: 16 },
+  { key: 'dlp_till_date', header: 'DLP till (Date)', groupHeader: 'Under DLP', category: 'dates', dataType: 'date', align: 'center', defaultSelected: true, width: 16 },
+
+  // 3. Length under Construction (incl. Tender projects)
+  { key: 'const_contractor_name', header: 'Name of Contractor', groupHeader: 'Length under Construction (incl. Tender projects)', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 22 },
+  { key: 'const_work_name', header: 'Name of Work', groupHeader: 'Length under Construction (incl. Tender projects)', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 28 },
+  { key: 'const_commencement_date', header: 'Date of Commencement', groupHeader: 'Length under Construction (incl. Tender projects)', category: 'dates', dataType: 'date', align: 'center', defaultSelected: true, width: 16 },
+  { key: 'const_physical_progress_pct', header: 'Physical Progress %', groupHeader: 'Length under Construction (incl. Tender projects)', category: 'technical', dataType: 'percent', align: 'right', defaultSelected: true, width: 14 },
+  { key: 'const_actual_completion_date', header: 'Actual Date of Completion', groupHeader: 'Length under Construction (incl. Tender projects)', category: 'dates', dataType: 'date', align: 'center', defaultSelected: true, width: 16 },
+  { key: 'const_dlp_period_years', header: 'DLP Period in Years', groupHeader: 'Length under Construction (incl. Tender projects)', category: 'technical', dataType: 'integer', align: 'right', defaultSelected: true, width: 14 },
+
+  // 4. Length under STMC (incl. Tender projects)
+  { key: 'stmc_contractor_name', header: 'Name of Contractor', groupHeader: 'Length under STMC (incl. Tender projects)', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 22 },
+  { key: 'stmc_work_name', header: 'Name of Work', groupHeader: 'Length under STMC (incl. Tender projects)', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 28 },
+  { key: 'stmc_commencement_date', header: 'Date of Commencement', groupHeader: 'Length under STMC (incl. Tender projects)', category: 'dates', dataType: 'date', align: 'center', defaultSelected: true, width: 16 },
+  { key: 'stmc_till_date', header: 'DLP till (Date)', groupHeader: 'Length under STMC (incl. Tender projects)', category: 'dates', dataType: 'date', align: 'center', defaultSelected: true, width: 16 },
+
+  // 5. Length under PBMC (incl. Tender projects)
+  { key: 'pbmc_contractor_name', header: 'Name of Contractor', groupHeader: 'Length under PBMC (incl. Tender projects)', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 22 },
+  { key: 'pbmc_work_name', header: 'Name of Work', groupHeader: 'Length under PBMC (incl. Tender projects)', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 28 },
+  { key: 'pbmc_commencement_date', header: 'Date of Commencement', groupHeader: 'Length under PBMC (incl. Tender projects)', category: 'dates', dataType: 'date', align: 'center', defaultSelected: true, width: 16 },
+  { key: 'pbmc_till_date', header: 'DLP till (Date)', groupHeader: 'Length under PBMC (incl. Tender projects)', category: 'dates', dataType: 'date', align: 'center', defaultSelected: true, width: 16 },
+
+  // 6. Length under NO DLP
+  { key: 'no_dlp_scheme', header: 'Scheme', groupHeader: 'Length under NO DLP', category: 'status', dataType: 'string', align: 'left', defaultSelected: true, width: 22 },
+  { key: 'no_dlp_ended_date', header: 'DLP ended on', groupHeader: 'Length under NO DLP', category: 'dates', dataType: 'date', align: 'center', defaultSelected: true, width: 16 },
+
+  // 7. Remarks
+  { key: 'remarks', header: 'Remarks', groupHeader: 'Remarks', category: 'remarks', dataType: 'string', align: 'left', defaultSelected: true, width: 32 },
 ];
 
 // -----------------------------------------------------------------------------

@@ -163,55 +163,136 @@ export async function POST(req: NextRequest) {
     }
 
     // -------------------------------------------------------------------------
-    // 2. DLP & MAINTENANCE MODULE
+    // 2. DLP & MAINTENANCE MODULE (798 CANONICAL DEPARTMENTAL FORMAT)
     // -------------------------------------------------------------------------
     else if (module === 'dlp' || module === 'maintenance') {
       filePrefix = emptyTemplate ? 'TN_DLP_Maintenance_Template' : `TN_DLP_Maintenance_${timestamp}`;
-      let dlpData: Record<string, unknown>[] = [];
+      const dlpData: Record<string, unknown>[] = [];
 
       if (!emptyTemplate && supabase) {
         let query = supabase
-          .from('dlp_work_stretches')
-          .select('*, dlp_corridors(division_name, highway_code)')
-          .order('created_at', { ascending: false });
+          .from('dlp_corridors')
+          .select('*, dlp_work_stretches(*)')
+          .order('division_name', { ascending: true })
+          .order('highway_code', { ascending: true });
 
         if (filters.includeDeleted !== true) query = query.neq('status', 'DELETED');
         if (scope === 'selected' && selectedIds.length > 0) query = query.in('id', selectedIds);
-        if (filters.category && filters.category !== 'ALL') query = query.eq('category', filters.category);
+        if (filters.division && filters.division !== 'ALL') query = query.eq('division_name', filters.division);
 
-        const { data } = await query;
-        if (data) {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
+        const { data: corridors } = await query;
+        if (corridors) {
+          let sNo = 1;
+          corridors.forEach((corridor: any) => {
+            // 1. Parent Corridor Row
+            dlpData.push({
+              s_no: sNo++,
+              division_name: corridor.division_name || '',
+              highway_code: corridor.highway_code || '',
+              chainage_from_km: corridor.from_km !== null && corridor.from_km !== undefined ? String(corridor.from_km) : '',
+              chainage_to_km: corridor.to_km !== null && corridor.to_km !== undefined ? String(corridor.to_km) : '',
+              length_km: corridor.total_length_km ?? '',
+              road_width_from_m: '',
+              road_width_to_m: '',
+              dlp_contractor_name: '',
+              dlp_work_name: '',
+              dlp_commencement_date: '',
+              dlp_till_date: '',
+              const_contractor_name: '',
+              const_work_name: '',
+              const_commencement_date: '',
+              const_physical_progress_pct: '',
+              const_actual_completion_date: '',
+              const_dlp_period_years: '',
+              stmc_contractor_name: '',
+              stmc_work_name: '',
+              stmc_commencement_date: '',
+              stmc_till_date: '',
+              pbmc_contractor_name: '',
+              pbmc_work_name: '',
+              pbmc_commencement_date: '',
+              pbmc_till_date: '',
+              no_dlp_scheme: '',
+              no_dlp_ended_date: '',
+              remarks: corridor.remarks || '',
+              _isParent: true,
+            });
 
-          dlpData = data.map((item: any) => {
-            const corridor = item.dlp_corridors || {};
-            let daysRemaining: number | '' = '';
-            let computedStatus = item.status || 'ACTIVE';
+            // 2. Child Work Stretch Rows (Indented under Parent Corridor)
+            const rawStretches = (corridor.dlp_work_stretches || [])
+              .filter((st: any) => filters.includeDeleted === true || st.status !== 'DELETED')
+              .filter((st: any) => !filters.category || filters.category === 'ALL' || st.category === filters.category)
+              .sort((a: any, b: any) => Number(a.chainage_from_km || 0) - Number(b.chainage_from_km || 0));
 
-            if (item.dlp_till_date) {
-              const exp = new Date(item.dlp_till_date);
-              if (!isNaN(exp.getTime())) {
-                exp.setHours(0, 0, 0, 0);
-                const diffTime = exp.getTime() - today.getTime();
-                daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                computedStatus = daysRemaining <= 0 ? 'EXPIRED' : daysRemaining <= 90 ? 'EXPIRING_SOON' : 'ACTIVE';
+            rawStretches.forEach((st: any) => {
+              const rowObj: Record<string, unknown> = {
+                s_no: '',
+                division_name: '',
+                highway_code: '',
+                chainage_from_km: st.chainage_from_km !== null && st.chainage_from_km !== undefined ? String(st.chainage_from_km) : '',
+                chainage_to_km: st.chainage_to_km !== null && st.chainage_to_km !== undefined ? String(st.chainage_to_km) : '',
+                length_km: st.length_km ?? '',
+                road_width_from_m: st.road_width_from_m ?? '',
+                road_width_to_m: st.road_width_to_m ?? '',
+                dlp_contractor_name: '',
+                dlp_work_name: '',
+                dlp_commencement_date: '',
+                dlp_till_date: '',
+                const_contractor_name: '',
+                const_work_name: '',
+                const_commencement_date: '',
+                const_physical_progress_pct: '',
+                const_actual_completion_date: '',
+                const_dlp_period_years: '',
+                stmc_contractor_name: '',
+                stmc_work_name: '',
+                stmc_commencement_date: '',
+                stmc_till_date: '',
+                pbmc_contractor_name: '',
+                pbmc_work_name: '',
+                pbmc_commencement_date: '',
+                pbmc_till_date: '',
+                no_dlp_scheme: '',
+                no_dlp_ended_date: '',
+                remarks: st.remarks || '',
+                _isParent: false,
+              };
+
+              if (st.category === 'DLP') {
+                rowObj.dlp_contractor_name = st.contractor_name || '';
+                rowObj.dlp_work_name = st.work_name || '';
+                rowObj.dlp_commencement_date = st.commencement_date || '';
+                rowObj.dlp_till_date = st.dlp_till_date || '';
+              } else if (st.category === 'CONSTRUCTION') {
+                rowObj.const_contractor_name = st.contractor_name || '';
+                rowObj.const_work_name = st.work_name || '';
+                rowObj.const_commencement_date = st.commencement_date || '';
+                rowObj.const_physical_progress_pct = st.physical_progress_pct !== null && st.physical_progress_pct !== undefined ? st.physical_progress_pct : '';
+                rowObj.const_actual_completion_date = st.actual_completion_date || '';
+                rowObj.const_dlp_period_years = st.dlp_period_years ?? '';
+              } else if (st.category === 'STMC') {
+                rowObj.stmc_contractor_name = st.contractor_name || '';
+                rowObj.stmc_work_name = st.work_name || '';
+                rowObj.stmc_commencement_date = st.commencement_date || '';
+                rowObj.stmc_till_date = st.dlp_till_date || '';
+              } else if (st.category === 'PBMC') {
+                rowObj.pbmc_contractor_name = st.contractor_name || '';
+                rowObj.pbmc_work_name = st.work_name || '';
+                rowObj.pbmc_commencement_date = st.commencement_date || '';
+                rowObj.pbmc_till_date = st.dlp_till_date || '';
+              } else if (st.category === 'NO_DLP') {
+                rowObj.no_dlp_scheme = st.scheme || '';
+                rowObj.no_dlp_ended_date = st.dlp_ended_on_date || st.dlp_till_date || '';
               }
-            }
 
-            return {
-              ...item,
-              division_name: corridor.division_name || item.division_name || '',
-              highway_code: corridor.highway_code || item.highway_code || '',
-              computed_status: computedStatus,
-              days_remaining: daysRemaining,
-            };
+              dlpData.push(rowObj);
+            });
           });
         }
       }
 
       sheets.push({
-        sheetName: 'DLP Maintenance Stretches',
+        sheetName: '798 NH Length Summary',
         columns: DLP_COLUMNS,
         selectedKeys,
         data: dlpData,
