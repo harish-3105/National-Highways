@@ -6,6 +6,7 @@ export interface SheetExportPayload {
   columns: ExportColumnDef[];
   selectedKeys?: string[];
   data: Record<string, unknown>[];
+  titleRows?: string[];
 }
 
 export interface WorkbookExportOptions {
@@ -17,7 +18,7 @@ export interface WorkbookExportOptions {
 const CREAM_HEADER_FILL: ExcelJS.Fill = {
   type: 'pattern',
   pattern: 'solid',
-  fgColor: { argb: 'FFFFF2CC' }, // Soft Pastel Cream
+  fgColor: { argb: 'FFF9CB9C' }, // Official Departmental Peach-Cream from sample file
 };
 
 const HEADER_FONT: Partial<ExcelJS.Font> = {
@@ -101,7 +102,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
   workbook.modified = new Date();
 
   for (const sheetPayload of options.sheets) {
-    const { sheetName, columns, selectedKeys, data } = sheetPayload;
+    const { sheetName, columns, selectedKeys, data, titleRows = [] } = sheetPayload;
 
     // Filter columns based on user selection or defaults
     const activeColumns = columns.filter((col) =>
@@ -113,9 +114,11 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
     if (activeColumns.length === 0) continue;
 
     const has2TierHeader = activeColumns.some((col) => Boolean(col.groupHeader));
+    const numTitleRows = titleRows.length;
+    const totalHeaderRows = numTitleRows + (has2TierHeader ? 2 : 1);
 
     const worksheet = workbook.addWorksheet(sheetName, {
-      views: [{ state: 'frozen', ySplit: has2TierHeader ? 2 : 1 }], // Freeze header row(s)
+      views: [{ state: 'frozen', ySplit: totalHeaderRows }], // Freeze title & header row(s)
       properties: { defaultRowHeight: 20 },
     });
 
@@ -134,7 +137,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
         header: 0.2,
         footer: 0.2,
       },
-      printTitlesRow: has2TierHeader ? '1:2' : '1:1', // Repeat cream header row(s) on every printed page
+      printTitlesRow: `1:${totalHeaderRows}`, // Repeat titles & cream header row(s) on every printed page
       showGridLines: true,
     };
 
@@ -219,13 +222,44 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       }
     });
 
+    // -------------------------------------------------------------------------
+    // TOP TITLE ROWS (e.g. "National Highways", "Status of Length Maintenance")
+    // -------------------------------------------------------------------------
+    titleRows.forEach((titleText, tIdx) => {
+      const rowIdx = tIdx + 1;
+      const tRow = worksheet.getRow(rowIdx);
+      tRow.height = tIdx === 0 ? 28 : 24;
+      if (activeColumns.length > 1) {
+        worksheet.mergeCells(rowIdx, 1, rowIdx, activeColumns.length);
+      }
+      for (let c = 1; c <= activeColumns.length; c++) {
+        const cCell = worksheet.getCell(rowIdx, c);
+        cCell.fill = CREAM_HEADER_FILL;
+        cCell.border = CELL_BORDERS;
+      }
+      const cell = worksheet.getCell(rowIdx, 1);
+      cell.value = titleText;
+      cell.font = {
+        name: 'Arial',
+        size: tIdx === 0 ? 14 : 12,
+        bold: true,
+        color: { argb: 'FF0F172A' },
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    const headerStartRow = numTitleRows + 1;
+
     if (has2TierHeader) {
       // -----------------------------------------------------------------------
       // 2-TIER DEPARTMENTAL HEADER (Row 1: Category Groups, Row 2: Sub-headers)
       // -----------------------------------------------------------------------
-      const row1 = worksheet.getRow(1);
+      const groupRowIdx = headerStartRow;
+      const subHeaderRowIdx = headerStartRow + 1;
+
+      const row1 = worksheet.getRow(groupRowIdx);
       row1.height = 24;
-      const row2 = worksheet.getRow(2);
+      const row2 = worksheet.getRow(subHeaderRowIdx);
       row2.height = Math.min(Math.max(24, maxHeaderLines * 13 + 6), 65);
 
       let currentGroup = '';
@@ -235,8 +269,8 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
         const colNum = idx + 1;
         const grp = col.groupHeader || col.header;
 
-        // Set sub-header in Row 2
-        const cell2 = worksheet.getCell(2, colNum);
+        // Set sub-header in subHeaderRowIdx
+        const cell2 = worksheet.getCell(subHeaderRowIdx, colNum);
         cell2.value = col.header;
         cell2.fill = CREAM_HEADER_FILL;
         cell2.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FF334155' } };
@@ -248,9 +282,9 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
           groupStartCol = 1;
         } else if (grp !== currentGroup) {
           if (groupStartCol < colNum - 1) {
-            worksheet.mergeCells(1, groupStartCol, 1, colNum - 1);
+            worksheet.mergeCells(groupRowIdx, groupStartCol, groupRowIdx, colNum - 1);
           }
-          const cell1 = worksheet.getCell(1, groupStartCol);
+          const cell1 = worksheet.getCell(groupRowIdx, groupStartCol);
           cell1.value = currentGroup;
           currentGroup = grp;
           groupStartCol = colNum;
@@ -258,16 +292,16 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
         if (idx === activeColumns.length - 1) {
           if (groupStartCol < colNum) {
-            worksheet.mergeCells(1, groupStartCol, 1, colNum);
+            worksheet.mergeCells(groupRowIdx, groupStartCol, groupRowIdx, colNum);
           }
-          const cell1 = worksheet.getCell(1, groupStartCol);
+          const cell1 = worksheet.getCell(groupRowIdx, groupStartCol);
           cell1.value = currentGroup;
         }
       });
 
-      // Style all cells in Row 1
+      // Style all cells in groupRowIdx
       for (let c = 1; c <= activeColumns.length; c++) {
-        const cell1 = worksheet.getCell(1, c);
+        const cell1 = worksheet.getCell(groupRowIdx, c);
         cell1.fill = CREAM_HEADER_FILL;
         cell1.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
         cell1.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
@@ -275,12 +309,12 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       }
     } else {
       // -----------------------------------------------------------------------
-      // 1-TIER STANDARD HEADER (Row 1 only)
+      // 1-TIER STANDARD HEADER (Single Header Row)
       // -----------------------------------------------------------------------
-      const headerRow = worksheet.getRow(1);
+      const headerRow = worksheet.getRow(headerStartRow);
       headerRow.height = Math.min(Math.max(26, maxHeaderLines * 14 + 10), 75);
       activeColumns.forEach((col, idx) => {
-        const cell = worksheet.getCell(1, idx + 1);
+        const cell = worksheet.getCell(headerStartRow, idx + 1);
         cell.value = col.header;
         cell.fill = CREAM_HEADER_FILL;
         cell.font = HEADER_FONT;
@@ -400,10 +434,10 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
     // 3. Auto-filter across all columns
     if (activeColumns.length > 0) {
-      const headerRowIdx = has2TierHeader ? 2 : 1;
+      const filterRowIdx = totalHeaderRows;
       worksheet.autoFilter = {
-        from: { row: headerRowIdx, column: 1 },
-        to: { row: Math.max(data.length + headerRowIdx, headerRowIdx), column: activeColumns.length },
+        from: { row: filterRowIdx, column: 1 },
+        to: { row: Math.max(data.length + filterRowIdx, filterRowIdx), column: activeColumns.length },
       };
     }
   }
@@ -416,7 +450,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
  * Builds a standard CSV string buffer from dataset
  */
 export function buildCsvBuffer(sheetPayload: SheetExportPayload): Buffer {
-  const { columns, selectedKeys, data } = sheetPayload;
+  const { columns, selectedKeys, data, titleRows = [] } = sheetPayload;
   const activeColumns = columns.filter((col) =>
     selectedKeys && selectedKeys.length > 0
       ? selectedKeys.includes(col.key)
@@ -431,6 +465,11 @@ export function buildCsvBuffer(sheetPayload: SheetExportPayload): Buffer {
 
   const has2TierHeader = activeColumns.some((col) => Boolean(col.groupHeader));
   const rows: string[] = [];
+
+  // Top Title Rows
+  titleRows.forEach((t) => {
+    rows.push(escapeCsv(t));
+  });
 
   if (has2TierHeader) {
     const groupRow = activeColumns.map((c) => escapeCsv(c.groupHeader || c.header)).join(',');

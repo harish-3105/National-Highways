@@ -296,6 +296,7 @@ export async function POST(req: NextRequest) {
         columns: DLP_COLUMNS,
         selectedKeys,
         data: dlpData,
+        titleRows: ['National Highways', 'Status of Length Maintenance'],
       });
     }
 
