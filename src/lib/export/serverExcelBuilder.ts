@@ -23,14 +23,14 @@ const CREAM_HEADER_FILL: ExcelJS.Fill = {
 
 const HEADER_FONT: Partial<ExcelJS.Font> = {
   name: 'Arial Narrow',
-  size: 10.5,
+  size: 18,
   bold: true,
   color: { argb: 'FF0F172A' }, // Dark Slate
 };
 
 const DATA_FONT: Partial<ExcelJS.Font> = {
   name: 'Arial Narrow',
-  size: 9.5,
+  size: 16,
   color: { argb: 'FF0F172A' },
 };
 
@@ -119,7 +119,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
     const worksheet = workbook.addWorksheet(sheetName, {
       views: [{ state: 'frozen', ySplit: totalHeaderRows }], // Freeze title & header row(s)
-      properties: { defaultRowHeight: 20 },
+      properties: { defaultRowHeight: 28 },
     });
 
     // Native Excel Print Setup (Fits all columns on 1 page wide in Landscape A4)
@@ -232,7 +232,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
     titleRows.forEach((titleText, tIdx) => {
       const rowIdx = tIdx + 1;
       const tRow = worksheet.getRow(rowIdx);
-      tRow.height = tIdx === 0 ? 28 : 24;
+      tRow.height = tIdx === 0 ? 36 : 32;
       if (activeColumns.length > 1) {
         worksheet.mergeCells(rowIdx, 1, rowIdx, activeColumns.length);
       }
@@ -245,7 +245,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       cell.value = titleText;
       cell.font = {
         name: 'Arial Narrow',
-        size: tIdx === 0 ? 14 : 12,
+        size: 18,
         bold: true,
         color: { argb: 'FF0F172A' },
       };
@@ -262,9 +262,9 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       const subHeaderRowIdx = headerStartRow + 1;
 
       const row1 = worksheet.getRow(groupRowIdx);
-      row1.height = 24;
+      row1.height = 34;
       const row2 = worksheet.getRow(subHeaderRowIdx);
-      row2.height = Math.min(Math.max(24, maxHeaderLines * 13 + 6), 65);
+      row2.height = Math.min(Math.max(34, maxHeaderLines * 24 + 10), 130);
 
       let currentGroup = '';
       let groupStartCol = 1;
@@ -277,7 +277,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
         const cell2 = worksheet.getCell(subHeaderRowIdx, colNum);
         cell2.value = col.header;
         cell2.fill = CREAM_HEADER_FILL;
-        cell2.font = { name: 'Arial Narrow', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+        cell2.font = { name: 'Arial Narrow', size: 18, bold: true, color: { argb: 'FF0F172A' } };
         cell2.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
         cell2.border = CELL_BORDERS;
 
@@ -307,7 +307,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       for (let c = 1; c <= activeColumns.length; c++) {
         const cell1 = worksheet.getCell(groupRowIdx, c);
         cell1.fill = CREAM_HEADER_FILL;
-        cell1.font = { name: 'Arial Narrow', size: 10, bold: true, color: { argb: 'FF0F172A' } };
+        cell1.font = { name: 'Arial Narrow', size: 18, bold: true, color: { argb: 'FF0F172A' } };
         cell1.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
         cell1.border = CELL_BORDERS;
       }
@@ -316,7 +316,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       // 1-TIER STANDARD HEADER (Single Header Row)
       // -----------------------------------------------------------------------
       const headerRow = worksheet.getRow(headerStartRow);
-      headerRow.height = Math.min(Math.max(26, maxHeaderLines * 14 + 10), 75);
+      headerRow.height = Math.min(Math.max(36, maxHeaderLines * 26 + 10), 140);
       activeColumns.forEach((col, idx) => {
         const cell = worksheet.getCell(headerStartRow, idx + 1);
         cell.value = col.header;
@@ -386,13 +386,13 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
       const addedRow = worksheet.addRow(rowValues);
 
-      // Dynamically auto-fit row height
+      // Dynamically auto-fit row height for 16pt font
       if (isParentRow) {
-        addedRow.height = 22;
+        addedRow.height = 30;
       } else if (maxLinesInRow === 1) {
-        addedRow.height = 20;
+        addedRow.height = 28;
       } else {
-        addedRow.height = Math.min(Math.max(22, maxLinesInRow * 16 + 4), 160);
+        addedRow.height = Math.min(Math.max(28, maxLinesInRow * 24 + 8), 240);
       }
 
       // Style Data Cells
@@ -401,7 +401,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
         if (!colDef) return;
 
         if (isParentRow) {
-          cell.font = { name: 'Arial Narrow', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+          cell.font = { name: 'Arial Narrow', size: 16, bold: true, color: { argb: 'FF0F172A' } };
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
         } else {
           cell.font = DATA_FONT;
