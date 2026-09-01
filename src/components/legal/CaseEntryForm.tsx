@@ -1035,6 +1035,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </label>
                 <input
                   type="text"
+                  placeholder="W.P (MD) No.12345/2024"
                   value={formData.caseDetails || ''}
                   onChange={(e) => handleChange('caseDetails', e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
@@ -1214,6 +1215,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                     </label>
                     <input
                       type="text"
+                      placeholder="W.P (MD) No.12345/2024"
                       value={formData.appealInfo?.appealCaseDetails || ''}
                       onChange={(e) => handleAppealInfoChange('appealCaseDetails', e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
@@ -1500,6 +1502,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                 </label>
                 <input
                   type="text"
+                  placeholder="W.P (MD) No.12345/2024"
                   value={formData.baseCaseDetails || ''}
                   onChange={(e) => handleChange('baseCaseDetails', e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"

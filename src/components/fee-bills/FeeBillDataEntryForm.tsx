@@ -983,6 +983,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
               </label>
               <input
                 type="text"
+                placeholder="W.P (MD) No.12345/2024"
                 value={formData.caseDetails || ''}
                 onChange={(e) => setFormData((prev) => ({ ...prev, caseDetails: e.target.value }))}
                 className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500"
