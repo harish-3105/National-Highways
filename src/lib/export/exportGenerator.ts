@@ -80,7 +80,7 @@ export function generateExportFile(
     // Generate XLSX workbook
     const worksheet = XLSX.utils.json_to_sheet(formattedData);
 
-    // Auto-fit column widths based on data content values + 8 (4-char bilateral padding)
+    // Auto-fit column widths (ensures full display of headers + data values with padding)
     const colWidths = activeColumns.map((col) => {
       let maxDataLen = 0;
       for (const r of formattedData) {
@@ -91,7 +91,8 @@ export function generateExportFile(
         }
       }
       if (formattedData.length === 0 || maxDataLen === 0) maxDataLen = 8;
-      return { wch: Math.min(Math.max(maxDataLen + 8, 14), 36) };
+      const headerLen = col.label ? col.label.length : 8;
+      return { wch: Math.min(Math.max(maxDataLen + 8, headerLen + 4, 14), 40) };
     });
     worksheet['!cols'] = colWidths;
 

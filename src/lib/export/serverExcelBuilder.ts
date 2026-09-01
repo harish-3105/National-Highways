@@ -92,6 +92,34 @@ function getDisplayValue(val: unknown, colDef: ExportColumnDef): string {
 }
 
 /**
+ * Calculates the number of rendered text lines given a string and column width
+ */
+function calculateWrappedLines(text: string, colWidth: number): number {
+  if (!text) return 1;
+  const rawParagraphs = text.split(/\r?\n/);
+  let totalLines = 0;
+  for (const para of rawParagraphs) {
+    const words = para.trim().split(/\s+/);
+    if (words.length === 0 || (words.length === 1 && words[0] === '')) {
+      totalLines += 1;
+      continue;
+    }
+    let currentLineLen = 0;
+    let paraLines = 1;
+    for (const word of words) {
+      if (currentLineLen + word.length + (currentLineLen > 0 ? 1 : 0) <= Math.max(colWidth - 2, 4)) {
+        currentLineLen += word.length + (currentLineLen > 0 ? 1 : 0);
+      } else {
+        paraLines++;
+        currentLineLen = word.length;
+      }
+    }
+    totalLines += paraLines;
+  }
+  return Math.max(totalLines, 1);
+}
+
+/**
  * Builds an ExcelJS Workbook from structured sheet payloads
  */
 export async function buildExcelWorkbook(options: WorkbookExportOptions): Promise<Buffer> {
@@ -141,7 +169,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       showGridLines: true,
     };
 
-    // 1. Calculate data-driven column widths (Longest Data Value + 8 padding for 4 chars on each side)
+    // 1. Calculate column widths (ensures full display of column headers + data values with padding)
     const columnWidths = activeColumns.map((col) => {
       let maxDataLen = 0;
 
@@ -172,8 +200,11 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       else if (col.dataType === 'integer') typeFloor = 5;
 
       const effectiveDataLen = Math.max(maxDataLen, typeFloor);
-      // Longest data value + 8 padding (4 characters of space on each side)
-      const paddedWidth = effectiveDataLen + 8;
+      const dataPaddedWidth = effectiveDataLen + 8; // 4 chars bilateral padding for data values
+
+      // Ensure column width expands enough to fully display the header content
+      const headerLen = col.header ? col.header.length : 8;
+      const headerPaddedWidth = headerLen + 4; // breathing room for header title
 
       const isLongTextCol =
         col.category === 'remarks' ||
@@ -189,11 +220,11 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
       let optimalWidth: number;
       if (isLongTextCol) {
-        // For long text fields, cap at 36-38 chars to preserve horizontal print budget
-        optimalWidth = Math.min(Math.max(paddedWidth, 20), 38);
+        // For long text fields, expand up to 48 chars to fully display headers and content
+        optimalWidth = Math.min(Math.max(dataPaddedWidth, headerPaddedWidth, 24), 48);
       } else {
-        // For regular data fields, pad +8 (4 chars each side)
-        optimalWidth = Math.min(Math.max(paddedWidth, typeFloor + 8), 30);
+        // For standard fields, ensure the column expands enough to fully display the header
+        optimalWidth = Math.min(Math.max(dataPaddedWidth, headerPaddedWidth, typeFloor + 8), 36);
       }
 
       return optimalWidth;
@@ -205,24 +236,13 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       width: columnWidths[idx],
     }));
 
-    // Calculate dynamic Header Row Height based on the most wrapped header
-    let maxHeaderLines = 1;
+    // Calculate dynamic Sub-Header Row Height based on the most wrapped sub-header
+    let maxSubHeaderLines = 1;
     activeColumns.forEach((col, idx) => {
       const colW = columnWidths[idx] || 10;
-      const words = col.header.split(/\s+/);
-      let currentLineLen = 0;
-      let lines = 1;
-
-      for (const word of words) {
-        if (currentLineLen + word.length + (currentLineLen > 0 ? 1 : 0) <= Math.max(colW - 1, 4)) {
-          currentLineLen += word.length + (currentLineLen > 0 ? 1 : 0);
-        } else {
-          lines++;
-          currentLineLen = word.length;
-        }
-      }
-      if (lines > maxHeaderLines) {
-        maxHeaderLines = lines;
+      const lines = calculateWrappedLines(col.header, colW);
+      if (lines > maxSubHeaderLines) {
+        maxSubHeaderLines = lines;
       }
     });
 
@@ -232,7 +252,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
     titleRows.forEach((titleText, tIdx) => {
       const rowIdx = tIdx + 1;
       const tRow = worksheet.getRow(rowIdx);
-      tRow.height = tIdx === 0 ? 36 : 32;
+      tRow.height = tIdx === 0 ? 38 : 34;
       if (activeColumns.length > 1) {
         worksheet.mergeCells(rowIdx, 1, rowIdx, activeColumns.length);
       }
@@ -261,46 +281,78 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       const groupRowIdx = headerStartRow;
       const subHeaderRowIdx = headerStartRow + 1;
 
-      const row1 = worksheet.getRow(groupRowIdx);
-      row1.height = 34;
-      const row2 = worksheet.getRow(subHeaderRowIdx);
-      row2.height = Math.min(Math.max(34, maxHeaderLines * 24 + 10), 130);
-
+      // Track group widths to calculate vertical height for Tier 1 group headers
+      let maxGroupLines = 1;
       let currentGroup = '';
       let groupStartCol = 1;
+      let currentGroupWidth = 0;
+
+      const groupSpans: { group: string; startCol: number; endCol: number; totalWidth: number }[] = [];
 
       activeColumns.forEach((col, idx) => {
         const colNum = idx + 1;
         const grp = col.groupHeader || col.header;
+        const colW = columnWidths[idx] || 15;
 
-        // Set sub-header in subHeaderRowIdx
+        if (idx === 0) {
+          currentGroup = grp;
+          groupStartCol = 1;
+          currentGroupWidth = colW;
+        } else if (grp !== currentGroup) {
+          groupSpans.push({
+            group: currentGroup,
+            startCol: groupStartCol,
+            endCol: colNum - 1,
+            totalWidth: currentGroupWidth,
+          });
+          currentGroup = grp;
+          groupStartCol = colNum;
+          currentGroupWidth = colW;
+        } else {
+          currentGroupWidth += colW;
+        }
+
+        if (idx === activeColumns.length - 1) {
+          groupSpans.push({
+            group: currentGroup,
+            startCol: groupStartCol,
+            endCol: colNum,
+            totalWidth: currentGroupWidth,
+          });
+        }
+      });
+
+      // Calculate maximum lines required across all category group headers
+      groupSpans.forEach((span) => {
+        const gLines = calculateWrappedLines(span.group, span.totalWidth);
+        if (gLines > maxGroupLines) {
+          maxGroupLines = gLines;
+        }
+      });
+
+      const row1 = worksheet.getRow(groupRowIdx);
+      row1.height = Math.min(Math.max(36, maxGroupLines * 28 + 12), 140);
+      const row2 = worksheet.getRow(subHeaderRowIdx);
+      row2.height = Math.min(Math.max(36, maxSubHeaderLines * 28 + 12), 150);
+
+      // Render Sub-Headers in subHeaderRowIdx
+      activeColumns.forEach((col, idx) => {
+        const colNum = idx + 1;
         const cell2 = worksheet.getCell(subHeaderRowIdx, colNum);
         cell2.value = col.header;
         cell2.fill = CREAM_HEADER_FILL;
         cell2.font = { name: 'Arial Narrow', size: 18, bold: true, color: { argb: 'FF0F172A' } };
         cell2.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
         cell2.border = CELL_BORDERS;
+      });
 
-        if (idx === 0) {
-          currentGroup = grp;
-          groupStartCol = 1;
-        } else if (grp !== currentGroup) {
-          if (groupStartCol < colNum - 1) {
-            worksheet.mergeCells(groupRowIdx, groupStartCol, groupRowIdx, colNum - 1);
-          }
-          const cell1 = worksheet.getCell(groupRowIdx, groupStartCol);
-          cell1.value = currentGroup;
-          currentGroup = grp;
-          groupStartCol = colNum;
+      // Render Category Groups in groupRowIdx
+      groupSpans.forEach((span) => {
+        if (span.startCol < span.endCol) {
+          worksheet.mergeCells(groupRowIdx, span.startCol, groupRowIdx, span.endCol);
         }
-
-        if (idx === activeColumns.length - 1) {
-          if (groupStartCol < colNum) {
-            worksheet.mergeCells(groupRowIdx, groupStartCol, groupRowIdx, colNum);
-          }
-          const cell1 = worksheet.getCell(groupRowIdx, groupStartCol);
-          cell1.value = currentGroup;
-        }
+        const cell1 = worksheet.getCell(groupRowIdx, span.startCol);
+        cell1.value = span.group;
       });
 
       // Style all cells in groupRowIdx
@@ -316,7 +368,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       // 1-TIER STANDARD HEADER (Single Header Row)
       // -----------------------------------------------------------------------
       const headerRow = worksheet.getRow(headerStartRow);
-      headerRow.height = Math.min(Math.max(36, maxHeaderLines * 26 + 10), 140);
+      headerRow.height = Math.min(Math.max(38, maxSubHeaderLines * 28 + 14), 160);
       activeColumns.forEach((col, idx) => {
         const cell = worksheet.getCell(headerStartRow, idx + 1);
         cell.value = col.header;
