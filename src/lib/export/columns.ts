@@ -67,7 +67,7 @@ export const HIGHWAYS_L2_MICRO_COLUMNS: ExportColumnDef[] = [
   { key: 'row_width', header: 'ROW Width (m)', category: 'technical', dataType: 'string', align: 'center', defaultSelected: true, width: 18 },
   { key: 'carriageway_width', header: 'Carriageway Width (m)', category: 'technical', dataType: 'string', align: 'center', defaultSelected: true, width: 22 },
   { key: 'important_town', header: 'Town / Landmark / Crossing', category: 'core', dataType: 'string', align: 'left', defaultSelected: true, width: 30 },
-  { key: 'remarks', header: 'Remarks', category: 'remarks', dataType: 'string', align: 'left', defaultSelected: false, width: 35 },
+  { key: 'remarks', header: 'Remarks', category: 'remarks', dataType: 'string', align: 'left', defaultSelected: true, width: 35 },
 ];
 
 // -----------------------------------------------------------------------------

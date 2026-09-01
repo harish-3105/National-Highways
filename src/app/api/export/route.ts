@@ -64,6 +64,8 @@ export async function POST(req: NextRequest) {
     if (module === 'highways' || module === 'corridors') {
       filePrefix = emptyTemplate ? 'TN_Highway_Catalog_Template' : `TN_Highway_Catalog_${timestamp}`;
 
+      let selectedRoadCodes: string[] = [];
+
       // Level 1: Master Highway Corridors
       if (corridorLevels.includes('L1')) {
         let l1Data: Record<string, unknown>[] = [];
@@ -75,6 +77,8 @@ export async function POST(req: NextRequest) {
 
           const { data } = await query;
           if (data) {
+            selectedRoadCodes = data.map((hw: any) => hw.road_code).filter(Boolean);
+
             // Attach DLP counts
             const { data: dlpData } = await supabase.from('dlp_contracts').select('highway_code');
             const dlpMap = new Map<string, number>();
@@ -95,7 +99,7 @@ export async function POST(req: NextRequest) {
         sheets.push({
           sheetName: 'Corridors Master (L1)',
           columns: HIGHWAYS_L1_COLUMNS,
-          selectedKeys: selectedKeys?.L1 || selectedKeys,
+          selectedKeys: Array.isArray(selectedKeys) ? selectedKeys : selectedKeys?.L1,
           data: l1Data,
         });
       }
@@ -113,19 +117,25 @@ export async function POST(req: NextRequest) {
           if (filters.includeDeleted !== true) {
             query = query.neq('delete_status', 'DELETED').neq('delete_status', 'SOFT_DELETE');
           }
+          if (scope === 'selected' && selectedRoadCodes.length > 0) {
+            query = query.in('highway_code', selectedRoadCodes);
+          }
 
           const { data } = await query;
           if (data) {
             macroData = data.filter(
               (s: any) => s.breakdown_type === 'MACRO_PCU' || s.pcu_count > 0 || s.stretch_name
             );
+            if (macroData.length === 0 && data.length > 0) {
+              macroData = data;
+            }
           }
         }
 
         sheets.push({
           sheetName: 'Traffic Census PCU (L2)',
           columns: HIGHWAYS_L2_MACRO_COLUMNS,
-          selectedKeys: selectedKeys?.L2_MACRO || selectedKeys,
+          selectedKeys: Array.isArray(selectedKeys) ? undefined : selectedKeys?.L2_MACRO,
           data: macroData,
         });
       }
@@ -143,20 +153,25 @@ export async function POST(req: NextRequest) {
           if (filters.includeDeleted !== true) {
             query = query.neq('delete_status', 'DELETED').neq('delete_status', 'SOFT_DELETE');
           }
+          if (scope === 'selected' && selectedRoadCodes.length > 0) {
+            query = query.in('highway_code', selectedRoadCodes);
+          }
 
           const { data } = await query;
           if (data) {
             microData = data.filter(
               (s: any) => s.breakdown_type === 'MICRO_LANE' || s.row_width || s.carriageway_width
             );
-            if (microData.length === 0) microData = data; // Fallback to all if breakdown_type was unpopulated
+            if (microData.length === 0 && data.length > 0) {
+              microData = data; // Fallback to all if breakdown_type was unpopulated
+            }
           }
         }
 
         sheets.push({
           sheetName: 'Lane Geometry (L2)',
           columns: HIGHWAYS_L2_MICRO_COLUMNS,
-          selectedKeys: selectedKeys?.L2_MICRO || selectedKeys,
+          selectedKeys: Array.isArray(selectedKeys) ? undefined : selectedKeys?.L2_MICRO,
           data: microData,
         });
       }
