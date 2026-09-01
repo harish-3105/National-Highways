@@ -74,6 +74,10 @@ function groupLegalMasterData(items: LegalMasterConfigItem[]): LegalMasterData {
     return Array.from(new Set(dbVals)).sort();
   };
 
+  const rawCourts = getVals("court_name");
+  const rawAppellateCourts = getVals("appellate_court");
+  const syncedCourts = Array.from(new Set([...rawCourts, ...rawAppellateCourts])).sort();
+
   return {
     rawItems: sourceItems,
     circles: getVals("circle"),
@@ -82,9 +86,9 @@ function groupLegalMasterData(items: LegalMasterConfigItem[]): LegalMasterData {
     caseStatuses: getVals("case_status"),
     casePertainsTo: getVals("case_pertains_to"),
     natureOfCases: getVals("nature_of_case"),
-    courtNames: getVals("court_name"),
+    courtNames: syncedCourts,
     appealCaseTypes: getVals("appeal_case_type"),
-    appellateCourts: getVals("appellate_court"),
+    appellateCourts: syncedCourts,
     condonationOfDelays: getVals("condonation_of_delay"),
     presentStages: getVals("present_stage"),
     gpOpinions: getVals("gp_opinion"),
@@ -200,6 +204,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Bidirectional sync for court_name and appellate_court
+    if (category === "court_name" || category === "appellate_court") {
+      const otherCat: LegalCategory = category === "court_name" ? "appellate_court" : "court_name";
+      const { data: match } = await supabase
+        .from("legal_master_config")
+        .select("id")
+        .eq("category", otherCat)
+        .eq("value", trimmedValue)
+        .maybeSingle();
+
+      if (!match) {
+        await supabase
+          .from("legal_master_config")
+          .insert([{ category: otherCat, value: trimmedValue, parent_value: cleanParentValue }]);
+      }
+    }
+
     return NextResponse.json({ success: true, item: data }, { status: 201 });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -233,6 +254,12 @@ export async function PUT(request: NextRequest) {
     }
 
     if (id) {
+      const { data: itemToUpdate } = await supabase
+        .from("legal_master_config")
+        .select("category, value")
+        .eq("id", id)
+        .maybeSingle();
+
       const { data, error } = await supabase
         .from("legal_master_config")
         .update(updatePayload)
@@ -241,6 +268,17 @@ export async function PUT(request: NextRequest) {
         .single();
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      // Bidirectional sync for updates on court_name and appellate_court
+      if (itemToUpdate && (itemToUpdate.category === "court_name" || itemToUpdate.category === "appellate_court")) {
+        const otherCat = itemToUpdate.category === "court_name" ? "appellate_court" : "court_name";
+        await supabase
+          .from("legal_master_config")
+          .update(updatePayload)
+          .eq("category", otherCat)
+          .eq("value", itemToUpdate.value);
+      }
+
       return NextResponse.json({ success: true, item: data });
     }
 
@@ -253,6 +291,16 @@ export async function PUT(request: NextRequest) {
         .select();
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      if (category === "court_name" || category === "appellate_court") {
+        const otherCat = category === "court_name" ? "appellate_court" : "court_name";
+        await supabase
+          .from("legal_master_config")
+          .update(updatePayload)
+          .eq("category", otherCat)
+          .eq("value", oldValue.trim());
+      }
+
       return NextResponse.json({ success: true, items: data });
     }
 
@@ -274,8 +322,24 @@ export async function DELETE(request: NextRequest) {
     const { id, category, value } = await request.json();
 
     if (id) {
+      const { data: itemToDelete } = await supabase
+        .from("legal_master_config")
+        .select("category, value")
+        .eq("id", id)
+        .maybeSingle();
+
       const { error } = await supabase.from("legal_master_config").delete().eq("id", id);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      if (itemToDelete && (itemToDelete.category === "court_name" || itemToDelete.category === "appellate_court")) {
+        const otherCat = itemToDelete.category === "court_name" ? "appellate_court" : "court_name";
+        await supabase
+          .from("legal_master_config")
+          .delete()
+          .eq("category", otherCat)
+          .eq("value", itemToDelete.value);
+      }
+
       return NextResponse.json({ success: true });
     }
 
@@ -286,6 +350,16 @@ export async function DELETE(request: NextRequest) {
         .eq("category", category)
         .eq("value", value);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      if (category === "court_name" || category === "appellate_court") {
+        const otherCat = category === "court_name" ? "appellate_court" : "court_name";
+        await supabase
+          .from("legal_master_config")
+          .delete()
+          .eq("category", otherCat)
+          .eq("value", value);
+      }
+
       return NextResponse.json({ success: true });
     }
 

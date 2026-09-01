@@ -3,7 +3,7 @@
 export type CaseClassificationType = 'Normal Case' | 'Appeal Case';
 export type YesNoType = 'Yes' | 'No' | string;
 export type GPOpinionType = 'Opinion Pending' | 'Recommended for Appeal' | 'Not Recommended for Appeal' | 'Not Required' | string;
-export type ComplianceStatusType = 'Complied' | 'Pending' | string;
+export type ComplianceStatusType = 'Completed' | 'Complied' | 'Pending' | 'Overdue' | string;
 
 export type CircleType = string;
 export type CasePertainsToType = 'GOTN' | 'MoRTH' | 'Both' | 'NHAI' | string;
@@ -89,8 +89,9 @@ export interface LegalCaseData {
   complianceAction?: string; // Text field (Compliance Action Directed by Court)
   compliancePeriod?: string; // Text field (e.g. 8 weeks, 3 months)
   complianceEndDate?: string; // Date field (YYYY-MM-DD)
+  complianceCompletionDate?: string; // Date field (YYYY-MM-DD)
   actionTakenDetailsForCompliance?: string; // Text field
-  complianceStatus?: ComplianceStatusType; // Dropdown: Complied | Pending
+  complianceStatus?: ComplianceStatusType; // Dropdown: Completed | Pending | Overdue
   remarks?: string; // Text field
 
   // B.5. Disposal & Appeal Track (Stage 5)

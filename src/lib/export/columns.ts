@@ -196,6 +196,8 @@ export const LEGAL_CASES_COLUMNS: ExportColumnDef[] = [
   { key: 'interimOrderDirection', header: 'Interim Order / Direction', category: 'remarks', dataType: 'string', align: 'left', defaultSelected: false, width: 35 },
   { key: 'interimOrderDate', header: 'Interim Order Date', category: 'dates', dataType: 'date', align: 'center', defaultSelected: false, width: 18 },
   { key: 'complianceRequired', header: 'Compliance Required', category: 'status', dataType: 'string', align: 'center', defaultSelected: false, width: 20 },
+  { key: 'complianceEndDate', header: 'Compliance End Date', category: 'dates', dataType: 'date', align: 'center', defaultSelected: false, width: 18 },
+  { key: 'complianceCompletionDate', header: 'Compliance Completion Date', category: 'dates', dataType: 'date', align: 'center', defaultSelected: false, width: 20 },
   { key: 'complianceStatus', header: 'Compliance Status', category: 'status', dataType: 'string', align: 'center', defaultSelected: false, width: 18 },
   { key: 'finalResult', header: 'Final Result (Disposed)', category: 'status', dataType: 'string', align: 'center', defaultSelected: false, width: 20 },
   { key: 'finalOrderDate', header: 'Final Order Date', category: 'dates', dataType: 'date', align: 'center', defaultSelected: false, width: 18 },

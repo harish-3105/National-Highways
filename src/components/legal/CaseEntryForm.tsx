@@ -7,6 +7,7 @@ import {
   CaseClassificationType,
 } from '@/types/legal';
 import { calculateAppealDelay } from '@/lib/legal/masterData';
+import { formatDateIndian } from '@/lib/formatters';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { LegalMasterData } from '@/app/api/legal/master-data/route';
@@ -197,6 +198,7 @@ const getDefaultInitialState = (initial?: Partial<LegalCaseData>): LegalCaseData
     complianceAction: initial?.complianceAction || '',
     compliancePeriod: initial?.compliancePeriod || '',
     complianceEndDate: initial?.complianceEndDate || '',
+    complianceCompletionDate: initial?.complianceCompletionDate || '',
     actionTakenDetailsForCompliance: initial?.actionTakenDetailsForCompliance || '',
     complianceStatus: initial?.complianceStatus || '',
     remarks: initial?.remarks || '',
@@ -255,14 +257,16 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   // Dynamic Master Data Options directly from database (with Others included)
   const circles = masterData?.circles || [];
   const courts = useMemo(() => {
-    const list = masterData?.courtNames || [];
-    return list.includes('Others') ? list : [...list, 'Others'];
-  }, [masterData?.courtNames]);
+    const rawList = Array.from(
+      new Set([
+        ...(masterData?.courtNames || []),
+        ...(masterData?.appellateCourts || []),
+      ])
+    ).filter(Boolean);
+    return rawList.includes('Others') ? rawList : [...rawList, 'Others'];
+  }, [masterData?.courtNames, masterData?.appellateCourts]);
 
-  const appellateCourts = useMemo(() => {
-    const list = masterData?.appellateCourts || [];
-    return list.includes('Others') ? list : [...list, 'Others'];
-  }, [masterData?.appellateCourts]);
+  const appellateCourts = courts;
 
   const casePertainsToList = masterData?.casePertainsTo || [];
   const natureOfCasesList = useMemo(() => {
@@ -276,6 +280,40 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   const gpOpinions = masterData?.gpOpinions || [];
   const complianceStatuses = masterData?.complianceStatuses || [];
   const caRequiredOptions = masterData?.caRequiredOptions || [];
+
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  const availableComplianceStatuses = useMemo(() => {
+    const rawList = masterData?.complianceStatuses && masterData.complianceStatuses.length > 0
+      ? masterData.complianceStatuses
+      : ['Completed', 'Pending', 'Overdue'];
+    const completedLabel = rawList.find((s) => s.toLowerCase() === 'completed' || s.toLowerCase() === 'complied') || 'Completed';
+    const pendingLabel = rawList.find((s) => s.toLowerCase() === 'pending') || 'Pending';
+    const overdueLabel = rawList.find((s) => s.toLowerCase() === 'overdue') || 'Overdue';
+
+    if (formData.complianceEndDate) {
+      if (formData.complianceEndDate < todayStr) {
+        return [completedLabel, overdueLabel];
+      } else {
+        return [completedLabel, pendingLabel];
+      }
+    }
+    return [completedLabel, pendingLabel];
+  }, [formData.complianceEndDate, masterData?.complianceStatuses, todayStr]);
+
+  const completionDelayDays = useMemo(() => {
+    if (!formData.complianceCompletionDate || !formData.complianceEndDate) return 0;
+    if (formData.complianceCompletionDate <= formData.complianceEndDate) return 0;
+    const diff = new Date(formData.complianceCompletionDate).getTime() - new Date(formData.complianceEndDate).getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }, [formData.complianceCompletionDate, formData.complianceEndDate]);
+
+  const overdueDays = useMemo(() => {
+    if (!formData.complianceEndDate) return 0;
+    if (todayStr <= formData.complianceEndDate) return 0;
+    const diff = new Date(todayStr).getTime() - new Date(formData.complianceEndDate).getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }, [formData.complianceEndDate, todayStr]);
   const caFiledOptions = masterData?.caFiledOptions || [];
   const complianceRequiredOptions = masterData?.complianceRequiredOptions || [];
   const finalResultOptions = masterData?.finalResultOptions || [];
@@ -600,6 +638,26 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
         }
         if (!formData.complianceStatus) {
           stageErrors.complianceStatus = 'Compliance Status is required when Compliance is required.';
+        } else {
+          const isCompleted =
+            formData.complianceStatus.toLowerCase() === 'completed' ||
+            formData.complianceStatus.toLowerCase() === 'complied';
+          const isPending = formData.complianceStatus.toLowerCase() === 'pending';
+          const isOverdue = formData.complianceStatus.toLowerCase() === 'overdue';
+
+          if (formData.complianceEndDate) {
+            if (formData.complianceEndDate < todayStr && isPending) {
+              stageErrors.complianceStatus = 'Compliance Status cannot be Pending when Compliance End Date has elapsed (must be Completed or Overdue).';
+            } else if (formData.complianceEndDate >= todayStr && isOverdue) {
+              stageErrors.complianceStatus = 'Compliance Status cannot be Overdue before Compliance End Date has elapsed (must be Completed or Pending).';
+            }
+          }
+
+          if (isCompleted) {
+            if (!formData.complianceCompletionDate?.trim()) {
+              stageErrors.complianceCompletionDate = 'Completion Date is required when Compliance Status is Completed.';
+            }
+          }
         }
       }
     } else if (stageDef.id === 'disposal_appeal') {
@@ -607,6 +665,11 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
       if (formData.finalResult === 'Yes') {
         if (!formData.finalOrderDate) {
           stageErrors.finalOrderDate = 'Final Order Date is required when Case is Concluded.';
+        } else if (formData.caseClassification === 'Appeal Case') {
+          const appealFilingDate = formData.appealInfo?.appealFilingDate || formData.appealFilingDate;
+          if (appealFilingDate && formData.finalOrderDate < appealFilingDate) {
+            stageErrors.finalOrderDate = `Final Order Date (${formData.finalOrderDate}) cannot be earlier than Appeal Filing Date (${appealFilingDate}).`;
+          }
         }
         if (!formData.adverseToDepartment) {
           stageErrors.adverseToDepartment = 'Adverse to Department selection is required.';
@@ -1850,17 +1913,18 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Compliance End Date (CED)</label>
                       <DatePickerInput
                         value={formData.complianceEndDate || ''}
-                        onChange={(val) => handleChange('complianceEndDate', val)}
+                        onChange={(val) => {
+                          handleChange('complianceEndDate', val);
+                          // Auto-adjust complianceStatus if invalid for new date
+                          if (val) {
+                            if (val < todayStr && formData.complianceStatus?.toLowerCase() === 'pending') {
+                              handleChange('complianceStatus', '');
+                            } else if (val >= todayStr && formData.complianceStatus?.toLowerCase() === 'overdue') {
+                              handleChange('complianceStatus', '');
+                            }
+                          }
+                        }}
                       />
-                      {formData.complianceEndDate && new Date().toISOString().split('T')[0] > formData.complianceEndDate && (
-                        <div className="flex items-center gap-1.5 mt-1.5 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-[11px] font-bold text-amber-800 dark:text-amber-300 animate-in fade-in">
-                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                          <span>
-                            Delayed by {Math.ceil((new Date(new Date().toISOString().split('T')[0]).getTime() - new Date(formData.complianceEndDate).getTime()) / (1000 * 60 * 60 * 24))} day
-                            {Math.ceil((new Date(new Date().toISOString().split('T')[0]).getTime() - new Date(formData.complianceEndDate).getTime()) / (1000 * 60 * 60 * 24)) > 1 ? 's' : ''}.
-                          </span>
-                        </div>
-                      )}
                     </div>
 
                     <div>
@@ -1868,13 +1932,45 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                         Compliance Status <span className="text-rose-500">*</span>
                       </label>
                       <SearchableSelect
-                        options={complianceStatuses}
+                        options={availableComplianceStatuses}
                         value={formData.complianceStatus || ''}
                         onChange={(val) => handleChange('complianceStatus', val)}
                       />
                       {errors.complianceStatus && <p className="text-[11px] text-rose-500 mt-1">{errors.complianceStatus}</p>}
+                      {formData.complianceStatus?.toLowerCase() === 'overdue' && overdueDays > 0 && (
+                        <div className="flex items-center gap-1.5 mt-1.5 px-2.5 py-1 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-lg text-[11px] font-bold text-rose-800 dark:text-rose-300 animate-in fade-in">
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          <span>
+                            Overdue by {overdueDays} day{overdueDays > 1 ? 's' : ''} (Compliance End Date {formatDateIndian(formData.complianceEndDate)} has elapsed).
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {/* Conditional Completion Date (when Compliance Status is Completed / Complied) */}
+                  {(formData.complianceStatus?.toLowerCase() === 'completed' || formData.complianceStatus?.toLowerCase() === 'complied') && (
+                    <div className="animate-in fade-in max-w-sm">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Completion Date <span className="text-rose-500">*</span>
+                      </label>
+                      <DatePickerInput
+                        value={formData.complianceCompletionDate || ''}
+                        onChange={(val) => handleChange('complianceCompletionDate', val)}
+                      />
+                      {errors.complianceCompletionDate && (
+                        <p className="text-[11px] text-rose-500 mt-1">{errors.complianceCompletionDate}</p>
+                      )}
+                      {completionDelayDays > 0 && (
+                        <div className="flex items-center gap-1.5 mt-1.5 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-[11px] font-bold text-amber-800 dark:text-amber-300 animate-in fade-in">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span>
+                            Delayed by {completionDelayDays} day{completionDelayDays > 1 ? 's' : ''} (Completed on {formatDateIndian(formData.complianceCompletionDate)} after Compliance End Date {formatDateIndian(formData.complianceEndDate)}).
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Action Taken Details for Compliance</label>
@@ -1926,6 +2022,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
                       <DatePickerInput
                         value={formData.finalOrderDate || ''}
                         onChange={(val) => handleChange('finalOrderDate', val)}
+                        min={formData.caseClassification === 'Appeal Case' ? (formData.appealInfo?.appealFilingDate || formData.appealFilingDate || undefined) : undefined}
                       />
                       {errors.finalOrderDate && <p className="text-[11px] text-rose-500 mt-1">{errors.finalOrderDate}</p>}
                     </div>
