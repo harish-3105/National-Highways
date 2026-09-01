@@ -347,14 +347,14 @@ export const StaffDashboard: React.FC = () => {
               }}
               exportAction={{
                 onClick: () => setIsExportModalOpen(true),
-                label: "Export Staff Roster",
+                label: "Export",
               }}
               primaryAction={{
                 onClick: () => {
                   setSelectedStaffForEdit(null);
                   setUiMode("FORM");
                 },
-                label: "New Staff Officer",
+                label: "Add New",
                 icon: UserPlus,
               }}
             />

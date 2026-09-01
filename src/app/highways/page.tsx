@@ -229,14 +229,14 @@ export default function HighwaysPage() {
               }}
               exportAction={{
                 onClick: () => setIsExportModalOpen(true),
-                label: "Export Catalog",
+                label: "Export",
               }}
               primaryAction={{
                 onClick: () => {
                   setSelectedHighwayForEdit(null);
                   setUiMode('FORM');
                 },
-                label: "Add Highway",
+                label: "Add New",
               }}
             />
 

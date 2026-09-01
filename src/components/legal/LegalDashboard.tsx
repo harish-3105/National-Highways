@@ -404,11 +404,11 @@ export const LegalDashboard: React.FC = () => {
         }}
         exportAction={{
           onClick: () => setIsExportModalOpen(true),
-          label: "Export Legal Cases",
+          label: "Export",
         }}
         primaryAction={{
           onClick: handleCreateNew,
-          label: "New Legal Case",
+          label: "Add New",
         }}
       />
 

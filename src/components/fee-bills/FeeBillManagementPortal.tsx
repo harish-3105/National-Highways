@@ -257,14 +257,14 @@ export function FeeBillManagementPortal() {
         }}
         exportAction={{
           onClick: () => setIsExportModalOpen(true),
-          label: "Export Excel",
+          label: "Export",
         }}
         primaryAction={{
           onClick: () => {
             setEditingBill(null);
             setActiveTab('create');
           },
-          label: "New Fee Bill Voucher",
+          label: "Add New",
         }}
       />
 

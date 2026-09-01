@@ -240,7 +240,7 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
               className={`${ACTION_BTN_BASE} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300`}
             >
               <Upload className="w-3.5 h-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
-              <span className="truncate">{importAction.label || 'Import Data'}</span>
+              <span className="truncate">{importAction.label || 'Import'}</span>
             </button>
           ) : (
             <button
@@ -250,7 +250,7 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
               className={DISABLED_BTN_BASE}
             >
               <Upload className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{importAction?.label || 'Import Data'}</span>
+              <span className="truncate">{importAction?.label || 'Import'}</span>
             </button>
           )}
 
@@ -261,10 +261,10 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
               type="button"
               onClick={exportAction.onClick}
               title="Export Module Data"
-              className={`${ACTION_BTN_BASE} bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300`}
+              className={`${ACTION_BTN_BASE} bg-emerald-50/50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/70 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300`}
             >
-              <Download className="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-              <span className="truncate">{exportAction.label || 'Export Data'}</span>
+              <Download className="w-3.5 h-3.5 shrink-0 text-emerald-700 dark:text-emerald-400" />
+              <span className="truncate">{exportAction.label || 'Export'}</span>
             </button>
           ) : (
             <button
@@ -274,7 +274,7 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
               className={DISABLED_BTN_BASE}
             >
               <Download className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{exportAction?.label || 'Export Data'}</span>
+              <span className="truncate">{exportAction?.label || 'Export'}</span>
             </button>
           )}
         </div>

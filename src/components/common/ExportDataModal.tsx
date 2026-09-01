@@ -479,7 +479,7 @@ export const ExportDataModal: React.FC<ExportDataModalProps> = ({
               type="button"
               onClick={() => handleExecuteExport(false)}
               disabled={loading || activeRecordsCount === 0 || (!isCorridorsModule && selectedKeys.length === 0)}
-              className="inline-flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs disabled:opacity-50"
             >
               {loading ? (
                 <>

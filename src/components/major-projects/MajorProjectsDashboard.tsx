@@ -459,14 +459,14 @@ export const MajorProjectsDashboard: React.FC = () => {
         }}
         exportAction={{
           onClick: () => setIsExportModalOpen(true),
-          label: "Custom Export",
+          label: "Export",
         }}
         primaryAction={{
           onClick: () => {
             setSelectedProjectForEdit(null);
             setUiMode('FORM');
           },
-          label: "Add Work",
+          label: "Add New",
         }}
       />
 
@@ -909,7 +909,7 @@ export const MajorProjectsDashboard: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsExportModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-xs cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold shadow-xs cursor-pointer transition-colors"
             >
               <Download className="w-3.5 h-3.5" /> Export Selected ({selectedIds.length})
             </button>

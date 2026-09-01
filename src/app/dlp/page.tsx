@@ -467,14 +467,14 @@ export default function DlpPage() {
               }}
               exportAction={{
                 onClick: () => setIsExportModalOpen(true),
-                label: "Export DLP Works",
+                label: "Export",
               }}
               primaryAction={{
                 onClick: () => {
                   setSelectedCorridorForEdit(null);
                   setUiMode('FORM');
                 },
-                label: "New Corridor Entry",
+                label: "Add New",
               }}
             />
 
