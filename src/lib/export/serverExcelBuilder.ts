@@ -136,9 +136,9 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       showGridLines: true,
     };
 
-    // 1. Calculate snug, print-optimized auto-fit column widths (no extra padding)
+    // 1. Calculate data-driven column widths (purely sized to data values, not header length)
     const columnWidths = activeColumns.map((col) => {
-      let maxLen = col.header.length;
+      let maxDataLen = 0;
 
       for (const item of data) {
         const rawVal = item[col.key];
@@ -147,14 +147,24 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
         const lines = displayStr.split(/\r?\n/);
         for (const line of lines) {
-          if (line.length > maxLen) {
-            maxLen = line.length;
+          if (line.length > maxDataLen) {
+            maxDataLen = line.length;
           }
         }
       }
 
-      // Snug +1 character padding (zero wasted horizontal space for printable sheets)
-      const snugWidth = maxLen + 1;
+      // If empty data / template, provide a sensible default
+      if (data.length === 0 || maxDataLen === 0) {
+        maxDataLen = col.width ? Math.min(col.width, 14) : 10;
+      }
+
+      // Type-specific minimum floor to guarantee numbers & dates never overflow (###)
+      let typeFloor = 8;
+      if (col.dataType === 'date') typeFloor = 10;
+      else if (col.dataType === 'currency') typeFloor = 10;
+      else if (col.dataType === 'number') typeFloor = 8;
+      else if (col.dataType === 'percent') typeFloor = 6;
+      else if (col.dataType === 'integer') typeFloor = 6;
 
       const isLongTextCol =
         col.category === 'remarks' ||
@@ -169,28 +179,47 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
       let optimalWidth: number;
       if (isLongTextCol) {
-        // For long text fields, cap at 30-34 chars to preserve horizontal print budget
-        const minW = col.width ? Math.min(col.width, 22) : 18;
-        optimalWidth = Math.min(Math.max(snugWidth, minW), 32);
+        // For long text fields, cap at 28-30 chars to preserve horizontal print budget
+        optimalWidth = Math.min(Math.max(maxDataLen + 1, 16), 30);
       } else {
-        // For regular fields (codes, numbers, dates, short names, statuses), fit snugly
-        const minW = Math.min(Math.max(col.width || 10, col.header.length + 1, 8), 24);
-        optimalWidth = Math.min(Math.max(snugWidth, minW), 28);
+        // For regular data fields, fit tightly to the data values
+        optimalWidth = Math.min(Math.max(maxDataLen + 1, typeFloor), 24);
       }
 
       return optimalWidth;
     });
 
-    // Configure Header Columns with snug print-optimized widths
+    // Configure Header Columns with data-driven snug widths
     worksheet.columns = activeColumns.map((col, idx) => ({
       header: col.header,
       key: col.key,
       width: columnWidths[idx],
     }));
 
-    // Style Header Row (Row 1)
+    // Calculate dynamic Header Row Height based on the most wrapped header
+    let maxHeaderLines = 1;
+    activeColumns.forEach((col, idx) => {
+      const colW = columnWidths[idx] || 10;
+      const words = col.header.split(/\s+/);
+      let currentLineLen = 0;
+      let lines = 1;
+
+      for (const word of words) {
+        if (currentLineLen + word.length + (currentLineLen > 0 ? 1 : 0) <= Math.max(colW - 1, 4)) {
+          currentLineLen += word.length + (currentLineLen > 0 ? 1 : 0);
+        } else {
+          lines++;
+          currentLineLen = word.length;
+        }
+      }
+      if (lines > maxHeaderLines) {
+        maxHeaderLines = lines;
+      }
+    });
+
+    // Style Header Row (Row 1) with dynamic vertical height to display tall multi-line headers
     const headerRow = worksheet.getRow(1);
-    headerRow.height = 26;
+    headerRow.height = Math.min(Math.max(26, maxHeaderLines * 14 + 10), 75);
     headerRow.eachCell((cell) => {
       cell.fill = CREAM_HEADER_FILL;
       cell.font = HEADER_FONT;

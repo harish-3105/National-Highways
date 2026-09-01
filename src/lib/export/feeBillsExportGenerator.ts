@@ -104,23 +104,42 @@ export function generateFeeBillsExcel(options: FeeBillsExportOptions): Blob {
 
   const worksheet = XLSX.utils.json_to_sheet(formattedData);
 
-  // Auto-fit column widths with snug padding (optimized for print width)
+  // Auto-fit column widths based on data content values (not header length)
   const allKeys = ['S.No', ...activeCols.map((c) => c.label)];
   const colWidths = allKeys.map((k) => {
-    let maxLen = k.length;
+    let maxDataLen = 0;
     for (const r of formattedData) {
       const str = String(r[k] || '');
       const lines = str.split(/\r?\n/);
       for (const line of lines) {
-        if (line.length > maxLen) maxLen = line.length;
+        if (line.length > maxDataLen) maxDataLen = line.length;
       }
     }
-    return { wch: Math.min(Math.max(maxLen + 1, 10), 30) };
+    if (formattedData.length === 0 || maxDataLen === 0) maxDataLen = 10;
+    return { wch: Math.min(Math.max(maxDataLen + 1, 8), 28) };
   });
   worksheet['!cols'] = colWidths;
 
+  // Calculate dynamic header row height
+  let maxHeaderLines = 1;
+  allKeys.forEach((k, idx) => {
+    const colW = colWidths[idx]?.wch || 10;
+    const words = k.split(/\s+/);
+    let currentLineLen = 0;
+    let lines = 1;
+    for (const word of words) {
+      if (currentLineLen + word.length + (currentLineLen > 0 ? 1 : 0) <= Math.max(colW - 1, 4)) {
+        currentLineLen += word.length + (currentLineLen > 0 ? 1 : 0);
+      } else {
+        lines++;
+        currentLineLen = word.length;
+      }
+    }
+    if (lines > maxHeaderLines) maxHeaderLines = lines;
+  });
+
   const rowHeights = [
-    { hpt: 26 }, // Header Row
+    { hpt: Math.min(Math.max(26, maxHeaderLines * 14 + 10), 75) }, // Dynamic Header Row Height
     ...formattedData.map((r) => {
       let maxLines = 1;
       allKeys.forEach((k, cIdx) => {
@@ -228,20 +247,39 @@ export function generatePivotMatrixExcel(options: PivotMatrixExportOptions): Blo
 
   const allCols = ['S.No', rowTitle, ...columnHeaders, 'Grand Total', 'Total Vouchers'];
   const colWidths = allCols.map((k) => {
-    let maxLen = k.length;
+    let maxDataLen = 0;
     for (const r of dataRows) {
       const str = String(r[k] || '');
       const lines = str.split(/\r?\n/);
       for (const line of lines) {
-        if (line.length > maxLen) maxLen = line.length;
+        if (line.length > maxDataLen) maxDataLen = line.length;
       }
     }
-    return { wch: Math.min(Math.max(maxLen + 1, 10), 30) };
+    if (dataRows.length === 0 || maxDataLen === 0) maxDataLen = 10;
+    return { wch: Math.min(Math.max(maxDataLen + 1, 8), 28) };
   });
   worksheet['!cols'] = colWidths;
 
+  // Calculate dynamic header row height
+  let maxHeaderLines = 1;
+  allCols.forEach((k, idx) => {
+    const colW = colWidths[idx]?.wch || 10;
+    const words = k.split(/\s+/);
+    let currentLineLen = 0;
+    let lines = 1;
+    for (const word of words) {
+      if (currentLineLen + word.length + (currentLineLen > 0 ? 1 : 0) <= Math.max(colW - 1, 4)) {
+        currentLineLen += word.length + (currentLineLen > 0 ? 1 : 0);
+      } else {
+        lines++;
+        currentLineLen = word.length;
+      }
+    }
+    if (lines > maxHeaderLines) maxHeaderLines = lines;
+  });
+
   const rowHeights = [
-    { hpt: 26 }, // Header Row
+    { hpt: Math.min(Math.max(26, maxHeaderLines * 14 + 10), 75) }, // Dynamic Header Row Height
     ...dataRows.map((r) => {
       let maxLines = 1;
       allCols.forEach((k, cIdx) => {
