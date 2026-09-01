@@ -34,7 +34,8 @@ import { ViewMajorProjectModal } from './ViewMajorProjectModal';
 import { DeleteMajorProjectModal } from './DeleteMajorProjectModal';
 import { OngoingWorksMasterDataModal } from './OngoingWorksMasterDataModal';
 import { ProjectHistoryModal } from './ProjectHistoryModal';
-import { ExportMajorProjectsModal } from './ExportMajorProjectsModal';
+import { ExportDataModal } from '@/components/common/ExportDataModal';
+import { ONGOING_WORKS_COLUMNS } from '@/lib/export/columns';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 export const MajorProjectsDashboard: React.FC = () => {
@@ -939,11 +940,20 @@ export const MajorProjectsDashboard: React.FC = () => {
         onHistory={(project) => setHistoryProject(project)}
       />
 
-      {/* Custom Export Modal (Corridors Style with Row/Col/Format picker) */}
-      <ExportMajorProjectsModal
-        allProjects={projects}
-        filteredProjects={filteredProjects}
+      {/* Custom Export Modal (Server-Side with Cream Headers & Row/Col Selection) */}
+      <ExportDataModal
+        module="ongoing-works"
+        moduleTitle="Ongoing Capital Works (35-Column)"
+        totalCount={projects.length}
+        filteredCount={filteredProjects.length}
         selectedIds={selectedIds}
+        columns={ONGOING_WORKS_COLUMNS}
+        filters={{
+          circle: selectedCircle !== 'ALL' ? selectedCircle : undefined,
+          division: selectedDivision !== 'ALL' ? selectedDivision : undefined,
+          search: searchTerm,
+          includeDeleted: showArchived,
+        }}
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
       />

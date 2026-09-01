@@ -30,6 +30,8 @@ import { DeleteStaffModal } from "./DeleteStaffModal";
 import { StaffMasterDataModal } from "./StaffMasterDataModal";
 import { SearchableSelect } from "@/components/common/SearchableSelect";
 import { ModulePageHeader } from "@/components/common/ModulePageHeader";
+import { ExportDataModal } from "@/components/common/ExportDataModal";
+import { STAFF_COLUMNS } from "@/lib/export/columns";
 import {
   getCascadingDivisions,
   getCascadingSubDivisions,
@@ -53,6 +55,7 @@ export const StaffDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
   // Screen state: 'LIST' | 'FORM' | 'MASTER_DATA'
   const [uiMode, setUiMode] = useState<'LIST' | 'FORM' | 'MASTER_DATA'>('LIST');
@@ -343,8 +346,8 @@ export const StaffDashboard: React.FC = () => {
                 disabledReason: "Staff Excel Import coming soon",
               }}
               exportAction={{
-                disabled: true,
-                disabledReason: "Staff Excel Export coming soon",
+                onClick: () => setIsExportModalOpen(true),
+                label: "Export Staff Roster",
               }}
               primaryAction={{
                 onClick: () => {
@@ -669,6 +672,29 @@ export const StaffDashboard: React.FC = () => {
       setIsDeleteOpen(false);
       setSelectedStaff(null);
     }}
+  />
+
+  {/* Server-Side Styled Export Modal */}
+  <ExportDataModal
+    module="staff"
+    moduleTitle="Staff Directory & Roster"
+    totalCount={staffList.length}
+    filteredCount={filteredStaff.length}
+    selectedIds={[]}
+    columns={STAFF_COLUMNS}
+    filters={{
+      office: selectedOffice || undefined,
+      circle: selectedCircle || undefined,
+      division: selectedDivision || undefined,
+      subDivision: selectedSubDivision || undefined,
+      section: selectedSection || undefined,
+      subSection: selectedSubSection || undefined,
+      designation: selectedDesignation || undefined,
+      search: searchQuery,
+      includeDeleted: showArchived,
+    }}
+    isOpen={isExportModalOpen}
+    onClose={() => setIsExportModalOpen(false)}
   />
 </div>
   );

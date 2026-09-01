@@ -11,6 +11,8 @@ import { getCircleForDivision } from '@/lib/dlp/masterData';
 import { formatDateIndian } from '@/lib/formatters';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { ModulePageHeader } from '@/components/common/ModulePageHeader';
+import { ExportDataModal } from '@/components/common/ExportDataModal';
+import { DLP_COLUMNS } from '@/lib/export/columns';
 import { DlpCorridor, DlpWorkStretch, DlpWorkCategory, DlpMasterData } from '@/types/dlp';
 import {
   ShieldCheck,
@@ -102,6 +104,7 @@ export default function DlpPage() {
   const [selectedCorridorForView, setSelectedCorridorForView] = useState<DlpCorridor | null>(null);
   const [selectedCorridorForEdit, setSelectedCorridorForEdit] = useState<DlpCorridor | null>(null);
   const [selectedCorridorForDelete, setSelectedCorridorForDelete] = useState<DlpCorridor | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -463,8 +466,8 @@ export default function DlpPage() {
                 disabledReason: "DLP Excel Import coming soon",
               }}
               exportAction={{
-                disabled: true,
-                disabledReason: "DLP Excel Export coming soon",
+                onClick: () => setIsExportModalOpen(true),
+                label: "Export DLP Works",
               }}
               primaryAction={{
                 onClick: () => {
@@ -1320,6 +1323,25 @@ export default function DlpPage() {
     isOpen={!!selectedCorridorForDelete}
     onClose={() => setSelectedCorridorForDelete(null)}
     onSuccess={() => fetchDlpCorridors()}
+  />
+
+  {/* Server-Side Export Modal */}
+  <ExportDataModal
+    module="dlp"
+    moduleTitle="DLP & Maintenance Works"
+    totalCount={totalStretchesCount}
+    filteredCount={filteredCorridors.reduce((sum, c) => sum + (c.work_stretches?.length || 0), 0)}
+    selectedIds={[]}
+    columns={DLP_COLUMNS}
+    filters={{
+      division: selectedDivision,
+      category: selectedCategoryFilter,
+      status: statusFilter,
+      search: searchTerm,
+      includeDeleted: showArchived,
+    }}
+    isOpen={isExportModalOpen}
+    onClose={() => setIsExportModalOpen(false)}
   />
 </div>
   );

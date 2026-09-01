@@ -11,7 +11,8 @@ import { HighwayMasterDataModal } from '@/components/highways/HighwayMasterDataM
 import { HighwayMasterData } from '@/app/api/highways/master-data/route';
 import { ViewHighwayModal } from '@/components/highways/ViewHighwayModal';
 import { DeleteHighwayModal } from '@/components/highways/DeleteHighwayModal';
-import { ExportHighwayModal } from '@/components/highways/ExportHighwayModal';
+import { ExportDataModal } from '@/components/common/ExportDataModal';
+import { HIGHWAYS_L1_COLUMNS } from '@/lib/export/columns';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { ModulePageHeader } from '@/components/common/ModulePageHeader';
 import { Route } from 'lucide-react';
@@ -337,10 +338,19 @@ export default function HighwaysPage() {
         onSuccess={() => fetchHighways()}
       />
 
-      <ExportHighwayModal
-        allCorridors={allCorridors.length > 0 ? allCorridors : corridors}
-        filteredCorridors={corridors}
+      <ExportDataModal
+        module="highways"
+        moduleTitle="Master Corridor Catalog"
+        totalCount={allCorridors.length > 0 ? allCorridors.length : corridors.length}
+        filteredCount={displayedCorridors.length}
         selectedIds={selectedIds}
+        columns={HIGHWAYS_L1_COLUMNS}
+        isCorridorsModule={true}
+        filters={{
+          search: debouncedSearch,
+          config: activeConfig,
+          includeDeleted: showArchived,
+        }}
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
       />

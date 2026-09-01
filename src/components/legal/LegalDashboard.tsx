@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { ModulePageHeader } from '@/components/common/ModulePageHeader';
+import { ExportDataModal } from '@/components/common/ExportDataModal';
+import { LEGAL_CASES_COLUMNS } from '@/lib/export/columns';
 import { formatDateIndian } from '@/lib/formatters';
 
 export const LegalDashboard: React.FC = () => {
@@ -39,6 +41,7 @@ export const LegalDashboard: React.FC = () => {
   const [selectedCaseForEdit, setSelectedCaseForEdit] = useState<LegalCaseData | null>(null);
   const [selectedCaseForView, setSelectedCaseForView] = useState<LegalCaseData | null>(null);
   const [selectedCaseForDelete, setSelectedCaseForDelete] = useState<LegalCaseData | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
   // Master Data Configuration State (100% loaded from database)
   const [isMasterModalOpen, setIsMasterModalOpen] = useState<boolean>(false);
@@ -400,8 +403,8 @@ export const LegalDashboard: React.FC = () => {
           disabledReason: "Legal Cases Import coming soon",
         }}
         exportAction={{
-          disabled: true,
-          disabledReason: "Legal Cases Export coming soon",
+          onClick: () => setIsExportModalOpen(true),
+          label: "Export Legal Cases",
         }}
         primaryAction={{
           onClick: handleCreateNew,
@@ -893,6 +896,25 @@ export const LegalDashboard: React.FC = () => {
         isOpen={!!selectedCaseForDelete}
         onClose={() => setSelectedCaseForDelete(null)}
         onSuccess={() => fetchCases()}
+      />
+
+      {/* Server-Side Export Modal */}
+      <ExportDataModal
+        module="legal"
+        moduleTitle="Legal Cases & Litigation Tracking"
+        totalCount={cases.length}
+        filteredCount={filteredCases.length}
+        selectedIds={[]}
+        columns={LEGAL_CASES_COLUMNS}
+        filters={{
+          circle: filterCircle || undefined,
+          division: filterDivision || undefined,
+          status: filterCurrentStatus || undefined,
+          search: searchTerm,
+          includeDeleted: showArchived,
+        }}
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
       />
     </div>
   );

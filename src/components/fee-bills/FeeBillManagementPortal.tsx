@@ -10,7 +10,8 @@ import { FeeBillAnalysisDashboard } from './FeeBillAnalysisDashboard';
 import { MasterDataManagement } from './MasterDataManagement';
 import { FeeBillDetailModal } from './FeeBillDetailModal';
 import { FeeBillAuditModal } from './FeeBillAuditModal';
-import { ExportFeeBillsModal } from './ExportFeeBillsModal';
+import { ExportDataModal } from '@/components/common/ExportDataModal';
+import { FEE_BILLS_COLUMNS } from '@/lib/export/columns';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { ModulePageHeader } from '@/components/common/ModulePageHeader';
 import {
@@ -575,7 +576,7 @@ export function FeeBillManagementPortal() {
       {activeTab === 'settings' && (
         <MasterDataManagement
           masterData={masterData}
-          onUpdateMasterData={(newData) => handleUpdateMasterData(newData)}
+          onUpdateMasterData={(newData: FeeBillMasterDataConfig) => handleUpdateMasterData(newData)}
           onClose={() => setActiveTab('workspace')}
         />
       )}
@@ -591,10 +592,21 @@ export function FeeBillManagementPortal() {
         onSuccess={() => fetchFeeBills()}
       />
 
-      {/* Custom Scope & Field Selection Export Modal */}
-      <ExportFeeBillsModal
-        allBills={bills}
-        filteredBills={activeBills}
+      {/* Server-Side Styled Export Modal */}
+      <ExportDataModal
+        module="fee-bills"
+        moduleTitle="Advocate Fee Bills"
+        totalCount={bills.length}
+        filteredCount={activeBills.length}
+        selectedIds={[]}
+        columns={FEE_BILLS_COLUMNS}
+        filters={{
+          circle: selectedCircle || undefined,
+          division: selectedDivision || undefined,
+          paymentStatus: paymentStatusFilter !== 'ALL' ? paymentStatusFilter : undefined,
+          search: searchTerm,
+          includeDeleted: showArchived,
+        }}
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
       />
