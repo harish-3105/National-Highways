@@ -22,28 +22,28 @@ const CREAM_HEADER_FILL: ExcelJS.Fill = {
 };
 
 const HEADER_FONT: Partial<ExcelJS.Font> = {
-  name: 'Arial',
-  size: 11,
+  name: 'Arial Narrow',
+  size: 10.5,
   bold: true,
-  color: { argb: 'FF1E293B' }, // Dark Slate
+  color: { argb: 'FF0F172A' }, // Dark Slate
 };
 
 const DATA_FONT: Partial<ExcelJS.Font> = {
-  name: 'Arial',
-  size: 10,
+  name: 'Arial Narrow',
+  size: 9.5,
   color: { argb: 'FF0F172A' },
 };
 
-const THIN_BORDER: Partial<ExcelJS.Border> = {
+const THIN_BLACK_BORDER: Partial<ExcelJS.Border> = {
   style: 'thin',
-  color: { argb: 'FFCBD5E1' }, // Light Slate Border
+  color: { argb: 'FF000000' }, // Solid Black Grid Border
 };
 
 const CELL_BORDERS: Partial<ExcelJS.Borders> = {
-  top: THIN_BORDER,
-  left: THIN_BORDER,
-  bottom: THIN_BORDER,
-  right: THIN_BORDER,
+  top: THIN_BLACK_BORDER,
+  left: THIN_BLACK_BORDER,
+  bottom: THIN_BLACK_BORDER,
+  right: THIN_BLACK_BORDER,
 };
 
 /**
@@ -92,7 +92,7 @@ function getDisplayValue(val: unknown, colDef: ExportColumnDef): string {
 }
 
 /**
- * Builds a professionally decorated Excel workbook buffer with automated column & row sizing
+ * Builds an ExcelJS Workbook from structured sheet payloads
  */
 export async function buildExcelWorkbook(options: WorkbookExportOptions): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
@@ -141,7 +141,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       showGridLines: true,
     };
 
-    // 1. Calculate data-driven column widths (purely sized to data values, not header length)
+    // 1. Calculate data-driven column widths (Longest Data Value + 8 padding for 4 chars on each side)
     const columnWidths = activeColumns.map((col) => {
       let maxDataLen = 0;
 
@@ -160,16 +160,20 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
       // If empty data / template, provide a sensible default
       if (data.length === 0 || maxDataLen === 0) {
-        maxDataLen = col.width ? Math.min(col.width, 14) : 10;
+        maxDataLen = col.width ? Math.min(col.width, 14) : 8;
       }
 
       // Type-specific minimum floor to guarantee numbers & dates never overflow (###)
-      let typeFloor = 8;
+      let typeFloor = 6;
       if (col.dataType === 'date') typeFloor = 10;
       else if (col.dataType === 'currency') typeFloor = 10;
       else if (col.dataType === 'number') typeFloor = 8;
       else if (col.dataType === 'percent') typeFloor = 6;
-      else if (col.dataType === 'integer') typeFloor = 6;
+      else if (col.dataType === 'integer') typeFloor = 5;
+
+      const effectiveDataLen = Math.max(maxDataLen, typeFloor);
+      // Longest data value + 8 padding (4 characters of space on each side)
+      const paddedWidth = effectiveDataLen + 8;
 
       const isLongTextCol =
         col.category === 'remarks' ||
@@ -185,11 +189,11 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
       let optimalWidth: number;
       if (isLongTextCol) {
-        // For long text fields, cap at 28-30 chars to preserve horizontal print budget
-        optimalWidth = Math.min(Math.max(maxDataLen + 1, 16), 30);
+        // For long text fields, cap at 36-38 chars to preserve horizontal print budget
+        optimalWidth = Math.min(Math.max(paddedWidth, 20), 38);
       } else {
-        // For regular data fields, fit tightly to the data values
-        optimalWidth = Math.min(Math.max(maxDataLen + 1, typeFloor), 24);
+        // For regular data fields, pad +8 (4 chars each side)
+        optimalWidth = Math.min(Math.max(paddedWidth, typeFloor + 8), 30);
       }
 
       return optimalWidth;
@@ -240,7 +244,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       const cell = worksheet.getCell(rowIdx, 1);
       cell.value = titleText;
       cell.font = {
-        name: 'Arial',
+        name: 'Arial Narrow',
         size: tIdx === 0 ? 14 : 12,
         bold: true,
         color: { argb: 'FF0F172A' },
@@ -273,7 +277,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
         const cell2 = worksheet.getCell(subHeaderRowIdx, colNum);
         cell2.value = col.header;
         cell2.fill = CREAM_HEADER_FILL;
-        cell2.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FF334155' } };
+        cell2.font = { name: 'Arial Narrow', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
         cell2.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
         cell2.border = CELL_BORDERS;
 
@@ -303,7 +307,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       for (let c = 1; c <= activeColumns.length; c++) {
         const cell1 = worksheet.getCell(groupRowIdx, c);
         cell1.fill = CREAM_HEADER_FILL;
-        cell1.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+        cell1.font = { name: 'Arial Narrow', size: 10, bold: true, color: { argb: 'FF0F172A' } };
         cell1.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
         cell1.border = CELL_BORDERS;
       }
@@ -394,29 +398,20 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       // Style Data Cells
       addedRow.eachCell((cell, colNumber) => {
         const colDef = activeColumns[colNumber - 1];
-        const colWidth = columnWidths[colNumber - 1] || 15;
         if (!colDef) return;
 
         if (isParentRow) {
-          cell.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+          cell.font = { name: 'Arial Narrow', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
         } else {
           cell.font = DATA_FONT;
         }
         cell.border = CELL_BORDERS;
 
-        const cellValStr = cell.value !== null && cell.value !== undefined ? String(cell.value) : '';
-        const needsWrap =
-          maxLinesInRow > 1 ||
-          colDef.category === 'remarks' ||
-          colDef.category === 'issues' ||
-          cellValStr.includes('\n') ||
-          cellValStr.length > colWidth;
-
         cell.alignment = {
-          vertical: maxLinesInRow > 1 ? 'top' : 'middle',
-          horizontal: colDef.align,
-          wrapText: Boolean(needsWrap),
+          vertical: 'middle',
+          horizontal: 'center',
+          wrapText: true,
         };
 
         // Apply specific Excel number formats

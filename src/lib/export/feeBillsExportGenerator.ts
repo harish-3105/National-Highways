@@ -104,7 +104,7 @@ export function generateFeeBillsExcel(options: FeeBillsExportOptions): Blob {
 
   const worksheet = XLSX.utils.json_to_sheet(formattedData);
 
-  // Auto-fit column widths based on data content values (not header length)
+  // Auto-fit column widths based on data content values + 8 (4-char bilateral padding)
   const allKeys = ['S.No', ...activeCols.map((c) => c.label)];
   const colWidths = allKeys.map((k) => {
     let maxDataLen = 0;
@@ -115,8 +115,8 @@ export function generateFeeBillsExcel(options: FeeBillsExportOptions): Blob {
         if (line.length > maxDataLen) maxDataLen = line.length;
       }
     }
-    if (formattedData.length === 0 || maxDataLen === 0) maxDataLen = 10;
-    return { wch: Math.min(Math.max(maxDataLen + 1, 8), 28) };
+    if (formattedData.length === 0 || maxDataLen === 0) maxDataLen = 8;
+    return { wch: Math.min(Math.max(maxDataLen + 8, 14), 36) };
   });
   worksheet['!cols'] = colWidths;
 
@@ -255,8 +255,8 @@ export function generatePivotMatrixExcel(options: PivotMatrixExportOptions): Blo
         if (line.length > maxDataLen) maxDataLen = line.length;
       }
     }
-    if (dataRows.length === 0 || maxDataLen === 0) maxDataLen = 10;
-    return { wch: Math.min(Math.max(maxDataLen + 1, 8), 28) };
+    if (dataRows.length === 0 || maxDataLen === 0) maxDataLen = 8;
+    return { wch: Math.min(Math.max(maxDataLen + 8, 14), 36) };
   });
   worksheet['!cols'] = colWidths;
 

@@ -131,7 +131,7 @@ export function generateMajorProjectsExportFile(
   } else {
     const worksheet = XLSX.utils.json_to_sheet(formattedData);
 
-    // Auto-fit column widths based on data content values (not header length)
+    // Auto-fit column widths based on data content values + 8 (4-char bilateral padding)
     const colWidths = activeColumns.map((col) => {
       let maxDataLen = 0;
       for (const r of formattedData) {
@@ -141,8 +141,8 @@ export function generateMajorProjectsExportFile(
           if (line.length > maxDataLen) maxDataLen = line.length;
         }
       }
-      if (formattedData.length === 0 || maxDataLen === 0) maxDataLen = 10;
-      return { wch: Math.min(Math.max(maxDataLen + 1, 8), 30) };
+      if (formattedData.length === 0 || maxDataLen === 0) maxDataLen = 8;
+      return { wch: Math.min(Math.max(maxDataLen + 8, 14), 38) };
     });
     worksheet['!cols'] = colWidths;
 
