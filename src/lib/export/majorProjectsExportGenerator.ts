@@ -132,13 +132,38 @@ export function generateMajorProjectsExportFile(
     const worksheet = XLSX.utils.json_to_sheet(formattedData);
 
     const colWidths = activeColumns.map((col) => {
-      const maxContentLen = Math.max(
-        col.label.length,
-        ...formattedData.map((r) => String(r[col.label] || '').length)
-      );
-      return { wch: Math.min(Math.max(maxContentLen + 2, 12), 60) };
+      let maxLen = col.label.length;
+      for (const r of formattedData) {
+        const str = String(r[col.label] || '');
+        const lines = str.split(/\r?\n/);
+        for (const line of lines) {
+          if (line.length > maxLen) maxLen = line.length;
+        }
+      }
+      return { wch: Math.min(Math.max(maxLen + 4, 14), 60) };
     });
     worksheet['!cols'] = colWidths;
+
+    const rowHeights = [
+      { hpt: 28 }, // Header Row
+      ...formattedData.map((r) => {
+        let maxLines = 1;
+        activeColumns.forEach((col, cIdx) => {
+          const str = String(r[col.label] || '');
+          const w = colWidths[cIdx].wch;
+          if (str) {
+            const rawLines = str.split(/\r?\n/);
+            let cellLines = 0;
+            for (const line of rawLines) {
+              cellLines += Math.max(1, Math.ceil(line.length / Math.max(w - 2, 8)));
+            }
+            if (cellLines > maxLines) maxLines = cellLines;
+          }
+        });
+        return { hpt: maxLines > 1 ? Math.min(Math.max(24, maxLines * 18 + 6), 180) : 22 };
+      }),
+    ];
+    worksheet['!rows'] = rowHeights;
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Ongoing Works');

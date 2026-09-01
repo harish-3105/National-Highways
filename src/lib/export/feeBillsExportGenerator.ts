@@ -107,13 +107,38 @@ export function generateFeeBillsExcel(options: FeeBillsExportOptions): Blob {
   // Auto-fit column widths
   const allKeys = ['S.No', ...activeCols.map((c) => c.label)];
   const colWidths = allKeys.map((k) => {
-    const maxContentLen = Math.max(
-      k.length,
-      ...formattedData.map((r) => String(r[k] || '').length)
-    );
-    return { wch: Math.min(Math.max(maxContentLen + 3, 12), 50) };
+    let maxLen = k.length;
+    for (const r of formattedData) {
+      const str = String(r[k] || '');
+      const lines = str.split(/\r?\n/);
+      for (const line of lines) {
+        if (line.length > maxLen) maxLen = line.length;
+      }
+    }
+    return { wch: Math.min(Math.max(maxLen + 4, 14), 50) };
   });
   worksheet['!cols'] = colWidths;
+
+  const rowHeights = [
+    { hpt: 28 }, // Header Row
+    ...formattedData.map((r) => {
+      let maxLines = 1;
+      allKeys.forEach((k, cIdx) => {
+        const str = String(r[k] || '');
+        const w = colWidths[cIdx].wch;
+        if (str) {
+          const rawLines = str.split(/\r?\n/);
+          let cellLines = 0;
+          for (const line of rawLines) {
+            cellLines += Math.max(1, Math.ceil(line.length / Math.max(w - 2, 8)));
+          }
+          if (cellLines > maxLines) maxLines = cellLines;
+        }
+      });
+      return { hpt: maxLines > 1 ? Math.min(Math.max(24, maxLines * 18 + 6), 180) : 22 };
+    }),
+  ];
+  worksheet['!rows'] = rowHeights;
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Legal Fee Bills');
@@ -199,13 +224,38 @@ export function generatePivotMatrixExcel(options: PivotMatrixExportOptions): Blo
 
   const allCols = ['S.No', rowTitle, ...columnHeaders, 'Grand Total', 'Total Vouchers'];
   const colWidths = allCols.map((k) => {
-    const maxContentLen = Math.max(
-      k.length,
-      ...dataRows.map((r) => String(r[k] || '').length)
-    );
-    return { wch: Math.min(Math.max(maxContentLen + 4, 14), 50) };
+    let maxLen = k.length;
+    for (const r of dataRows) {
+      const str = String(r[k] || '');
+      const lines = str.split(/\r?\n/);
+      for (const line of lines) {
+        if (line.length > maxLen) maxLen = line.length;
+      }
+    }
+    return { wch: Math.min(Math.max(maxLen + 4, 14), 50) };
   });
   worksheet['!cols'] = colWidths;
+
+  const rowHeights = [
+    { hpt: 28 }, // Header Row
+    ...dataRows.map((r) => {
+      let maxLines = 1;
+      allCols.forEach((k, cIdx) => {
+        const str = String(r[k] || '');
+        const w = colWidths[cIdx].wch;
+        if (str) {
+          const rawLines = str.split(/\r?\n/);
+          let cellLines = 0;
+          for (const line of rawLines) {
+            cellLines += Math.max(1, Math.ceil(line.length / Math.max(w - 2, 8)));
+          }
+          if (cellLines > maxLines) maxLines = cellLines;
+        }
+      });
+      return { hpt: maxLines > 1 ? Math.min(Math.max(24, maxLines * 18 + 6), 180) : 22 };
+    }),
+  ];
+  worksheet['!rows'] = rowHeights;
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Pivot Matrix');

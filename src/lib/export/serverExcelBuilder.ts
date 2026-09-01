@@ -46,7 +46,52 @@ const CELL_BORDERS: Partial<ExcelJS.Borders> = {
 };
 
 /**
- * Builds a professionally decorated Excel workbook buffer
+ * Formats a value for display measurement & string representation
+ */
+function getDisplayValue(val: unknown, colDef: ExportColumnDef): string {
+  if (val === null || val === undefined) return '';
+
+  if (colDef.dataType === 'date') {
+    if (val instanceof Date) {
+      return val.toISOString().slice(0, 10);
+    }
+    if (typeof val === 'string' && val.trim()) {
+      const parsed = new Date(val);
+      return !isNaN(parsed.getTime()) ? parsed.toISOString().slice(0, 10) : val;
+    }
+    return '';
+  }
+
+  if (colDef.dataType === 'currency') {
+    const num = Number(val);
+    if (isNaN(num)) return '';
+    return num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  if (colDef.dataType === 'number') {
+    const num = Number(val);
+    if (isNaN(num)) return '';
+    const digits = colDef.key.includes('length') || colDef.key.includes('chainage') ? 3 : 2;
+    return num.toFixed(digits);
+  }
+
+  if (colDef.dataType === 'integer') {
+    const num = Number(val);
+    if (isNaN(num)) return '';
+    return Math.round(num).toString();
+  }
+
+  if (colDef.dataType === 'percent') {
+    const num = Number(val);
+    if (isNaN(num)) return '';
+    return `${num.toFixed(1)}%`;
+  }
+
+  return String(val);
+}
+
+/**
+ * Builds a professionally decorated Excel workbook buffer with automated column & row sizing
  */
 export async function buildExcelWorkbook(options: WorkbookExportOptions): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
@@ -69,14 +114,59 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 
     const worksheet = workbook.addWorksheet(sheetName, {
       views: [{ state: 'frozen', ySplit: 1 }], // Freeze header row
-      properties: { defaultRowHeight: 20 },
+      properties: { defaultRowHeight: 22 },
     });
 
-    // 1. Configure Header Columns
-    worksheet.columns = activeColumns.map((col) => ({
+    // 1. Calculate dynamic auto-fit column widths based on headers and data contents
+    const columnWidths = activeColumns.map((col) => {
+      let maxLen = col.header.length;
+
+      for (const item of data) {
+        const rawVal = item[col.key];
+        const displayStr = getDisplayValue(rawVal, col);
+        if (!displayStr) continue;
+
+        const lines = displayStr.split(/\r?\n/);
+        for (const line of lines) {
+          if (line.length > maxLen) {
+            maxLen = line.length;
+          }
+        }
+      }
+
+      // Add padding for cell breathing room & Excel auto-filter dropdown arrows
+      const paddedWidth = maxLen + 4;
+
+      const isLongTextCol =
+        col.category === 'remarks' ||
+        col.category === 'issues' ||
+        col.key.includes('details') ||
+        col.key.includes('name_of_work') ||
+        col.key.includes('prayer') ||
+        col.key.includes('stretch_name') ||
+        col.key.includes('petitioner') ||
+        col.key.includes('respondent') ||
+        (col.width && col.width >= 35);
+
+      let optimalWidth: number;
+      if (isLongTextCol) {
+        // For long text fields, allow them to expand generously up to 60 chars
+        const minW = col.width ? Math.min(col.width, 35) : 25;
+        optimalWidth = Math.min(Math.max(paddedWidth, minW), 60);
+      } else {
+        // For regular fields (codes, numbers, dates, short names, statuses), fit snugly
+        const minW = Math.max(col.width || 12, col.header.length + 4, 12);
+        optimalWidth = Math.min(Math.max(paddedWidth, minW), 45);
+      }
+
+      return optimalWidth;
+    });
+
+    // Configure Header Columns with dynamic auto-fit widths
+    worksheet.columns = activeColumns.map((col, idx) => ({
       header: col.header,
       key: col.key,
-      width: col.width || Math.max(col.header.length + 4, 14),
+      width: columnWidths[idx],
     }));
 
     // Style Header Row (Row 1)
@@ -93,12 +183,14 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
       cell.border = CELL_BORDERS;
     });
 
-    // 2. Populate Data Rows
+    // 2. Populate Data Rows with Dynamic Auto Row Height Fit
     data.forEach((item) => {
       const rowValues: Record<string, unknown> = {};
+      let maxLinesInRow = 1;
 
-      activeColumns.forEach((col) => {
+      activeColumns.forEach((col, colIdx) => {
         let val = item[col.key];
+        const colWidth = columnWidths[colIdx] || 15;
 
         if (val === null || val === undefined) {
           rowValues[col.key] = '';
@@ -125,26 +217,55 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
           return;
         }
 
-        rowValues[col.key] = String(val);
+        const strVal = String(val);
+        rowValues[col.key] = strVal;
+
+        // Calculate approximate rendered lines for this cell
+        if (strVal) {
+          const rawLines = strVal.split(/\r?\n/);
+          let cellLines = 0;
+          for (const line of rawLines) {
+            const effectiveW = Math.max(colWidth - 2, 8);
+            const wrappedCount = Math.max(1, Math.ceil(line.length / effectiveW));
+            cellLines += wrappedCount;
+          }
+          if (cellLines > maxLinesInRow) {
+            maxLinesInRow = cellLines;
+          }
+        }
       });
 
       const addedRow = worksheet.addRow(rowValues);
-      addedRow.height = 20;
+
+      // Dynamically auto-fit row height
+      if (maxLinesInRow === 1) {
+        addedRow.height = 22; // Clean default height with good vertical padding
+      } else {
+        // 18pt per line + 6pt padding, capped safely at 180pt
+        addedRow.height = Math.min(Math.max(24, maxLinesInRow * 18 + 6), 180);
+      }
 
       // Style Data Cells
       addedRow.eachCell((cell, colNumber) => {
         const colDef = activeColumns[colNumber - 1];
+        const colWidth = columnWidths[colNumber - 1] || 15;
         if (!colDef) return;
 
         cell.font = DATA_FONT;
         cell.border = CELL_BORDERS;
 
-        const isLongText = colDef.category === 'remarks' || colDef.category === 'issues' || (colDef.width && colDef.width >= 35);
+        const cellValStr = cell.value !== null && cell.value !== undefined ? String(cell.value) : '';
+        const needsWrap =
+          maxLinesInRow > 1 ||
+          colDef.category === 'remarks' ||
+          colDef.category === 'issues' ||
+          cellValStr.includes('\n') ||
+          cellValStr.length > colWidth;
 
         cell.alignment = {
-          vertical: 'middle',
+          vertical: maxLinesInRow > 1 ? 'top' : 'middle',
           horizontal: colDef.align,
-          wrapText: Boolean(isLongText),
+          wrapText: Boolean(needsWrap),
         };
 
         // Apply specific Excel number formats
