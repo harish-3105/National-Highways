@@ -65,7 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_user_profiles_role ON public.user_profiles(role_i
 -- 5. Google Sheets-Style Immutable Audit Logs
 CREATE TABLE IF NOT EXISTS public.audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES public.user_profiles(id) ON DELETE SET NULL,
+  user_id UUID,                           -- Decoupled UUID preserving historical integrity
   user_phone VARCHAR(20) NOT NULL,
   user_name VARCHAR(255) NOT NULL,
   user_role VARCHAR(100) NOT NULL,
@@ -89,9 +89,19 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON public.audit_logs(created_a
 CREATE INDEX IF NOT EXISTS idx_audit_logs_phone ON public.audit_logs(user_phone);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON public.audit_logs(module, entity_id);
 
--- Append-Only Security Rules (Zero updates or deletes)
-CREATE OR REPLACE RULE no_audit_update AS ON UPDATE TO public.audit_logs DO INSTEAD NOTHING;
-CREATE OR REPLACE RULE no_audit_delete AS ON DELETE TO public.audit_logs DO INSTEAD NOTHING;
+-- Tamper-Proof Trigger Function (Prevents updates and deletes without breaking FKs)
+CREATE OR REPLACE FUNCTION public.prevent_audit_tampering()
+RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'Audit logs are immutable historical records and cannot be updated or deleted.';
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_prevent_audit_tampering ON public.audit_logs;
+CREATE TRIGGER trg_prevent_audit_tampering
+BEFORE UPDATE OR DELETE ON public.audit_logs
+FOR EACH ROW
+EXECUTE FUNCTION public.prevent_audit_tampering();
 
 -- 6. Master Lockdown & System Settings
 CREATE TABLE IF NOT EXISTS public.system_settings (
