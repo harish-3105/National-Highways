@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { FeeBillRecord } from '@/types/feeBill';
 import { derivePendencyStage } from '@/lib/feeBillMasterData';
+import { getSession } from '@/lib/auth/session';
+import { canPerformAction } from '@/lib/auth/permissions';
+import { logAudit } from '@/lib/audit/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -124,6 +127,23 @@ export async function GET(request: Request) {
           return true;
         });
 
+        // Enforce Row-Level PBAC Data Siloing if user lacks statewide view permission
+        const session = await getSession();
+        if (session && !session.isSuperAdmin) {
+          const canViewStatewide =
+            session.permissions.includes('jurisdiction:view_statewide') ||
+            session.permissions.includes('*:*') ||
+            session.jurisdictionScope === 'STATEWIDE';
+
+          if (!canViewStatewide) {
+            if (session.jurisdictionScope === 'DIVISION' && session.division) {
+              mapped = mapped.filter((b) => b.division.toLowerCase() === session.division?.toLowerCase());
+            } else if (session.jurisdictionScope === 'CIRCLE' && session.circle) {
+              mapped = mapped.filter((b) => b.circle.toLowerCase() === session.circle?.toLowerCase());
+            }
+          }
+        }
+
         return NextResponse.json({ success: true, feeBills: mapped, totalCount: mapped.length });
       }
     }
@@ -161,6 +181,22 @@ export async function POST(request: Request) {
       );
     }
 
+    const session = await getSession();
+    const isUpdatingRealId = Boolean(body.id && !String(body.id).startsWith('fb-'));
+    const requiredPerm = isUpdatingRealId ? 'fee_bills:edit' : 'fee_bills:create';
+
+    const authCheck = canPerformAction(session, requiredPerm, {
+      circle: body.circle || null,
+      division: body.division || null,
+    });
+
+    if (!authCheck.allowed) {
+      return NextResponse.json(
+        { success: false, message: authCheck.reason || 'Unauthorized operation.' },
+        { status: 403 }
+      );
+    }
+
     const trimmedFeeBillNumber = body.feeBillNumber.trim();
     const derivedPendency = derivePendencyStage(body);
     const isDel = body.delete_status === 'DELETED' || body.delete_status === 'SOFT_DELETE';
@@ -176,10 +212,15 @@ export async function POST(request: Request) {
       updatedAt: new Date().toISOString(),
     };
 
-    if (supabase) {
-      // 1. Strict Duplicate Check: Block saving if fee_bill_number already exists on another record
-      const isUpdatingRealId = Boolean(body.id && !String(body.id).startsWith('fb-'));
+    let existingBill: any = null;
 
+    if (supabase) {
+      if (isUpdatingRealId) {
+        const { data: oldB } = await supabase.from('fee_bills').select('*').eq('id', body.id).maybeSingle();
+        existingBill = oldB;
+      }
+
+      // 1. Strict Duplicate Check: Block saving if fee_bill_number already exists on another record
       const { data: existingWithNumber } = await supabase
         .from('fee_bills')
         .select('id, fee_bill_number, delete_status')
@@ -260,7 +301,6 @@ export async function POST(request: Request) {
       if (isUpdatingRealId) {
         let { error: updateErr } = await supabase.from('fee_bills').update(nativePayload).eq('id', body.id);
         if (updateErr && updateErr.code === 'PGRST204') {
-          // If schema has not added columns yet, store in proposal_movement._ext for seamless backwards-compatibility
           const fallbackPayload = { ...nativePayload };
           delete fallbackPayload.receipt_date;
           delete fallbackPayload.assistant_settled_amount;
@@ -293,6 +333,20 @@ export async function POST(request: Request) {
           console.error('Supabase fee_bills update error:', updateErr);
           return NextResponse.json({ success: false, message: updateErr.message }, { status: 500 });
         }
+
+        // Log Tamper-Proof Audit for update
+        if (session) {
+          await logAudit({
+            actor: session,
+            module: 'FEE_BILLS',
+            action: 'UPDATE',
+            entityId: String(body.id),
+            entityTitle: `Fee Voucher: ${record.feeBillNumber} (${record.lawyerName || 'Advocate'})`,
+            changesSummary: `Updated advocate fee voucher for ${record.lawyerName} in ${record.division}`,
+            oldState: existingBill,
+            newState: nativePayload,
+          });
+        }
       } else {
         let { data: inserted, error: insertErr } = await supabase
           .from('fee_bills')
@@ -301,7 +355,6 @@ export async function POST(request: Request) {
           .single();
 
         if (insertErr && insertErr.code === 'PGRST204') {
-          // If schema has not added columns yet, store in proposal_movement._ext for seamless backwards-compatibility
           const fallbackPayload = { ...nativePayload };
           delete fallbackPayload.receipt_date;
           delete fallbackPayload.assistant_settled_amount;
@@ -342,6 +395,19 @@ export async function POST(request: Request) {
           return NextResponse.json({ success: false, message: insertErr.message }, { status: 500 });
         }
         if (inserted?.id) record.id = String(inserted.id);
+
+        // Log Tamper-Proof Audit for create
+        if (session) {
+          await logAudit({
+            actor: session,
+            module: 'FEE_BILLS',
+            action: 'CREATE',
+            entityId: String(record.id),
+            entityTitle: `Fee Voucher: ${record.feeBillNumber} (${record.lawyerName || 'Advocate'})`,
+            changesSummary: `Created new advocate fee voucher for ${record.lawyerName} in ${record.division}`,
+            newState: nativePayload,
+          });
+        }
       }
     }
 
@@ -372,11 +438,42 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, message: 'ID is required' }, { status: 400 });
     }
 
+    const session = await getSession();
+
     if (supabase) {
-      await supabase
-        .from('fee_bills')
-        .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
-        .eq('id', id);
+      const { data: existingBill } = await supabase.from('fee_bills').select('*').eq('id', id).maybeSingle();
+
+      if (existingBill) {
+        const authCheck = canPerformAction(session, 'fee_bills:delete', {
+          circle: existingBill.circle,
+          division: existingBill.division,
+        });
+
+        if (!authCheck.allowed) {
+          return NextResponse.json(
+            { success: false, message: authCheck.reason || 'Unauthorized operation.' },
+            { status: 403 }
+          );
+        }
+
+        await supabase
+          .from('fee_bills')
+          .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
+          .eq('id', id);
+
+        // Log Tamper-Proof Audit for delete
+        if (session) {
+          await logAudit({
+            actor: session,
+            module: 'FEE_BILLS',
+            action: 'DELETE',
+            entityId: id,
+            entityTitle: `Fee Voucher: ${existingBill.fee_bill_number || id}`,
+            changesSummary: `Soft-deleted advocate fee voucher for ${existingBill.lawyer_name}`,
+            oldState: existingBill,
+          });
+        }
+      }
     }
 
     const idx = fallbackStore.findIndex((b) => String(b.id) === String(id));

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getSession } from "@/lib/auth/session";
+import { canPerformAction, canAssignRole } from "@/lib/auth/permissions";
+import { logAudit } from "@/lib/audit/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +91,19 @@ export async function POST(request: NextRequest) {
       role_id, // Optional custom role assignment on staff creation
     } = body;
 
+    const session = await getSession();
+    const isNew = !id;
+    const requiredPerm = isNew ? "staff:create" : "staff:edit";
+
+    const authCheck = canPerformAction(session, requiredPerm, {
+      circle: circle || null,
+      division: division || null,
+    });
+
+    if (!authCheck.allowed) {
+      return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
+    }
+
     if (!name || typeof name !== "string" || name.trim() === "") {
       return NextResponse.json({ error: "Staff Name is required" }, { status: 400 });
     }
@@ -107,6 +123,8 @@ export async function POST(request: NextRequest) {
     };
 
     if (id) {
+      const { data: oldStaff } = await supabase.from("staff_members").select("*").eq("id", id).maybeSingle();
+
       const { data, error } = await supabase
         .from("staff_members")
         .update(payload)
@@ -136,6 +154,20 @@ export async function POST(request: NextRequest) {
           .eq("staff_id", id);
       }
 
+      // Log Tamper-Proof Audit
+      if (session) {
+        await logAudit({
+          actor: session,
+          module: "STAFF",
+          action: "UPDATE",
+          entityId: String(id),
+          entityTitle: `Staff: ${name.trim()} (${designation || "Officer"})`,
+          changesSummary: `Updated personnel record for ${name.trim()} in ${division || "jurisdiction"}`,
+          oldState: oldStaff,
+          newState: data,
+        });
+      }
+
       return NextResponse.json(data);
     } else {
       const { data, error } = await supabase
@@ -146,6 +178,19 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      // Log Tamper-Proof Audit
+      if (session) {
+        await logAudit({
+          actor: session,
+          module: "STAFF",
+          action: "CREATE",
+          entityId: String(data.id),
+          entityTitle: `Staff: ${name.trim()} (${designation || "Officer"})`,
+          changesSummary: `Registered new personnel ${name.trim()} in ${division || "jurisdiction"}`,
+          newState: data,
+        });
       }
 
       return NextResponse.json(data, { status: 201 });
@@ -167,12 +212,20 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Database service unavailable" }, { status: 500 });
     }
 
+    const session = await getSession();
+    const authCheck = canPerformAction(session, "staff:edit");
+    if (!authCheck.allowed) {
+      return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
     if (!id) {
       return NextResponse.json({ error: "Missing staff member id" }, { status: 400 });
     }
+
+    const { data: staffMember } = await supabase.from("staff_members").select("*").eq("id", id).maybeSingle();
 
     const { error } = await supabase
       .from("staff_members")
@@ -183,6 +236,19 @@ export async function PATCH(request: NextRequest) {
 
     // Reactivate login account if exists
     await supabase.from("user_profiles").update({ is_active: true }).eq("staff_id", id);
+
+    // Log Tamper-Proof Audit
+    if (session && staffMember) {
+      await logAudit({
+        actor: session,
+        module: "STAFF",
+        action: "RESTORE",
+        entityId: id,
+        entityTitle: `Staff: ${staffMember.name} (${staffMember.designation || "Officer"})`,
+        changesSummary: `Restored archived staff member ${staffMember.name}`,
+        oldState: staffMember,
+      });
+    }
 
     return NextResponse.json({ success: true, message: "Staff member restored successfully" });
   } catch (err: any) {
@@ -198,6 +264,12 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Database service unavailable" }, { status: 500 });
     }
 
+    const session = await getSession();
+    const authCheck = canPerformAction(session, "staff:delete");
+    if (!authCheck.allowed) {
+      return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const permanent = searchParams.get("permanent") === "true";
@@ -205,6 +277,8 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ error: "Missing staff member id" }, { status: 400 });
     }
+
+    const { data: existingStaff } = await supabase.from("staff_members").select("*").eq("id", id).maybeSingle();
 
     if (permanent) {
       await supabase.from("user_profiles").delete().eq("staff_id", id);
@@ -220,6 +294,19 @@ export async function DELETE(request: NextRequest) {
 
       // Suspend login access while archived
       await supabase.from("user_profiles").update({ is_active: false }).eq("staff_id", id);
+    }
+
+    // Log Tamper-Proof Audit
+    if (session && existingStaff) {
+      await logAudit({
+        actor: session,
+        module: "STAFF",
+        action: "DELETE",
+        entityId: id,
+        entityTitle: `Staff: ${existingStaff.name} (${existingStaff.designation || "Officer"})`,
+        changesSummary: `Soft-deleted/archived staff member ${existingStaff.name}`,
+        oldState: existingStaff,
+      });
     }
 
     return NextResponse.json({ success: true, message: "Staff member soft deleted successfully" });

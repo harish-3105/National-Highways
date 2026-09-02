@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server';
 import { DlpCorridor, DlpWorkStretch, DlpWorkCategory } from '@/types/dlp';
 import { detectLaneWidthForChainage, checkSpanWidthCapacity } from '@/lib/dlp/laneDetection';
 import { addYearsToDateString, normalizeDateForDb, parseDateString } from '@/lib/formatters';
+import { getSession } from '@/lib/auth/session';
+import { canPerformAction } from '@/lib/auth/permissions';
+import { logAudit } from '@/lib/audit/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -116,6 +119,21 @@ export async function GET(req: NextRequest) {
       .select('*, dlp_work_stretches(*)')
       .order('created_at', { ascending: false });
 
+    // Enforce Row-Level PBAC Data Siloing if user lacks statewide view permission
+    const session = await getSession();
+    if (session && !session.isSuperAdmin) {
+      const canViewStatewide =
+        session.permissions.includes('jurisdiction:view_statewide') ||
+        session.permissions.includes('*:*') ||
+        session.jurisdictionScope === 'STATEWIDE';
+
+      if (!canViewStatewide) {
+        if (session.jurisdictionScope === 'DIVISION' && session.division) {
+          query = query.ilike('division_name', `%${session.division}%`);
+        }
+      }
+    }
+
     if (highwayCode) query = query.eq('highway_code', highwayCode);
     if (division) query = query.ilike('division_name', `%${division}%`);
 
@@ -224,6 +242,12 @@ export async function POST(req: NextRequest) {
         { success: false, error: 'Division name and Highway code are required' },
         { status: 400 }
       );
+    }
+
+    const session = await getSession();
+    const authCheck = canPerformAction(session, 'dlp:create', { division: division_name });
+    if (!authCheck.allowed) {
+      return NextResponse.json({ success: false, error: authCheck.reason || 'Unauthorized operation.' }, { status: 403 });
     }
 
     const numFrom = Number(from_km || 0);
@@ -401,6 +425,19 @@ export async function POST(req: NextRequest) {
       insertedStretches = (stretchData || []).map(computeStretchLiveStatus);
     }
 
+    // Log Audit Event
+    if (session) {
+      await logAudit({
+        actor: session,
+        module: 'DLP',
+        action: 'CREATE',
+        entityId: corridorData.id,
+        entityTitle: `DLP Corridor ${highway_code} (Km ${numFrom}–${numTo})`,
+        changesSummary: `Created DLP maintenance package for ${highway_code} in ${division_name} with ${insertedStretches.length} work stretches`,
+        newState: { ...corridorData, work_stretches: insertedStretches },
+      });
+    }
+
     return NextResponse.json({
       success: true,
       corridor: {
@@ -426,6 +463,22 @@ export async function PUT(req: NextRequest) {
     const supabase = await createClient();
     if (!supabase) {
       return NextResponse.json({ success: false, error: 'Database client unavailable' }, { status: 500 });
+    }
+
+    const session = await getSession();
+
+    // Fetch existing state for diff and permission check
+    const { data: existingCorridor } = await supabase
+      .from('dlp_corridors')
+      .select('*, dlp_work_stretches(*)')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (existingCorridor) {
+      const authCheck = canPerformAction(session, 'dlp:edit', { division: existingCorridor.division_name });
+      if (!authCheck.allowed) {
+        return NextResponse.json({ success: false, error: authCheck.reason || 'Unauthorized operation.' }, { status: 403 });
+      }
     }
 
     const numFrom = Number(from_km || 0);
@@ -456,17 +509,20 @@ export async function PUT(req: NextRequest) {
     // 2. Sync Work Stretches if provided
     let syncedStretches: DlpWorkStretch[] = [];
     if (Array.isArray(work_stretches)) {
-      // Prefetch Level 2 Sub-Chainages to auto-resolve lane widths when not provided
-      const plainNum = (highway_code || '').replace(/^NH-?/i, '');
-      const searchCodes = Array.from(new Set([highway_code, `NH-${plainNum}`, plainNum]));
-      const { data: subChainagesData } = await supabase
-        .from('highway_sub_chainages')
-        .select('*')
-        .in('highway_code', searchCodes)
-        .neq('delete_status', 'DELETED')
-        .neq('delete_status', 'SOFT_DELETE');
+      // Delete removed stretches
+      await supabase.from('dlp_work_stretches').delete().eq('corridor_id', id);
 
       if (work_stretches.length > 0) {
+        // Prefetch Level 2 Sub-Chainages to auto-resolve lane widths when not provided
+        const plainNum = (highway_code || updatedCorridor.highway_code).replace(/^NH-?/i, '');
+        const searchCodes = Array.from(new Set([highway_code, updatedCorridor.highway_code, `NH-${plainNum}`, plainNum]));
+        const { data: subChainagesData } = await supabase
+          .from('highway_sub_chainages')
+          .select('*')
+          .in('highway_code', searchCodes)
+          .neq('delete_status', 'DELETED')
+          .neq('delete_status', 'SOFT_DELETE');
+
         // Validate width capacity across all stretches before DB update
         for (let i = 0; i < work_stretches.length; i++) {
           const s = work_stretches[i];
@@ -487,9 +543,6 @@ export async function PUT(req: NextRequest) {
             }
           }
         }
-
-        // Delete removed stretches
-        await supabase.from('dlp_work_stretches').delete().eq('corridor_id', id);
 
         const stretchesToInsert = work_stretches.map((s: any) => {
           const sFrom = Number(s.chainage_from_km || 0);
@@ -587,6 +640,20 @@ export async function PUT(req: NextRequest) {
       }
     }
 
+    // Log Audit Event
+    if (session && existingCorridor) {
+      await logAudit({
+        actor: session,
+        module: 'DLP',
+        action: 'UPDATE',
+        entityId: id,
+        entityTitle: `DLP Corridor ${updatedCorridor.highway_code}`,
+        changesSummary: `Updated DLP maintenance package and ${syncedStretches.length} work stretches for ${updatedCorridor.highway_code}`,
+        oldState: existingCorridor,
+        newState: { ...updatedCorridor, work_stretches: syncedStretches },
+      });
+    }
+
     return NextResponse.json({
       success: true,
       corridor: {
@@ -614,6 +681,22 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Database client unavailable' }, { status: 500 });
     }
 
+    const session = await getSession();
+
+    // Fetch existing state for diff and permission check
+    const { data: existingCorridor } = await supabase
+      .from('dlp_corridors')
+      .select('*, dlp_work_stretches(*)')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (existingCorridor) {
+      const authCheck = canPerformAction(session, 'dlp:delete', { division: existingCorridor.division_name });
+      if (!authCheck.allowed) {
+        return NextResponse.json({ success: false, error: authCheck.reason || 'Unauthorized operation.' }, { status: 403 });
+      }
+    }
+
     // Soft-delete corridor and all its stretches
     const { error: corridorErr } = await supabase
       .from('dlp_corridors')
@@ -628,6 +711,19 @@ export async function DELETE(req: NextRequest) {
       .from('dlp_work_stretches')
       .update({ status: 'DELETED', updated_at: new Date().toISOString() })
       .eq('corridor_id', id);
+
+    // Log Audit Event
+    if (session && existingCorridor) {
+      await logAudit({
+        actor: session,
+        module: 'DLP',
+        action: 'DELETE',
+        entityId: id,
+        entityTitle: `DLP Corridor ${existingCorridor.highway_code}`,
+        changesSummary: `Soft-deleted DLP maintenance corridor for ${existingCorridor.highway_code} in ${existingCorridor.division_name}`,
+        oldState: existingCorridor,
+      });
+    }
 
     return NextResponse.json({ success: true, message: `Corridor ${id} soft-deleted` });
   } catch (err: unknown) {

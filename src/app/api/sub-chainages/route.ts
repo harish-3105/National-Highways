@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getSession } from '@/lib/auth/session';
+import { canPerformAction } from '@/lib/auth/permissions';
+import { logAudit } from '@/lib/audit/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -130,7 +133,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: 'Database client not connected' }, { status: 500 });
     }
 
+    const session = await getSession();
     const body = await request.json();
+    const isEdit = Boolean(body.id);
+    const requiredPerm = isEdit ? 'sub_chainages:edit' : 'sub_chainages:create';
+
+    const authCheck = canPerformAction(session, requiredPerm);
+    if (!authCheck.allowed) {
+      return NextResponse.json(
+        { success: false, message: authCheck.reason || 'Unauthorized operation.' },
+        { status: 403 }
+      );
+    }
+
     const {
       id,
       highway_code,
@@ -174,6 +189,8 @@ export async function POST(request: Request) {
     };
 
     if (id) {
+      const { data: oldSub } = await supabase.from('highway_sub_chainages').select('*').eq('id', id).maybeSingle();
+
       // UPDATE
       let { data, error } = await supabase
         .from('highway_sub_chainages')
@@ -193,7 +210,23 @@ export async function POST(request: Request) {
       }
 
       if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
-      return NextResponse.json({ success: true, subChainage: data?.[0] });
+      const updated = data?.[0];
+
+      // Log Tamper-Proof Audit
+      if (session && updated) {
+        await logAudit({
+          actor: session,
+          module: 'HIGHWAYS',
+          action: 'UPDATE',
+          entityId: id,
+          entityTitle: `Sub-Chainage: ${updated.highway_code} (Km ${updated.from_km}–${updated.to_km})`,
+          changesSummary: `Updated sub-chainage stretch for ${updated.highway_code}`,
+          oldState: oldSub,
+          newState: updated,
+        });
+      }
+
+      return NextResponse.json({ success: true, subChainage: updated });
     }
 
     // INSERT
@@ -217,7 +250,22 @@ export async function POST(request: Request) {
     }
 
     if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
-    return NextResponse.json({ success: true, subChainage: data?.[0] });
+    const created = data?.[0];
+
+    // Log Tamper-Proof Audit
+    if (session && created) {
+      await logAudit({
+        actor: session,
+        module: 'HIGHWAYS',
+        action: 'CREATE',
+        entityId: created.id,
+        entityTitle: `Sub-Chainage: ${created.highway_code} (Km ${created.from_km}–${created.to_km})`,
+        changesSummary: `Added new sub-chainage stretch for ${created.highway_code} (${created.lane_configuration})`,
+        newState: created,
+      });
+    }
+
+    return NextResponse.json({ success: true, subChainage: created });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, message: msg }, { status: 500 });
@@ -238,7 +286,18 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, message: 'Sub-chainage ID is required' }, { status: 400 });
     }
 
+    const session = await getSession();
+    const authCheck = canPerformAction(session, 'sub_chainages:delete');
+    if (!authCheck.allowed) {
+      return NextResponse.json(
+        { success: false, message: authCheck.reason || 'Unauthorized operation.' },
+        { status: 403 }
+      );
+    }
+
     if (supabase) {
+      const { data: existingSub } = await supabase.from('highway_sub_chainages').select('*').eq('id', id).maybeSingle();
+
       if (hard) {
         // Hard Delete
         const { error } = await supabase.from('highway_sub_chainages').delete().eq('id', id);
@@ -254,6 +313,19 @@ export async function DELETE(request: Request) {
           const { error: hardErr } = await supabase.from('highway_sub_chainages').delete().eq('id', id);
           if (hardErr) return NextResponse.json({ success: false, message: hardErr.message }, { status: 500 });
         }
+      }
+
+      // Log Tamper-Proof Audit
+      if (session && existingSub) {
+        await logAudit({
+          actor: session,
+          module: 'HIGHWAYS',
+          action: 'DELETE',
+          entityId: id,
+          entityTitle: `Sub-Chainage: ${existingSub.highway_code} (Km ${existingSub.from_km}–${existingSub.to_km})`,
+          changesSummary: `Soft-deleted sub-chainage stretch for ${existingSub.highway_code}`,
+          oldState: existingSub,
+        });
       }
     }
 

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getSession } from '@/lib/auth/session';
+import { canPerformAction } from '@/lib/auth/permissions';
+import { logAudit } from '@/lib/audit/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -257,7 +260,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: 'Database client not connected' }, { status: 500 });
     }
 
+    const session = await getSession();
     const body = await request.json();
+    const isEdit = Boolean(body.id);
+    const requiredPerm = isEdit ? 'highways:edit' : 'highways:create';
+
+    const authCheck = canPerformAction(session, requiredPerm);
+    if (!authCheck.allowed) {
+      return NextResponse.json(
+        { success: false, message: authCheck.reason || 'Unauthorized operation.' },
+        { status: 403 }
+      );
+    }
+
     const {
       id,
       road_code,
@@ -279,6 +294,8 @@ export async function POST(request: Request) {
 
     // UPDATE / EDIT MODE
     if (id) {
+      const { data: oldHighway } = await supabase.from('highways').select('*').eq('id', id).maybeSingle();
+
       const updatePayload: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
       };
@@ -302,7 +319,22 @@ export async function POST(request: Request) {
 
       const { data, error } = await supabase.from('highways').update(updatePayload).eq('id', id).select();
       if (!error && data && data[0]) {
-        return NextResponse.json({ success: true, corridor: data[0] });
+        const updated = data[0];
+        // Log Tamper-Proof Audit
+        if (session) {
+          await logAudit({
+            actor: session,
+            module: 'HIGHWAYS',
+            action: 'UPDATE',
+            entityId: id,
+            entityTitle: `Highway Corridor: ${updated.road_code} (${updated.road_name})`,
+            changesSummary: `Updated highway corridor metadata for ${updated.road_code}`,
+            oldState: oldHighway,
+            newState: updated,
+          });
+        }
+
+        return NextResponse.json({ success: true, corridor: updated });
       }
       if (error) {
         return NextResponse.json({ success: false, message: error.message }, { status: 500 });
@@ -337,7 +369,21 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase.from('highways').insert([insertPayload]).select();
     if (!error && data && data[0]) {
-      return NextResponse.json({ success: true, corridor: data[0] });
+      const created = data[0];
+      // Log Tamper-Proof Audit
+      if (session) {
+        await logAudit({
+          actor: session,
+          module: 'HIGHWAYS',
+          action: 'CREATE',
+          entityId: created.id,
+          entityTitle: `Highway Corridor: ${created.road_code} (${created.road_name})`,
+          changesSummary: `Registered new highway corridor ${created.road_code} (${created.length_km} Km)`,
+          newState: created,
+        });
+      }
+
+      return NextResponse.json({ success: true, corridor: created });
     }
     if (error) {
       return NextResponse.json({ success: false, message: error.message }, { status: 500 });
@@ -363,7 +409,18 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, message: 'Highway ID is required' }, { status: 400 });
     }
 
+    const session = await getSession();
+    const authCheck = canPerformAction(session, 'highways:delete');
+    if (!authCheck.allowed) {
+      return NextResponse.json(
+        { success: false, message: authCheck.reason || 'Unauthorized operation.' },
+        { status: 403 }
+      );
+    }
+
     if (supabase) {
+      const { data: existingHw } = await supabase.from('highways').select('*').eq('id', id).maybeSingle();
+
       const { error } = await supabase
         .from('highways')
         .update({ status: 'DELETED', updated_at: new Date().toISOString() })
@@ -371,6 +428,19 @@ export async function DELETE(request: Request) {
 
       if (error) {
         return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+      }
+
+      // Log Tamper-Proof Audit
+      if (session && existingHw) {
+        await logAudit({
+          actor: session,
+          module: 'HIGHWAYS',
+          action: 'DELETE',
+          entityId: id,
+          entityTitle: `Highway Corridor: ${existingHw.road_code}`,
+          changesSummary: `Soft-deleted highway corridor ${existingHw.road_code}`,
+          oldState: existingHw,
+        });
       }
     }
 

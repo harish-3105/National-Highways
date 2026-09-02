@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { LegalCaseData } from '@/types/legal';
+import { getSession } from '@/lib/auth/session';
+import { canPerformAction } from '@/lib/auth/permissions';
+import { logAudit } from '@/lib/audit/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -143,6 +146,23 @@ export async function GET(req: NextRequest) {
         .select('*')
         .order('created_at', { ascending: false });
 
+      // Enforce Row-Level PBAC Data Siloing if user lacks statewide view permission
+      const session = await getSession();
+      if (session && !session.isSuperAdmin) {
+        const canViewStatewide =
+          session.permissions.includes('jurisdiction:view_statewide') ||
+          session.permissions.includes('*:*') ||
+          session.jurisdictionScope === 'STATEWIDE';
+
+        if (!canViewStatewide) {
+          if (session.jurisdictionScope === 'DIVISION' && session.division) {
+            query = query.eq('division', session.division);
+          } else if (session.jurisdictionScope === 'CIRCLE' && session.circle) {
+            query = query.eq('circle', session.circle);
+          }
+        }
+      }
+
       if (!includeDeleted) {
         query = query.neq('delete_status', 'DELETED');
       }
@@ -216,6 +236,22 @@ export async function POST(req: NextRequest) {
   try {
     const body: LegalCaseData = await req.json();
     const supabase = await createClient();
+    const session = await getSession();
+
+    const isNew = !body.id || body.id.startsWith('lc-');
+    const requiredPerm = isNew ? 'legal:create' : 'legal:edit';
+
+    const authCheck = canPerformAction(session, requiredPerm, {
+      circle: body.circle || null,
+      division: body.division || null,
+    });
+
+    if (!authCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: authCheck.reason || 'Unauthorized operation.' },
+        { status: 403 }
+      );
+    }
 
     const caseId = body.id || `lc-${Date.now()}`;
     const nowIso = new Date().toISOString();
@@ -229,7 +265,14 @@ export async function POST(req: NextRequest) {
       createdAt: body.createdAt || nowIso,
     };
 
+    let existingRecord: any = null;
+
     if (supabase) {
+      if (!isNew && body.id) {
+        const { data: oldRec } = await supabase.from('legal_cases').select('*').eq('id', body.id).maybeSingle();
+        existingRecord = oldRec;
+      }
+
       const computedCaseDetails =
         body.caseDetails ||
         (body.caseClassification === 'Appeal Case'
@@ -350,7 +393,7 @@ export async function POST(req: NextRequest) {
         updated_at: nowIso,
       };
 
-      if (body.id && !body.id.startsWith('lc-')) {
+      if (!isNew && body.id) {
         const { data, error } = await supabase
           .from('legal_cases')
           .update(payload)
@@ -363,7 +406,22 @@ export async function POST(req: NextRequest) {
         }
 
         if (data && data[0]) {
-          return NextResponse.json({ success: true, case: mapDbRowToLegalCase(data[0]), mode: 'UPDATE' });
+          const updatedCase = data[0];
+          // Log Tamper-Proof Audit
+          if (session) {
+            await logAudit({
+              actor: session,
+              module: 'LEGAL',
+              action: 'UPDATE',
+              entityId: updatedCase.id,
+              entityTitle: `Legal Case: ${updatedCase.case_details || updatedCase.id}`,
+              changesSummary: `Updated legal case in ${updatedCase.division || 'division'}`,
+              oldState: existingRecord,
+              newState: updatedCase,
+            });
+          }
+
+          return NextResponse.json({ success: true, case: mapDbRowToLegalCase(updatedCase), mode: 'UPDATE' });
         }
       } else {
         const { data, error } = await supabase
@@ -377,7 +435,21 @@ export async function POST(req: NextRequest) {
         }
 
         if (data && data[0]) {
-          return NextResponse.json({ success: true, case: mapDbRowToLegalCase(data[0]), mode: 'CREATE' });
+          const newCase = data[0];
+          // Log Tamper-Proof Audit
+          if (session) {
+            await logAudit({
+              actor: session,
+              module: 'LEGAL',
+              action: 'CREATE',
+              entityId: newCase.id,
+              entityTitle: `Legal Case: ${newCase.case_details || newCase.id}`,
+              changesSummary: `Registered new legal case in ${newCase.division || 'division'}`,
+              newState: newCase,
+            });
+          }
+
+          return NextResponse.json({ success: true, case: mapDbRowToLegalCase(newCase), mode: 'CREATE' });
         }
       }
     }
@@ -407,14 +479,45 @@ export async function DELETE(req: NextRequest) {
     }
 
     const supabase = await createClient();
-    if (supabase && !id.startsWith('lc-')) {
-      const { error } = await supabase
-        .from('legal_cases')
-        .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
-        .eq('id', id);
+    const session = await getSession();
 
-      if (error) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    if (supabase && !id.startsWith('lc-')) {
+      const { data: existingCase } = await supabase.from('legal_cases').select('*').eq('id', id).maybeSingle();
+
+      if (existingCase) {
+        const authCheck = canPerformAction(session, 'legal:delete', {
+          circle: existingCase.circle,
+          division: existingCase.division,
+        });
+
+        if (!authCheck.allowed) {
+          return NextResponse.json(
+            { success: false, error: authCheck.reason || 'Unauthorized operation.' },
+            { status: 403 }
+          );
+        }
+
+        const { error } = await supabase
+          .from('legal_cases')
+          .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
+          .eq('id', id);
+
+        if (error) {
+          return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        }
+
+        // Log Tamper-Proof Audit
+        if (session) {
+          await logAudit({
+            actor: session,
+            module: 'LEGAL',
+            action: 'DELETE',
+            entityId: id,
+            entityTitle: `Legal Case: ${existingCase.case_details || id}`,
+            changesSummary: `Soft-deleted legal case from active register`,
+            oldState: existingCase,
+          });
+        }
       }
     }
 
