@@ -722,7 +722,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                   No {activeTab === 'MACRO_PCU' ? 'Macro Traffic Census' : 'Micro Lane Geometry'} Stretches Found
                 </h4>
                 <p className="text-[11px] text-slate-400 mt-1 max-w-md mx-auto">
-                  Upload <code className="text-blue-600 font-mono">Lane wise PCU Details.xlsx</code> in the Data Ingestion Engine or click <strong>&quot;+ Add Stretch&quot;</strong> above to start adding granular chainage stretches.
+                  Click <strong>&quot;+ Add Stretch&quot;</strong> above to start adding granular chainage stretches.
                 </p>
               </div>
             ) : (

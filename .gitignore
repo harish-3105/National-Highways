@@ -45,3 +45,8 @@ next-env.d.ts
 /harish/
 /mathir/
 /archived/
+
+# database dumps
+*.sql
+!supabase/migrations/*.sql
+*.dump

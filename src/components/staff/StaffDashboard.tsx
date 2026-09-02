@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  Shield,
 } from "lucide-react";
 import { NavigationHeader } from "@/components/NavigationHeader";
 import { StaffMember, StaffMasterConfig } from "./StaffTypes";
@@ -28,6 +29,8 @@ import { StaffEntryForm } from "./StaffEntryForm";
 import { ViewStaffModal } from "./ViewStaffModal";
 import { DeleteStaffModal } from "./DeleteStaffModal";
 import { StaffMasterDataModal } from "./StaffMasterDataModal";
+import { RoleStudioModal } from "@/components/roles/RoleStudioModal";
+import { SessionUser } from "@/lib/auth/session";
 import { SearchableSelect } from "@/components/common/SearchableSelect";
 import { ModulePageHeader } from "@/components/common/ModulePageHeader";
 import { ExportDataModal } from "@/components/common/ExportDataModal";
@@ -75,8 +78,26 @@ export const StaffDashboard: React.FC = () => {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isMasterDataOpen, setIsMasterDataOpen] = useState(false);
+  const [isRoleStudioOpen, setIsRoleStudioOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
 
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+
+  // Fetch current user session
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) setCurrentUser(data.user);
+        }
+      } catch (err) {
+        console.error('Error fetching user session:', err);
+      }
+    }
+    loadUser();
+  }, []);
 
   // Fetch staff list & master config
   const fetchStaffData = async () => {
@@ -357,6 +378,17 @@ export const StaffDashboard: React.FC = () => {
                 label: "Add New",
                 icon: UserPlus,
               }}
+              extraContent={
+                <button
+                  type="button"
+                  onClick={() => setIsRoleStudioOpen(true)}
+                  className="h-9 inline-flex items-center justify-center gap-1.5 px-3 rounded-xl text-xs font-bold bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-all cursor-pointer shadow-xs"
+                  title="Open Discord-style Role & Permission Studio"
+                >
+                  <Shield className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span>Roles & Perms Studio</span>
+                </button>
+              }
             />
 
             {/* In-Page Master Data Config Mode */}
@@ -695,6 +727,13 @@ export const StaffDashboard: React.FC = () => {
     }}
     isOpen={isExportModalOpen}
     onClose={() => setIsExportModalOpen(false)}
+  />
+
+  {/* Discord-Style Role & Permission Studio Modal */}
+  <RoleStudioModal
+    isOpen={isRoleStudioOpen}
+    onClose={() => setIsRoleStudioOpen(false)}
+    currentUser={currentUser}
   />
 </div>
   );
