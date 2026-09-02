@@ -215,24 +215,14 @@ INSERT INTO public.system_settings (id, is_lockdown_active)
 VALUES ('global_config', false)
 ON CONFLICT (id) DO NOTHING;
 
--- Provision Initial 2 Super Admin User Accounts (TOTP Secret: JBSWY3DPEHPK3PXP default base32 seed)
+-- Provision Initial Super Admin User Account (TOTP Secret: JBSWY3DPEHPK3PXP default base32 seed)
 INSERT INTO public.user_profiles (
   id, phone_number, full_name, role_id, jurisdiction_scope, totp_secret, totp_enabled, is_active
 ) VALUES 
   (
     '00000000-0000-0000-0000-000000000101',
     '9999999999',
-    'Developer Admin',
-    '00000000-0000-0000-0000-000000000001',
-    'STATEWIDE',
-    'JBSWY3DPEHPK3PXP',
-    false,
-    true
-  ),
-  (
-    '00000000-0000-0000-0000-000000000102',
-    '9840000001',
-    'Chief Engineer (NH)',
+    'Super Admin',
     '00000000-0000-0000-0000-000000000001',
     'STATEWIDE',
     'JBSWY3DPEHPK3PXP',
