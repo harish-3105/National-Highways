@@ -25,7 +25,7 @@ export function canPerformAction(
 
   // Emergency Lockdown Enforcement
   if (user.isLockdownActive) {
-    const isReadOnlyAction = permCode.endsWith(':view') || permCode.endsWith(':export');
+    const isReadOnlyAction = permCode.endsWith(':view') || permCode.endsWith(':export') || permCode.endsWith(':view_history');
     if (!isReadOnlyAction) {
       return {
         allowed: false,
@@ -43,11 +43,24 @@ export function canPerformAction(
     };
   }
 
-  // Geographic Jurisdiction Scoping (PBAC)
+  // Super Admin / Statewide scope bypasses all jurisdiction boundary checks
   if (user.jurisdictionScope === 'STATEWIDE') {
     return { allowed: true };
   }
 
+  const isReadOnly = permCode.endsWith(':view') || permCode.endsWith(':export') || permCode.endsWith(':view_history');
+
+  // If read-only action, check if user has 'jurisdiction:view_statewide'
+  if (isReadOnly && (user.permissions.includes('jurisdiction:view_statewide') || user.permissions.includes('*:*'))) {
+    return { allowed: true };
+  }
+
+  // If write/mutation action, check if user has 'jurisdiction:edit_statewide'
+  if (!isReadOnly && (user.permissions.includes('jurisdiction:edit_statewide') || user.permissions.includes('*:*'))) {
+    return { allowed: true };
+  }
+
+  // Geographic Jurisdiction Boundary Enforcement (PBAC)
   if (user.jurisdictionScope === 'CIRCLE' && entityScope?.circle && user.circle) {
     if (entityScope.circle.trim().toLowerCase() !== user.circle.trim().toLowerCase()) {
       return {
@@ -99,7 +112,7 @@ export function canMutateRole(
       if (!actor.permissions.includes(perm) && !actor.permissions.includes('*:*')) {
         return {
           allowed: false,
-          error: `Anti-escalation rule: You cannot grant the permission "${perm}" because you do not personally possess it.`,
+          error: `Anti-escalation security violation: You cannot grant the permission "${perm}" because you do not hold it yourself.`,
         };
       }
     }
@@ -109,34 +122,23 @@ export function canMutateRole(
 }
 
 /**
- * Discord Invariant Guard: Validates whether an actor can assign a role to a member
+ * Discord Invariant Guard: Validates whether an actor can assign a target role to a user
  */
 export function canAssignRole(
   actor: SessionUser | null,
-  targetMemberHighestPosition: number,
-  roleToAssignPosition: number
+  targetRolePosition: number
 ): { allowed: boolean; error?: string } {
   if (!actor) return { allowed: false, error: 'Authentication required.' };
   if (actor.isSuperAdmin) return { allowed: true };
 
-  // 1. Must possess roles:assign permission
   if (!actor.permissions.includes('roles:assign') && !actor.permissions.includes('*:*')) {
     return { allowed: false, error: 'You lack the "roles:assign" permission.' };
   }
 
-  // 2. Cannot modify a member who is at or above self
-  if (targetMemberHighestPosition >= actor.position) {
+  if (targetRolePosition >= actor.position) {
     return {
       allowed: false,
-      error: `Hierarchy boundary: You cannot modify roles for a staff member who holds a rank (${targetMemberHighestPosition}) at or above your own (${actor.position}).`,
-    };
-  }
-
-  // 3. Cannot assign a role at or above self
-  if (roleToAssignPosition >= actor.position) {
-    return {
-      allowed: false,
-      error: `Hierarchy boundary: You cannot assign a role of rank ${roleToAssignPosition} (your highest rank is ${actor.position}).`,
+      error: `Hierarchy boundary: You cannot assign a role with position ${targetRolePosition} (your rank is ${actor.position}).`,
     };
   }
 
@@ -144,7 +146,7 @@ export function canAssignRole(
 }
 
 /**
- * Helper to check if a specific permission is present in a user's permission list
+ * Simple permission check helper
  */
 export function hasPermission(user: SessionUser | null, permCode: string): boolean {
   if (!user) return false;

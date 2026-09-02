@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getSession } from '@/lib/auth/session';
+import { canPerformAction } from '@/lib/auth/permissions';
+import { logAudit, computeFieldDiffs } from '@/lib/audit/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -149,6 +152,23 @@ export async function GET(request: Request) {
     }
 
     let query = supabase.from('major_projects_50cr').select('*').order('s_no', { ascending: true });
+
+    // Enforce Row-Level PBAC Data Siloing if user lacks statewide view permission
+    const session = await getSession();
+    if (session && !session.isSuperAdmin) {
+      const canViewStatewide =
+        session.permissions.includes('jurisdiction:view_statewide') ||
+        session.permissions.includes('*:*') ||
+        session.jurisdictionScope === 'STATEWIDE';
+
+      if (!canViewStatewide) {
+        if (session.jurisdictionScope === 'DIVISION' && session.division) {
+          query = query.ilike('division', session.division);
+        } else if (session.jurisdictionScope === 'CIRCLE' && session.circle) {
+          query = query.ilike('circle', session.circle);
+        }
+      }
+    }
 
     if (!includeDeleted) {
       query = query.neq('delete_status', 'DELETED');
@@ -301,38 +321,55 @@ export async function POST(request: Request) {
       );
     }
 
+    const session = await getSession();
+    const isExisting = Boolean(id && !String(id).startsWith('proj-'));
+    const requiredPerm = isExisting ? 'works:edit_progress' : 'works:create';
+
+    const authCheck = canPerformAction(session, requiredPerm, {
+      circle: circle || null,
+      division: division || null,
+    });
+
+    if (!authCheck.allowed) {
+      return NextResponse.json(
+        { success: false, message: authCheck.reason || 'Unauthorized operation.' },
+        { status: 403 }
+      );
+    }
+
     const payload: Record<string, unknown> = {
       s_no: Number(s_no) || 1,
       circle: circle ? String(circle).trim() : null,
-      division: division ? String(division).trim() : '',
-      scheme: scheme ? String(scheme).trim() : 'Annual Plan 2025-26',
+      division: division ? String(division).trim() : 'Salem',
+      scheme: scheme ? String(scheme).trim() : 'CRIDP',
       name_of_work: String(name_of_work).trim(),
-      project_cost_cr: project_cost_cr !== undefined && project_cost_cr !== '' && project_cost_cr !== null ? Number(project_cost_cr) : 0,
-      work_stage: work_stage === 'TENDER_STAGE' ? 'TENDER_STAGE' : work_stage === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS',
+      project_cost_cr: Number(project_cost_cr) || 0,
+      work_stage: (work_stage as any) || 'IN_PROGRESS',
       progress_percent:
-        work_stage === 'TENDER_STAGE'
-          ? null
-          : work_stage === 'COMPLETED' && (progress_percent === undefined || progress_percent === '' || progress_percent === null)
-          ? 100
-          : progress_percent !== undefined && progress_percent !== '' && progress_percent !== null
+        progress_percent !== undefined && progress_percent !== '' && progress_percent !== null
           ? Number(progress_percent)
           : null,
-      probable_completion_date:
-        work_stage === 'TENDER_STAGE' ? null : probable_completion_date?.trim() || null,
-      stage_remarks: stage_remarks?.trim() || null,
-      progress_remarks: progress_remarks?.trim() || null,
+      probable_completion_date: probable_completion_date ? String(probable_completion_date).trim() : null,
+      stage_remarks: stage_remarks ? String(stage_remarks).trim() : null,
+      progress_remarks: progress_remarks ? String(progress_remarks).trim() : null,
       delete_status: delete_status || 'ACTIVE',
 
+      // Level 2 (27-Column Deep Technical & Financial Data)
       pmis_id: pmis_id ? String(pmis_id).trim() : null,
       old_new_nh: old_new_nh ? String(old_new_nh).trim() : null,
-      length_km: length_km !== undefined && length_km !== '' && length_km !== null ? Number(length_km) : null,
+      length_km:
+        length_km !== undefined && length_km !== '' && length_km !== null ? Number(length_km) : null,
       job_no: job_no ? String(job_no).trim() : null,
       sanction_date: sanction_date ? String(sanction_date).trim() : null,
       appointed_date: appointed_date ? String(appointed_date).trim() : null,
-      scheduled_completion_date: scheduled_completion_date ? String(scheduled_completion_date).trim() : null,
+      scheduled_completion_date: scheduled_completion_date
+        ? String(scheduled_completion_date).trim()
+        : null,
 
       completed_length_prior_km:
-        completed_length_prior_km !== undefined && completed_length_prior_km !== '' && completed_length_prior_km !== null
+        completed_length_prior_km !== undefined &&
+        completed_length_prior_km !== '' &&
+        completed_length_prior_km !== null
           ? Number(completed_length_prior_km)
           : null,
       completed_length_current_fy_km:
@@ -423,8 +460,9 @@ export async function POST(request: Request) {
       const existing = existingRecords?.[0];
 
       if (existing) {
-        // Enforce Monotonic Progress Increase (unless Admin)
-        if (!isAdmin && payload.work_stage === 'IN_PROGRESS' && payload.progress_percent !== null) {
+        // Enforce Monotonic Progress Increase (unless Admin / Creative Mode)
+        const hasCreativeMode = session?.isSuperAdmin || session?.permissions.includes('system:creative_mode');
+        if (!hasCreativeMode && payload.work_stage === 'IN_PROGRESS' && payload.progress_percent !== null) {
           const prevProg = existing.progress_percent !== null ? Number(existing.progress_percent) : 0;
           const newProg = Number(payload.progress_percent);
           if (newProg < prevProg) {
@@ -438,11 +476,11 @@ export async function POST(request: Request) {
           }
         }
 
-        // Enforce Write-Once / Freeze-When-Filled for standard users (A-N & Z)
-        if (!isAdmin) {
+        // Enforce Write-Once / Freeze-When-Filled for standard users (A-N & Z) unless override perm
+        const canOverrideFrozen = hasCreativeMode || session?.permissions.includes('works:override_frozen');
+        if (!canOverrideFrozen) {
           FROZEN_PROJECT_COLUMNS.forEach((col) => {
             const prevVal = existing[col];
-            // If previous value exists (non-null and non-empty), standard user cannot overwrite it
             if (prevVal !== null && prevVal !== undefined && prevVal !== '') {
               payload[col] = prevVal; // Preserve existing frozen value
             }
@@ -470,7 +508,7 @@ export async function POST(request: Request) {
         await supabase.from('major_projects_snapshots').insert({
           project_id: updatedProject.id,
           action_source: actionSource || 'MANUAL_EDIT',
-          user_identifier: userIdentifier || 'portal_user',
+          user_identifier: session?.phoneNumber || userIdentifier || 'portal_user',
           progress_percent: updatedProject.progress_percent,
           financial_progress_percent: finPercent,
           cumm_financial_expenditure_cr: updatedProject.cumm_financial_expenditure_cr,
@@ -487,6 +525,24 @@ export async function POST(request: Request) {
         });
       } catch (snapshotErr) {
         console.error('Snapshot logging error:', snapshotErr);
+      }
+
+      // 3. Immutable Google Sheets-Style Audit Logging
+      if (session && existing) {
+        try {
+          await logAudit({
+            actor: session,
+            module: 'ONGOING_WORKS',
+            action: 'UPDATE',
+            entityId: updatedProject.id,
+            entityTitle: updatedProject.name_of_work,
+            changesSummary: `Updated project: ${updatedProject.name_of_work}`,
+            oldState: existing,
+            newState: updatedProject,
+          });
+        } catch (auditErr) {
+          console.error('Audit logging error:', auditErr);
+        }
       }
 
       return NextResponse.json({ success: true, project: updatedProject });
@@ -514,7 +570,7 @@ export async function POST(request: Request) {
         await supabase.from('major_projects_snapshots').insert({
           project_id: newProject.id,
           action_source: 'MANUAL_ADD',
-          user_identifier: userIdentifier || 'portal_user',
+          user_identifier: session?.phoneNumber || userIdentifier || 'portal_user',
           progress_percent: newProject.progress_percent,
           financial_progress_percent: finPercent,
           cumm_financial_expenditure_cr: newProject.cumm_financial_expenditure_cr,
@@ -529,6 +585,19 @@ export async function POST(request: Request) {
           issue_others: newProject.issue_others,
           full_snapshot: newProject,
         });
+
+        // Audit log creation
+        if (session) {
+          await logAudit({
+            actor: session,
+            module: 'ONGOING_WORKS',
+            action: 'CREATE',
+            entityId: newProject.id,
+            entityTitle: newProject.name_of_work,
+            changesSummary: `Created new capital project: ${newProject.name_of_work}`,
+            newState: newProject,
+          });
+        }
       }
     } catch (snapshotErr) {
       console.error('Initial snapshot logging error:', snapshotErr);
@@ -555,17 +624,52 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, message: 'Project ID is required' }, { status: 400 });
     }
 
-    if (supabase) {
-      if (hard) {
-        const { error } = await supabase.from('major_projects_50cr').delete().eq('id', id);
-        if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
-      } else {
-        const { error } = await supabase
-          .from('major_projects_50cr')
-          .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
-          .eq('id', id);
+    const session = await getSession();
 
-        if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    if (supabase) {
+      const { data: existingRec } = await supabase
+        .from('major_projects_50cr')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (existingRec) {
+        const authCheck = canPerformAction(session, 'works:delete', {
+          circle: existingRec.circle,
+          division: existingRec.division,
+        });
+
+        if (!authCheck.allowed) {
+          return NextResponse.json(
+            { success: false, message: authCheck.reason || 'Unauthorized operation.' },
+            { status: 403 }
+          );
+        }
+
+        if (hard) {
+          const { error } = await supabase.from('major_projects_50cr').delete().eq('id', id);
+          if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+        } else {
+          const { error } = await supabase
+            .from('major_projects_50cr')
+            .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
+            .eq('id', id);
+
+          if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+        }
+
+        // Record Audit Log for deletion
+        if (session) {
+          await logAudit({
+            actor: session,
+            module: 'ONGOING_WORKS',
+            action: 'DELETE',
+            entityId: existingRec.id,
+            entityTitle: existingRec.name_of_work,
+            changesSummary: `Soft-deleted project from active roster: ${existingRec.name_of_work}`,
+            oldState: existingRec,
+          });
+        }
       }
     }
 

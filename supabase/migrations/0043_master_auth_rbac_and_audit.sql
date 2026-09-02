@@ -114,9 +114,13 @@ CREATE TABLE IF NOT EXISTS public.system_settings (
 );
 
 -- ============================================================================
--- 7. Seed Permissions (45 Atomic Permissions)
+-- 7. Seed Permissions Catalog
 -- ============================================================================
 INSERT INTO public.permissions (code, module, label, description) VALUES
+-- Jurisdiction & Scope Boundaries
+('jurisdiction:view_statewide', 'Jurisdiction', 'View Statewide Records', 'View projects, contracts, and cases outside assigned Circle/Division'),
+('jurisdiction:edit_statewide', 'Jurisdiction', 'Edit Statewide Records', 'Edit and mutate records outside assigned Circle/Division'),
+
 -- System Governance
 ('system:lockdown_toggle', 'System', 'Master Lockdown Toggle', 'Toggle statewide emergency read-only freeze switch'),
 ('system:audit_view', 'System', 'View Audit Logs', 'View historical snapshot diffs and mutation audit logs'),
@@ -145,7 +149,9 @@ INSERT INTO public.permissions (code, module, label, description) VALUES
 ('works:edit_delays', 'Ongoing Works', 'Manage Delays & EOT', 'Record delay reasons and Extension of Time proposals'),
 ('works:override_frozen', 'Ongoing Works', 'Override Frozen Columns', 'Modify frozen baseline columns (Cols A-N, Z) on existing works'),
 ('works:delete', 'Ongoing Works', 'Soft Delete Works', 'Soft delete capital project records with audit reason'),
+('works:restore', 'Ongoing Works', 'Restore Archived Works', 'Restore soft-deleted capital projects back to active list'),
 ('works:export', 'Ongoing Works', 'Export Works Registers', 'Generate and download 35-column Excel (.xlsx) work registers'),
+('works:import', 'Ongoing Works', 'Bulk Excel Import', 'Upload monthly division-level Excel update sheets'),
 ('works:view_history', 'Ongoing Works', 'View Snapshot Diffs', 'View monthly snapshot trendlines and audit diff history'),
 
 -- Master Highways Catalog & SLD
@@ -171,6 +177,7 @@ INSERT INTO public.permissions (code, module, label, description) VALUES
 ('legal:view', 'Legal Cases', 'View Legal Cases', 'Read access to High Court and District Court cases'),
 ('legal:create', 'Legal Cases', 'Register New Case', 'File new litigation record (WP/WA, prayers, respondent)'),
 ('legal:edit', 'Legal Cases', 'Update Case Status', 'Update hearing dates, counter affidavits, and conversions'),
+('legal:convert', 'Legal Cases', 'Convert Case Type', 'Convert a Writ Petition to a Writ Appeal or Contempt Petition'),
 ('legal:record_judgment', 'Legal Cases', 'Record Final Judgment', 'Enter final court orders, compliance, and contempt filings'),
 ('legal:delete', 'Legal Cases', 'Soft Delete Legal Case', 'Soft delete legal case records'),
 ('legal:export', 'Legal Cases', 'Export Legal Briefs', 'Download legal registers and pendency reports to Excel'),
