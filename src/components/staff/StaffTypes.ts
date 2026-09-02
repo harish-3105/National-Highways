@@ -11,6 +11,14 @@ export interface StaffMember {
   contact_no: string | null;
   emailid: string | null;
   delete_status?: "ACTIVE" | "DELETED";
+  user_profile?: {
+    id: string;
+    role_id: string;
+    role_name: string;
+    position: number;
+    is_active: boolean;
+    totp_enabled: boolean;
+  } | null;
   created_at?: string;
   updated_at?: string;
 }

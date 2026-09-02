@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Eye, Edit3, Trash2, Phone, Mail, Building, MapPin, RotateCcw, Archive } from "lucide-react";
+import { Eye, Edit3, Trash2, Phone, Mail, Building, MapPin, RotateCcw, Archive, ShieldCheck, KeyRound } from "lucide-react";
 import { StaffMember } from "./StaffTypes";
 
 interface StaffTableProps {
@@ -121,18 +121,37 @@ export const StaffTable: React.FC<StaffTableProps> = ({
                   </div>
                 </td>
 
-                {/* Contact Details */}
+                {/* Contact Details & Portal Login Status */}
                 <td className="py-3.5 px-4">
                   <div className="space-y-1">
                     {member.contact_no && (
-                      <span className="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-300">
-                        <Phone className="w-3 h-3 text-emerald-500" />
-                        {member.contact_no}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="flex items-center gap-1 text-[11px] font-mono font-semibold text-slate-700 dark:text-slate-300">
+                          <Phone className="w-3 h-3 text-emerald-500 shrink-0" />
+                          {member.contact_no}
+                        </span>
+                        {member.user_profile ? (
+                          <span
+                            title={`Portal Role: ${member.user_profile.role_name}`}
+                            className="inline-flex items-center gap-1 text-[9.5px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800/60 px-1.5 py-0.2 rounded-xs"
+                          >
+                            <ShieldCheck className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
+                            {member.user_profile.role_name}
+                          </span>
+                        ) : (
+                          <span
+                            title="Can log in at /login with mobile number (Default Viewer role)"
+                            className="inline-flex items-center gap-0.5 text-[9px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1 py-0.2 rounded-xs"
+                          >
+                            <KeyRound className="w-2.5 h-2.5 text-slate-400" />
+                            Viewer
+                          </span>
+                        )}
+                      </div>
                     )}
                     {member.emailid && (
-                      <span className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
-                        <Mail className="w-3 h-3 text-blue-500" />
+                      <span className="flex items-center gap-1 text-[10.5px] text-slate-500 dark:text-slate-400">
+                        <Mail className="w-3 h-3 text-blue-500 shrink-0" />
                         {member.emailid}
                       </span>
                     )}

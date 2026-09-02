@@ -28,14 +28,36 @@ export async function GET(request: NextRequest) {
       query = query.neq("delete_status", "DELETED");
     }
 
-    const { data, error } = await query;
+    const { data: staffList, error } = await query;
 
     if (error) {
       console.error("Error fetching staff members:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(data || []);
+    // Fetch user profiles to display login status & roles in staff directory
+    const { data: profiles } = await supabase
+      .from("user_profiles")
+      .select("id, staff_id, phone_number, role_id, is_active, totp_enabled, roles ( id, name, position )");
+
+    const profileMap = new Map((profiles || []).filter(p => p.staff_id).map((p: any) => [p.staff_id, p]));
+
+    const merged = (staffList || []).map((s: any) => {
+      const p = profileMap.get(s.id);
+      return {
+        ...s,
+        user_profile: p ? {
+          id: p.id,
+          role_id: p.role_id,
+          role_name: p.roles?.name || 'Viewer',
+          position: p.roles?.position || 0,
+          is_active: p.is_active,
+          totp_enabled: p.totp_enabled,
+        } : null,
+      };
+    });
+
+    return NextResponse.json(merged);
   } catch (err: any) {
     console.error("GET /api/staff error:", err);
     return NextResponse.json({ error: err.message || "Failed to fetch staff members" }, { status: 500 });
@@ -62,7 +84,8 @@ export async function POST(request: NextRequest) {
       designation,
       name,
       contact_no,
-      emailid
+      emailid,
+      role_id, // Optional custom role assignment on staff creation
     } = body;
 
     if (!name || typeof name !== "string" || name.trim() === "") {
@@ -93,6 +116,24 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      // Sync user profile if contact_no or name changed
+      if (contact_no) {
+        const tenDigit = contact_no.trim().replace(/[\s-]/g, '').slice(-10);
+        const updateFields: any = {
+          full_name: name.trim(),
+          circle: circle || null,
+          division: division || null,
+          sub_division: sub_division || null,
+          phone_number: tenDigit,
+        };
+        if (role_id) updateFields.role_id = role_id;
+
+        await supabase
+          .from("user_profiles")
+          .update(updateFields)
+          .eq("staff_id", id);
       }
 
       return NextResponse.json(data);
@@ -140,6 +181,9 @@ export async function PATCH(request: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+    // Reactivate login account if exists
+    await supabase.from("user_profiles").update({ is_active: true }).eq("staff_id", id);
+
     return NextResponse.json({ success: true, message: "Staff member restored successfully" });
   } catch (err: any) {
     console.error("PATCH /api/staff error:", err);
@@ -163,6 +207,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (permanent) {
+      await supabase.from("user_profiles").delete().eq("staff_id", id);
       const { error } = await supabase.from("staff_members").delete().eq("id", id);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     } else {
@@ -172,6 +217,9 @@ export async function DELETE(request: NextRequest) {
         .eq("id", id);
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      // Suspend login access while archived
+      await supabase.from("user_profiles").update({ is_active: false }).eq("staff_id", id);
     }
 
     return NextResponse.json({ success: true, message: "Staff member soft deleted successfully" });
