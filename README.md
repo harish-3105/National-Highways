@@ -25,13 +25,17 @@ The application unifies ground-truth departmental data across corridors, linear 
 |  - Embedded In-Page Relational Master Data Configuration Console                                  |
 +---------------------------------------------------------------------------------------------------+
 |                              DATABASE & PERSISTENCE FOUNDATION                                    |
-|  - 44 Migrations (0000-0042) | Native PostgreSQL Schema | Row-Level Security | Soft-Delete Pattern |
+|  - 45 Migrations (0000-0043) | Native PostgreSQL Schema | Row-Level Security | Discord RBAC & Audit  |
 +---------------------------------------------------------------------------------------------------+
 ```
 
 ### 🌟 Key Capabilities
 * **Next.js 16 + React 19 Full-Stack Architecture**: Server-side rendering, dynamic API route handlers, and static optimization powered by Turbopack.
 * **6 Core Production Modules + Universal Ingestion**: Ongoing Capital Works & Major Projects, Defect Liability Period (DLP) & 2D Spatial Geometry, Master Highways Catalog & Interactive Straight-Line Diagram (SLD), Legal Litigation & Court Proceedings, Legal Fee Bills & Voucher Management, Departmental Staff Directory, and Universal Ingestion.
+* **TOTP Two-Factor Authentication (RFC 6238 Standard)**: Seamless 10-digit mobile login with QR code onboarding, time-drift tolerance ($\pm 1$ step), and encrypted `nh_session` HTTP-only session cookies.
+* **Discord-Style Hierarchical RBAC**: Visual Role Studio with integer position stacking, anti-escalation security invariants ($P_{\text{target}} < P_{\text{actor}}$), and strict permission grant containment ($\text{Perms} \subseteq \text{ActorPerms}$).
+* **Symmetric PBAC Jurisdiction Scoping**: Atomic `jurisdiction:view_statewide` (read data-siloing) and `jurisdiction:edit_statewide` (write protection) enforcing division-level governance without code duplication.
+* **Immutable Google-Sheets-Style Audit Trail**: Tamper-proof non-repudiation ledger (`public.audit_logs`) tracking 100% of mutations with Red $\rightarrow$ Green field-level diffs, point-in-time snapshots, and Excel export at `/admin/audit`.
 * **2D Continuous Spatial Asset Geometry**: Micro-lane spatial offsets measured continuously from Road Centerline ($0.00\text{m}$), strictly mapping 1:1 to dedicated relational PostgreSQL columns.
 * **Stage-Gated Progressive Form Validation**: Multi-stage entry lifecycle across all forms where Tab 1 is the baseline required to save initial drafts, Tab $N+1$ is strictly gated until Tab $N$ validations pass, and saving from Tab $N$ validates only up to Tab $N$.
 * **Zero Workarounds & Real Relational Schema Integrity**: Zero JSON/JSONB packing of structured relational fields; 100% strongly-typed native PostgreSQL columns across all tables.
@@ -245,6 +249,45 @@ Automated data parsing pipeline designed to ingest legacy government spreadsheet
 
 ---
 
+## 🛡️ Identity, Discord-Style RBAC, PBAC Jurisdiction & Immutable Audit Architecture
+
+The platform incorporates a carrier-grade enterprise security and governance foundation built on **RFC 6238 TOTP Two-Factor Authentication**, **Discord-Style Hierarchical Role-Based Access Control (RBAC)**, **Policy-Based Access Control (PBAC) Jurisdiction Scoping**, and an **Immutable Google-Sheets-Style Audit Trail**.
+
+> 📖 **Full Specification**: For detailed schema designs, invariants, and implementation matrices, refer to [`AUTH_RBAC_AND_AUDIT_SPEC.md`](AUTH_RBAC_AND_AUDIT_SPEC.md).
+
+```
++---------------------------------------------------------------------------------------------------+
+|                                  SECURITY & GOVERNANCE FLOW                                       |
++---------------------------------------------------------------------------------------------------+
+|  1. Phone Identity (10-Digit) -> 2. RFC 6238 TOTP (SHA-256) -> 3. nh_session (Encrypted Cookie)    |
+|  4. Discord Position Stack (100 -> 0) -> 5. PBAC Jurisdiction Scope -> 6. Tamper-Proof Audit Log  |
++---------------------------------------------------------------------------------------------------+
+```
+
+### 1. Two-Factor Authentication (TOTP MFA)
+* **Mobile-First Passwordless Onboarding**: Officers enter their 10-digit phone number registered in the Department Staff Directory (`staff_members`).
+* **RFC 6238 TOTP Standard (`otpauth`)**: Pure TypeScript implementation supporting Google Authenticator, Microsoft Authenticator, and 2FAS with $\pm 1$ time-step clock-drift tolerance.
+* **Encrypted HTTP-Only Session (`nh_session`)**: 8-hour encrypted token containing officer metadata, jurisdiction scope, and active permission codes.
+
+### 2. Discord-Style Hierarchical Role Matrix (`RoleStudioModal.tsx`)
+* **Integer Position Hierarchy**:
+  $$\text{Super Admin (100)} > \text{Chief Engineer (80)} > \text{Superintending Engineer (60)} > \text{Divisional Engineer (40)} > \text{Viewer (0)}$$
+* **Target Position Invariant**: Administrators can only create, edit, delete, or assign roles positioned strictly below their own rank ($P_{\text{target}} < P_{\text{actor}}$).
+* **Anti-Escalation Containment**: Officers cannot grant permission codes they do not personally possess ($\text{GrantedPerms} \subseteq \text{ActorPerms}$).
+* **Decoupled Designation vs. Role**: Real-world job posts (SE, DE, AE) remain decoupled from platform permissions, preventing artificial UI fallbacks.
+
+### 3. Symmetric PBAC Jurisdiction Engine (`src/lib/auth/permissions.ts`)
+* **`jurisdiction:view_statewide`**: When unchecked, the server blind-silos read queries (`GET`) strictly to the officer's assigned division or circle (`LOWER(division) = LOWER(:userDivision)`).
+* **`jurisdiction:edit_statewide`**: When unchecked, write actions (`POST`, `PUT`, `PATCH`, `DELETE`) targeting records outside the officer's assigned division are rejected with `403 Forbidden`.
+
+### 4. Immutable Google-Sheets-Style Audit Trail (`/admin/audit`)
+* **Tamper-Proof Ledger (`public.audit_logs`)**: Automatically records every creation, modification, soft-deletion, restoration, lockdown toggle, and role promotion across all 8 modules.
+* **Granular Red $\rightarrow$ Green Field-Level Diffs**: Computes exact before/after diffs highlighting altered fields with Red (`-`) and Green (`+`) badges.
+* **Statewide Audit Console & Excel Export**: Real-time multi-filter log viewer with 1-click styled `.xlsx` audit report generation.
+* **Emergency Master Lockdown (`/api/admin/lockdown`)**: Super-Admin trigger to immediately suspend all platform mutations statewide during emergency audits or maintenance.
+
+---
+
 ## 🧮 Core Mathematical & Business Logic Formulas
 
 ### 1. Dynamic Project Delay Gap Engine (Time Overrun)
@@ -405,6 +448,7 @@ Located in `supabase/migrations/`:
 * `0040_add_remarks_column_fee_bills.sql` $\rightarrow$ Added `remarks TEXT` column to `public.fee_bills`.
 * `0041_legal_cases_court_and_compliance_enhancements.sql` $\rightarrow$ Added court name custom fields and compliance completion dates.
 * `0042_drop_ced_complaint_sent_date.sql` $\rightarrow$ Dropped deprecated complaint date column from `legal_cases`.
+* `0043_master_auth_rbac_and_audit.sql` $\rightarrow$ Master Identity, Discord-Style Hierarchical RBAC (`roles`, `permissions`, `role_permissions`, `user_profiles`), 50+ Permissions Catalog, PBAC Jurisdiction Scoping, Emergency Lockdown, and Immutable Google-Sheets Audit Trail (`audit_logs`).
 
 ---
 
