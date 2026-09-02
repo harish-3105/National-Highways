@@ -91,9 +91,13 @@ export const StaffTable: React.FC<StaffTableProps> = ({
 
                 {/* Designation */}
                 <td className="py-3.5 px-4">
-                  <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50 inline-block">
-                    {member.designation || "Staff"}
-                  </span>
+                  {member.designation ? (
+                    <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50 inline-block">
+                      {member.designation}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400 font-normal text-xs">—</span>
+                  )}
                 </td>
 
                 {/* Office & Circle */}

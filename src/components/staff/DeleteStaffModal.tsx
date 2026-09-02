@@ -55,7 +55,7 @@ export const DeleteStaffModal: React.FC<DeleteStaffModalProps> = ({
             Archive Staff Record
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-            Are you sure you want to archive <span className="font-semibold text-slate-800 dark:text-slate-200">{staff.name}</span> ({staff.designation || "Staff"})?
+            Are you sure you want to archive <span className="font-semibold text-slate-800 dark:text-slate-200">{staff.name}</span>{staff.designation ? ` (${staff.designation})` : ''}?
           </p>
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-300 text-left mb-4">
             ℹ️ <span className="font-semibold">Soft Delete Notice:</span> This record will not be permanently erased. It will be archived and can be viewed or restored anytime using the <span className="font-semibold text-blue-600 dark:text-blue-400">Show Archived</span> filter.
