@@ -57,6 +57,7 @@ export default function HighwaysPage() {
     circles: [],
     divisions: [],
     configurations: [],
+    level2LaneStatuses: [],
     circleDivisionMap: {},
   });
 

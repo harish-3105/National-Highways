@@ -75,12 +75,21 @@ VALUES
   ('division', 'Villupuram', 'circle', 'Villupuram'),
   ('division', 'Thanjavur', 'circle', 'Villupuram'),
 
-  -- Carriageway Configurations
+  -- Level 1 Carriageway Configurations
   ('configuration', '2 Lane', NULL, NULL),
   ('configuration', '2 Lane with Paved Shoulder', NULL, NULL),
   ('configuration', '4 Lane', NULL, NULL),
   ('configuration', '4 Lane with Paved Shoulder', NULL, NULL),
   ('configuration', '6 Lane', NULL, NULL),
   ('configuration', '8 Lane', NULL, NULL),
-  ('configuration', 'Expressway / Corridor', NULL, NULL)
+  ('configuration', 'Expressway / Corridor', NULL, NULL),
+
+  -- Level 2 Sub-Chainage Lane Statuses (Exact SLD-Compliant Tokens)
+  ('level2_lane_status', '2-Lane', NULL, NULL),
+  ('level2_lane_status', '2L+PS', NULL, NULL),
+  ('level2_lane_status', '4-Lane', NULL, NULL),
+  ('level2_lane_status', '4L+PS', NULL, NULL),
+  ('level2_lane_status', '6-Lane', NULL, NULL),
+  ('level2_lane_status', '<2-Lane', NULL, NULL),
+  ('level2_lane_status', 'Primary', NULL, NULL)
 ON CONFLICT DO NOTHING;

@@ -26,7 +26,7 @@ interface HighwayMasterDataModalProps {
   onRefresh: () => void;
 }
 
-type TabType = 'circle' | 'division' | 'configuration';
+type TabType = 'circle' | 'division' | 'configuration' | 'level2_lane_status';
 
 interface CategoryTab {
   id: TabType;
@@ -50,9 +50,15 @@ const CATEGORY_TABS: CategoryTab[] = [
   },
   {
     id: 'configuration',
-    label: 'Configurations & Lane Status',
-    description: 'Level 1 corridor configurations & Level 2 sub-stretch lane statuses',
+    label: 'Corridor Configurations',
+    description: 'Level 1 corridor configurations (2-Lane, 4-Lane, 6-Lane, etc.)',
     icon: Route,
+  },
+  {
+    id: 'level2_lane_status',
+    label: 'Level 2 Lane Statuses',
+    description: 'Sub-chainage micro-stretch statuses (2-Lane, 2L+PS, 4-Lane, etc.)',
+    icon: Layers,
   },
 ];
 
@@ -255,7 +261,9 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
                   ? masterData.circles
                   : tab.id === 'division'
                   ? masterData.divisions
-                  : masterData.configurations
+                  : tab.id === 'configuration'
+                  ? masterData.configurations
+                  : masterData.level2LaneStatuses
               )?.length || 0;
 
               const isActive = activeTab === tab.id;

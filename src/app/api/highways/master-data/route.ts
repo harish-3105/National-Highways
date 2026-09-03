@@ -16,7 +16,7 @@ function getSupabaseClient() {
 
 export interface HighwayMasterConfigItem {
   id: string;
-  category: "circle" | "division" | "configuration";
+  category: "circle" | "division" | "configuration" | "level2_lane_status";
   value: string;
   parent_category?: string | null;
   parent_value?: string | null;
@@ -30,6 +30,7 @@ export interface HighwayMasterData {
   circles: string[];
   divisions: string[];
   configurations: string[];
+  level2LaneStatuses: string[];
   circleDivisionMap: Record<string, string[]>;
 }
 
@@ -38,6 +39,7 @@ function groupMasterData(items: HighwayMasterConfigItem[]): HighwayMasterData {
   const circles = Array.from(new Set(activeItems.filter((i) => i.category === "circle").map((i) => i.value.trim()))).sort();
   const divisions = Array.from(new Set(activeItems.filter((i) => i.category === "division").map((i) => i.value.trim()))).sort();
   const configurations = Array.from(new Set(activeItems.filter((i) => i.category === "configuration").map((i) => i.value.trim()))).sort();
+  const level2LaneStatuses = Array.from(new Set(activeItems.filter((i) => i.category === "level2_lane_status").map((i) => i.value.trim()))).sort();
 
   const circleDivisionMap: Record<string, string[]> = {};
   circles.forEach((c) => {
@@ -67,6 +69,7 @@ function groupMasterData(items: HighwayMasterConfigItem[]): HighwayMasterData {
     circles,
     divisions,
     configurations,
+    level2LaneStatuses,
     circleDivisionMap,
   };
 }
@@ -111,7 +114,7 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanCategory = category.trim().toLowerCase();
-    const allowed = ["circle", "division", "configuration"];
+    const allowed = ["circle", "division", "configuration", "level2_lane_status"];
     if (!allowed.includes(cleanCategory)) {
       return NextResponse.json(
         { error: `Category must be one of: ${allowed.join(", ")}` },

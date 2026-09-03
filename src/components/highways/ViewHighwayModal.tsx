@@ -346,7 +346,11 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
         <div>
           <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Lane Status</label>
           <SearchableSelect
-            options={masterData?.configurations || []}
+            options={
+              masterData?.level2LaneStatuses && masterData.level2LaneStatuses.length > 0
+                ? masterData.level2LaneStatuses
+                : masterData?.configurations || []
+            }
             value={subLaneConfig}
             onChange={setSubLaneConfig}
             placeholder="Select Lane Config..."
