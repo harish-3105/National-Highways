@@ -11,6 +11,7 @@ import {
   Plus,
   Download,
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth/useAuth';
 
 export interface ModulePageHeaderProps {
   // Title / Identity
@@ -33,6 +34,7 @@ export interface ModulePageHeaderProps {
     activeLabel?: string;
     inactiveLabel?: string;
     disabled?: boolean;
+    requiredPermission?: string;
   };
 
   // Row 1, Col 2: Master Data Config
@@ -40,6 +42,7 @@ export interface ModulePageHeaderProps {
     onClick: () => void;
     label?: string;
     disabled?: boolean;
+    disabledReason?: string;
     title?: string;
   };
 
@@ -89,6 +92,7 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
   extraContent,
   className = '',
 }) => {
+  const auth = useAuth();
   const PrimaryIcon = primaryAction?.icon || Plus;
 
   const ACTION_BTN_BASE =
@@ -191,26 +195,28 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
           {archiveToggle ? (
             <button
               type="button"
-              onClick={archiveToggle.onToggle}
-              disabled={archiveToggle.disabled}
+              onClick={auth.canViewArchived ? archiveToggle.onToggle : undefined}
+              disabled={archiveToggle.disabled || !auth.canViewArchived}
               title={
-                archiveToggle.showArchived
+                !auth.canViewArchived
+                  ? "Requires 'system:view_archived' permission to access archived records"
+                  : archiveToggle.showArchived
                   ? 'Hide Deleted / Archived Records'
                   : 'Show Deleted / Archived Records'
               }
               className={`${ACTION_BTN_BASE} border ${
-                archiveToggle.showArchived
+                archiveToggle.showArchived && auth.canViewArchived
                   ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900'
                   : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              } disabled:opacity-40 disabled:cursor-not-allowed`}
             >
-              {archiveToggle.showArchived ? (
+              {archiveToggle.showArchived && auth.canViewArchived ? (
                 <EyeOff className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
               ) : (
                 <Archive className="w-3.5 h-3.5 shrink-0 text-slate-500 dark:text-slate-400" />
               )}
               <span className="truncate">
-                {archiveToggle.showArchived
+                {archiveToggle.showArchived && auth.canViewArchived
                   ? archiveToggle.activeLabel || 'Hide Archived'
                   : archiveToggle.inactiveLabel ||
                     (archiveToggle.archivedCount !== undefined

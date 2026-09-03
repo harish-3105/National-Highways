@@ -179,3 +179,15 @@ export function canOverrideFrozen(user: SessionUser | null): boolean {
     user.permissions.includes('*:*')
   );
 }
+
+/**
+ * Checks if the user has permission to view archived / soft-deleted records
+ */
+export function canViewArchived(user: SessionUser | null): boolean {
+  if (!user) return false;
+  if (user.isSuperAdmin) return true;
+  return (
+    hasPermission(user, 'system:view_archived') ||
+    user.permissions.includes('*:*')
+  );
+}

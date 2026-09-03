@@ -83,7 +83,9 @@ export async function GET(request: Request) {
     const search = searchParams.get('search')?.trim().toLowerCase() || '';
     const configFilter = searchParams.get('config')?.trim() || '';
     const sortBy = searchParams.get('sortBy') || 'length_desc';
-    const includeDeleted = searchParams.get('includeDeleted') === 'true';
+    const session = await getSession();
+    const rawIncludeDeleted = searchParams.get('includeDeleted') === 'true';
+    const includeDeleted = rawIncludeDeleted && canPerformAction(session, 'system:view_archived').allowed;
 
     let allCorridors: HighwayCorridor[] = [];
 

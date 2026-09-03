@@ -53,7 +53,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code')?.trim().toUpperCase() || searchParams.get('highwayCode')?.trim().toUpperCase() || '';
     const typeParam = searchParams.get('type')?.trim().toUpperCase(); // 'MACRO_PCU' | 'MICRO_LANE'
-    const includeDeleted = searchParams.get('includeDeleted') === 'true';
+    const session = await getSession();
+    const rawIncludeDeleted = searchParams.get('includeDeleted') === 'true';
+    const includeDeleted = rawIncludeDeleted && canPerformAction(session, 'system:view_archived').allowed;
 
     if (!code) {
       return NextResponse.json(

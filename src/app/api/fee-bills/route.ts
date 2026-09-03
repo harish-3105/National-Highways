@@ -41,7 +41,9 @@ export async function GET(request: Request) {
     const division = searchParams.get('division')?.trim() || '';
     const paymentStatus = searchParams.get('paymentStatus')?.trim() || '';
     const pendencyStatus = searchParams.get('pendencyStatus')?.trim() || '';
-    const includeDeleted = searchParams.get('includeDeleted') === 'true';
+    const session = await getSession();
+    const rawIncludeDeleted = searchParams.get('includeDeleted') === 'true';
+    const includeDeleted = rawIncludeDeleted && canPerformAction(session, 'system:view_archived').allowed;
 
     if (supabase) {
       const { data, error } = await supabase

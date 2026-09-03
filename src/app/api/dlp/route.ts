@@ -107,7 +107,9 @@ export async function GET(req: NextRequest) {
     const division = searchParams.get('division');
     const search = searchParams.get('search');
     const statusFilter = searchParams.get('status');
-    const includeDeleted = searchParams.get('includeDeleted') === 'true';
+    const session = await getSession();
+    const rawIncludeDeleted = searchParams.get('includeDeleted') === 'true';
+    const includeDeleted = rawIncludeDeleted && canPerformAction(session, 'system:view_archived').allowed;
 
     const supabase = await createClient();
     if (!supabase) {
@@ -120,7 +122,6 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false });
 
     // Enforce Row-Level PBAC Data Siloing if user lacks statewide view permission
-    const session = await getSession();
     if (session && !session.isSuperAdmin) {
       const canViewStatewide =
         session.permissions.includes('jurisdiction:view_statewide') ||

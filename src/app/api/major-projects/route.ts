@@ -140,7 +140,7 @@ export async function GET(request: Request) {
     const divisionParam = searchParams.get('division')?.trim();
     const stageParam = searchParams.get('stage')?.trim();
     const searchParam = searchParams.get('search')?.trim().toLowerCase();
-    const includeDeleted = searchParams.get('includeDeleted') === 'true';
+    const rawIncludeDeleted = searchParams.get('includeDeleted') === 'true';
     const completionFilter = searchParams.get('completionFilter')?.trim(); // 'ACTIVE_ONLY', 'COMPLETED_ONLY', 'ALL'
 
     if (!supabase) {
@@ -151,10 +151,12 @@ export async function GET(request: Request) {
       });
     }
 
+    const session = await getSession();
+    const includeDeleted = rawIncludeDeleted && canPerformAction(session, 'system:view_archived').allowed;
+
     let query = supabase.from('major_projects_50cr').select('*').order('s_no', { ascending: true });
 
     // Enforce Row-Level PBAC Data Siloing if user lacks statewide view permission
-    const session = await getSession();
     if (session && !session.isSuperAdmin) {
       const canViewStatewide =
         session.permissions.includes('jurisdiction:view_statewide') ||

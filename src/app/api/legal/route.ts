@@ -135,7 +135,10 @@ export async function GET(req: NextRequest) {
     const classification = searchParams.get('classification');
     const status = searchParams.get('status');
     const search = searchParams.get('search');
-    const includeDeleted = searchParams.get('includeDeleted') === 'true';
+    const rawIncludeDeleted = searchParams.get('includeDeleted') === 'true';
+
+    const session = await getSession();
+    const includeDeleted = rawIncludeDeleted && canPerformAction(session, 'system:view_archived').allowed;
 
     const supabase = await createClient();
     let casesList: LegalCaseData[] = [];
@@ -147,7 +150,6 @@ export async function GET(req: NextRequest) {
         .order('created_at', { ascending: false });
 
       // Enforce Row-Level PBAC Data Siloing if user lacks statewide view permission
-      const session = await getSession();
       if (session && !session.isSuperAdmin) {
         const canViewStatewide =
           session.permissions.includes('jurisdiction:view_statewide') ||

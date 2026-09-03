@@ -23,7 +23,9 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const includeDeleted = searchParams.get("include_deleted") === "true";
+    const session = await getSession();
+    const rawIncludeDeleted = searchParams.get("include_deleted") === "true";
+    const includeDeleted = rawIncludeDeleted && canPerformAction(session, "system:view_archived").allowed;
 
     let query = supabase.from("staff_members").select("*").order("created_at", { ascending: false });
 

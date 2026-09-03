@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { HighwayMasterData } from '@/app/api/highways/master-data/route';
+import { useAuth } from '@/lib/auth/useAuth';
 
 interface ViewHighwayModalProps {
   highway: HighwayCorridor | null;
@@ -42,6 +43,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
   onEdit,
   masterData,
 }) => {
+  const auth = useAuth();
   const [subChainages, setSubChainages] = useState<SubChainageStretch[]>([]);
   const [loadingSub, setLoadingSub] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'MACRO_PCU' | 'MICRO_LANE'>('MACRO_PCU');
@@ -688,15 +690,25 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                 {/* Archive Toggle Button */}
                 <button
                   type="button"
-                  onClick={() => setShowArchived(!showArchived)}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer border ${
-                    showArchived
-                      ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-800'
-                      : 'bg-slate-200/70 dark:bg-slate-700/70 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600'
+                  onClick={auth.canViewArchived ? () => setShowArchived(!showArchived) : undefined}
+                  disabled={!auth.canViewArchived}
+                  title={
+                    !auth.canViewArchived
+                      ? "Requires 'system:view_archived' permission"
+                      : showArchived
+                      ? 'Hide Deleted / Archived Records'
+                      : 'Show Deleted / Archived Records'
+                  }
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors border ${
+                    !auth.canViewArchived
+                      ? 'opacity-40 cursor-not-allowed bg-slate-200/50 dark:bg-slate-800/50 text-slate-500 border-slate-300 dark:border-slate-700'
+                      : showArchived
+                      ? 'cursor-pointer bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-800'
+                      : 'cursor-pointer bg-slate-200/70 dark:bg-slate-700/70 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600'
                   }`}
                 >
                   <Archive className="w-3.5 h-3.5" />
-                  <span>{showArchived ? 'Hide Archived' : 'Show Archived'}</span>
+                  <span>{showArchived && auth.canViewArchived ? 'Hide Archived' : 'Show Archived'}</span>
                 </button>
 
                 <span className="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 text-xs font-bold rounded-lg border border-emerald-300 dark:border-emerald-800">

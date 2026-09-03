@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { SessionUser } from './session';
-import { hasPermission, canBypassValidation, canOverrideFrozen } from './permissions';
+import { hasPermission, canBypassValidation, canOverrideFrozen, canViewArchived } from './permissions';
 
 export interface UseAuthReturn {
   user: SessionUser | null;
@@ -11,6 +11,7 @@ export interface UseAuthReturn {
   hasPermission: (permCode: string) => boolean;
   canBypassValidation: boolean;
   canOverrideFrozen: boolean;
+  canViewArchived: boolean;
   refreshSession: () => Promise<void>;
 }
 
@@ -45,6 +46,7 @@ export function useAuth(): UseAuthReturn {
     hasPermission: (permCode: string) => hasPermission(user, permCode),
     canBypassValidation: canBypassValidation(user),
     canOverrideFrozen: canOverrideFrozen(user),
+    canViewArchived: canViewArchived(user),
     refreshSession: fetchSession,
   };
 }
