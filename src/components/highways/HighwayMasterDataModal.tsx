@@ -79,27 +79,11 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentCategoryItems: { id: string; category: TabType; value: string }[] = (
+  const displayItems: { id: string; category: TabType; value: string }[] = (
     masterData.rawItems || []
   )
     .filter((item) => item.category === activeTab)
     .map((item) => ({ id: item.id || `raw-${item.value}`, category: item.category, value: item.value }));
-
-  const fallbackArray: string[] =
-    activeTab === 'circle'
-      ? masterData.circles || []
-      : activeTab === 'division'
-      ? masterData.divisions || []
-      : masterData.configurations || [];
-
-  const displayItems: { id: string; category: TabType; value: string }[] =
-    currentCategoryItems.length > 0
-      ? currentCategoryItems
-      : fallbackArray.map((val: string, idx: number) => ({
-          id: `db-${idx}`,
-          category: activeTab,
-          value: val,
-        }));
 
   const filteredItems = displayItems.filter((item) =>
     item.value.toLowerCase().includes(searchTerm.toLowerCase())

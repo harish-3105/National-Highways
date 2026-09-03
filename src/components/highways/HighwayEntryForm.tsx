@@ -90,16 +90,6 @@ function parseChainageValue(val: string): number | null {
   return isNaN(parsed) ? null : parsed;
 }
 
-const DEFAULT_CONFIG_OPTIONS = [
-  '2-Lane',
-  '2-Lane with Paved Shoulder',
-  '4-Lane',
-  '6-Lane',
-  'Intermediate Lane',
-  'Single Lane',
-  'Mixed Configuration',
-];
-
 export const HighwayEntryForm: React.FC<HighwayEntryFormProps> = ({
   initialData,
   masterData,
@@ -189,9 +179,7 @@ export const HighwayEntryForm: React.FC<HighwayEntryFormProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const configOptions = masterData?.configurations && masterData.configurations.length > 0
-    ? masterData.configurations
-    : DEFAULT_CONFIG_OPTIONS;
+  const configOptions = masterData?.configurations || [];
 
   // Auto calculate length from chainages
   const handleFromChainageChange = (val: string) => {

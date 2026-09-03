@@ -54,9 +54,9 @@ export default function HighwaysPage() {
   // Master Data Configuration State
   const [masterData, setMasterData] = useState<HighwayMasterData>({
     rawItems: [],
-    circles: ['Chennai', 'Salem', 'Madurai', 'Coimbatore', 'Tirunelveli', 'Villupuram'],
-    divisions: ['Salem', 'Madurai', 'Chennai', 'Dharapuram', 'Tirunelveli', 'Villupuram', 'Thanjavur'],
-    configurations: ['2 Lane', '2 Lane with Paved Shoulder', '4 Lane', '4 Lane with Paved Shoulder', '6 Lane', '8 Lane', 'Expressway / Corridor'],
+    circles: [],
+    divisions: [],
+    configurations: [],
   });
 
   const fetchMasterData = async () => {

@@ -32,43 +32,14 @@ export interface HighwayMasterData {
   configurations: string[];
 }
 
-const DEFAULT_CIRCLES = ["Chennai", "Salem", "Madurai", "Coimbatore", "Tirunelveli", "Villupuram"];
-const DEFAULT_DIVISIONS = [
-  "Salem",
-  "Madurai",
-  "Chennai",
-  "Dharapuram",
-  "Tirunelveli",
-  "Villupuram",
-  "Thanjavur",
-  "Chengalpattu",
-  "Tiruvallur",
-  "Namakkal",
-  "Dharmapuri",
-  "Dindigul",
-  "Theni",
-];
-const DEFAULT_CONFIGURATIONS = [
-  "2 Lane",
-  "2 Lane with Paved Shoulder",
-  "4 Lane",
-  "4 Lane with Paved Shoulder",
-  "6 Lane",
-  "8 Lane",
-  "Expressway / Corridor",
-];
-
 function groupMasterData(items: HighwayMasterConfigItem[]): HighwayMasterData {
-  const circlesFromDb = items.filter((i) => i.category === "circle").map((i) => i.value);
-  const divisionsFromDb = items.filter((i) => i.category === "division").map((i) => i.value);
-  const configsFromDb = items.filter((i) => i.category === "configuration").map((i) => i.value);
-
-  const circles = Array.from(new Set([...DEFAULT_CIRCLES, ...circlesFromDb])).sort();
-  const divisions = Array.from(new Set([...DEFAULT_DIVISIONS, ...divisionsFromDb])).sort();
-  const configurations = Array.from(new Set([...DEFAULT_CONFIGURATIONS, ...configsFromDb])).sort();
+  const activeItems = items.filter((i) => !i.status || i.status === "ACTIVE");
+  const circles = Array.from(new Set(activeItems.filter((i) => i.category === "circle").map((i) => i.value))).sort();
+  const divisions = Array.from(new Set(activeItems.filter((i) => i.category === "division").map((i) => i.value))).sort();
+  const configurations = Array.from(new Set(activeItems.filter((i) => i.category === "configuration").map((i) => i.value))).sort();
 
   return {
-    rawItems: items,
+    rawItems: activeItems,
     circles,
     divisions,
     configurations,
