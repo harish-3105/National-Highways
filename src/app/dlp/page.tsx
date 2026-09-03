@@ -8,6 +8,7 @@ import { DlpMasterDataModal } from '@/components/dlp/DlpMasterDataModal';
 import DeleteDlpContractModal from '@/components/dlp/DeleteDlpContractModal';
 import ViewDlpContractModal from '@/components/dlp/ViewDlpContractModal';
 import { getCircleForDivision } from '@/lib/dlp/masterData';
+import { compute2dWorkBreakdown } from '@/lib/dlp/spatialBreakdown';
 import { formatDateIndian } from '@/lib/formatters';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { ModulePageHeader } from '@/components/common/ModulePageHeader';
@@ -1042,52 +1043,23 @@ export default function DlpPage() {
                               <td className="py-4 px-6">
                                 {(() => {
                                   const rawStretches = item.all_work_stretches || item.work_stretches || [];
-                                  const catSums: Record<DlpWorkCategory, number> = {
-                                    DLP: 0,
-                                    CONSTRUCTION: 0,
-                                    STMC: 0,
-                                    PBMC: 0,
-                                    NO_DLP: 0,
-                                  };
-                                  rawStretches.forEach((s) => {
-                                    if (catSums[s.category] !== undefined) {
-                                      catSums[s.category] += Number(s.length_km || 0);
-                                    }
-                                  });
-                                  const activeSum = catSums.DLP + catSums.CONSTRUCTION + catSums.STMC + catSums.PBMC;
                                   const cLen = Number(item.total_length_km || 0);
-                                  const unworkedNoDlp = Math.max(0, Math.round((cLen - activeSum) * 1000) / 1000);
+                                  const badges = compute2dWorkBreakdown(cLen, rawStretches);
+
+                                  if (badges.length === 0) {
+                                    return <span className="text-slate-400 text-[10px] italic">No active works</span>;
+                                  }
 
                                   return (
                                     <div className="flex flex-wrap gap-1 max-w-[280px]">
-                                      {catSums.DLP > 0 && (
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${CATEGORY_BADGES.DLP.bg} ${CATEGORY_BADGES.DLP.text}`}>
-                                          DLP: {catSums.DLP.toFixed(2)}km
+                                      {badges.map((b) => (
+                                        <span
+                                          key={b.id}
+                                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${b.bg} ${b.text}`}
+                                        >
+                                          {b.label}
                                         </span>
-                                      )}
-                                      {catSums.CONSTRUCTION > 0 && (
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${CATEGORY_BADGES.CONSTRUCTION.bg} ${CATEGORY_BADGES.CONSTRUCTION.text}`}>
-                                          Construction: {catSums.CONSTRUCTION.toFixed(2)}km
-                                        </span>
-                                      )}
-                                      {catSums.STMC > 0 && (
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${CATEGORY_BADGES.STMC.bg} ${CATEGORY_BADGES.STMC.text}`}>
-                                          STMC: {catSums.STMC.toFixed(2)}km
-                                        </span>
-                                      )}
-                                      {catSums.PBMC > 0 && (
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${CATEGORY_BADGES.PBMC.bg} ${CATEGORY_BADGES.PBMC.text}`}>
-                                          PBMC: {catSums.PBMC.toFixed(2)}km
-                                        </span>
-                                      )}
-                                      {unworkedNoDlp > 0 && (
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${CATEGORY_BADGES.NO_DLP.bg} ${CATEGORY_BADGES.NO_DLP.text}`}>
-                                          No DLP: {unworkedNoDlp.toFixed(2)}km
-                                        </span>
-                                      )}
-                                      {activeSum === 0 && unworkedNoDlp === 0 && (
-                                        <span className="text-slate-400 text-[10px] italic">No active works</span>
-                                      )}
+                                      ))}
                                     </div>
                                   );
                                 })()}

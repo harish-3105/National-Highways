@@ -4,6 +4,7 @@ import React from 'react';
 import { DlpCorridor, DlpWorkStretch, DlpWorkCategory } from '@/types/dlp';
 import { X, ShieldCheck, CheckCircle2, Clock, AlertTriangle, Layers, MapPin, Calendar } from 'lucide-react';
 import { formatDateIndian } from '@/lib/formatters';
+import { compute2dWorkBreakdown } from '@/lib/dlp/spatialBreakdown';
 
 interface ViewDlpContractModalProps {
   corridor: DlpCorridor | null;
@@ -99,24 +100,41 @@ export const ViewDlpContractModal: React.FC<ViewDlpContractModalProps> = ({ corr
         <div className="p-6 md:p-8 overflow-y-auto flex-1 text-xs text-slate-800 dark:text-slate-200">
           <div className="max-w-7xl mx-auto w-full space-y-6">
             {/* Corridor Identity Card */}
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <strong className="text-slate-500 block">Highway Identifier:</strong>
-              <span className="font-extrabold text-blue-600 dark:text-blue-400 text-sm">
-                {corridor.highway_code}
-              </span>
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <strong className="text-slate-500 block">Highway Identifier:</strong>
+                <span className="font-extrabold text-blue-600 dark:text-blue-400 text-sm">
+                  {corridor.highway_code}
+                </span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Division Jurisdiction:</strong>
+                <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                  {corridor.division_name} Division
+                </span>
+              </div>
+              <div>
+                <strong className="text-slate-500 block">Corridor Chainage Limits:</strong>
+                <span className="font-bold font-mono text-slate-900 dark:text-slate-100">
+                  Km {corridor.from_km} &rarr; Km {corridor.to_km} ({corridor.total_length_km} km)
+                </span>
+              </div>
             </div>
-            <div>
-              <strong className="text-slate-500 block">Division Jurisdiction:</strong>
-              <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">
-                {corridor.division_name} Division
+
+            {/* 2D Spatial Work Breakdown Badges */}
+            <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/80 flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">
+                2D Spatial Breakdown:
               </span>
-            </div>
-            <div>
-              <strong className="text-slate-500 block">Corridor Chainage Limits:</strong>
-              <span className="font-bold font-mono text-slate-900 dark:text-slate-100">
-                Km {corridor.from_km} &rarr; Km {corridor.to_km} ({corridor.total_length_km} km)
-              </span>
+              {compute2dWorkBreakdown(Number(corridor.total_length_km || 0), stretches).map((b) => (
+                <span
+                  key={b.id}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${b.bg} ${b.text}`}
+                >
+                  {b.label}
+                </span>
+              ))}
             </div>
           </div>
 
