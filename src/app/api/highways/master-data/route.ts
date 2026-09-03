@@ -18,7 +18,11 @@ export interface HighwayMasterConfigItem {
   id: string;
   category: "circle" | "division" | "configuration";
   value: string;
+  parent_category?: string | null;
+  parent_value?: string | null;
+  status?: string;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface HighwayMasterData {
@@ -104,7 +108,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
     }
 
-    const { category, value } = await request.json();
+    const { category, value, parent_category, parent_value } = await request.json();
 
     if (!category || !value || typeof value !== "string" || value.trim() === "") {
       return NextResponse.json({ error: "Category and value are required" }, { status: 400 });
@@ -123,7 +127,15 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from("highway_master_config")
-      .insert([{ category: cleanCategory, value: cleanValue }])
+      .insert([
+        {
+          category: cleanCategory,
+          value: cleanValue,
+          parent_category: parent_category || null,
+          parent_value: parent_value || null,
+          status: "ACTIVE",
+        },
+      ])
       .select()
       .single();
 
