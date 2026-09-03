@@ -57,6 +57,7 @@ export default function HighwaysPage() {
     circles: [],
     divisions: [],
     configurations: [],
+    circleDivisionMap: {},
   });
 
   const fetchMasterData = async () => {

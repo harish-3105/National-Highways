@@ -30,19 +30,44 @@ export interface HighwayMasterData {
   circles: string[];
   divisions: string[];
   configurations: string[];
+  circleDivisionMap: Record<string, string[]>;
 }
 
 function groupMasterData(items: HighwayMasterConfigItem[]): HighwayMasterData {
   const activeItems = items.filter((i) => !i.status || i.status === "ACTIVE");
-  const circles = Array.from(new Set(activeItems.filter((i) => i.category === "circle").map((i) => i.value))).sort();
-  const divisions = Array.from(new Set(activeItems.filter((i) => i.category === "division").map((i) => i.value))).sort();
-  const configurations = Array.from(new Set(activeItems.filter((i) => i.category === "configuration").map((i) => i.value))).sort();
+  const circles = Array.from(new Set(activeItems.filter((i) => i.category === "circle").map((i) => i.value.trim()))).sort();
+  const divisions = Array.from(new Set(activeItems.filter((i) => i.category === "division").map((i) => i.value.trim()))).sort();
+  const configurations = Array.from(new Set(activeItems.filter((i) => i.category === "configuration").map((i) => i.value.trim()))).sort();
+
+  const circleDivisionMap: Record<string, string[]> = {};
+  circles.forEach((c) => {
+    circleDivisionMap[c] = [];
+  });
+
+  activeItems
+    .filter((i) => i.category === "division")
+    .forEach((item) => {
+      const parentCircle = item.parent_value?.trim();
+      if (parentCircle) {
+        if (!circleDivisionMap[parentCircle]) {
+          circleDivisionMap[parentCircle] = [];
+        }
+        if (!circleDivisionMap[parentCircle].includes(item.value.trim())) {
+          circleDivisionMap[parentCircle].push(item.value.trim());
+        }
+      }
+    });
+
+  Object.keys(circleDivisionMap).forEach((circleKey) => {
+    circleDivisionMap[circleKey].sort((a, b) => a.localeCompare(b));
+  });
 
   return {
     rawItems: activeItems,
     circles,
     divisions,
     configurations,
+    circleDivisionMap,
   };
 }
 
@@ -134,7 +159,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
     }
 
-    const { id, category, oldValue, newValue } = await request.json();
+    const { id, category, oldValue, newValue, parent_value, parent_category } = await request.json();
 
     if (!newValue || typeof newValue !== "string" || newValue.trim() === "") {
       return NextResponse.json({ error: "New option value is required" }, { status: 400 });
@@ -143,9 +168,16 @@ export async function PUT(request: NextRequest) {
     const cleanNewValue = newValue.trim();
 
     if (id) {
+      const updatePayload: Record<string, unknown> = {
+        value: cleanNewValue,
+        updated_at: new Date().toISOString(),
+      };
+      if (parent_value !== undefined) updatePayload.parent_value = parent_value?.trim() || null;
+      if (parent_category !== undefined) updatePayload.parent_category = parent_category?.trim() || null;
+
       const { data, error } = await supabase
         .from("highway_master_config")
-        .update({ value: cleanNewValue })
+        .update(updatePayload)
         .eq("id", id)
         .select()
         .single();

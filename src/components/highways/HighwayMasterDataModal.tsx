@@ -65,6 +65,7 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('circle');
   const [newValue, setNewValue] = useState('');
+  const [newParentCircle, setNewParentCircle] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -73,27 +74,39 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
   // Inline editing state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
+  const [editingParentCircle, setEditingParentCircle] = useState<string>('');
 
   // Delete confirmation state
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ id?: string; value: string } | null>(null);
 
   if (!isOpen) return null;
 
-  const displayItems: { id: string; category: TabType; value: string }[] = (
-    masterData.rawItems || []
-  )
-    .filter((item) => item.category === activeTab)
-    .map((item) => ({ id: item.id || `raw-${item.value}`, category: item.category, value: item.value }));
+  const displayItems = (masterData.rawItems || [])
+    .filter((item) => item.category === activeTab && item.status !== 'DELETED')
+    .map((item) => ({
+      id: item.id || `raw-${item.value}`,
+      category: item.category,
+      value: item.value,
+      parent_category: item.parent_category,
+      parent_value: item.parent_value,
+    }));
 
-  const filteredItems = displayItems.filter((item) =>
-    item.value.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredItems = displayItems.filter((item) => {
+    const matchVal = (item.value || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchParent = (item.parent_value || '').toLowerCase().includes(searchTerm.toLowerCase());
+    return matchVal || matchParent;
+  });
 
   const activeTabMeta = CATEGORY_TABS.find((t) => t.id === activeTab);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newValue.trim()) return;
+
+    if (activeTab === 'division' && !newParentCircle.trim()) {
+      setErrorMsg('Please select a Parent Circle for the new Division.');
+      return;
+    }
 
     setLoading(true);
     setErrorMsg(null);
@@ -106,6 +119,8 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
         body: JSON.stringify({
           category: activeTab,
           value: newValue.trim(),
+          parent_category: activeTab === 'division' ? 'circle' : undefined,
+          parent_value: activeTab === 'division' ? newParentCircle.trim() : undefined,
         }),
       });
 
@@ -115,6 +130,7 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
       }
 
       setNewValue('');
+      setNewParentCircle('');
       setSuccessMsg(`Added "${newValue.trim()}" to ${activeTabMeta?.label}.`);
       onRefresh();
     } catch (err: unknown) {
@@ -126,7 +142,7 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
   };
 
   const handleUpdate = async (id: string, oldValue: string) => {
-    if (!editingValue.trim() || editingValue.trim() === oldValue) {
+    if (!editingValue.trim()) {
       setEditingId(null);
       return;
     }
@@ -136,34 +152,21 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
     setSuccessMsg(null);
 
     try {
-      if (id.startsWith('db-')) {
-        const res = await fetch('/api/highways/master-data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            category: activeTab,
-            value: editingValue.trim(),
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || 'Failed to save updated option');
-        }
-      } else {
-        const res = await fetch('/api/highways/master-data', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id,
-            category: activeTab,
-            oldValue,
-            newValue: editingValue.trim(),
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || 'Failed to update option');
-        }
+      const res = await fetch('/api/highways/master-data', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id,
+          category: activeTab,
+          oldValue,
+          newValue: editingValue.trim(),
+          parent_category: activeTab === 'division' ? 'circle' : undefined,
+          parent_value: activeTab === 'division' ? editingParentCircle.trim() : undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to update option');
       }
 
       setSuccessMsg(`Updated option to "${editingValue.trim()}".`);
@@ -336,7 +339,21 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
             )}
 
             {/* Add New Option Form */}
-            <form onSubmit={handleAdd} className="flex gap-2">
+            <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-2">
+              {activeTab === 'division' && (
+                <select
+                  value={newParentCircle}
+                  onChange={(e) => setNewParentCircle(e.target.value)}
+                  className="px-3.5 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 min-w-[160px]"
+                >
+                  <option value="">-- Select Parent Circle --</option>
+                  {(masterData.circles || []).map((circle) => (
+                    <option key={circle} value={circle}>
+                      {circle} Circle
+                    </option>
+                  ))}
+                </select>
+              )}
               <input
                 type="text"
                 placeholder={`Add new ${activeTabMeta?.label.toLowerCase()} option...`}
@@ -346,8 +363,8 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
               />
               <button
                 type="submit"
-                disabled={loading || !newValue.trim()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                disabled={loading || !newValue.trim() || (activeTab === 'division' && !newParentCircle.trim())}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer whitespace-nowrap"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Option</span>
@@ -379,7 +396,21 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
                     className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl flex items-center justify-between gap-3 group transition-colors"
                   >
                     {editingId === item.id ? (
-                      <div className="flex items-center gap-2 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 flex-1">
+                        {item.category === 'division' && (
+                          <select
+                            value={editingParentCircle}
+                            onChange={(e) => setEditingParentCircle(e.target.value)}
+                            className="px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-500 rounded-lg text-xs font-semibold outline-none"
+                          >
+                            <option value="">-- No Parent Circle --</option>
+                            {(masterData.circles || []).map((circle) => (
+                              <option key={circle} value={circle}>
+                                {circle} Circle
+                              </option>
+                            ))}
+                          </select>
+                        )}
                         <input
                           type="text"
                           value={editingValue}
@@ -388,7 +419,7 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
                             if (e.key === 'Enter') handleUpdate(item.id, item.value);
                             if (e.key === 'Escape') setEditingId(null);
                           }}
-                          className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-blue-500 rounded-lg text-xs font-semibold outline-none"
+                          className="flex-1 min-w-[140px] px-3 py-1.5 bg-white dark:bg-slate-900 border border-blue-500 rounded-lg text-xs font-semibold outline-none"
                           autoFocus
                         />
                         <button
@@ -411,6 +442,11 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
                           <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                             {item.value}
                           </span>
+                          {item.category === 'division' && item.parent_value && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
+                              {item.parent_value} Circle
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
@@ -418,6 +454,7 @@ export const HighwayMasterDataModal: React.FC<HighwayMasterDataModalProps> = ({
                             onClick={() => {
                               setEditingId(item.id);
                               setEditingValue(item.value);
+                              setEditingParentCircle(item.parent_value || '');
                             }}
                             className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors cursor-pointer"
                             title="Edit Option"
