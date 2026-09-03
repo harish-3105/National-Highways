@@ -20,11 +20,13 @@ import {
   LockKeyhole,
   Check,
   TrendingUp,
+  Sparkles,
 } from 'lucide-react';
 import { MajorProject } from '@/app/api/major-projects/route';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { calculateProjectDelay } from '@/lib/formatters';
+import { useAuth } from '@/lib/auth/useAuth';
 
 interface OngoingWorkEntryFormProps {
   initialData?: Partial<MajorProject>;
@@ -34,6 +36,8 @@ interface OngoingWorkEntryFormProps {
   masterSchemes?: string[];
   circleDivisionMap?: Record<string, string[]>;
   isAdmin?: boolean;
+  canBypassValidation?: boolean;
+  canOverrideFrozen?: boolean;
   onSave: (projectData: Partial<MajorProject>) => Promise<void> | void;
   onCancel: () => void;
 }
@@ -107,9 +111,19 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   masterSchemes = [],
   circleDivisionMap = {},
   isAdmin = false,
+  canBypassValidation = false,
+  canOverrideFrozen = false,
   onSave,
   onCancel,
 }) => {
+  const auth = useAuth();
+  const effectiveCanBypassValidation = Boolean(
+    canBypassValidation || auth.canBypassValidation || auth.isSuperAdmin || isAdmin
+  );
+  const effectiveCanOverrideFrozen = Boolean(
+    canOverrideFrozen || auth.canOverrideFrozen || auth.isSuperAdmin || isAdmin
+  );
+
   const [activeStageIndex, setActiveStageIndex] = useState<number>(0);
 
   // Parse existing issues from stage_remarks without touching detailed_stage_status (Col 27)
@@ -312,7 +326,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
 
   // Helper: Write-Once / Freeze-When-Filled check
   const isFieldLocked = (fieldName: keyof MajorProject): boolean => {
-    if (isAdmin) return false;
+    if (effectiveCanOverrideFrozen) return false;
     if (!initialData?.id) return false;
     const val = initialData[fieldName];
     return val !== null && val !== undefined && val !== '';
@@ -433,6 +447,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   };
 
   const isStageAccessible = (targetStageIdx: number): boolean => {
+    if (effectiveCanBypassValidation) return true;
     if (targetStageIdx === 0) return true;
     for (let i = 0; i < targetStageIdx; i++) {
       const stageErrs = validateSingleStage(i);
@@ -474,7 +489,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   };
 
   const handleStageTabClick = (idx: number) => {
-    if (isStageAccessible(idx)) {
+    if (effectiveCanBypassValidation || isStageAccessible(idx)) {
       setErrors({});
       setActiveStageIndex(idx);
     } else {
@@ -483,7 +498,7 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
   };
 
   const handleNextStage = () => {
-    if (validateUpToStage(activeStageIndex)) {
+    if (effectiveCanBypassValidation || validateUpToStage(activeStageIndex)) {
       if (activeStageIndex < STAGES.length - 1) {
         setActiveStageIndex((prev) => prev + 1);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -500,9 +515,11 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateUpToStage(activeStageIndex)) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+    if (!effectiveCanBypassValidation) {
+      if (!validateUpToStage(activeStageIndex)) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
     }
 
     setLoading(true);
@@ -600,9 +617,15 @@ export const OngoingWorkEntryForm: React.FC<OngoingWorkEntryFormProps> = ({
                 {initialData?.id ? 'Edit Ongoing Highway Work Record' : 'New Capital Highway Work Entry'}
               </h2>
               {initialData?.id && (
-                <span className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[11px] font-medium">
-                  <Lock className="w-3 h-3 text-amber-500" /> Write-Once Protection Active
-                </span>
+                effectiveCanOverrideFrozen ? (
+                  <span className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 rounded-lg text-[11px] font-semibold">
+                    <Sparkles className="w-3 h-3 text-emerald-500" /> Creative Mode &bull; All Fields Editable
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[11px] font-medium">
+                    <Lock className="w-3 h-3 text-amber-500" /> Write-Once Protection Active
+                  </span>
+                )
               )}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">

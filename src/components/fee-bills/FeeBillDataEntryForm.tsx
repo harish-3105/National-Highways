@@ -35,6 +35,7 @@ import {
   CreditCard,
   Scale,
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth/useAuth';
 
 interface FeeBillDataEntryFormProps {
   initialData?: Partial<FeeBillRecord>;
@@ -139,6 +140,9 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
         ? initialData.assistantAmountDeposited
         : Math.max(0, (initialData?.assistantSettledAmount || 0) - (initialData?.assistantItCess || 0)),
   }));
+
+  const auth = useAuth();
+  const effectiveCanBypassValidation = Boolean(auth.canBypassValidation || auth.isSuperAdmin);
 
   const [hasAssistant, setHasAssistant] = useState<boolean>(
     Boolean(
@@ -572,6 +576,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
   };
 
   const isStageAccessible = (targetStageIdx: number): boolean => {
+    if (effectiveCanBypassValidation) return true;
     if (targetStageIdx === 0) return true;
     for (let i = 0; i < targetStageIdx; i++) {
       const stageErrs = validateSingleStage(i);
@@ -632,7 +637,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
   const handleTabClick = (targetTabId: FormTabType) => {
     const targetIdx = TABS.findIndex((t) => t.id === targetTabId);
-    if (isStageAccessible(targetIdx)) {
+    if (effectiveCanBypassValidation || isStageAccessible(targetIdx)) {
       setErrors({});
       setActiveTab(targetTabId);
     } else {
@@ -641,7 +646,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
   };
 
   const goToNextTab = () => {
-    if (validateUpToStage(currentTabIndex)) {
+    if (effectiveCanBypassValidation || validateUpToStage(currentTabIndex)) {
       if (currentTabIndex < TABS.length - 1) {
         setActiveTab(TABS[currentTabIndex + 1].id);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -658,7 +663,7 @@ export const FeeBillDataEntryForm: React.FC<FeeBillDataEntryFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateUpToStage(currentTabIndex)) {
+    if (effectiveCanBypassValidation || validateUpToStage(currentTabIndex)) {
       onSave(formData);
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });

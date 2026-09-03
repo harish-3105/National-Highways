@@ -125,6 +125,7 @@ INSERT INTO public.permissions (code, module, label, description) VALUES
 ('system:lockdown_toggle', 'System', 'Master Lockdown Toggle', 'Toggle statewide emergency read-only freeze switch'),
 ('system:audit_view', 'System', 'View Audit Logs', 'View historical snapshot diffs and mutation audit logs'),
 ('system:creative_mode', 'System', 'Admin Creative Mode', 'Bypass monotonic progress checks and edit frozen baseline columns'),
+('system:bypass_validation', 'System', 'Bypass Form Validation & Stage Gates', 'Allows unrestricted multi-stage form navigation and draft saving without blocking on required fields or progressive stage gates'),
 
 -- Roles & Users Management
 ('roles:view', 'Roles & Users', 'View Role Catalog', 'View roles and permission configurations'),

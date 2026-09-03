@@ -18,7 +18,7 @@ export interface SessionUser {
 
 export const COOKIE_NAME = 'tnhighways_session';
 const SESSION_SECRET = process.env.AUTH_SECRET || 'tnhighways_dept_secret_key_2026_rbac_jwt_secure_auth';
-const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days in seconds
+const SESSION_MAX_AGE = 60 * 60 * 24; // 1 day in seconds (24 hours)
 
 // Helper to base64url encode an ArrayBuffer or Uint8Array
 function bufferToBase64Url(buffer: ArrayBuffer | Uint8Array): string {

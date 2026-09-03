@@ -460,8 +460,13 @@ export async function POST(request: Request) {
       const existing = existingRecords?.[0];
 
       if (existing) {
-        // Enforce Monotonic Progress Increase (unless Admin / Creative Mode)
-        const hasCreativeMode = session?.isSuperAdmin || session?.permissions.includes('system:creative_mode');
+        // Enforce Monotonic Progress Increase (unless Admin / Creative Mode / Bypass Validation)
+        const hasCreativeMode =
+          session?.isSuperAdmin ||
+          session?.permissions.includes('*:*') ||
+          session?.permissions.includes('system:creative_mode') ||
+          session?.permissions.includes('system:bypass_validation');
+
         if (!hasCreativeMode && payload.work_stage === 'IN_PROGRESS' && payload.progress_percent !== null) {
           const prevProg = existing.progress_percent !== null ? Number(existing.progress_percent) : 0;
           const newProg = Number(payload.progress_percent);
@@ -477,7 +482,9 @@ export async function POST(request: Request) {
         }
 
         // Enforce Write-Once / Freeze-When-Filled for standard users (A-N & Z) unless override perm
-        const canOverrideFrozen = hasCreativeMode || session?.permissions.includes('works:override_frozen');
+        const canOverrideFrozen =
+          hasCreativeMode ||
+          session?.permissions.includes('works:override_frozen');
         if (!canOverrideFrozen) {
           FROZEN_PROJECT_COLUMNS.forEach((col) => {
             const prevVal = existing[col];

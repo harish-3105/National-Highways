@@ -26,6 +26,7 @@ import {
   LockKeyhole,
   Link as LinkIcon,
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth/useAuth';
 
 interface CaseEntryFormProps {
   initialData?: Partial<LegalCaseData>;
@@ -220,6 +221,9 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   onSave,
   onCancel,
 }) => {
+  const auth = useAuth();
+  const effectiveCanBypassValidation = Boolean(auth.canBypassValidation || auth.isSuperAdmin);
+
   const [activeStageIndex, setActiveStageIndex] = useState<number>(0);
   const [formData, setFormData] = useState<LegalCaseData>(() => getDefaultInitialState(initialData));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -698,6 +702,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   }, [formData, stages]);
 
   const isStageAccessible = (targetStageIdx: number): boolean => {
+    if (effectiveCanBypassValidation) return true;
     if (targetStageIdx === 0) return true;
     for (let i = 0; i < targetStageIdx; i++) {
       const stageErrs = validateSingleStage(i);
@@ -770,7 +775,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   };
 
   const handleStageTabClick = (idx: number) => {
-    if (isStageAccessible(idx)) {
+    if (effectiveCanBypassValidation || isStageAccessible(idx)) {
       setErrors({});
       setActiveStageIndex(idx);
     } else {
@@ -779,7 +784,7 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
   };
 
   const handleNextStage = () => {
-    if (validateUpToStage(activeStageIndex)) {
+    if (effectiveCanBypassValidation || validateUpToStage(activeStageIndex)) {
       if (activeStageIndex < stages.length - 1) {
         setActiveStageIndex((prev) => prev + 1);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -796,9 +801,11 @@ export const CaseEntryForm: React.FC<CaseEntryFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateUpToStage(activeStageIndex)) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+    if (!effectiveCanBypassValidation) {
+      if (!validateUpToStage(activeStageIndex)) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
     }
 
     setLoading(true);

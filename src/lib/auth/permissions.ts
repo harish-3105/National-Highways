@@ -153,3 +153,29 @@ export function hasPermission(user: SessionUser | null, permCode: string): boole
   if (user.isSuperAdmin) return true;
   return user.permissions.includes(permCode) || user.permissions.includes('*:*');
 }
+
+/**
+ * Checks if the user has permission to bypass form validation, stage-gating, and draft requirements
+ */
+export function canBypassValidation(user: SessionUser | null): boolean {
+  if (!user) return false;
+  if (user.isSuperAdmin) return true;
+  return (
+    hasPermission(user, 'system:bypass_validation') ||
+    hasPermission(user, 'system:creative_mode') ||
+    user.permissions.includes('*:*')
+  );
+}
+
+/**
+ * Checks if the user has permission to edit frozen/write-once baseline fields
+ */
+export function canOverrideFrozen(user: SessionUser | null): boolean {
+  if (!user) return false;
+  if (user.isSuperAdmin) return true;
+  return (
+    hasPermission(user, 'works:override_frozen') ||
+    hasPermission(user, 'system:creative_mode') ||
+    user.permissions.includes('*:*')
+  );
+}

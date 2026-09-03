@@ -108,7 +108,7 @@ This document provides a comprehensive, ground-truth reference for the Security,
   - `httpOnly: true` (Inaccessible to browser JavaScript)
   - `secure: process.env.NODE_ENV === 'production'`
   - `sameSite: 'lax'`
-  - `maxAge: 28800` (8 Hours)
+  - `maxAge: 86400` (1 Day / 24 Hours)
 
 ### Global Route Guard & Middleware / Proxy
 - File: `src/middleware.ts` / `src/proxy.ts`
@@ -290,6 +290,8 @@ Jurisdiction boundaries prevent unauthorized cross-division data leakage or tamp
 | | `audit:export` | Export Audit Trail | Download complete audit trail with diffs to Excel |
 | | `system:lockdown` | Trigger Emergency Lockdown | Toggle read-only maintenance lockdown statewide |
 | | `system:reset_2fa` | Reset Officer 2FA Secrets | Reset lost authenticator keys for departmental officers |
+| | `system:creative_mode` | Admin Creative Mode | Bypass monotonic progress increase constraints & override baseline locks |
+| | `system:bypass_validation` | Bypass Form Validation | Allows unrestricted multi-stage form navigation and draft saving without required field blockers |
 
 ---
 
