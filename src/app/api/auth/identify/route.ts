@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     let { data: user, error } = await supabase
       .from('user_profiles')
       .select('id, phone_number, full_name, is_active, totp_secret, totp_enabled, failed_totp_attempts, totp_locked_until')
-      .eq('phone_number', tenDigitPhone)
+      .or(`phone_number.eq.${tenDigitPhone},phone_number.eq.+91${tenDigitPhone},phone_number.ilike.%${tenDigitPhone}`)
       .maybeSingle();
 
     if (error) {

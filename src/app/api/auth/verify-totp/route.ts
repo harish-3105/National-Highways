@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
           is_system_role
         )
       `)
-      .eq('phone_number', tenDigitPhone)
+      .or(`phone_number.eq.${tenDigitPhone},phone_number.eq.+91${tenDigitPhone},phone_number.ilike.%${tenDigitPhone}`)
       .maybeSingle();
 
     if (userError) {
