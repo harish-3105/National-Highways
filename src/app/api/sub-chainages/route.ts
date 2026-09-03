@@ -214,13 +214,16 @@ export async function POST(request: Request) {
 
       // Log Tamper-Proof Audit
       if (session && updated) {
+        const isRestored = oldSub?.delete_status === 'DELETED' && updated.delete_status === 'ACTIVE';
         await logAudit({
           actor: session,
           module: 'HIGHWAYS',
-          action: 'UPDATE',
+          action: isRestored ? 'RESTORE' : 'UPDATE',
           entityId: id,
           entityTitle: `Sub-Chainage: ${updated.highway_code} (Km ${updated.from_km}–${updated.to_km})`,
-          changesSummary: `Updated sub-chainage stretch for ${updated.highway_code}`,
+          changesSummary: isRestored
+            ? `Restored archived sub-chainage stretch for ${updated.highway_code}`
+            : `Updated sub-chainage stretch for ${updated.highway_code}`,
           oldState: oldSub,
           newState: updated,
         });

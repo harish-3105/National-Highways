@@ -336,13 +336,18 @@ export async function POST(request: Request) {
 
         // Log Tamper-Proof Audit for update
         if (session) {
+          const isRestored =
+            (existingBill?.delete_status === 'DELETED' || existingBill?.delete_status === 'SOFT_DELETE') &&
+            nativePayload.delete_status === 'ACTIVE';
           await logAudit({
             actor: session,
             module: 'FEE_BILLS',
-            action: 'UPDATE',
+            action: isRestored ? 'RESTORE' : 'UPDATE',
             entityId: String(body.id),
             entityTitle: `Fee Voucher: ${record.feeBillNumber} (${record.lawyerName || 'Advocate'})`,
-            changesSummary: `Updated advocate fee voucher for ${record.lawyerName} in ${record.division}`,
+            changesSummary: isRestored
+              ? `Restored archived fee voucher ${record.feeBillNumber} for ${record.lawyerName || 'Advocate'}`
+              : `Updated advocate fee voucher for ${record.lawyerName} in ${record.division}`,
             oldState: existingBill,
             newState: nativePayload,
           });

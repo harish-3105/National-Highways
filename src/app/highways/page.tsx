@@ -185,6 +185,27 @@ export default function HighwaysPage() {
     }
   };
 
+  const handleRestoreHighway = async (highway: HighwayCorridor) => {
+    try {
+      const res = await fetch('/api/highways', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: highway.id,
+          action: 'restore',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchHighways();
+      } else {
+        alert(data.message || 'Failed to restore corridor');
+      }
+    } catch (err) {
+      console.error('Failed to restore highway:', err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       {/* Global Navigation Header */}
@@ -297,6 +318,7 @@ export default function HighwaysPage() {
                       setUiMode('FORM');
                     }}
                     onDelete={(h) => setDeletingHighway(h)}
+                    onRestore={handleRestoreHighway}
                     activeLaneFilter={activeLaneFilter}
                   />
                 ) : (

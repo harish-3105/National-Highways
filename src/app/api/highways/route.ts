@@ -316,19 +316,23 @@ export async function POST(request: Request) {
       if (length_6l !== undefined) updatePayload.length_6l = Number(length_6l) || 0;
       if (configuration) updatePayload.configuration = configuration;
       if (body.status) updatePayload.status = body.status;
+      if (body.action === 'restore') updatePayload.status = 'ACTIVE';
 
       const { data, error } = await supabase.from('highways').update(updatePayload).eq('id', id).select();
       if (!error && data && data[0]) {
         const updated = data[0];
+        const isRestored = body.action === 'restore' || (oldHighway?.status === 'DELETED' && updated.status === 'ACTIVE');
         // Log Tamper-Proof Audit
         if (session) {
           await logAudit({
             actor: session,
             module: 'HIGHWAYS',
-            action: 'UPDATE',
+            action: isRestored ? 'RESTORE' : 'UPDATE',
             entityId: id,
             entityTitle: `Highway Corridor: ${updated.road_code} (${updated.road_name})`,
-            changesSummary: `Updated highway corridor metadata for ${updated.road_code}`,
+            changesSummary: isRestored
+              ? `Restored archived highway corridor ${updated.road_code}`
+              : `Updated highway corridor metadata for ${updated.road_code}`,
             oldState: oldHighway,
             newState: updated,
           });

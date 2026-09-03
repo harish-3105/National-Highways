@@ -533,3 +533,68 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const supabase = await createClient();
+    const session = await getSession();
+    const body = await request.json();
+    const { id, action } = body;
+
+    if (!id || action !== 'restore') {
+      return NextResponse.json({ success: false, error: 'Invalid restore request' }, { status: 400 });
+    }
+
+    if (supabase && !id.startsWith('lc-')) {
+      const { data: existingCase } = await supabase.from('legal_cases').select('*').eq('id', id).maybeSingle();
+
+      if (existingCase) {
+        const authCheck = canPerformAction(session, 'legal:delete', {
+          circle: existingCase.circle,
+          division: existingCase.division,
+        });
+
+        if (!authCheck.allowed) {
+          return NextResponse.json(
+            { success: false, error: authCheck.reason || 'Unauthorized operation.' },
+            { status: 403 }
+          );
+        }
+
+        const { error } = await supabase
+          .from('legal_cases')
+          .update({ delete_status: 'ACTIVE', updated_at: new Date().toISOString() })
+          .eq('id', id);
+
+        if (error) {
+          return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        }
+
+        // Log Tamper-Proof Audit
+        if (session) {
+          await logAudit({
+            actor: session,
+            module: 'LEGAL',
+            action: 'RESTORE',
+            entityId: id,
+            entityTitle: `Legal Case: ${existingCase.case_details || id}`,
+            changesSummary: `Restored archived legal case back to active register`,
+            oldState: existingCase,
+          });
+        }
+      }
+    }
+
+    const idx = inMemoryLegalStore.findIndex((c) => c.id === id);
+    if (idx >= 0) {
+      inMemoryLegalStore[idx].delete_status = 'ACTIVE';
+      inMemoryLegalStore[idx].isDeleted = false;
+    }
+
+    return NextResponse.json({ success: true, message: 'Case restored successfully' });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  }
+}
+

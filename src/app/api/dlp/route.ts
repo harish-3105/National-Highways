@@ -731,3 +731,78 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const supabase = await createClient();
+    const { searchParams } = new URL(request.url);
+    let id = searchParams.get('id');
+    let action = searchParams.get('action');
+
+    if (!id || !action) {
+      try {
+        const body = await request.json();
+        id = body.id || id;
+        action = body.action || action;
+      } catch {}
+    }
+
+    if (!id || action !== 'restore') {
+      return NextResponse.json({ success: false, error: 'Invalid restore request' }, { status: 400 });
+    }
+
+    if (!supabase) {
+      return NextResponse.json({ success: false, error: 'Database client unavailable' }, { status: 500 });
+    }
+
+    const session = await getSession();
+
+    // Fetch existing corridor
+    const { data: existingCorridor } = await supabase
+      .from('dlp_corridors')
+      .select('*, dlp_work_stretches(*)')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (existingCorridor) {
+      const authCheck = canPerformAction(session, 'dlp:delete', { division: existingCorridor.division_name });
+      if (!authCheck.allowed) {
+        return NextResponse.json({ success: false, error: authCheck.reason || 'Unauthorized operation.' }, { status: 403 });
+      }
+    }
+
+    // Restore corridor and all child stretches to ACTIVE
+    const { error: corridorErr } = await supabase
+      .from('dlp_corridors')
+      .update({ status: 'ACTIVE', updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (corridorErr) {
+      return NextResponse.json({ success: false, error: corridorErr.message }, { status: 500 });
+    }
+
+    await supabase
+      .from('dlp_work_stretches')
+      .update({ status: 'ACTIVE', updated_at: new Date().toISOString() })
+      .eq('corridor_id', id);
+
+    // Log Audit Event
+    if (session && existingCorridor) {
+      await logAudit({
+        actor: session,
+        module: 'DLP',
+        action: 'RESTORE',
+        entityId: id,
+        entityTitle: `DLP Corridor ${existingCorridor.highway_code}`,
+        changesSummary: `Restored archived DLP maintenance corridor for ${existingCorridor.highway_code} in ${existingCorridor.division_name}`,
+        oldState: existingCorridor,
+      });
+    }
+
+    return NextResponse.json({ success: true, message: `Corridor ${id} restored successfully` });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  }
+}
+

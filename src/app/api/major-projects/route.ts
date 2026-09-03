@@ -537,13 +537,16 @@ export async function POST(request: Request) {
       // 3. Immutable Google Sheets-Style Audit Logging
       if (session && existing) {
         try {
+          const isRestored = existing.delete_status === 'DELETED' && updatedProject.delete_status === 'ACTIVE';
           await logAudit({
             actor: session,
             module: 'ONGOING_WORKS',
-            action: 'UPDATE',
+            action: isRestored ? 'RESTORE' : 'UPDATE',
             entityId: updatedProject.id,
             entityTitle: updatedProject.name_of_work,
-            changesSummary: `Updated project: ${updatedProject.name_of_work}`,
+            changesSummary: isRestored
+              ? `Restored archived project: ${updatedProject.name_of_work}`
+              : `Updated project: ${updatedProject.name_of_work}`,
             oldState: existing,
             newState: updatedProject,
           });

@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   Clock,
   X,
+  RotateCcw,
 } from 'lucide-react';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { ModulePageHeader } from '@/components/common/ModulePageHeader';
@@ -200,6 +201,24 @@ export const LegalDashboard: React.FC = () => {
       const msg = err instanceof Error ? err.message : String(err);
       console.error('Failed to save case:', err);
       alert('Error connecting to server: ' + msg);
+    }
+  };
+
+  const handleRestoreCase = async (item: LegalCaseData) => {
+    try {
+      const res = await fetch('/api/legal', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: item.id, action: 'restore' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchCases();
+      } else {
+        alert(data.error || 'Failed to restore case');
+      }
+    } catch (err) {
+      console.error('Failed to restore case:', err);
     }
   };
 
@@ -840,32 +859,44 @@ export const LegalDashboard: React.FC = () => {
                           <Eye className="w-4 h-4" />
                         </button>
 
-                        <button
-                          onClick={() => handleEdit(item)}
-                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 rounded-lg transition-colors cursor-pointer"
-                          title="Edit Case Record"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-
-                        {/* If lower court case has appeal filed, allow 1-click appeal launch */}
-                        {item.appealFiled === 'Yes' && item.caseClassification === 'Normal Case' && (
+                        {item.delete_status === 'DELETED' || item.isDeleted ? (
                           <button
-                            onClick={() => handleSaveAndCreateAppeal(item)}
-                            className="p-1.5 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950 rounded-lg transition-colors cursor-pointer"
-                            title="Open New Appeal Case for this record"
+                            onClick={() => handleRestoreCase(item)}
+                            className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 rounded-md transition-colors cursor-pointer"
+                            title="Restore Archived Case Record"
                           >
-                            <Sparkles className="w-4 h-4" />
+                            <RotateCcw className="w-4 h-4" />
                           </button>
-                        )}
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 rounded-lg transition-colors cursor-pointer"
+                              title="Edit Case Record"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
 
-                        <button
-                          onClick={() => setSelectedCaseForDelete(item)}
-                          className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-lg transition-colors cursor-pointer"
-                          title="Archive Case Record"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                            {/* If lower court case has appeal filed, allow 1-click appeal launch */}
+                            {item.appealFiled === 'Yes' && item.caseClassification === 'Normal Case' && (
+                              <button
+                                onClick={() => handleSaveAndCreateAppeal(item)}
+                                className="p-1.5 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950 rounded-lg transition-colors cursor-pointer"
+                                title="Open New Appeal Case for this record"
+                              >
+                                <Sparkles className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => setSelectedCaseForDelete(item)}
+                              className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-lg transition-colors cursor-pointer"
+                              title="Archive Case Record"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   );

@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { HighwayCorridor } from '@/app/api/highways/route';
-import { ArrowRight, MapPin, ShieldCheck, Edit3, Trash2, Eye, ChevronLeft, ChevronRight, BarChart2 } from 'lucide-react';
+import { ArrowRight, MapPin, ShieldCheck, Edit3, Trash2, Eye, ChevronLeft, ChevronRight, BarChart2, RotateCcw } from 'lucide-react';
 
 interface HighwaysTableProps {
   corridors: HighwayCorridor[];
@@ -14,6 +14,7 @@ interface HighwaysTableProps {
   onView?: (highway: HighwayCorridor) => void;
   onEdit: (highway: HighwayCorridor) => void;
   onDelete: (highway: HighwayCorridor) => void;
+  onRestore?: (highway: HighwayCorridor) => void;
   activeLaneFilter?: string | null;
 }
 
@@ -26,6 +27,7 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
   onView,
   onEdit,
   onDelete,
+  onRestore,
   activeLaneFilter = null,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -307,21 +309,35 @@ export const HighwaysTable: React.FC<HighwaysTableProps> = ({
                         </button>
                       )}
 
-                      <button
-                        onClick={() => onEdit(item)}
-                        className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-md transition-colors cursor-pointer"
-                        title="Edit Corridor"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
+                      {item.status === 'DELETED' ? (
+                        onRestore && (
+                          <button
+                            onClick={() => onRestore(item)}
+                            className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 rounded-md transition-colors cursor-pointer"
+                            title="Restore Archived Highway Corridor"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        )
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => onEdit(item)}
+                            className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-md transition-colors cursor-pointer"
+                            title="Edit Corridor"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
 
-                      <button
-                        onClick={() => onDelete(item)}
-                        className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/60 rounded-md transition-colors cursor-pointer"
-                        title="Soft-Delete Corridor"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                          <button
+                            onClick={() => onDelete(item)}
+                            className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/60 rounded-md transition-colors cursor-pointer"
+                            title="Soft-Delete Corridor"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

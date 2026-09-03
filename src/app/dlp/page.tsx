@@ -35,6 +35,7 @@ import {
   Construction,
   Building2,
   X,
+  RotateCcw,
 } from 'lucide-react';
 
 const CATEGORY_BADGES: Record<
@@ -159,6 +160,26 @@ export default function DlpPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       alert(`Failed to save DLP corridor: ${msg}`);
+    }
+  };
+
+  const handleRestoreCorridor = async (item: DlpCorridor) => {
+    try {
+      const res = await fetch('/api/dlp', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: item.id, action: 'restore' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchDlpCorridors();
+        setNotificationMsg(`Corridor ${item.highway_code} restored to active status.`);
+        setTimeout(() => setNotificationMsg(null), 4000);
+      } else {
+        alert(data.error || 'Failed to restore corridor');
+      }
+    } catch (err) {
+      console.error('Failed to restore corridor:', err);
     }
   };
 
@@ -1086,23 +1107,35 @@ export default function DlpPage() {
                                 >
                                   <Eye className="w-4 h-4" />
                                 </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedCorridorForEdit(item);
-                                    setUiMode('FORM');
-                                  }}
-                                  className="p-1.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                                  title="Edit Record"
-                                >
-                                  <Edit3 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => setSelectedCorridorForDelete(item)}
-                                  className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/60 rounded-md transition-colors cursor-pointer"
-                                  title="Soft-Delete Record"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                {item.status === 'DELETED' || (item as any).delete_status === 'DELETED' ? (
+                                  <button
+                                    onClick={() => handleRestoreCorridor(item)}
+                                    className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 rounded-md transition-colors cursor-pointer"
+                                    title="Restore Archived Corridor"
+                                  >
+                                    <RotateCcw className="w-4 h-4" />
+                                  </button>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedCorridorForEdit(item);
+                                        setUiMode('FORM');
+                                      }}
+                                      className="p-1.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                                      title="Edit Record"
+                                    >
+                                      <Edit3 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => setSelectedCorridorForDelete(item)}
+                                      className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/60 rounded-md transition-colors cursor-pointer"
+                                      title="Soft-Delete Record"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
                               </td>
                             </tr>
 
