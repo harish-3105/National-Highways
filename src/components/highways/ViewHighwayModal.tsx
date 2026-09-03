@@ -906,7 +906,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
                     Km {deletingSub.from_km} → Km {deletingSub.to_km} ({deletingSub.length_km} km)
                   </span>
                   <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px]">
-                    {deletingSub.lane_configuration || '2-Lane'}
+                    {deletingSub.lane_configuration || '—'}
                   </span>
                 </div>
                 {deletingSub.division_name && (

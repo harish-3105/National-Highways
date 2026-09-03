@@ -379,7 +379,7 @@ export const HighwayEntryForm: React.FC<HighwayEntryFormProps> = ({
       length_2l_ps: parseFloat(length2lPs) || 0,
       length_4l: parseFloat(length4l) || 0,
       length_6l: parseFloat(length6l) || 0,
-      configuration: configuration || '2-Lane',
+      configuration: configuration?.trim() || '',
       status: initialData?.status || 'ACTIVE',
       start_latitude: startLatitude ? parseFloat(startLatitude) : null,
       start_longitude: startLongitude ? parseFloat(startLongitude) : null,

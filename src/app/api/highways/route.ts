@@ -148,7 +148,7 @@ export async function GET(request: Request) {
     let corridorsWithDlp = 0;
 
     allCorridors.forEach((c) => {
-      const cfg = c.configuration || '2-Lane';
+      const cfg = c.configuration?.trim() || 'Unspecified';
       laneDistribution[cfg] = (laneDistribution[cfg] || 0) + 1;
 
       laneLengthsKm.lessThan2l += Number(c.length_less_than_2l) || 0;
@@ -366,7 +366,7 @@ export async function POST(request: Request) {
       length_2l_ps: Number(length_2l_ps) || 0,
       length_4l: Number(length_4l) || 0,
       length_6l: Number(length_6l) || 0,
-      configuration: configuration || '2-Lane',
+      configuration: configuration?.trim() || 'Unspecified',
       status: 'ACTIVE',
       updated_at: new Date().toISOString(),
     };

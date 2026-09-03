@@ -179,7 +179,7 @@ export async function POST(request: Request) {
       from_km: parsedFrom,
       to_km: parsedTo,
       length_km: parsedLen,
-      lane_configuration: lane_configuration || '2-Lane',
+      lane_configuration: lane_configuration?.trim() || null,
       pcu_count: Number(pcu_count) || 0,
       dpr_status: dpr_status?.trim() || null,
       important_town: important_town?.trim() || null,
