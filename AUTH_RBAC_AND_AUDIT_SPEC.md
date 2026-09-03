@@ -238,60 +238,116 @@ Jurisdiction boundaries prevent unauthorized cross-division data leakage or tamp
 
 ---
 
-## 5. Complete Master Permissions Catalog (50+ Permissions)
+## 5. Complete Master Permissions Catalog (98 Granular Permissions)
 
 | Module | Permission Code | Label | Description |
 | :--- | :--- | :--- | :--- |
-| **Jurisdiction** | `jurisdiction:view_statewide` | View Statewide Records | View projects, contracts, and cases outside assigned Circle/Division |
-| | `jurisdiction:edit_statewide` | Edit Statewide Records | Edit and mutate records outside assigned Circle/Division |
-| **Ongoing Works** | `works:view` | View Works MIS | View ongoing works dashboard and project lists |
-| | `works:create` | Create Projects | Add new ongoing capital project records |
-| | `works:edit_progress` | Update Physical/Financial Progress | Edit monthly progress %, expenditures, and stage remarks |
-| | `works:override_frozen` | Edit Sanctioned Metadata | Modify frozen baseline contract and sanction values |
-| | `works:delete` | Soft-Delete Works | Archive or remove ongoing project records |
-| | `works:export` | Export Works to Excel | Export project MIS to styled Excel workbooks |
-| | `works:view_history` | View Historical Snapshots | View past progress snapshots and milestone staircases |
-| **DLP Maintenance** | `dlp:view` | View DLP Register | View defect liability corridors and 2D spatial chainages |
-| | `dlp:create` | Add DLP Stretches | Register new DLP corridors and warranty segments |
-| | `dlp:edit` | Edit Maintenance Records | Update contractor details, completion dates, and widths |
-| | `dlp:delete` | Delete Maintenance Stretches | Archive or soft-delete DLP corridors and work stretches |
-| | `dlp:export` | Export DLP Register | Download DLP spreadsheets in departmental format |
-| **Legal Litigation** | `legal:view` | View Legal Cases | View High Court and District Court case listings |
-| | `legal:create` | Register Legal Cases | Add new WP, WA, or Lower Court litigation records |
-| | `legal:edit` | Update Case Proceedings | Edit counter-affidavit status, hearing dates, and orders |
-| | `legal:delete` | Delete Legal Cases | Archive or soft-delete court litigation entries |
-| | `legal:export` | Export Legal Register | Download court case registers to Excel |
-| **Fee Bills** | `fee_bills:view` | View Fee Bills | View advocate fee bills and payment vouchers |
-| | `fee_bills:create` | Create Fee Vouchers | Submit new advocate appearance and drafting fee bills |
-| | `fee_bills:edit` | Process & Settle Vouchers | Update 5-stage voucher movements, G.O.s, and ECS reference |
-| | `fee_bills:delete` | Delete Fee Vouchers | Soft-delete advocate fee records |
-| | `fee_bills:export` | Export Fee Bills | Download advocate payment reports to Excel |
-| **Highways Corridors** | `highways:view` | View Highway Network | View master highway corridors and SLD views |
+| **System & Security** | `system:lockdown_toggle` | Toggle Emergency Lockdown | Freeze system statewide in read-only maintenance mode |
+| | `system:audit_view` | View System Audit Logs | Access `/admin/audit` to inspect immutable audit trails |
+| | `system:audit_export` | Export Audit Logs | Export system audit logs to Excel or CSV |
+| | `system:view_archived` | View Archived Records | Access and toggle soft-deleted / archived records across dashboards |
+| | `system:creative_mode` | Admin Creative Mode | Bypass monotonic progression constraints and edit locked history |
+| | `system:bypass_validation` | Bypass Validation Rules | Save incomplete drafts without completing required stage fields |
+| | `system:hard_delete` | Permanent Database Purge | Permanently delete records from PostgreSQL tables |
+| **Jurisdiction** | `jurisdiction:view_statewide` | View Statewide Data | View projects and records outside assigned Circle/Division |
+| | `jurisdiction:edit_statewide` | Edit Statewide Data | Create and edit records outside assigned Circle/Division |
+| | `jurisdiction:reassign_division` | Reassign Jurisdiction | Reassign an existing contract/project to another Division |
+| **Roles & Users** | `roles:view` | View Role Hierarchy | Open Role Studio and inspect permission stacks |
+| | `roles:create` | Create Custom Roles | Create new security roles with assigned permission sets |
+| | `roles:edit` | Edit Role Permissions | Update role permission matrices and scope defaults |
+| | `roles:delete` | Delete Custom Roles | Delete custom roles and safely reassign users to Viewer |
+| | `roles:reorder` | Reorder Role Positions | Reorder role integer rank hierarchy via drag-and-drop |
+| | `users:view` | View User Accounts | Inspect user accounts, phone numbers, and last active sessions |
+| | `users:create` | Provision User Accounts | Create new user logins and dispatch initial OTP setups |
+| | `users:edit` | Edit User Profiles | Update user phone numbers, jurisdiction bindings, and roles |
+| | `users:delete` | Deactivate User Logins | Suspend user accounts and revoke active sessions |
+| | `users:reset_2fa` | Reset TOTP Secrets | Clear and re-issue 2FA authenticator QR setup keys |
+| | `users:unlock` | Unlock OTP Lockouts | Clear temporary login lockouts caused by failed OTP verification attempts |
+| **Master Data** | `master_data:manage` | Global Master Config | Manage master data options across all modules |
+| | `highways:master_data_manage` | Manage Highway Config | Manage Highway Circles, Divisions, and Carriageway configs |
+| | `dlp:master_data_manage` | Manage DLP Config | Manage DLP Circles, Divisions, and Maintenance Schemes |
+| | `legal:master_data_manage` | Manage Legal Config | Manage Court Names, Case Types, Stages, and GP Opinions |
+| | `fee_bills:master_data_manage` | Manage Fee Bills Config | Manage G.O. Stages, Claim Types, and Expense Headings |
+| | `works:master_data_manage` | Manage Works Config | Manage Ongoing Works Schemes, Civil Stages, and Delays |
+| | `staff:master_data_manage` | Manage Staff Config | Manage Designations, Posting Units, and Department Wings |
+| **Ongoing Works** | `works:view` | View Works MIS | View ongoing capital works dashboard and project lists |
+| | `works:create` | Create Works Projects | Register new ongoing capital projects |
+| | `works:edit_basic` | Edit Basic Project Info | Edit project names, sanctioned costs, and job numbers |
+| | `works:edit_progress` | Update Physical/Financial % | Edit monthly progress %, expenditures, and status remarks |
+| | `works:edit_clearances` | Manage Clearances | Update Land Acquisition, Forest, and Utility clearance stages |
+| | `works:edit_financials` | Manage Financial Milestones | Update letter of credit, expenditure bills, and contractor payments |
+| | `works:edit_delays` | Classify Project Delays | Update delay classifications and EOT justifications |
+| | `works:override_frozen` | Edit Frozen Baseline Info | Override locked sanctioned costs and original agreement dates |
+| | `works:delete` | Soft-Delete Works | Archive or soft-delete ongoing project records |
+| | `works:restore` | Restore Archived Works | Restore soft-deleted ongoing projects back to active list |
+| | `works:bulk_delete` | Bulk Soft Delete Works | Batch soft-delete multiple selected ongoing capital projects |
+| | `works:bulk_restore` | Bulk Restore Works | Batch restore multiple selected ongoing capital projects |
+| | `works:export` | Export Works to Excel | Download complete Ongoing Works MIS in styled Excel format |
+| | `works:import` | Bulk Excel Ingest (Works) | Bulk import ongoing projects from master Excel workbooks |
+| | `works:create_snapshot` | Trigger Monthly Snapshot | Manually freeze and archive a monthly progress snapshot |
+| | `works:view_history` | View Historical Milestones | View historical progress snapshots and milestone staircases |
+| **Highways Catalog** | `highways:view` | View Highway Network | View master highway corridors and SLD views |
 | | `highways:create` | Add Highway Corridors | Register new National Highway road codes |
-| | `highways:edit` | Edit Highway Geometry | Update corridor lengths, lane configurations, and towns |
-| | `highways:delete` | Delete Highway Corridors | Soft-delete highway network corridors |
-| | `highways:export` | Export Highways Catalog | Export corridor catalog to Excel |
-| **Sub-Chainages** | `sub_chainages:view` | View Micro-Geometry | View sub-chainage lane breakdowns and PCU counts |
-| | `sub_chainages:create` | Add Sub-Chainages | Add discrete micro-lane stretches |
-| | `sub_chainages:edit` | Edit Micro-Lane Data | Update ROW widths, carriageway widths, and town names |
-| | `sub_chainages:delete` | Delete Sub-Chainages | Soft-delete micro-lane stretches |
-| **Staff & Roles** | `staff:view` | View Staff Directory | View departmental staff contacts and postings |
-| | `staff:create` | Add Staff Members | Register new departmental personnel |
+| | `highways:edit` | Edit Highway Corridors | Update corridor lengths, lane configurations, and start/end locations |
+| | `highways:delete` | Soft-Delete Corridors | Soft-delete highway network corridors |
+| | `highways:restore` | Restore Corridors | Restore soft-deleted Level 1 highway corridors back to active list |
+| | `highways:bulk_delete` | Bulk Delete Corridors | Batch soft-delete multiple selected highway corridors |
+| | `highways:bulk_restore` | Bulk Restore Corridors | Batch restore multiple selected highway corridors |
+| | `highways:export` | Export Highway Catalog | Export corridor catalog to Excel |
+| | `highways:import` | Bulk Excel Import (Highways) | Bulk import Level 1 highway corridors from Excel sheets |
+| | `sub_chainages:view` | View Sub-Chainages | View micro-geometry stretches, lane widths, and PCU counts |
+| | `sub_chainages:create` | Add Sub-Chainages | Add discrete micro-lane sub-chainage stretches |
+| | `sub_chainages:edit` | Edit Sub-Chainages | Update sub-chainage ROW widths, carriageway widths, and towns |
+| | `sub_chainages:delete` | Soft-Delete Sub-Chainages | Soft-delete micro-lane stretches |
+| | `sub_chainages:restore` | Restore Sub-Chainages | Restore soft-deleted Level 2 sub-chainage geometry stretches |
+| | `sub_chainages:import` | Bulk Import (Sub-Chainages) | Bulk import Level 2 sub-chainages from Excel sheets |
+| | `sld:view` | View Straight Line Diagrams | Open interactive Straight Line Diagram visualizer |
+| | `sld:print_export` | Print / Export SLD | Export high-resolution SLD diagrams to vector PDF/PNG |
+| **DLP Maintenance** | `dlp:view` | View DLP Register | View defect liability corridors and 2D spatial chainages |
+| | `dlp:create` | Register DLP Packages | Register new DLP maintenance contract packages |
+| | `dlp:edit` | Edit DLP Records | Update contractor details, completion dates, and warranty status |
+| | `dlp:extend_date` | Grant DLP Time Extensions | Formally extend DLP defect liability expiration dates |
+| | `dlp:delete` | Soft-Delete DLP Packages | Soft-delete DLP contract packages |
+| | `dlp:restore` | Restore Archived DLP | Restore soft-deleted DLP maintenance packages back to active list |
+| | `dlp:stretches_manage` | Manage 2D Work Stretches | Add, modify, and delete child 2D spatial work stretches |
+| | `dlp:bulk_delete` | Bulk Delete DLP Packages | Batch soft-delete multiple selected DLP maintenance packages |
+| | `dlp:bulk_restore` | Bulk Restore DLP Packages | Batch restore multiple selected DLP maintenance packages |
+| | `dlp:export` | Export DLP Register | Download DLP spreadsheets in departmental format |
+| | `dlp:import` | Bulk Excel Import (DLP) | Bulk import DLP maintenance contracts from Excel sheets |
+| **Legal Cases** | `legal:view` | View Legal Cases | View High Court and District Court case listings |
+| | `legal:create` | Register Legal Cases | Add new WP, WA, or Lower Court litigation records |
+| | `legal:edit` | Update Case Proceedings | Edit counter-affidavit status, hearing dates, and court orders |
+| | `legal:convert` | Convert Case Type | Convert WP to Writ Appeal (WA) or SLP upon higher appeal |
+| | `legal:record_judgment` | Record Final Judgment | Record final court orders, compliance dates, and closure status |
+| | `legal:assign_officer` | Assign Law Officers | Assign Government Pleaders, Special GPs, and Advocates to court cases |
+| | `legal:delete` | Soft-Delete Cases | Soft-delete court litigation entries |
+| | `legal:restore` | Restore Archived Cases | Restore soft-deleted legal litigation cases back to active list |
+| | `legal:bulk_delete` | Bulk Delete Cases | Batch soft-delete multiple selected court cases |
+| | `legal:bulk_restore` | Bulk Restore Cases | Batch restore multiple selected court cases |
+| | `legal:export` | Export Legal Register | Download court case registers to Excel |
+| | `legal:import` | Bulk Excel Import (Legal) | Bulk import litigation cases from Excel sheets |
+| **Fee Bills** | `fee_bills:view` | View Fee Bills | View advocate fee bills and payment vouchers |
+| | `fee_bills:create` | Submit Fee Vouchers | Submit new advocate appearance and drafting fee bills |
+| | `fee_bills:edit` | Process Fee Vouchers | Update 5-stage voucher movements, G.O.s, and ECS references |
+| | `fee_bills:process_go` | Issue Government Orders | Formally record G.O. sanction numbers and sanctioned amounts |
+| | `fee_bills:process_payment` | Record ECS Disbursements | Record treasury bill numbers and final bank disbursement dates |
+| | `fee_bills:override_calc` | Override 1/3rd Rule Calc | Authorize and override 1/3rd fee calculation checks |
+| | `fee_bills:delete` | Soft-Delete Fee Vouchers | Soft-delete advocate fee records |
+| | `fee_bills:restore` | Restore Fee Vouchers | Restore soft-deleted advocate fee vouchers back to active list |
+| | `fee_bills:bulk_delete` | Bulk Delete Fee Vouchers | Batch soft-delete multiple selected fee vouchers |
+| | `fee_bills:bulk_restore` | Bulk Restore Fee Vouchers | Batch restore multiple selected fee vouchers |
+| | `fee_bills:export` | Export Fee Bills | Download advocate payment reports to Excel |
+| | `fee_bills:view_audit` | View Fee Movement History | Inspect immutable 5-stage voucher movement timestamps |
+| **Staff Directory** | `staff:view` | View Staff Directory | View departmental staff contacts and postings |
+| | `staff:create` | Add Staff Personnel | Register new departmental personnel |
 | | `staff:edit` | Edit Staff Profiles | Update staff designations, postings, and phone numbers |
-| | `staff:delete` | Archive Staff Members | Soft-delete personnel and suspend login credentials |
-| | `staff:assign_role` | Assign Platform Roles | Assign security roles to departmental officers |
+| | `staff:transfer` | Transfer Posting Location | Process staff transfers, seat changes, and jurisdiction relocations |
+| | `staff:assign_role` | Assign Security Roles | Assign security roles to departmental officers |
+| | `staff:delete` | Deactivate Staff Members | Soft-delete personnel and suspend login credentials |
+| | `staff:restore` | Restore Archived Staff | Restore deactivated staff personnel back to active posting roster |
+| | `staff:bulk_delete` | Bulk Delete Staff | Batch soft-delete multiple selected staff records |
 | | `staff:export` | Export Staff Directory | Download personnel directory to Excel |
-| | `roles:view` | View Roles & Permissions | Open Role Studio and inspect permission stacks |
-| | `roles:create` | Create Custom Roles | Create new security roles with assigned permissions |
-| | `roles:edit` | Edit Role Permissions | Modify permission checkboxes and default scopes |
-| | `roles:delete` | Delete Custom Roles | Remove custom roles and reassign users to Viewer |
-| | `roles:reorder` | Reorder Role Hierarchy | Adjust integer position hierarchy stack |
-| **Audit & Governance** | `audit:view` | View Audit Logs | Access `/admin/audit` to inspect tamper-proof activity logs |
-| | `audit:export` | Export Audit Trail | Download complete audit trail with diffs to Excel |
-| | `system:lockdown` | Trigger Emergency Lockdown | Toggle read-only maintenance lockdown statewide |
-| | `system:reset_2fa` | Reset Officer 2FA Secrets | Reset lost authenticator keys for departmental officers |
-| | `system:creative_mode` | Admin Creative Mode | Bypass monotonic progress increase constraints & override baseline locks |
-| | `system:bypass_validation` | Bypass Form Validation | Allows unrestricted multi-stage form navigation and draft saving without required field blockers |
+| | `staff:import` | Bulk Excel Import (Staff) | Bulk import staff personnel roster from Excel sheets |
 
 ---
 

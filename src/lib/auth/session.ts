@@ -14,11 +14,26 @@ export interface SessionUser {
   subDivision?: string | null;
   permissions: string[];
   isLockdownActive: boolean;
+  isActive?: boolean;
 }
 
 export const COOKIE_NAME = 'tnhighways_session';
-const SESSION_SECRET = process.env.AUTH_SECRET || 'tnhighways_dept_secret_key_2026_rbac_jwt_secure_auth';
-const SESSION_MAX_AGE = 60 * 60 * 24; // 1 day in seconds (24 hours)
+export const SESSION_MAX_AGE = 60 * 60 * 24; // 1 day in seconds (24 hours)
+
+/**
+ * Returns the cryptographically secure JWT signing secret from environment.
+ * Throws a fatal security error in production if AUTH_SECRET is missing.
+ */
+export function getSessionSecret(): string {
+  const secret = (process.env.AUTH_SECRET || '').trim();
+  if (secret.length >= 32) {
+    return secret;
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('FATAL SECURITY CONFIGURATION ERROR: AUTH_SECRET environment variable is missing or less than 32 characters in production.');
+  }
+  return 'dev_temporary_jwt_secret_key_minimum_32_characters_for_local_testing_only';
+}
 
 // Helper to base64url encode an ArrayBuffer or Uint8Array
 function bufferToBase64Url(buffer: ArrayBuffer | Uint8Array): string {
@@ -82,7 +97,7 @@ export async function createSessionToken(payload: SessionUser): Promise<string> 
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw',
-    encoder.encode(SESSION_SECRET),
+    encoder.encode(getSessionSecret()),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
@@ -108,7 +123,7 @@ export async function verifySessionToken(token: string): Promise<SessionUser | n
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
       'raw',
-      encoder.encode(SESSION_SECRET),
+      encoder.encode(getSessionSecret()),
       { name: 'HMAC', hash: 'SHA-256' },
       false,
       ['verify']

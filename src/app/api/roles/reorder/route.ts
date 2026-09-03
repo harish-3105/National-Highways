@@ -53,19 +53,25 @@ export async function POST(req: NextRequest) {
       return r && !r.is_system_role;
     });
 
-    // Assign descending positions between 9000 and 10
     const totalCustom = customRolesToReorder.length;
+
+    // Step 1: Temporarily set positions to negative offsets to avoid unique key collisions during reorder
     for (let i = 0; i < totalCustom; i++) {
       const id = customRolesToReorder[i];
-      // Highest custom role gets (totalCustom - i) * 10
-      const newPos = (totalCustom - i) * 10;
-      
-      // Ensure it doesn't exceed actor's position if not super admin
-      const clampedPos = actor.isSuperAdmin ? newPos : Math.min(newPos, actor.position - (i + 1));
+      await supabase
+        .from('roles')
+        .update({ position: -(i + 100) })
+        .eq('id', id);
+    }
+
+    // Step 2: Assign clean sequential descending positions from totalCustom down to 1
+    for (let i = 0; i < totalCustom; i++) {
+      const id = customRolesToReorder[i];
+      const finalPos = totalCustom - i; // Highest in UI list gets totalCustom, bottom gets 1
 
       await supabase
         .from('roles')
-        .update({ position: clampedPos, updated_at: new Date().toISOString() })
+        .update({ position: finalPos, updated_at: new Date().toISOString() })
         .eq('id', id);
     }
 

@@ -82,21 +82,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { name, description, default_scope, position, permissions } = await req.json();
+    const { name, description, default_scope, permissions } = await req.json();
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       return NextResponse.json({ error: 'Role name is required' }, { status: 400 });
     }
 
-    const targetPosition = Number(position) || (actor.position > 1 ? actor.position - 10 : 10);
+    const supabase = await createClient();
 
-    // Enforce Discord Invariants
+    // 1. Fetch all existing custom roles to dynamically assign next sequential position (1 to N)
+    const { data: existingRoles, error: rolesFetchError } = await supabase
+      .from('roles')
+      .select('id, position, is_system_role')
+      .eq('is_system_role', false)
+      .order('position', { ascending: true });
+
+    if (rolesFetchError) {
+      return NextResponse.json({ error: rolesFetchError.message }, { status: 500 });
+    }
+
+    const customRoles = existingRoles || [];
+    // The new role position is dynamically indexed as (count + 1)
+    const targetPosition = customRoles.length + 1;
+
+    // Enforce Discord Invariants (Ensure targetPosition is strictly below creator's rank)
     const validation = canMutateRole(actor, targetPosition, permissions);
     if (!validation.allowed) {
       return NextResponse.json({ error: validation.error }, { status: 403 });
     }
-
-    const supabase = await createClient();
 
     // Insert Role
     const { data: newRole, error: insertError } = await supabase

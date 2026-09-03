@@ -13,13 +13,21 @@ export async function POST(req: NextRequest) {
 
     const cleanPhone = phoneNumber.trim().replace(/[\s-]/g, '');
     const tenDigitPhone = cleanPhone.slice(-10);
+
+    if (!/^[6-9]\d{9}$/.test(tenDigitPhone)) {
+      return NextResponse.json(
+        { error: 'Please enter a valid 10-digit Indian mobile number.' },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createClient();
 
     // 1. Query existing user profile
     let { data: user, error } = await supabase
       .from('user_profiles')
-      .select('id, phone_number, full_name, is_active, totp_secret, totp_enabled')
-      .or(`phone_number.eq.${cleanPhone},phone_number.eq.${tenDigitPhone}`)
+      .select('id, phone_number, full_name, is_active, totp_secret, totp_enabled, failed_totp_attempts, totp_locked_until')
+      .eq('phone_number', tenDigitPhone)
       .maybeSingle();
 
     if (error) {
@@ -31,7 +39,7 @@ export async function POST(req: NextRequest) {
       const { data: staff, error: staffError } = await supabase
         .from('staff_members')
         .select('*')
-        .or(`contact_no.ilike.%${tenDigitPhone}%,contact_no.eq.${cleanPhone}`)
+        .or(`contact_no.eq.${tenDigitPhone},contact_no.eq.+91${tenDigitPhone},contact_no.ilike.%${tenDigitPhone}`)
         .neq('delete_status', 'DELETED')
         .maybeSingle();
 
@@ -72,8 +80,10 @@ export async function POST(req: NextRequest) {
           totp_secret: newSecret,
           totp_enabled: false,
           is_active: true,
+          failed_totp_attempts: 0,
+          totp_locked_until: null,
         })
-        .select('id, phone_number, full_name, is_active, totp_secret, totp_enabled')
+        .select('id, phone_number, full_name, is_active, totp_secret, totp_enabled, failed_totp_attempts, totp_locked_until')
         .single();
 
       if (insertError) {
@@ -81,6 +91,10 @@ export async function POST(req: NextRequest) {
       }
 
       user = newUser;
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: 'User profile not found or could not be created.' }, { status: 500 });
     }
 
     // 3. Check if account is active

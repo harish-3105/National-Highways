@@ -16,7 +16,22 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanPhone = phoneNumber.trim().replace(/[\s-]/g, '');
+    const tenDigitPhone = cleanPhone.slice(-10);
     const cleanCode = code.trim().replace(/[\s-]/g, '');
+
+    if (!/^[6-9]\d{9}$/.test(tenDigitPhone)) {
+      return NextResponse.json(
+        { error: 'Please enter a valid 10-digit Indian mobile number.' },
+        { status: 400 }
+      );
+    }
+
+    if (!/^\d{6}$/.test(cleanCode)) {
+      return NextResponse.json(
+        { error: 'Please enter a valid 6-digit verification code.' },
+        { status: 400 }
+      );
+    }
 
     const supabase = await createClient();
 
@@ -30,6 +45,8 @@ export async function POST(req: NextRequest) {
         is_active,
         totp_secret,
         totp_enabled,
+        failed_totp_attempts,
+        totp_locked_until,
         jurisdiction_scope,
         circle,
         division,
@@ -42,7 +59,7 @@ export async function POST(req: NextRequest) {
           is_system_role
         )
       `)
-      .eq('phone_number', cleanPhone)
+      .eq('phone_number', tenDigitPhone)
       .maybeSingle();
 
     if (userError) {
@@ -57,16 +74,48 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'This account has been deactivated.' }, { status: 403 });
     }
 
-    // 2. Verify TOTP Code
+    // 2. Check Brute-Force Temporary Lockout
+    if (user.totp_locked_until) {
+      const lockedUntil = new Date(user.totp_locked_until);
+      if (lockedUntil > new Date()) {
+        const remainingMinutes = Math.ceil((lockedUntil.getTime() - Date.now()) / (60 * 1000));
+        return NextResponse.json(
+          { error: `Account temporarily locked due to 5 consecutive failed attempts. Please try again in ${remainingMinutes} minute(s).` },
+          { status: 429 }
+        );
+      }
+    }
+
+    // 3. Verify TOTP Code
     const isValid = verifyTotpCode(cleanCode, user.totp_secret);
     if (!isValid) {
+      const currentFailed = Number(user.failed_totp_attempts || 0) + 1;
+      const willLock = currentFailed >= 5;
+      const lockoutTime = willLock ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null;
+
+      await supabase
+        .from('user_profiles')
+        .update({
+          failed_totp_attempts: currentFailed,
+          totp_locked_until: lockoutTime,
+        })
+        .eq('id', user.id);
+
+      if (willLock) {
+        return NextResponse.json(
+          { error: 'Account temporarily locked for 15 minutes due to 5 consecutive failed attempts.' },
+          { status: 429 }
+        );
+      }
+
+      const remaining = 5 - currentFailed;
       return NextResponse.json(
-        { error: 'Invalid 6-digit code. Please check your Google or Microsoft Authenticator app and try again.' },
+        { error: `Invalid 6-digit code. ${remaining} attempt(s) remaining before temporary lockout.` },
         { status: 401 }
       );
     }
 
-    // 3. Update verification timestamp / enable TOTP
+    // 4. Update verification timestamp / enable TOTP & reset failed attempts
     const now = new Date().toISOString();
     await supabase
       .from('user_profiles')
@@ -74,6 +123,8 @@ export async function POST(req: NextRequest) {
         totp_enabled: true,
         totp_verified_at: user.totp_enabled ? undefined : now,
         last_login_at: now,
+        failed_totp_attempts: 0,
+        totp_locked_until: null,
       })
       .eq('id', user.id);
 

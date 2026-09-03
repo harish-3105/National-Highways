@@ -176,6 +176,28 @@ export async function DELETE(
       return NextResponse.json({ error: deleteErr.message }, { status: 500 });
     }
 
+    // Normalize remaining custom roles sequentially from 1 to N
+    const { data: remainingCustomRoles } = await supabase
+      .from('roles')
+      .select('id, position')
+      .eq('is_system_role', false)
+      .order('position', { ascending: true });
+
+    if (remainingCustomRoles && remainingCustomRoles.length > 0) {
+      for (let i = 0; i < remainingCustomRoles.length; i++) {
+        await supabase
+          .from('roles')
+          .update({ position: -(i + 100) })
+          .eq('id', remainingCustomRoles[i].id);
+      }
+      for (let i = 0; i < remainingCustomRoles.length; i++) {
+        await supabase
+          .from('roles')
+          .update({ position: i + 1, updated_at: new Date().toISOString() })
+          .eq('id', remainingCustomRoles[i].id);
+      }
+    }
+
     // Log Tamper-Proof Audit
     await logAudit({
       actor,

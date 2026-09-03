@@ -47,6 +47,24 @@ const CELL_BORDERS: Partial<ExcelJS.Borders> = {
 };
 
 /**
+ * Sanitizes cell values to prevent CSV / Excel formula injection.
+ * Prepends an apostrophe if a string begins with '=', '+', '-', or '@'.
+ */
+export function sanitizeExcelCellValue(val: unknown): unknown {
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (trimmed.length > 0 && ['=', '+', '-', '@'].includes(trimmed[0])) {
+      // If it's not a pure signed number (like -5.2 or +91), escape it with '
+      if ((trimmed[0] === '-' || trimmed[0] === '+') && !isNaN(Number(trimmed))) {
+        return val;
+      }
+      return `'${val}`;
+    }
+  }
+  return val;
+}
+
+/**
  * Formats a value for display measurement & string representation
  */
 function getDisplayValue(val: unknown, colDef: ExportColumnDef): string {
@@ -419,7 +437,7 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
         }
 
         const strVal = String(val);
-        rowValues[col.key] = strVal;
+        rowValues[col.key] = sanitizeExcelCellValue(strVal);
 
         // Calculate approximate rendered lines for this cell
         if (strVal) {
@@ -458,35 +476,43 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
         } else {
           cell.font = DATA_FONT;
         }
+
         cell.border = CELL_BORDERS;
 
-        cell.alignment = {
-          vertical: 'middle',
-          horizontal: 'center',
-          wrapText: true,
-        };
+        // Apply alignment according to column type
+        if (colDef.dataType === 'currency' || colDef.dataType === 'number' || colDef.dataType === 'percent' || colDef.dataType === 'integer') {
+          cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        } else if (colDef.dataType === 'date') {
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        } else if (colDef.key.includes('code') || colDef.key.includes('no') || colDef.key.includes('status')) {
+          cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        } else {
+          cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+        }
 
-        // Apply specific Excel number formats
+        // Apply Native Number Format
         if (colDef.dataType === 'currency') {
-          cell.numFmt = '#,##0.00';
-        } else if (colDef.dataType === 'number') {
-          cell.numFmt = colDef.key.includes('length') || colDef.key.includes('chainage') ? '#,##0.000' : '#,##0.00';
+          cell.numFmt = '₹#,##,##0.00';
+        } else if (colDef.dataType === 'percent') {
+          cell.numFmt = '0.0"%";-0.0"%";0.0"%"';
         } else if (colDef.dataType === 'integer') {
           cell.numFmt = '#,##0';
-        } else if (colDef.dataType === 'percent') {
-          cell.numFmt = '0.0%';
+        } else if (colDef.dataType === 'number') {
+          const digits = colDef.key.includes('length') || colDef.key.includes('chainage') ? '0.000' : '0.00';
+          cell.numFmt = `#,##0.${digits}`;
         }
       });
     });
 
-    // 3. Auto-filter across all columns
-    if (activeColumns.length > 0) {
-      const filterRowIdx = totalHeaderRows;
-      worksheet.autoFilter = {
-        from: { row: filterRowIdx, column: 1 },
-        to: { row: Math.max(data.length + filterRowIdx, filterRowIdx), column: activeColumns.length },
-      };
-    }
+    // 3. Freeze Panes & Set Grid Lines
+    worksheet.views = [
+      {
+        state: 'frozen',
+        xSplit: 0,
+        ySplit: totalHeaderRows,
+        showGridLines: true,
+      },
+    ];
   }
 
   const buffer = await workbook.xlsx.writeBuffer();
@@ -494,9 +520,9 @@ export async function buildExcelWorkbook(options: WorkbookExportOptions): Promis
 }
 
 /**
- * Builds a standard CSV string buffer from dataset
+ * Builds a clean CSV representation of the first sheet payload
  */
-export function buildCsvBuffer(sheetPayload: SheetExportPayload): Buffer {
+export function buildCsvExport(sheetPayload: SheetExportPayload): Buffer {
   const { columns, selectedKeys, data, titleRows = [] } = sheetPayload;
   const activeColumns = columns.filter((col) =>
     selectedKeys && selectedKeys.length > 0
@@ -506,7 +532,8 @@ export function buildCsvBuffer(sheetPayload: SheetExportPayload): Buffer {
 
   const escapeCsv = (val: unknown): string => {
     if (val === null || val === undefined) return '""';
-    const str = String(val).replace(/"/g, '""');
+    const sanitized = sanitizeExcelCellValue(val);
+    const str = String(sanitized).replace(/"/g, '""');
     return `"${str}"`;
   };
 
@@ -532,3 +559,6 @@ export function buildCsvBuffer(sheetPayload: SheetExportPayload): Buffer {
 
   return Buffer.from(rows.join('\r\n'), 'utf-8');
 }
+
+// Export buildCsvBuffer as alias for compatibility
+export const buildCsvBuffer = buildCsvExport;
