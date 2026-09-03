@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getSession } from "@/lib/auth/session";
 import { canPerformAction, canAssignRole } from "@/lib/auth/permissions";
 import { logAudit } from "@/lib/audit/logger";
+import { generateTotpSecret } from "@/lib/auth/totp";
 
 export const dynamic = "force-dynamic";
 
@@ -180,6 +181,43 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      // Auto-provision user_profiles entry if contact_no is provided
+      if (contact_no) {
+        const cleanPhone = contact_no.trim().replace(/[\s-]/g, '');
+        const tenDigit = cleanPhone.slice(-10);
+
+        if (/^[6-9]\d{9}$/.test(tenDigit)) {
+          let finalRoleId = role_id;
+          if (!finalRoleId) {
+            const { data: viewerRole } = await supabase
+              .from('roles')
+              .select('id')
+              .eq('name', 'Viewer')
+              .maybeSingle();
+            finalRoleId = viewerRole?.id || '00000000-0000-0000-0000-000000000002';
+          }
+
+          const newSecret = generateTotpSecret();
+
+          await supabase.from('user_profiles').upsert(
+            {
+              staff_id: data.id,
+              phone_number: tenDigit,
+              full_name: name.trim(),
+              role_id: finalRoleId,
+              jurisdiction_scope: division ? 'DIVISION' : circle ? 'CIRCLE' : 'STATEWIDE',
+              circle: circle || null,
+              division: division || null,
+              sub_division: sub_division || null,
+              totp_secret: newSecret,
+              totp_enabled: false,
+              is_active: true,
+            },
+            { onConflict: 'phone_number' }
+          );
+        }
       }
 
       // Log Tamper-Proof Audit
