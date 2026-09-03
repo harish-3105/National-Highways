@@ -549,16 +549,22 @@ export async function PATCH(request: Request) {
       const { data: existingCase } = await supabase.from('legal_cases').select('*').eq('id', id).maybeSingle();
 
       if (existingCase) {
-        const authCheck = canPerformAction(session, 'legal:delete', {
+        const authCheck = canPerformAction(session, 'legal:restore', {
           circle: existingCase.circle,
           division: existingCase.division,
         });
 
         if (!authCheck.allowed) {
-          return NextResponse.json(
-            { success: false, error: authCheck.reason || 'Unauthorized operation.' },
-            { status: 403 }
-          );
+          const fallbackCheck = canPerformAction(session, 'legal:delete', {
+            circle: existingCase.circle,
+            division: existingCase.division,
+          });
+          if (!fallbackCheck.allowed) {
+            return NextResponse.json(
+              { success: false, error: authCheck.reason || 'Unauthorized operation.' },
+              { status: 403 }
+            );
+          }
         }
 
         const { error } = await supabase

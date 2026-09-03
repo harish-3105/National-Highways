@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getSession } from "@/lib/auth/session";
+import { canPerformAction } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -106,6 +108,15 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession();
+    let authCheck = canPerformAction(session, "works:master_data_manage");
+    if (!authCheck.allowed) {
+      authCheck = canPerformAction(session, "master_data:manage");
+    }
+    if (!authCheck.allowed) {
+      return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
+    }
+
     const supabase = getSupabaseClient();
     if (!supabase) {
       return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
@@ -190,6 +201,15 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const session = await getSession();
+    let authCheck = canPerformAction(session, "works:master_data_manage");
+    if (!authCheck.allowed) {
+      authCheck = canPerformAction(session, "master_data:manage");
+    }
+    if (!authCheck.allowed) {
+      return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
+    }
+
     const supabase = getSupabaseClient();
     if (!supabase) {
       return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
@@ -236,6 +256,15 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await getSession();
+    let authCheck = canPerformAction(session, "works:master_data_manage");
+    if (!authCheck.allowed) {
+      authCheck = canPerformAction(session, "master_data:manage");
+    }
+    if (!authCheck.allowed) {
+      return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
+    }
+
     const supabase = getSupabaseClient();
     if (!supabase) {
       return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });

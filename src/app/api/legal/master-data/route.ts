@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getSession } from "@/lib/auth/session";
+import { canPerformAction } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -130,6 +132,15 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession();
+    let authCheck = canPerformAction(session, "legal:master_data_manage");
+    if (!authCheck.allowed) {
+      authCheck = canPerformAction(session, "master_data:manage");
+    }
+    if (!authCheck.allowed) {
+      return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
+    }
+
     const supabase = getSupabaseClient();
     if (!supabase) {
       return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
@@ -201,20 +212,25 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
+      console.error("Error inserting legal master item:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     // Bidirectional sync for court_name and appellate_court
     if (category === "court_name" || category === "appellate_court") {
-      const otherCat: LegalCategory = category === "court_name" ? "appellate_court" : "court_name";
-      const { data: match } = await supabase
+      const otherCat = category === "court_name" ? "appellate_court" : "court_name";
+      let otherQuery = supabase
         .from("legal_master_config")
         .select("id")
         .eq("category", otherCat)
-        .eq("value", trimmedValue)
-        .maybeSingle();
+        .eq("value", trimmedValue);
 
-      if (!match) {
+      if (cleanParentValue) {
+        otherQuery = otherQuery.eq("parent_value", cleanParentValue);
+      }
+
+      const { data: otherExisting } = await otherQuery.maybeSingle();
+      if (!otherExisting) {
         await supabase
           .from("legal_master_config")
           .insert([{ category: otherCat, value: trimmedValue, parent_value: cleanParentValue }]);
@@ -231,6 +247,15 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const session = await getSession();
+    let authCheck = canPerformAction(session, "legal:master_data_manage");
+    if (!authCheck.allowed) {
+      authCheck = canPerformAction(session, "master_data:manage");
+    }
+    if (!authCheck.allowed) {
+      return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
+    }
+
     const supabase = getSupabaseClient();
     if (!supabase) {
       return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
@@ -314,6 +339,15 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await getSession();
+    let authCheck = canPerformAction(session, "legal:master_data_manage");
+    if (!authCheck.allowed) {
+      authCheck = canPerformAction(session, "master_data:manage");
+    }
+    if (!authCheck.allowed) {
+      return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
+    }
+
     const supabase = getSupabaseClient();
     if (!supabase) {
       return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });

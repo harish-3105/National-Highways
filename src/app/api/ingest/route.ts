@@ -1,8 +1,20 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { parseDatasetFile, DatasetType } from '@/lib/ingestion/parser';
+import { getSession } from '@/lib/auth/session';
+import { canPerformAction } from '@/lib/auth/permissions';
 
 export const dynamic = 'force-dynamic';
+
+const INGEST_PERMISSION_MAP: Record<DatasetType, string> = {
+  HIGHWAYS_MASTER: 'highways:import',
+  HIGHWAY_SUB_CHAINAGES: 'sub_chainages:import',
+  HIGHWAY_MILESTONES: 'highways:import',
+  ACCIDENT_BLACKSPOTS: 'highways:import',
+  ONGOING_WORKS: 'works:import',
+  DLP_CONTRACTS: 'dlp:import',
+  LEGAL_CASES: 'legal:import',
+};
 
 function getSupabaseClient() {
   const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -82,6 +94,20 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, message: 'File and datasetType are required fields.' },
         { status: 400 }
+      );
+    }
+
+    const session = await getSession();
+    const requiredPerm = INGEST_PERMISSION_MAP[datasetType] || 'works:import';
+    let authCheck = canPerformAction(session, requiredPerm);
+    if (!authCheck.allowed) {
+      // Fallback check to generic works:import or *:*
+      authCheck = canPerformAction(session, 'works:import');
+    }
+    if (!authCheck.allowed) {
+      return NextResponse.json(
+        { success: false, message: authCheck.reason || 'Unauthorized operation.' },
+        { status: 403 }
       );
     }
 

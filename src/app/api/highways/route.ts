@@ -262,10 +262,15 @@ export async function POST(request: Request) {
 
     const session = await getSession();
     const body = await request.json();
+    const isRestore = body.action === 'restore';
     const isEdit = Boolean(body.id);
-    const requiredPerm = isEdit ? 'highways:edit' : 'highways:create';
+    const requiredPerm = isRestore ? 'highways:restore' : isEdit ? 'highways:edit' : 'highways:create';
 
-    const authCheck = canPerformAction(session, requiredPerm);
+    let authCheck = canPerformAction(session, requiredPerm);
+    if (!authCheck.allowed && isRestore) {
+      authCheck = canPerformAction(session, 'highways:edit');
+    }
+
     if (!authCheck.allowed) {
       return NextResponse.json(
         { success: false, message: authCheck.reason || 'Unauthorized operation.' },

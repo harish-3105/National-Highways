@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getSession } from '@/lib/auth/session';
+import { canPerformAction } from '@/lib/auth/permissions';
 import { EMPTY_MASTER_DATA } from '@/lib/feeBillMasterData';
 import { FeeBillMasterDataConfig } from '@/types/feeBill';
 
@@ -181,6 +183,15 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const session = await getSession();
+    let authCheck = canPerformAction(session, 'fee_bills:master_data_manage');
+    if (!authCheck.allowed) {
+      authCheck = canPerformAction(session, 'master_data:manage');
+    }
+    if (!authCheck.allowed) {
+      return NextResponse.json({ success: false, message: authCheck.reason || 'Unauthorized operation.' }, { status: 403 });
+    }
+
     const supabase = getSupabaseClient();
     const body = await request.json();
 

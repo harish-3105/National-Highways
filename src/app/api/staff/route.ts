@@ -213,7 +213,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     const session = await getSession();
-    const authCheck = canPerformAction(session, "staff:edit");
+    let authCheck = canPerformAction(session, "staff:restore");
+    if (!authCheck.allowed) {
+      authCheck = canPerformAction(session, "staff:edit");
+    }
     if (!authCheck.allowed) {
       return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
     }

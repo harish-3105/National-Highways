@@ -182,13 +182,21 @@ export async function POST(request: Request) {
     }
 
     const session = await getSession();
+    const isRestore = Boolean(body.id && (body as any).action === 'restore');
     const isUpdatingRealId = Boolean(body.id && !String(body.id).startsWith('fb-'));
-    const requiredPerm = isUpdatingRealId ? 'fee_bills:edit' : 'fee_bills:create';
+    const requiredPerm = isRestore ? 'fee_bills:restore' : isUpdatingRealId ? 'fee_bills:edit' : 'fee_bills:create';
 
-    const authCheck = canPerformAction(session, requiredPerm, {
+    let authCheck = canPerformAction(session, requiredPerm, {
       circle: body.circle || null,
       division: body.division || null,
     });
+
+    if (!authCheck.allowed && isRestore) {
+      authCheck = canPerformAction(session, 'fee_bills:edit', {
+        circle: body.circle || null,
+        division: body.division || null,
+      });
+    }
 
     if (!authCheck.allowed) {
       return NextResponse.json(

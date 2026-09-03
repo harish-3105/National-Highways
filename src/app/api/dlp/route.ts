@@ -765,9 +765,12 @@ export async function PATCH(request: Request) {
       .maybeSingle();
 
     if (existingCorridor) {
-      const authCheck = canPerformAction(session, 'dlp:delete', { division: existingCorridor.division_name });
+      const authCheck = canPerformAction(session, 'dlp:restore', { division: existingCorridor.division_name });
       if (!authCheck.allowed) {
-        return NextResponse.json({ success: false, error: authCheck.reason || 'Unauthorized operation.' }, { status: 403 });
+        const fallbackCheck = canPerformAction(session, 'dlp:delete', { division: existingCorridor.division_name });
+        if (!fallbackCheck.allowed) {
+          return NextResponse.json({ success: false, error: authCheck.reason || 'Unauthorized operation.' }, { status: 403 });
+        }
       }
     }
 

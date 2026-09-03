@@ -135,10 +135,15 @@ export async function POST(request: Request) {
 
     const session = await getSession();
     const body = await request.json();
+    const isRestore = Boolean(body.id && body.delete_status === 'ACTIVE' && body.action === 'restore');
     const isEdit = Boolean(body.id);
-    const requiredPerm = isEdit ? 'sub_chainages:edit' : 'sub_chainages:create';
+    const requiredPerm = isRestore ? 'sub_chainages:restore' : isEdit ? 'sub_chainages:edit' : 'sub_chainages:create';
 
-    const authCheck = canPerformAction(session, requiredPerm);
+    let authCheck = canPerformAction(session, requiredPerm);
+    if (!authCheck.allowed && isRestore) {
+      authCheck = canPerformAction(session, 'sub_chainages:edit');
+    }
+
     if (!authCheck.allowed) {
       return NextResponse.json(
         { success: false, message: authCheck.reason || 'Unauthorized operation.' },
