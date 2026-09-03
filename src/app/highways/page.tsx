@@ -352,6 +352,7 @@ export default function HighwaysPage() {
           setSelectedHighwayForEdit(h);
           setUiMode('FORM');
         }}
+        masterData={masterData}
       />
 
       <DeleteHighwayModal

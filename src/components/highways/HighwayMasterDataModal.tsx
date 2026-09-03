@@ -50,8 +50,8 @@ const CATEGORY_TABS: CategoryTab[] = [
   },
   {
     id: 'configuration',
-    label: 'Carriageway Configurations',
-    description: '2 Lane, 4 Lane, 6 Lane, Paved Shoulders, Expressway...',
+    label: 'Configurations & Lane Status',
+    description: 'Level 1 corridor configurations & Level 2 sub-stretch lane statuses',
     icon: Route,
   },
 ];

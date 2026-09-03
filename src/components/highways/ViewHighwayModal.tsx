@@ -25,12 +25,14 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { HighwayMasterData } from '@/app/api/highways/master-data/route';
 
 interface ViewHighwayModalProps {
   highway: HighwayCorridor | null;
   isOpen: boolean;
   onClose: () => void;
   onEdit: (highway: HighwayCorridor) => void;
+  masterData?: HighwayMasterData;
 }
 
 export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
@@ -38,6 +40,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
   isOpen,
   onClose,
   onEdit,
+  masterData,
 }) => {
   const [subChainages, setSubChainages] = useState<SubChainageStretch[]>([]);
   const [loadingSub, setLoadingSub] = useState<boolean>(false);
@@ -343,7 +346,7 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
         <div>
           <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Lane Status</label>
           <SearchableSelect
-            options={['2-Lane', '2L+PS', '4-Lane', '4L+PS', '6-Lane', '<2-Lane', 'Primary']}
+            options={masterData?.configurations || []}
             value={subLaneConfig}
             onChange={setSubLaneConfig}
             placeholder="Select Lane Config..."
@@ -399,13 +402,12 @@ export const ViewHighwayModal: React.FC<ViewHighwayModalProps> = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div>
-          <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Division Name</label>
-          <input
-            type="text"
-            placeholder="e.g. Coimbatore"
+          <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Division Name</label>
+          <SearchableSelect
+            options={masterData?.divisions || []}
             value={subDivision}
-            onChange={(e) => setSubDivision(e.target.value)}
-            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100"
+            onChange={setSubDivision}
+            placeholder="Select Division..."
           />
         </div>
 
