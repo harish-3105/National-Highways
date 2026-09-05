@@ -453,10 +453,6 @@ export const MajorProjectsDashboard: React.FC = () => {
           activeLabel: "Hide Archived",
           inactiveLabel: "Show Archived",
         }}
-        importAction={{
-          disabled: true,
-          disabledReason: "Works Excel Import coming soon",
-        }}
         exportAction={{
           onClick: () => setIsExportModalOpen(true),
           label: "Export",

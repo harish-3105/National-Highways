@@ -362,10 +362,6 @@ export const StaffDashboard: React.FC = () => {
                 activeLabel: "Hide Archived",
                 inactiveLabel: `Archived (${archivedStaffCount})`,
               }}
-              importAction={{
-                disabled: true,
-                disabledReason: "Staff Excel Import coming soon",
-              }}
               exportAction={{
                 onClick: () => setIsExportModalOpen(true),
                 label: "Export",

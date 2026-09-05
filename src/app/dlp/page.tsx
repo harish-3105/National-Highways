@@ -479,10 +479,6 @@ export default function DlpPage() {
                 activeLabel: "Hide Archived",
                 inactiveLabel: "Show Archived",
               }}
-              importAction={{
-                disabled: true,
-                disabledReason: "DLP Excel Import coming soon",
-              }}
               exportAction={{
                 onClick: () => setIsExportModalOpen(true),
                 label: "Export",

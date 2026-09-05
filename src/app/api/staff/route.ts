@@ -17,45 +17,80 @@ function getSupabaseClient() {
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getSession();
+    const authCheck = canPerformAction(session, "staff:view");
+    if (!authCheck.allowed) {
+      return NextResponse.json({ error: authCheck.reason || "Unauthorized" }, { status: 403 });
+    }
+
     const supabase = getSupabaseClient();
     if (!supabase) {
-      return NextResponse.json([]);
+      return NextResponse.json({ error: "Database service unavailable" }, { status: 500 });
     }
 
     const { searchParams } = new URL(request.url);
-    const session = await getSession();
-    const rawIncludeDeleted = searchParams.get("include_deleted") === "true";
-    const includeDeleted = rawIncludeDeleted && canPerformAction(session, "system:view_archived").allowed;
+    const office = searchParams.get("office");
+    const circle = searchParams.get("circle");
+    const division = searchParams.get("division");
+    const sub_division = searchParams.get("sub_division");
+    const search = searchParams.get("search");
 
     let query = supabase.from("staff_members").select("*").order("created_at", { ascending: false });
 
-    if (!includeDeleted) {
-      query = query.neq("delete_status", "DELETED");
+    if (office && office !== "All Offices") query = query.eq("office", office);
+    if (circle && circle !== "All Circles") query = query.eq("circle", circle);
+    if (division && division !== "All Divisions") query = query.eq("division", division);
+    if (sub_division && sub_division !== "All Sub-Divisions") query = query.eq("sub_division", sub_division);
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,designation.ilike.%${search}%,contact_no.ilike.%${search}%,emailid.ilike.%${search}%`);
     }
 
-    const { data: staffList, error } = await query;
-
-    if (error) {
-      console.error("Error fetching staff members:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    const { data: staffList, error: staffError } = await query;
+    if (staffError) {
+      return NextResponse.json({ error: staffError.message }, { status: 500 });
     }
 
-    // Fetch user profiles to display login status & roles in staff directory
-    const { data: profiles } = await supabase
-      .from("user_profiles")
-      .select("id, staff_id, phone_number, role_id, is_active, totp_enabled, roles ( id, name, position )");
+    // Fetch matching user_profiles to join login status & role
+    const staffIds = (staffList || []).map((s: any) => s.id);
+    let profilesByStaffId: Record<string, any> = {};
 
-    const profileMap = new Map((profiles || []).filter(p => p.staff_id).map((p: any) => [p.staff_id, p]));
+    if (staffIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("user_profiles")
+        .select(`
+          id,
+          staff_id,
+          role_id,
+          is_active,
+          totp_enabled,
+          roles (
+            id,
+            name,
+            position,
+            is_system_role
+          )
+        `)
+        .in("staff_id", staffIds);
+
+      if (profiles) {
+        profiles.forEach((p: any) => {
+          if (p.staff_id) {
+            profilesByStaffId[p.staff_id] = p;
+          }
+        });
+      }
+    }
 
     const merged = (staffList || []).map((s: any) => {
-      const p = profileMap.get(s.id);
+      const p = profilesByStaffId[s.id];
       return {
         ...s,
         user_profile: p ? {
           id: p.id,
           role_id: p.role_id,
-          role_name: p.roles?.name || 'Viewer',
-          position: p.roles?.position || 0,
+          role_name: (p.roles as any)?.name || 'Viewer',
+          role_position: (p.roles as any)?.position || 0,
           is_active: p.is_active,
           totp_enabled: p.totp_enabled,
         } : null,
@@ -108,6 +143,27 @@ export async function POST(request: NextRequest) {
 
     if (!name || typeof name !== "string" || name.trim() === "") {
       return NextResponse.json({ error: "Staff Name is required" }, { status: 400 });
+    }
+
+    // Validate role assignment hierarchy if role_id is specified
+    if (role_id) {
+      const { data: targetRole, error: roleError } = await supabase
+        .from("roles")
+        .select("id, name, position")
+        .eq("id", role_id)
+        .maybeSingle();
+
+      if (roleError || !targetRole) {
+        return NextResponse.json({ error: "Invalid role_id specified." }, { status: 400 });
+      }
+
+      const roleAssignCheck = canAssignRole(session, targetRole.position);
+      if (!roleAssignCheck.allowed) {
+        return NextResponse.json(
+          { error: roleAssignCheck.error || "Hierarchy boundary: You cannot assign this role." },
+          { status: 403 }
+        );
+      }
     }
 
     const payload = {

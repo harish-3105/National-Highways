@@ -417,10 +417,6 @@ export const LegalDashboard: React.FC = () => {
           activeLabel: "Hide Archived",
           inactiveLabel: "Show Archived",
         }}
-        importAction={{
-          disabled: true,
-          disabledReason: "Legal Cases Import coming soon",
-        }}
         exportAction={{
           onClick: () => setIsExportModalOpen(true),
           label: "Export",

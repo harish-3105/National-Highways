@@ -7,7 +7,6 @@ import {
   Archive,
   EyeOff,
   SlidersHorizontal,
-  Upload,
   Plus,
   Download,
 } from 'lucide-react';
@@ -46,14 +45,6 @@ export interface ModulePageHeaderProps {
     title?: string;
   };
 
-  // Row 2, Col 2: Import Data
-  importAction?: {
-    onClick?: () => void;
-    label?: string;
-    disabled?: boolean;
-    disabledReason?: string;
-  };
-
   // Row 1, Col 3: Primary Action (Add / New)
   primaryAction?: {
     onClick: () => void;
@@ -86,7 +77,6 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
   refreshLabel = 'Refresh',
   archiveToggle,
   masterConfig,
-  importAction,
   primaryAction,
   exportAction,
   extraContent,
@@ -237,28 +227,8 @@ export const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({
           )}
 
           {/* ================= COLUMN 2 (Row 2) ================= */}
-          {/* Col 2, Row 2: Import Data */}
-          {importAction && !importAction.disabled && importAction.onClick ? (
-            <button
-              type="button"
-              onClick={importAction.onClick}
-              title="Import Data File"
-              className={`${ACTION_BTN_BASE} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300`}
-            >
-              <Upload className="w-3.5 h-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
-              <span className="truncate">{importAction.label || 'Import'}</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled
-              title={importAction?.disabledReason || 'Module Import coming soon'}
-              className={DISABLED_BTN_BASE}
-            >
-              <Upload className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{importAction?.label || 'Import'}</span>
-            </button>
-          )}
+          {/* Col 2, Row 2: Reserved Grid Spacer Slot */}
+          <div className="invisible w-[140px] sm:w-[150px] h-9" />
 
           {/* ================= COLUMN 3 (Row 2) ================= */}
           {/* Col 3, Row 2: Export Data */}

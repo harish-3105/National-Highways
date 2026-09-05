@@ -84,6 +84,11 @@ export async function GET(request: Request) {
     const configFilter = searchParams.get('config')?.trim() || '';
     const sortBy = searchParams.get('sortBy') || 'length_desc';
     const session = await getSession();
+    const authCheck = canPerformAction(session, 'highways:view');
+    if (!authCheck.allowed) {
+      return NextResponse.json({ success: false, message: authCheck.reason || 'Unauthorized' }, { status: 403 });
+    }
+
     const rawIncludeDeleted = searchParams.get('includeDeleted') === 'true';
     const includeDeleted = rawIncludeDeleted && canPerformAction(session, 'system:view_archived').allowed;
 

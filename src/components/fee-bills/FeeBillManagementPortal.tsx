@@ -251,10 +251,6 @@ export function FeeBillManagementPortal() {
           activeLabel: "Hide Archived",
           inactiveLabel: "Show Archived",
         }}
-        importAction={{
-          disabled: true,
-          disabledReason: "Fee Bills Excel Import coming soon",
-        }}
         exportAction={{
           onClick: () => setIsExportModalOpen(true),
           label: "Export",

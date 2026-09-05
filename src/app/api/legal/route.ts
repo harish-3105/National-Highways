@@ -138,6 +138,11 @@ export async function GET(req: NextRequest) {
     const rawIncludeDeleted = searchParams.get('includeDeleted') === 'true';
 
     const session = await getSession();
+    const authCheck = canPerformAction(session, 'legal:view');
+    if (!authCheck.allowed) {
+      return NextResponse.json({ error: authCheck.reason || 'Unauthorized' }, { status: 403 });
+    }
+
     const includeDeleted = rawIncludeDeleted && canPerformAction(session, 'system:view_archived').allowed;
 
     const supabase = await createClient();
@@ -148,22 +153,6 @@ export async function GET(req: NextRequest) {
         .from('legal_cases')
         .select('*')
         .order('created_at', { ascending: false });
-
-      // Enforce Row-Level PBAC Data Siloing if user lacks statewide view permission
-      if (session && !session.isSuperAdmin) {
-        const canViewStatewide =
-          session.permissions.includes('jurisdiction:view_statewide') ||
-          session.permissions.includes('*:*') ||
-          session.jurisdictionScope === 'STATEWIDE';
-
-        if (!canViewStatewide) {
-          if (session.jurisdictionScope === 'DIVISION' && session.division) {
-            query = query.eq('division', session.division);
-          } else if (session.jurisdictionScope === 'CIRCLE' && session.circle) {
-            query = query.eq('circle', session.circle);
-          }
-        }
-      }
 
       if (!includeDeleted) {
         query = query.neq('delete_status', 'DELETED');

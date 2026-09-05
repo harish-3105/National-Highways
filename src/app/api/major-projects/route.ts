@@ -152,25 +152,14 @@ export async function GET(request: Request) {
     }
 
     const session = await getSession();
+    const authCheck = canPerformAction(session, 'works:view');
+    if (!authCheck.allowed) {
+      return NextResponse.json({ success: false, message: authCheck.reason || 'Unauthorized' }, { status: 403 });
+    }
+
     const includeDeleted = rawIncludeDeleted && canPerformAction(session, 'system:view_archived').allowed;
 
     let query = supabase.from('major_projects_50cr').select('*').order('s_no', { ascending: true });
-
-    // Enforce Row-Level PBAC Data Siloing if user lacks statewide view permission
-    if (session && !session.isSuperAdmin) {
-      const canViewStatewide =
-        session.permissions.includes('jurisdiction:view_statewide') ||
-        session.permissions.includes('*:*') ||
-        session.jurisdictionScope === 'STATEWIDE';
-
-      if (!canViewStatewide) {
-        if (session.jurisdictionScope === 'DIVISION' && session.division) {
-          query = query.ilike('division', session.division);
-        } else if (session.jurisdictionScope === 'CIRCLE' && session.circle) {
-          query = query.ilike('circle', session.circle);
-        }
-      }
-    }
 
     if (!includeDeleted) {
       query = query.neq('delete_status', 'DELETED');

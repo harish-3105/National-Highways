@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getSession } from '@/lib/auth/session';
+import { canPerformAction } from '@/lib/auth/permissions';
 import {
   HIGHWAYS_L1_COLUMNS,
   HIGHWAYS_L2_MACRO_COLUMNS,
@@ -36,8 +38,52 @@ function getSupabaseClient() {
   }
 }
 
+const EXPORT_PERMISSION_MAP: Record<string, string> = {
+  highways: 'highways:export',
+  corridors: 'highways:export',
+  dlp: 'dlp:export',
+  maintenance: 'dlp:export',
+  'ongoing-works': 'works:export',
+  'major-projects': 'works:export',
+  legal: 'legal:export',
+  cases: 'legal:export',
+  'fee-bills': 'fee_bills:export',
+  fee_bills: 'fee_bills:export',
+  staff: 'staff:export',
+  'staff-members': 'staff:export',
+};
+
+/**
+ * Resolves child division names belonging to a specified circle
+ */
+async function getDivisionsForCircle(supabase: any, circleName: string): Promise<string[]> {
+  try {
+    const { data } = await supabase
+      .from('ongoing_works_master_config')
+      .select('value')
+      .eq('category', 'division')
+      .ilike('parent_value', circleName);
+
+    if (data && data.length > 0) {
+      return data.map((d: { value: string }) => d.value.trim());
+    }
+  } catch {
+    // Return empty array on resolution failure
+  }
+  return [];
+}
+
 export async function POST(req: NextRequest) {
   try {
+    // 1. Mandatory Session Authentication
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required. Please log in to export data.' },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const {
       module,
@@ -51,9 +97,26 @@ export async function POST(req: NextRequest) {
       customFileName,
     } = body;
 
+    // 2. Permission Verification (PBAC)
+    const targetModule = String(module || '').toLowerCase();
+    const requiredPerm = EXPORT_PERMISSION_MAP[targetModule];
+    if (!requiredPerm) {
+      return NextResponse.json(
+        { success: false, message: `Unknown or unsupported export module: ${module}` },
+        { status: 400 }
+      );
+    }
+
+    const authCheck = canPerformAction(session, requiredPerm);
+    if (!authCheck.allowed) {
+      return NextResponse.json(
+        { success: false, message: authCheck.reason || `Unauthorized: You lack the "${requiredPerm}" permission.` },
+        { status: 403 }
+      );
+    }
+
     const supabase = getSupabaseClient();
     const timestamp = new Date().toISOString().slice(0, 10);
-    const dateSuffix = emptyTemplate ? `Template_${timestamp}` : timestamp;
 
     const sheets: SheetExportPayload[] = [];
     let filePrefix = customFileName || `TN_NH_${String(module).toUpperCase()}`;
@@ -79,19 +142,9 @@ export async function POST(req: NextRequest) {
           if (data) {
             selectedRoadCodes = data.map((hw: any) => hw.road_code).filter(Boolean);
 
-            // Attach DLP counts
-            const { data: dlpData } = await supabase.from('dlp_contracts').select('highway_code');
-            const dlpMap = new Map<string, number>();
-            if (dlpData) {
-              dlpData.forEach((d: { highway_code: string }) => {
-                const code = (d.highway_code || '').toUpperCase();
-                dlpMap.set(code, (dlpMap.get(code) || 0) + 1);
-              });
-            }
-
             l1Data = data.map((hw: any) => ({
               ...hw,
-              dlp_count: dlpMap.get((hw.road_code || '').toUpperCase()) || 0,
+              dlp_count: 0,
             }));
           }
         }
@@ -163,7 +216,7 @@ export async function POST(req: NextRequest) {
               (s: any) => s.breakdown_type === 'MICRO_LANE' || s.row_width || s.carriageway_width
             );
             if (microData.length === 0 && data.length > 0) {
-              microData = data; // Fallback to all if breakdown_type was unpopulated
+              microData = data;
             }
           }
         }
@@ -256,9 +309,9 @@ export async function POST(req: NextRequest) {
                 const_contractor_name: '',
                 const_work_name: '',
                 const_commencement_date: '',
-                const_physical_progress_pct: '',
-                const_actual_completion_date: '',
-                const_dlp_period_years: '',
+                const_physical_progress_pct: st.physical_progress_pct !== null && st.physical_progress_pct !== undefined ? st.physical_progress_pct : '',
+                const_actual_completion_date: st.actual_completion_date || '',
+                const_dlp_period_years: st.dlp_period_years ?? '',
                 stmc_contractor_name: '',
                 stmc_work_name: '',
                 stmc_commencement_date: '',

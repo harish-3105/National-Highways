@@ -246,10 +246,6 @@ export default function HighwaysPage() {
                 activeLabel: "Hide Archived",
                 inactiveLabel: "Show Archived",
               }}
-              importAction={{
-                disabled: true,
-                disabledReason: "Highways Excel Import coming soon",
-              }}
               exportAction={{
                 onClick: () => setIsExportModalOpen(true),
                 label: "Export",

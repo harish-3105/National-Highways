@@ -42,6 +42,11 @@ export async function GET(request: Request) {
     const paymentStatus = searchParams.get('paymentStatus')?.trim() || '';
     const pendencyStatus = searchParams.get('pendencyStatus')?.trim() || '';
     const session = await getSession();
+    const authCheck = canPerformAction(session, 'fee_bills:view');
+    if (!authCheck.allowed) {
+      return NextResponse.json({ success: false, message: authCheck.reason || 'Unauthorized' }, { status: 403 });
+    }
+
     const rawIncludeDeleted = searchParams.get('includeDeleted') === 'true';
     const includeDeleted = rawIncludeDeleted && canPerformAction(session, 'system:view_archived').allowed;
 
@@ -128,23 +133,6 @@ export async function GET(request: Request) {
           }
           return true;
         });
-
-        // Enforce Row-Level PBAC Data Siloing if user lacks statewide view permission
-        const session = await getSession();
-        if (session && !session.isSuperAdmin) {
-          const canViewStatewide =
-            session.permissions.includes('jurisdiction:view_statewide') ||
-            session.permissions.includes('*:*') ||
-            session.jurisdictionScope === 'STATEWIDE';
-
-          if (!canViewStatewide) {
-            if (session.jurisdictionScope === 'DIVISION' && session.division) {
-              mapped = mapped.filter((b) => b.division.toLowerCase() === session.division?.toLowerCase());
-            } else if (session.jurisdictionScope === 'CIRCLE' && session.circle) {
-              mapped = mapped.filter((b) => b.circle.toLowerCase() === session.circle?.toLowerCase());
-            }
-          }
-        }
 
         return NextResponse.json({ success: true, feeBills: mapped, totalCount: mapped.length });
       }

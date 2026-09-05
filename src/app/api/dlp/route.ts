@@ -108,6 +108,11 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get('search');
     const statusFilter = searchParams.get('status');
     const session = await getSession();
+    const authCheck = canPerformAction(session, 'dlp:view');
+    if (!authCheck.allowed) {
+      return NextResponse.json({ success: false, error: authCheck.reason || 'Unauthorized' }, { status: 403 });
+    }
+
     const rawIncludeDeleted = searchParams.get('includeDeleted') === 'true';
     const includeDeleted = rawIncludeDeleted && canPerformAction(session, 'system:view_archived').allowed;
 
@@ -120,20 +125,6 @@ export async function GET(req: NextRequest) {
       .from('dlp_corridors')
       .select('*, dlp_work_stretches(*)')
       .order('created_at', { ascending: false });
-
-    // Enforce Row-Level PBAC Data Siloing if user lacks statewide view permission
-    if (session && !session.isSuperAdmin) {
-      const canViewStatewide =
-        session.permissions.includes('jurisdiction:view_statewide') ||
-        session.permissions.includes('*:*') ||
-        session.jurisdictionScope === 'STATEWIDE';
-
-      if (!canViewStatewide) {
-        if (session.jurisdictionScope === 'DIVISION' && session.division) {
-          query = query.ilike('division_name', `%${session.division}%`);
-        }
-      }
-    }
 
     if (highwayCode) query = query.eq('highway_code', highwayCode);
     if (division) query = query.ilike('division_name', `%${division}%`);
