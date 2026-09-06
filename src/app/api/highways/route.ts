@@ -104,11 +104,15 @@ export async function GET(request: Request) {
       if (rawHighways) {
         allCorridors = rawHighways;
 
-        const { data: dlpContracts } = await supabase.from('dlp_contracts').select('highway_code');
+        let dlpQuery = supabase.from('dlp_corridors').select('highway_code');
+        if (!includeDeleted) {
+          dlpQuery = dlpQuery.neq('status', 'DELETED');
+        }
+        const { data: dlpCorridors } = await dlpQuery;
         const dlpCountsMap = new Map<string, number>();
-        if (dlpContracts) {
-          dlpContracts.forEach((contract: { highway_code: string }) => {
-            const code = contract.highway_code?.toUpperCase();
+        if (dlpCorridors) {
+          dlpCorridors.forEach((corridor: { highway_code: string }) => {
+            const code = corridor.highway_code?.toUpperCase();
             if (code) {
               dlpCountsMap.set(code, (dlpCountsMap.get(code) || 0) + 1);
             }

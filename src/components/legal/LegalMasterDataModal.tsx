@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { LegalCategory, LegalMasterData } from '@/app/api/legal/master-data/route';
 import {
   X,
@@ -70,7 +70,7 @@ export const LegalMasterDataModal: React.FC<LegalMasterDataModalProps> = ({
   // Delete confirmation state
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ id?: string; value: string } | null>(null);
 
-  const circleOptions = masterData?.circles || [];
+  const circleOptions = useMemo(() => masterData?.circles || [], [masterData?.circles]);
 
   useEffect(() => {
     if (circleOptions.length > 0 && !selectedCircleForDiv) {

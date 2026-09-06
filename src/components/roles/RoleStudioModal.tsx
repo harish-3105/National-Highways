@@ -64,6 +64,17 @@ export function RoleStudioModal({ isOpen, onClose, currentUser }: RoleStudioModa
   const [newRoleName, setNewRoleName] = useState<string>('');
   const [newRoleScope, setNewRoleScope] = useState<string>('DIVISION');
 
+  const selectRole = (role: RoleData) => {
+    setSelectedRoleId(role.id);
+    setEditName(role.name);
+    setEditDescription(role.description || '');
+    setEditScope(role.default_scope || 'DIVISION');
+    setEditPermissions([...role.permissions]);
+    setIsCreatingRole(false);
+    setErrorMsg('');
+    setSuccessMsg('');
+  };
+
   // Load Roles & Catalog
   const fetchRoles = async () => {
     setIsLoading(true);
@@ -91,17 +102,6 @@ export function RoleStudioModal({ isOpen, onClose, currentUser }: RoleStudioModa
       fetchRoles();
     }
   }, [isOpen]);
-
-  const selectRole = (role: RoleData) => {
-    setSelectedRoleId(role.id);
-    setEditName(role.name);
-    setEditDescription(role.description || '');
-    setEditScope(role.default_scope || 'DIVISION');
-    setEditPermissions([...role.permissions]);
-    setIsCreatingRole(false);
-    setErrorMsg('');
-    setSuccessMsg('');
-  };
 
   if (!isOpen) return null;
 
