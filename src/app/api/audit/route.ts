@@ -15,10 +15,10 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    // If searching global audit logs without a specific entityId, require system:audit_view perm
-    if (!entityId && (!actor || !hasPermission(actor, 'system:audit_view'))) {
+    // Require system:audit_view permission unconditionally for all audit log queries
+    if (!actor || !hasPermission(actor, 'system:audit_view')) {
       return NextResponse.json(
-        { error: 'Unauthorized: You require the "system:audit_view" permission to view statewide audit logs.' },
+        { error: 'Unauthorized: You require the "system:audit_view" permission to view audit logs.' },
         { status: 403 }
       );
     }

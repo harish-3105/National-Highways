@@ -48,6 +48,10 @@ export default function AdminAuditPage() {
   const [page, setPage] = useState<number>(1);
   const limit = 30;
 
+  // Export State
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [exportProgress, setExportProgress] = useState<number | null>(null);
+
   // Selected Log for Inspector Modal
   const [inspectEntity, setInspectEntity] = useState<{ id: string; title: string; module: string } | null>(null);
 
@@ -85,26 +89,73 @@ export default function AdminAuditPage() {
     fetchLogs();
   };
 
-  const exportToExcel = () => {
-    if (logs.length === 0) return;
-    const rows = logs.map((l) => ({
-      Timestamp: new Date(l.created_at).toLocaleString('en-IN'),
-      'Officer Name': l.user_name,
-      'Mobile Phone': l.user_phone,
-      Role: l.user_role,
-      Jurisdiction: l.user_jurisdiction,
-      Module: l.module,
-      Action: l.action,
-      'Entity ID': l.entity_id,
-      'Entity Name': l.entity_title || '',
-      'Changes Summary': l.changes_summary || '',
-      'Fields Modified Count': l.field_changes?.length || 0,
-    }));
+  const exportToExcel = async () => {
+    if (isExporting || totalCount === 0) return;
+    setIsExporting(true);
+    setExportProgress(0);
+    setErrorMsg('');
 
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Audit_Log');
-    XLSX.writeFile(workbook, `TNHighways_Statewide_Audit_Log_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    try {
+      const exportBatchSize = 1000;
+      let offset = 0;
+      let allLogs: AuditLogItem[] = [];
+      let totalExpected = totalCount;
+
+      while (true) {
+        const params = new URLSearchParams();
+        if (searchTerm) params.set('userPhone', searchTerm);
+        if (moduleFilter) params.set('module', moduleFilter);
+        if (actionFilter) params.set('action', actionFilter);
+        params.set('limit', String(exportBatchSize));
+        params.set('offset', String(offset));
+
+        const res = await fetch(`/api/audit?${params.toString()}`);
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to fetch audit records for export.');
+        }
+
+        const batch: AuditLogItem[] = data.logs || [];
+        allLogs = allLogs.concat(batch);
+        totalExpected = data.totalCount ?? totalExpected;
+        setExportProgress(allLogs.length);
+
+        if (batch.length === 0 || allLogs.length >= totalExpected) {
+          break;
+        }
+
+        offset += exportBatchSize;
+      }
+
+      if (allLogs.length === 0) {
+        throw new Error('No audit log records found to export.');
+      }
+
+      const rows = allLogs.map((l) => ({
+        Timestamp: new Date(l.created_at).toLocaleString('en-IN'),
+        'Officer Name': l.user_name,
+        'Mobile Phone': l.user_phone,
+        Role: l.user_role,
+        Jurisdiction: l.user_jurisdiction,
+        Module: l.module,
+        Action: l.action,
+        'Entity ID': l.entity_id,
+        'Entity Name': l.entity_title || '',
+        'Changes Summary': l.changes_summary || '',
+        'Fields Modified Count': l.field_changes?.length || 0,
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Audit_Log');
+      XLSX.writeFile(workbook, `TNHighways_Statewide_Audit_Log_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } catch (err: any) {
+      console.error('Audit export failed:', err);
+      setErrorMsg(err.message || 'Audit export failed.');
+    } finally {
+      setIsExporting(false);
+      setExportProgress(null);
+    }
   };
 
   return (
@@ -135,7 +186,8 @@ export default function AdminAuditPage() {
             <button
               type="button"
               onClick={fetchLogs}
-              className="p-2 rounded-xs border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+              disabled={isExporting}
+              className="p-2 rounded-xs border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50 transition-colors cursor-pointer"
               title="Refresh Logs"
             >
               <RefreshCw className="w-4 h-4" />
@@ -143,11 +195,24 @@ export default function AdminAuditPage() {
             <button
               type="button"
               onClick={exportToExcel}
-              disabled={logs.length === 0}
+              disabled={isExporting || totalCount === 0 || logs.length === 0}
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xs transition-colors cursor-pointer shadow-xs"
             >
-              <Download className="w-4 h-4" />
-              <span>Export Audit (.xlsx)</span>
+              {isExporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>
+                    {exportProgress !== null
+                      ? `Exporting... (${exportProgress}${totalCount > 0 ? ` / ${totalCount}` : ''} rows)`
+                      : 'Exporting...'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Export Audit (.xlsx)</span>
+                </>
+              )}
             </button>
           </div>
         </div>

@@ -676,48 +676,77 @@ export async function DELETE(req: NextRequest) {
     const session = await getSession();
 
     // Fetch existing state for diff and permission check
-    const { data: existingCorridor } = await supabase
+    const { data: existingCorridor, error: fetchErr } = await supabase
       .from('dlp_corridors')
       .select('*, dlp_work_stretches(*)')
       .eq('id', id)
       .maybeSingle();
 
-    if (existingCorridor) {
-      const authCheck = canPerformAction(session, 'dlp:delete', { division: existingCorridor.division_name });
-      if (!authCheck.allowed) {
-        return NextResponse.json({ success: false, error: authCheck.reason || 'Unauthorized operation.' }, { status: 403 });
+    if (fetchErr) {
+      return NextResponse.json({ success: false, error: fetchErr.message }, { status: 500 });
+    }
+    if (!existingCorridor) {
+      return NextResponse.json({ success: false, error: 'DLP corridor not found' }, { status: 404 });
+    }
+
+    const authCheck = canPerformAction(session, 'dlp:delete', { division: existingCorridor.division_name });
+    if (!authCheck.allowed) {
+      return NextResponse.json({ success: false, error: authCheck.reason || 'Unauthorized operation.' }, { status: 403 });
+    }
+
+    const isHardDelete = searchParams.get('hard') === 'true' || searchParams.get('permanent') === 'true';
+
+    if (isHardDelete) {
+      const hardAuth = canPerformAction(session, 'system:hard_delete');
+      if (!hardAuth.allowed) {
+        return NextResponse.json({ success: false, error: hardAuth.reason || 'Hard deletion unauthorized.' }, { status: 403 });
       }
+
+      // Foreign key ON DELETE CASCADE atomically deletes child work stretches
+      const { error: delErr } = await supabase
+        .from('dlp_corridors')
+        .delete()
+        .eq('id', id);
+
+      if (delErr) {
+        return NextResponse.json({ success: false, error: delErr.message }, { status: 500 });
+      }
+
+      if (session) {
+        await logAudit({
+          actor: session,
+          module: 'DLP',
+          action: 'DELETE',
+          entityId: id,
+          entityTitle: `DLP Corridor ${existingCorridor.highway_code}`,
+          changesSummary: `Permanently deleted DLP maintenance corridor for ${existingCorridor.highway_code} in ${existingCorridor.division_name}`,
+          oldState: existingCorridor,
+        });
+      }
+
+      return NextResponse.json({ success: true, message: `Corridor ${id} permanently deleted` });
+    } else {
+      // Atomic soft-delete via PostgreSQL RPC
+      const { error: rpcErr } = await supabase.rpc('soft_delete_dlp_corridor', { p_corridor_id: id });
+
+      if (rpcErr) {
+        return NextResponse.json({ success: false, error: rpcErr.message }, { status: 500 });
+      }
+
+      if (session) {
+        await logAudit({
+          actor: session,
+          module: 'DLP',
+          action: 'DELETE',
+          entityId: id,
+          entityTitle: `DLP Corridor ${existingCorridor.highway_code}`,
+          changesSummary: `Soft-deleted DLP maintenance corridor for ${existingCorridor.highway_code} in ${existingCorridor.division_name}`,
+          oldState: existingCorridor,
+        });
+      }
+
+      return NextResponse.json({ success: true, message: `Corridor ${id} soft-deleted` });
     }
-
-    // Soft-delete corridor and all its stretches
-    const { error: corridorErr } = await supabase
-      .from('dlp_corridors')
-      .update({ status: 'DELETED', updated_at: new Date().toISOString() })
-      .eq('id', id);
-
-    if (corridorErr) {
-      return NextResponse.json({ success: false, error: corridorErr.message }, { status: 500 });
-    }
-
-    await supabase
-      .from('dlp_work_stretches')
-      .update({ status: 'DELETED', updated_at: new Date().toISOString() })
-      .eq('corridor_id', id);
-
-    // Log Audit Event
-    if (session && existingCorridor) {
-      await logAudit({
-        actor: session,
-        module: 'DLP',
-        action: 'DELETE',
-        entityId: id,
-        entityTitle: `DLP Corridor ${existingCorridor.highway_code}`,
-        changesSummary: `Soft-deleted DLP maintenance corridor for ${existingCorridor.highway_code} in ${existingCorridor.division_name}`,
-        oldState: existingCorridor,
-      });
-    }
-
-    return NextResponse.json({ success: true, message: `Corridor ${id} soft-deleted` });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
@@ -727,6 +756,10 @@ export async function DELETE(req: NextRequest) {
 export async function PATCH(request: Request) {
   try {
     const supabase = await createClient();
+    if (!supabase) {
+      return NextResponse.json({ success: false, error: 'Database client unavailable' }, { status: 500 });
+    }
+
     const { searchParams } = new URL(request.url);
     let id = searchParams.get('id');
     let action = searchParams.get('action');
@@ -743,46 +776,38 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'Invalid restore request' }, { status: 400 });
     }
 
-    if (!supabase) {
-      return NextResponse.json({ success: false, error: 'Database client unavailable' }, { status: 500 });
-    }
-
     const session = await getSession();
 
     // Fetch existing corridor
-    const { data: existingCorridor } = await supabase
+    const { data: existingCorridor, error: fetchErr } = await supabase
       .from('dlp_corridors')
       .select('*, dlp_work_stretches(*)')
       .eq('id', id)
       .maybeSingle();
 
-    if (existingCorridor) {
-      const authCheck = canPerformAction(session, 'dlp:restore', { division: existingCorridor.division_name });
-      if (!authCheck.allowed) {
-        const fallbackCheck = canPerformAction(session, 'dlp:delete', { division: existingCorridor.division_name });
-        if (!fallbackCheck.allowed) {
-          return NextResponse.json({ success: false, error: authCheck.reason || 'Unauthorized operation.' }, { status: 403 });
-        }
+    if (fetchErr) {
+      return NextResponse.json({ success: false, error: fetchErr.message }, { status: 500 });
+    }
+    if (!existingCorridor) {
+      return NextResponse.json({ success: false, error: 'DLP corridor not found' }, { status: 404 });
+    }
+
+    const authCheck = canPerformAction(session, 'dlp:restore', { division: existingCorridor.division_name });
+    if (!authCheck.allowed) {
+      const fallbackCheck = canPerformAction(session, 'dlp:delete', { division: existingCorridor.division_name });
+      if (!fallbackCheck.allowed) {
+        return NextResponse.json({ success: false, error: authCheck.reason || 'Unauthorized operation.' }, { status: 403 });
       }
     }
 
-    // Restore corridor and all child stretches to ACTIVE
-    const { error: corridorErr } = await supabase
-      .from('dlp_corridors')
-      .update({ status: 'ACTIVE', updated_at: new Date().toISOString() })
-      .eq('id', id);
+    // Atomic restore via PostgreSQL RPC
+    const { error: rpcErr } = await supabase.rpc('restore_dlp_corridor', { p_corridor_id: id });
 
-    if (corridorErr) {
-      return NextResponse.json({ success: false, error: corridorErr.message }, { status: 500 });
+    if (rpcErr) {
+      return NextResponse.json({ success: false, error: rpcErr.message }, { status: 500 });
     }
 
-    await supabase
-      .from('dlp_work_stretches')
-      .update({ status: 'ACTIVE', updated_at: new Date().toISOString() })
-      .eq('corridor_id', id);
-
-    // Log Audit Event
-    if (session && existingCorridor) {
+    if (session) {
       await logAudit({
         actor: session,
         module: 'DLP',
