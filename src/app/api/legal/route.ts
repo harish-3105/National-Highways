@@ -204,19 +204,6 @@ export async function POST(req: NextRequest) {
     const isNew = !body.id || body.id.startsWith('lc-');
     const requiredPerm = isNew ? 'legal:create' : 'legal:edit';
 
-    const authCheck = canPerformAction(session, requiredPerm, {
-      circle: body.circle || null,
-      division: body.division || null,
-    });
-
-    if (!authCheck.allowed) {
-      return NextResponse.json(
-        { success: false, error: authCheck.reason || 'Unauthorized operation.' },
-        { status: 403 }
-      );
-    }
-
-    const nowIso = new Date().toISOString();
     let existingRecord: Record<string, unknown> | null = null;
 
     if (!isNew && body.id) {
@@ -229,6 +216,23 @@ export async function POST(req: NextRequest) {
       }
       existingRecord = oldRec;
     }
+
+    const authCheck = canPerformAction(
+      session,
+      requiredPerm,
+      isNew
+        ? { circle: body.circle || null, division: body.division || null }
+        : { circle: (existingRecord?.circle as string) || null, division: (existingRecord?.division as string) || null }
+    );
+
+    if (!authCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: authCheck.reason || 'Unauthorized operation.' },
+        { status: 403 }
+      );
+    }
+
+    const nowIso = new Date().toISOString();
 
     const computedCaseDetails =
       body.caseDetails ||
@@ -578,3 +582,4 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
+

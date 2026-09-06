@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getSession } from '@/lib/auth/session';
+import { canPerformAction } from '@/lib/auth/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +29,16 @@ function getSupabaseClient() {
 export async function GET(request: Request) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ success: false, message: 'Database connection not available' }, { status: 500 });
+    }
+
+    const session = await getSession();
+    const authCheck = canPerformAction(session, 'works:view');
+    if (!authCheck.allowed) {
+      return NextResponse.json({ success: false, message: authCheck.reason || 'Unauthorized' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
 
@@ -35,10 +47,6 @@ export async function GET(request: Request) {
         { success: false, message: 'projectId query parameter is required.' },
         { status: 400 }
       );
-    }
-
-    if (!supabase) {
-      return NextResponse.json({ success: true, snapshots: [] });
     }
 
     const { data, error } = await supabase

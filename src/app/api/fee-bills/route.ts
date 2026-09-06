@@ -167,15 +167,27 @@ export async function POST(request: Request) {
     const isUpdatingRealId = Boolean(body.id && !String(body.id).startsWith('fb-'));
     const requiredPerm = isRestore ? 'fee_bills:restore' : isUpdatingRealId ? 'fee_bills:edit' : 'fee_bills:create';
 
-    let authCheck = canPerformAction(session, requiredPerm, {
-      circle: body.circle || null,
-      division: body.division || null,
-    });
+    let existingBill: Record<string, unknown> | null = null;
+
+    if (isUpdatingRealId) {
+      const { data: oldB, error: oldErr } = await supabase.from('fee_bills').select('*').eq('id', body.id).maybeSingle();
+      if (oldErr) return NextResponse.json({ success: false, message: oldErr.message }, { status: 500 });
+      if (!oldB) return NextResponse.json({ success: false, message: 'Fee bill not found' }, { status: 404 });
+      existingBill = oldB;
+    }
+
+    let authCheck = canPerformAction(
+      session,
+      requiredPerm,
+      isUpdatingRealId
+        ? { circle: (existingBill?.circle as string) || null, division: (existingBill?.division as string) || null }
+        : { circle: body.circle || null, division: body.division || null }
+    );
 
     if (!authCheck.allowed && isRestore) {
       authCheck = canPerformAction(session, 'fee_bills:edit', {
-        circle: body.circle || null,
-        division: body.division || null,
+        circle: (existingBill?.circle as string) || null,
+        division: (existingBill?.division as string) || null,
       });
     }
 
@@ -200,15 +212,6 @@ export async function POST(request: Request) {
       isDeleted: isDel,
       updatedAt: new Date().toISOString(),
     };
-
-    let existingBill: Record<string, unknown> | null = null;
-
-    if (isUpdatingRealId) {
-      const { data: oldB, error: oldErr } = await supabase.from('fee_bills').select('*').eq('id', body.id).maybeSingle();
-      if (oldErr) return NextResponse.json({ success: false, message: oldErr.message }, { status: 500 });
-      if (!oldB) return NextResponse.json({ success: false, message: 'Fee bill not found' }, { status: 404 });
-      existingBill = oldB;
-    }
 
     // Strict Duplicate Check: Block saving if fee_bill_number already exists on another record
     const { data: existingWithNumber, error: dupErr } = await supabase

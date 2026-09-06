@@ -132,10 +132,30 @@ export async function POST(request: NextRequest) {
     const isNew = !id;
     const requiredPerm = isNew ? "staff:create" : "staff:edit";
 
-    const authCheck = canPerformAction(session, requiredPerm, {
-      circle: circle || null,
-      division: division || null,
-    });
+    let oldStaff: Record<string, unknown> | null = null;
+    if (!isNew && id) {
+      const { data: fetchedStaff, error: fetchErr } = await supabase
+        .from("staff_members")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (fetchErr) {
+        return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+      }
+      if (!fetchedStaff) {
+        return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
+      }
+      oldStaff = fetchedStaff;
+    }
+
+    const authCheck = canPerformAction(
+      session,
+      requiredPerm,
+      isNew
+        ? { circle: circle || null, division: division || null }
+        : { circle: (oldStaff?.circle as string) || null, division: (oldStaff?.division as string) || null }
+    );
 
     if (!authCheck.allowed) {
       return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
@@ -181,8 +201,6 @@ export async function POST(request: NextRequest) {
     };
 
     if (id) {
-      const { data: oldStaff } = await supabase.from("staff_members").select("*").eq("id", id).maybeSingle();
-
       const { data, error } = await supabase
         .from("staff_members")
         .update(payload)
@@ -270,15 +288,6 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Database service unavailable" }, { status: 500 });
     }
 
-    const session = await getSession();
-    let authCheck = canPerformAction(session, "staff:restore");
-    if (!authCheck.allowed) {
-      authCheck = canPerformAction(session, "staff:edit");
-    }
-    if (!authCheck.allowed) {
-      return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
-    }
-
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
@@ -286,7 +295,34 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Missing staff member id" }, { status: 400 });
     }
 
-    const { data: staffMember } = await supabase.from("staff_members").select("*").eq("id", id).maybeSingle();
+    const session = await getSession();
+
+    const { data: staffMember, error: fetchErr } = await supabase
+      .from("staff_members")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (fetchErr) {
+      return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+    }
+    if (!staffMember) {
+      return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
+    }
+
+    let authCheck = canPerformAction(session, "staff:restore", {
+      circle: staffMember.circle || null,
+      division: staffMember.division || null,
+    });
+    if (!authCheck.allowed) {
+      authCheck = canPerformAction(session, "staff:edit", {
+        circle: staffMember.circle || null,
+        division: staffMember.division || null,
+      });
+    }
+    if (!authCheck.allowed) {
+      return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
+    }
 
     const { error } = await supabase
       .from("staff_members")
@@ -325,12 +361,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Database service unavailable" }, { status: 500 });
     }
 
-    const session = await getSession();
-    const authCheck = canPerformAction(session, "staff:delete");
-    if (!authCheck.allowed) {
-      return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
-    }
-
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const permanent = searchParams.get("permanent") === "true";
@@ -339,9 +369,38 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Missing staff member id" }, { status: 400 });
     }
 
-    const { data: existingStaff } = await supabase.from("staff_members").select("*").eq("id", id).maybeSingle();
+    const session = await getSession();
+
+    const { data: existingStaff, error: fetchErr } = await supabase
+      .from("staff_members")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (fetchErr) {
+      return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+    }
+    if (!existingStaff) {
+      return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
+    }
+
+    const authCheck = canPerformAction(session, "staff:delete", {
+      circle: existingStaff.circle || null,
+      division: existingStaff.division || null,
+    });
+    if (!authCheck.allowed) {
+      return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
+    }
 
     if (permanent) {
+      const hardAuth = canPerformAction(session, 'system:hard_delete');
+      if (!hardAuth.allowed) {
+        return NextResponse.json(
+          { error: hardAuth.reason || 'Hard deletion unauthorized.' },
+          { status: 403 }
+        );
+      }
+
       await supabase.from("user_profiles").delete().eq("staff_id", id);
       const { error } = await supabase.from("staff_members").delete().eq("id", id);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -365,12 +424,17 @@ export async function DELETE(request: NextRequest) {
         action: "DELETE",
         entityId: id,
         entityTitle: `Staff: ${existingStaff.name} (${existingStaff.designation || "Officer"})`,
-        changesSummary: `Soft-deleted/archived staff member ${existingStaff.name}`,
+        changesSummary: permanent
+          ? `Permanently deleted staff member ${existingStaff.name}`
+          : `Soft-deleted/archived staff member ${existingStaff.name}`,
         oldState: existingStaff,
       });
     }
 
-    return NextResponse.json({ success: true, message: "Staff member soft deleted successfully" });
+    return NextResponse.json({
+      success: true,
+      message: permanent ? "Staff member permanently deleted successfully" : "Staff member soft deleted successfully",
+    });
   } catch (err: any) {
     console.error("DELETE /api/staff error:", err);
     return NextResponse.json({ error: err.message || "Failed to delete staff member" }, { status: 500 });

@@ -144,11 +144,13 @@ export async function GET(request: Request) {
     const completionFilter = searchParams.get('completionFilter')?.trim(); // 'ACTIVE_ONLY', 'COMPLETED_ONLY', 'ALL'
 
     if (!supabase) {
-      return NextResponse.json({
-        success: true,
-        projects: [],
-        totalCount: 0,
-      });
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Database connection not available',
+        },
+        { status: 500 }
+      );
     }
 
     const session = await getSession();
@@ -181,11 +183,13 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error('Error fetching ongoing works from Supabase:', error);
-      return NextResponse.json({
-        success: true,
-        projects: [],
-        totalCount: 0,
-      });
+      return NextResponse.json(
+        {
+          success: false,
+          message: error.message,
+        },
+        { status: 500 }
+      );
     }
 
     let filteredData = (data || []) as MajorProject[];
@@ -316,10 +320,31 @@ export async function POST(request: Request) {
     const isExisting = Boolean(id && !String(id).startsWith('proj-'));
     const requiredPerm = isExisting ? 'works:edit_progress' : 'works:create';
 
-    const authCheck = canPerformAction(session, requiredPerm, {
-      circle: circle || null,
-      division: division || null,
-    });
+    let existing: Record<string, unknown> | null = null;
+
+    if (isExisting) {
+      const { data: existingRecords, error: fetchErr } = await supabase
+        .from('major_projects_50cr')
+        .select('*')
+        .eq('id', id)
+        .limit(1);
+
+      if (fetchErr) {
+        return NextResponse.json({ success: false, message: fetchErr.message }, { status: 500 });
+      }
+      if (!existingRecords || existingRecords.length === 0) {
+        return NextResponse.json({ success: false, message: 'Project not found' }, { status: 404 });
+      }
+      existing = existingRecords[0];
+    }
+
+    const authCheck = canPerformAction(
+      session,
+      requiredPerm,
+      isExisting
+        ? { circle: (existing?.circle as string) || null, division: (existing?.division as string) || null }
+        : { circle: circle || null, division: division || null }
+    );
 
     if (!authCheck.allowed) {
       return NextResponse.json(
@@ -441,15 +466,7 @@ export async function POST(request: Request) {
     };
 
     if (id && !id.startsWith('proj-')) {
-      // 1. Fetch existing record to verify "Write-Once / Freeze-When-Filled" and monotonic rules
-      const { data: existingRecords } = await supabase
-        .from('major_projects_50cr')
-        .select('*')
-        .eq('id', id)
-        .limit(1);
-
-      const existing = existingRecords?.[0];
-
+      // 1. Verify "Write-Once / Freeze-When-Filled" and monotonic rules
       if (existing) {
         // Enforce Monotonic Progress Increase (unless Admin / Creative Mode / Bypass Validation)
         const hasCreativeMode =
@@ -648,6 +665,14 @@ export async function DELETE(request: Request) {
         }
 
         if (hard) {
+          const hardAuth = canPerformAction(session, 'system:hard_delete');
+          if (!hardAuth.allowed) {
+            return NextResponse.json(
+              { success: false, message: hardAuth.reason || 'Hard deletion unauthorized.' },
+              { status: 403 }
+            );
+          }
+
           const { error } = await supabase.from('major_projects_50cr').delete().eq('id', id);
           if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
         } else {
@@ -667,14 +692,19 @@ export async function DELETE(request: Request) {
             action: 'DELETE',
             entityId: existingRec.id,
             entityTitle: existingRec.name_of_work,
-            changesSummary: `Soft-deleted project from active roster: ${existingRec.name_of_work}`,
+            changesSummary: hard
+              ? `Permanently deleted project: ${existingRec.name_of_work}`
+              : `Soft-deleted project from active roster: ${existingRec.name_of_work}`,
             oldState: existingRec,
           });
         }
       }
     }
 
-    return NextResponse.json({ success: true, message: 'Project removed successfully' });
+    return NextResponse.json({
+      success: true,
+      message: hard ? 'Project permanently deleted' : 'Project removed successfully',
+    });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, message: msg }, { status: 500 });

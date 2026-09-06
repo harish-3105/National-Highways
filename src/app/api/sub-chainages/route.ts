@@ -146,18 +146,6 @@ export async function POST(request: Request) {
     const isEdit = Boolean(body.id);
     const requiredPerm = isRestore ? 'sub_chainages:restore' : isEdit ? 'sub_chainages:edit' : 'sub_chainages:create';
 
-    let authCheck = canPerformAction(session, requiredPerm);
-    if (!authCheck.allowed && isRestore) {
-      authCheck = canPerformAction(session, 'sub_chainages:edit');
-    }
-
-    if (!authCheck.allowed) {
-      return NextResponse.json(
-        { success: false, message: authCheck.reason || 'Unauthorized operation.' },
-        { status: 403 }
-      );
-    }
-
     const {
       id,
       highway_code,
@@ -175,6 +163,44 @@ export async function POST(request: Request) {
       carriageway_width,
       delete_status,
     } = body;
+
+    let existingSub: Record<string, unknown> | null = null;
+    if (isEdit) {
+      const { data: oldSub, error: fetchErr } = await supabase
+        .from('highway_sub_chainages')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (fetchErr) {
+        return NextResponse.json({ success: false, message: fetchErr.message }, { status: 500 });
+      }
+      if (!oldSub) {
+        return NextResponse.json({ success: false, message: 'Sub-chainage stretch not found' }, { status: 404 });
+      }
+      existingSub = oldSub;
+    }
+
+    let authCheck = canPerformAction(
+      session,
+      requiredPerm,
+      isEdit
+        ? { division: (existingSub?.division_name as string) || null }
+        : { division: division_name?.trim() || null }
+    );
+
+    if (!authCheck.allowed && isRestore) {
+      authCheck = canPerformAction(session, 'sub_chainages:edit', {
+        division: (existingSub?.division_name as string) || null,
+      });
+    }
+
+    if (!authCheck.allowed) {
+      return NextResponse.json(
+        { success: false, message: authCheck.reason || 'Unauthorized operation.' },
+        { status: 403 }
+      );
+    }
 
     if (!highway_code) {
       return NextResponse.json({ success: false, message: 'Highway code is required' }, { status: 400 });
@@ -201,7 +227,7 @@ export async function POST(request: Request) {
     };
 
     if (id) {
-      const { data: oldSub } = await supabase.from('highway_sub_chainages').select('*').eq('id', id).maybeSingle();
+      const oldSub = existingSub;
 
       // UPDATE
       let { data, error } = await supabase
@@ -293,6 +319,10 @@ export const PUT = POST;
 export async function DELETE(request: Request) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ success: false, message: 'Database client not connected' }, { status: 500 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const hard = searchParams.get('hard') === 'true';
@@ -302,7 +332,23 @@ export async function DELETE(request: Request) {
     }
 
     const session = await getSession();
-    const authCheck = canPerformAction(session, 'sub_chainages:delete');
+
+    const { data: existingSub, error: fetchErr } = await supabase
+      .from('highway_sub_chainages')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchErr) {
+      return NextResponse.json({ success: false, message: fetchErr.message }, { status: 500 });
+    }
+    if (!existingSub) {
+      return NextResponse.json({ success: false, message: 'Sub-chainage stretch not found' }, { status: 404 });
+    }
+
+    const authCheck = canPerformAction(session, 'sub_chainages:delete', {
+      division: existingSub.division_name || null,
+    });
     if (!authCheck.allowed) {
       return NextResponse.json(
         { success: false, message: authCheck.reason || 'Unauthorized operation.' },
@@ -310,10 +356,15 @@ export async function DELETE(request: Request) {
       );
     }
 
-    if (supabase) {
-      const { data: existingSub } = await supabase.from('highway_sub_chainages').select('*').eq('id', id).maybeSingle();
-
       if (hard) {
+        const hardAuth = canPerformAction(session, 'system:hard_delete');
+        if (!hardAuth.allowed) {
+          return NextResponse.json(
+            { success: false, message: hardAuth.reason || 'Hard deletion unauthorized.' },
+            { status: 403 }
+          );
+        }
+
         // Hard Delete
         const { error } = await supabase.from('highway_sub_chainages').delete().eq('id', id);
         if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
@@ -324,10 +375,7 @@ export async function DELETE(request: Request) {
           .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
           .eq('id', id);
 
-        if (error) {
-          const { error: hardErr } = await supabase.from('highway_sub_chainages').delete().eq('id', id);
-          if (hardErr) return NextResponse.json({ success: false, message: hardErr.message }, { status: 500 });
-        }
+        if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
       }
 
       // Log Tamper-Proof Audit
@@ -338,13 +386,19 @@ export async function DELETE(request: Request) {
           action: 'DELETE',
           entityId: id,
           entityTitle: `Sub-Chainage: ${existingSub.highway_code} (Km ${existingSub.from_km}–${existingSub.to_km})`,
-          changesSummary: `Soft-deleted sub-chainage stretch for ${existingSub.highway_code}`,
+          changesSummary: hard
+            ? `Permanently deleted sub-chainage stretch for ${existingSub.highway_code}`
+            : `Soft-deleted sub-chainage stretch for ${existingSub.highway_code}`,
           oldState: existingSub,
         });
       }
-    }
 
-    return NextResponse.json({ success: true, message: 'Sub-chainage stretch soft-deleted successfully' });
+    return NextResponse.json({
+      success: true,
+      message: hard
+        ? 'Sub-chainage stretch permanently deleted successfully'
+        : 'Sub-chainage stretch soft-deleted successfully',
+    });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, message: msg }, { status: 500 });

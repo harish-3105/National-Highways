@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getTotpAuthUri, generateTotpSecret } from '@/lib/auth/totp';
+import { checkRateLimit, getClientIp } from '@/lib/auth/rateLimit';
 import QRCode from 'qrcode';
 
 export async function POST(req: NextRequest) {
@@ -18,6 +19,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Please enter a valid 10-digit Indian mobile number.' },
         { status: 400 }
+      );
+    }
+
+    // Rate Limiting (Serverless & Multi-Instance Safe via PostgreSQL):
+    // 1. Phone number limit: 5 attempts per hour (prevents single-target brute-force enumeration)
+    // 2. Client IP limit: 20 attempts per hour (prevents distributed directory harvesting)
+    const clientIp = getClientIp(req);
+    const [phoneLimit, ipLimit] = await Promise.all([
+      checkRateLimit(`identify:phone:${tenDigitPhone}`, 5, 3600),
+      checkRateLimit(`identify:ip:${clientIp}`, 20, 3600),
+    ]);
+
+    if (!phoneLimit.allowed || !ipLimit.allowed) {
+      const retryAfter = Math.max(phoneLimit.retryAfterSeconds, ipLimit.retryAfterSeconds);
+      return NextResponse.json(
+        { error: 'Too many identification attempts. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(retryAfter),
+          },
+        }
       );
     }
 
