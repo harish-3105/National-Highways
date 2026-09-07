@@ -34,8 +34,13 @@ export async function GET(request: NextRequest) {
     const division = searchParams.get("division");
     const sub_division = searchParams.get("sub_division");
     const search = searchParams.get("search");
+    const includeDeleted = searchParams.get("include_deleted") === "true";
 
     let query = supabase.from("staff_members").select("*").order("created_at", { ascending: false });
+
+    if (!includeDeleted) {
+      query = query.eq("delete_status", "ACTIVE");
+    }
 
     if (office && office !== "All Offices") query = query.eq("office", office);
     if (circle && circle !== "All Circles") query = query.eq("circle", circle);
