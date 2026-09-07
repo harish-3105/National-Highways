@@ -1,12 +1,12 @@
 # Tamil Nadu National Highways Department Management System
 
-A comprehensive, state-of-the-art enterprise web platform engineered to digitize, monitor, analyze, and manage the core operational assets of the National Highways division across Tamil Nadu.
+A comprehensive, state-of-the-art enterprise web platform engineered to digitize, monitor, analyze, and manage the core operational assets, linear corridor geometry, capital construction works, contractor warranty compliance, judicial litigation, advocate fee auditing, departmental personnel, and governance of the National Highways division across Tamil Nadu.
 
 ---
 
 ## 🏛️ System Overview
 
-The application unifies ground-truth departmental data across corridors, linear asset geometry, multi-crore capital infrastructure works, contractor warranty compliance, judicial litigation, fee auditing, human resources, and data ingestion into a high-performance, reactive portal with zero external runtime bloat.
+The platform unifies ground-truth departmental data across corridors, linear asset geometry, multi-crore capital infrastructure works, contractor warranty compliance, judicial litigation, fee auditing, human resources, and administrative governance into a high-performance, reactive portal with zero external runtime bloat.
 
 ```
 +---------------------------------------------------------------------------------------------------+
@@ -15,66 +15,73 @@ The application unifies ground-truth departmental data across corridors, linear 
 +---------------------------------------------------------------------------------------------------+
 |                                     MODULE PAGE HEADER (p-5)                                      |
 |  [Badge] Module Title & Subtitle Context        | [Refresh]      [Master Config]  [Add New (Blue)]|
-|                                                 | [Archived(N)]  [Import Data]    [Export Data]   |
+|                                                 | [Archived(N)]  [Lockdown (Red)] [Export Data]   |
 +---------------------------------------------------------------------------------------------------+
 |  [4-Quadrant KPI Stat Cards]                   | [Filter Toolbar: Search + Cascading Dropdowns]   |
 +-------------------------------------------------+-------------------------------------------------+
 |                                 MAIN DATA PRESENTATION LAYER                                      |
-|  - Table View (Sortable, Searchable, Paginated, Action Menu: View / Edit / Soft-Delete / Restore)  |
+|  - Table / Grid View (Sortable, Searchable, Paginated, Action Menu: View / Edit / Archive / Restore)
 |  - Progressive Stage-Gated Entry Form (Tab 1 Baseline Identity -> Tab N Detailed Stages)          |
 |  - Embedded In-Page Relational Master Data Configuration Console                                  |
+|  - Multi-Page A4 Landscape Straight-Line Diagram (SLD) with Visual Scale Alignment                |
 +---------------------------------------------------------------------------------------------------+
 |                              DATABASE & PERSISTENCE FOUNDATION                                    |
-|  - 45 Migrations (0000-0043) | Native PostgreSQL Schema | Row-Level Security | Discord RBAC & Audit  |
+|  - 52 Migrations (0000-0050) | Native PostgreSQL Schema | Row-Level Security | Discord RBAC & Audit  |
 +---------------------------------------------------------------------------------------------------+
 ```
 
 ### 🌟 Key Capabilities
 * **Next.js 16 + React 19 Full-Stack Architecture**: Server-side rendering, dynamic API route handlers, and static optimization powered by Turbopack.
-* **6 Core Production Modules + Universal Ingestion**: Ongoing Capital Works & Major Projects, Defect Liability Period (DLP) & 2D Spatial Geometry, Master Highways Catalog & Interactive Straight-Line Diagram (SLD), Legal Litigation & Court Proceedings, Legal Fee Bills & Voucher Management, Departmental Staff Directory, and Universal Ingestion.
-* **TOTP Two-Factor Authentication (RFC 6238 Standard)**: Seamless 10-digit mobile login with QR code onboarding, time-drift tolerance ($\pm 1$ step), and encrypted `nh_session` HTTP-only session cookies.
-* **Discord-Style Hierarchical RBAC**: Visual Role Studio with integer position stacking, anti-escalation security invariants ($P_{\text{target}} < P_{\text{actor}}$), and strict permission grant containment ($\text{Perms} \subseteq \text{ActorPerms}$).
+* **6 Core Production Modules + Admin Suite**: Corridors Catalog & Interactive Straight-Line Diagram (SLD), Defect Liability Period (DLP) & 2D Spatial Geometry, Ongoing Capital Works & Major Projects, Legal Litigation & Court Proceedings, Legal Fee Bills & Voucher Management, Departmental Staff Directory, and Statewide Admin & Audit Ledger.
+* **Multi-Page A4 Landscape SLD Print Engine**: Specialized CSS print matrix splitting long linear corridors across consecutive A4 Landscape pages with repeating departmental letterheads, metric chainage scale pins, track labels, and technical legends.
+* **TOTP Two-Factor Authentication (RFC 6238 Standard)**: Seamless 10-digit mobile login with QR code onboarding, time-drift tolerance ($\pm 1$ step), DB-backed rate limiting (`auth_rate_limits`), 5-attempt brute-force lockout, and encrypted `nh_session` HTTP-only session cookies.
+* **Discord-Style Hierarchical RBAC**: Visual Role Studio with integer position stacking ($100 \rightarrow 0$), anti-escalation security invariants ($P_{\text{target}} < P_{\text{actor}}$), and strict permission grant containment ($\text{Perms} \subseteq \text{ActorPerms}$).
 * **Symmetric PBAC Jurisdiction Scoping**: Atomic `jurisdiction:view_statewide` (read data-siloing) and `jurisdiction:edit_statewide` (write protection) enforcing division-level governance without code duplication.
 * **Immutable Google-Sheets-Style Audit Trail**: Tamper-proof non-repudiation ledger (`public.audit_logs`) tracking 100% of mutations with Red $\rightarrow$ Green field-level diffs, point-in-time snapshots, and Excel export at `/admin/audit`.
 * **2D Continuous Spatial Asset Geometry**: Micro-lane spatial offsets measured continuously from Road Centerline ($0.00\text{m}$), strictly mapping 1:1 to dedicated relational PostgreSQL columns.
 * **Stage-Gated Progressive Form Validation**: Multi-stage entry lifecycle across all forms where Tab 1 is the baseline required to save initial drafts, Tab $N+1$ is strictly gated until Tab $N$ validations pass, and saving from Tab $N$ validates only up to Tab $N$.
 * **Zero Workarounds & Real Relational Schema Integrity**: Zero JSON/JSONB packing of structured relational fields; 100% strongly-typed native PostgreSQL columns across all tables.
-* **Unified Server-Side ExcelJS Export Engine**: Departmental peach-cream header styling (`#FFF9CB9C`), Arial Narrow typography, solid black borders, and Landscape A4 single-page width print layout (`fitToWidth: 1`) with symmetrical 0-row import templates.
+* **Unified Server-Side ExcelJS Export Engine**: Departmental peach-cream header styling (`#FFF9CB9C`), Arial Narrow typography, solid black borders, and Landscape A4 single-page width print layout (`fitToWidth: 1`).
 * **VS Code Minimalist Design Language**: Standardized 2px border radius (`rounded-xs`, `--radius: 2px`), Charcoal & Zinc dark mode (`#181a1f`), high-contrast light mode, standardized 3×2 action toolbar grids, and dual-mode `DD/MM/YYYY` DatePicker inputs.
 * **Master Data Management**: In-page configuration consoles across all modules supporting relational Circle $\rightarrow$ Division parent-child cascades.
 * **Non-Destructive Soft-Delete Archiving**: Global soft-delete pattern (`delete_status = 'ACTIVE' | 'DELETED'`) with 1-click restore functionality across all tables.
 
 ---
 
-## 🚀 The 6 Production Modules
+## 🚀 The Production Modules
 
-### 1. Ongoing Works & Major Projects (`/ongoing-works` / `/major-projects`)
-Comprehensive capital project monitoring, physical & financial progress tracking, contract milestones, statutory clearances, and executive reviews.
+### 1. Master Highways Catalog & Interactive Straight-Line Diagram (SLD) (`/highways` & `/highways/[id]/sld`)
+The ground-truth linear referencing system for all National Highway corridors across Tamil Nadu.
 
-* **35-Column MIS & 43-Field Technical Coverage**:
-  * **Sanction & Identity**: Sl. No., Circle, Division, Annual Plan (FY) / Scheme, Name of Project, PMIS / OCMS / PMG ID, Old/New NH No., Job / AS No., Length (Km), Sanction Date.
-  * **Contract Milestones & Award**: Contractor Name, DE Name & Phone, Sanctioned TPC (₹ Cr), Contract Value (₹ Cr), Date of LOA, Date of Agreement, Date of Site Handover, Appointed Date / Date of Start.
-  * **Physical Civil Execution**: Completed Length Prior FY (Km), Completed Length Current FY (Km), Total Completed Length (Km), Cumulative Physical Progress % (0–100%), Work Stage (`IN_PROGRESS`, `TENDER_STAGE`, `COMPLETED`).
-  * **Financial Expenditure & RCE**: Revised Cost / RCE (₹ Cr), Cost Increase in RCE (₹ Cr), Prior FY Expenditure (₹ Cr), Current FY Expenditure (₹ Cr), Cumulative Financial Expenditure against TPC (₹ Cr), Contract Cumulative Expenditure (₹ Cr).
-  * **Timelines, Delays & Overruns**: Scheduled Completion Date, Likely / Actual Completion Date, Probable Completion Date, Dynamic Time Overrun (Years, Months & Days), EOT Granted Till Date, EOT Proposal Review Agency, Change of Scope (COS) Details.
-  * **Statutory Clearances (5 Isolated Fields)**: Land Acquisition (LA / Section 3D / 3G), Forest & Environment Clearances (MoEF / Wildlife), Utility Shifting (TNEB, TWAD, OFC, Gas), Railways (ROB / RUB / GAD approvals), Other Statutory Encumbrances.
-  * **Field Logs & Remarks**: Column 27 Detailed Technical Status Log (`detailed_stage_status`), Monthly Progress Remarks, Stage / Tender Remarks, Updated Division Date.
-* **6-Stage Progressive Entry Form (`OngoingWorkEntryForm.tsx`)**:
-  * `Stage 1: Sanction & Scope` $\rightarrow$ `Stage 2: Award & Contract` $\rightarrow$ `Stage 3: Physical & Financial Progress` $\rightarrow$ `Stage 4: Overruns & EOT` $\rightarrow$ `Stage 5: Statutory Clearances` $\rightarrow$ `Stage 6: Col 27 Field Log`.
-  * Live auto-summing math for physical lengths ($\text{Total} = \text{Prior} + \text{Current}$) and financial expenditures ($\text{Cumulative} = \text{Prior} + \text{Current}$).
-  * Monotonic physical progress integrity (prevents progress decreases for active works).
-  * Write-once freeze-when-filled protections on baseline identification columns.
-* **Single-Page Executive Passport (`ViewMajorProjectModal.tsx`)**:
-  * Continuous technical dossier with formatted progress indicators, milestone cards, clearance matrices, and a one-click **"Copy Log"** button for Column 27 field notes.
-* **Historical Audit Snapshot Engine (`ProjectHistoryModal.tsx`)**:
-  * Automated snapshot creation on every insert, edit, or Excel bulk ingestion (`major_projects_snapshots`).
-  * Interactive SVG **Milestone Staircase Step Chart** plotting physical progress % (Emerald) vs financial progress % (Blue) across historical dates with delta calculations.
-* **Executive KPI Summary & 2-Tier Filter Panel (`MajorProjectsDashboard.tsx`)**:
-  * 6 Mutually Exclusive KPI Filter Cards: Active Works, Capital Outlay Budget, Under Active Execution, Tender & Pre-Construction, Delayed Works, Completed Works.
-  * Tier 1: Debounced text search + Cascading Circle $\rightarrow$ Division selectors.
-  * Tier 2: Live Dynamic Delay Range (Years), Physical Progress Range (0–100%), Financial Progress Range (0–100%), and Mega Projects Toggle (`⚡ ≥ ₹50 Cr`).
-* **Dynamic Master Data Console (`OngoingWorksMasterDataModal.tsx`)**:
-  * Manages Circles, Divisions (with Parent Circle linking), and Schemes in `public.ongoing_works_master_config`.
+* **Level 1 Master Corridor Inventory (`/highways`)**:
+  * Old/New NH designations, termini locations, chainage limits, total length, and 5-tier multi-lane distance distribution (`<2L`, `2L`, `2L+PS`, `4L`, `6L`).
+  * **Quadrant KPI Matrix (`KpiHeaderCards.tsx`)**: 4 summary cards with interactive lane filter isolation (clicking `<2L`, `2L`, `2L+PS`, `4L`, or `6L` isolates matching corridors in the table/grid).
+  * **4-Stage Progressive Gated Form (`HighwayEntryForm.tsx`)**: Gated entry with real-time **Lane Checksum Validator** ($\Delta = |\sum L_{\text{lanes}} - L_{\text{target}}| < 0.05\text{ km}$) and WGS84 GPS georeferencing.
+* **Level 2 Sub-Chainages Dual-Sheet Breakdown (`ViewHighwayModal.tsx`)**:
+  * **Macro Traffic Census (Sheet "PCU")**: Executive stretches, actual Passenger Car Unit traffic counts, and DPR widening proposals with color-coded congestion tiers ($<5\text{k}$ Green, $5\text{k}-15\text{k}$ Amber, $>15\text{k}$ Red).
+  * **Micro Lane Geometry (Sheet "NH")**: Granular consecutive stretches, important towns, Right of Way (ROW) dimensions, and carriageway widths.
+  * Inline and modal sub-stretch CRUD with soft-delete archiving and instant restore.
+* **Level 3 Interactive Straight-Line Diagram (SLD) (`/highways/[id]/sld`)**:
+  * **Distance-Proportional Physical Canvas Scaling**: Bar widths expand proportionally to physical distance (`length_km`) based on zoom density ($\text{px/km}$).
+  * **150px Minimum Width Floor Protection**: Guarantees chainage labels, town markers, and length badges remain completely legible without subpixel overlap.
+  * **7 Interactive Matrix Layers**:
+    1. *Towns & Landmarks*: Municipalities, river bridges, and ROB markers.
+    2. *Chainage Splits Ruler*: Boundary flags (`Km X → Km Y`) and span badges.
+    3. *Centerline-Aligned Road Corridor*: Symmetrical carriageway expansion locked to horizontal centerline axis ($Y = 170\text{px}$).
+    4. *Carriageway Technical Specs*: Width indicators (`20m`, `14m`, `10m`, `7m`, `<7m`).
+    5. *Traffic PCU Volume*: Passenger Car Unit densities with traffic volume badges.
+    6. *Right of Way (ROW)*: Gazetted land corridor boundary widths.
+    7. *Sanctioned DPR Proposals*: Widening proposals, consultant schemes, and ministry sanctions.
+  * **Left Fixed Sidebar Caliper Docking Gauge**: Mathematically locked caliper brackets matching exact carriageway lateral heights ($1\text{m} = 10\text{px}$: $6\text{L} \rightarrow 200\text{px}$, $4\text{L} \rightarrow 140\text{px}$, $2\text{L+PS} \rightarrow 100\text{px}$, $2\text{L} \rightarrow 70\text{px}$, $<2\text{L} \rightarrow 38\text{px}$).
+  * **2D DLP Geometric Overlay Matrix**: Color-coded continuous boundary boxes rendered directly on the road corridor (central carriageway band for $w_{\text{from}} = 0\text{m}$ vs dual symmetrical LHS/RHS widening strips for $w_{\text{from}} > 0\text{m}$).
+  * **Horizontal Overlap Layout**: Automatic vertical stacking prevents overlapping concurrent contract badges from collision.
+  * **Multi-Page A4 Landscape Print Engine**:
+    * Clean CSS `@media print` layout partitioning lengthy corridors into discrete A4 pages.
+    * Repeating executive departmental letterhead, chainage window markers (`Km X+000 to Km Y+000`), scale pins, and technical color legends on each printed sheet.
+    * Track 3 label co-location for exact vertical alignment without cross-layer drifting.
+  * **Bidirectional Chainage Inversion**: 1-click toggle between Normal ($0 \rightarrow \text{End}$) and Reverse ($\text{End} \rightarrow 0$) orientation.
+* **Master Data Portal (`HighwayMasterDataModal.tsx`)**:
+  * Manages Circles, Divisions, Carriageway Configurations, and Level 2 Lane Statuses in `public.highway_master_config`.
 
 ---
 
@@ -82,7 +89,7 @@ Comprehensive capital project monitoring, physical & financial progress tracking
 Comprehensive road maintenance and warranty lifecycle management covering the canonical 24-to-29 column departmental spreadsheet standard (`798 NH Length Summary`).
 
 * **Relational 1-Record-Per-Stretch Standard (Rows 7–12 Pattern)**:
-  * Corridors are stored as parent entities (`public.dlp_corridors`), with individual maintenance segments stored as 1st-class relational children (`public.dlp_work_stretches`) with foreign key cascading deletes.
+  * Corridors are stored as parent entities (`public.dlp_corridors`), with individual maintenance segments stored as 1st-class relational children (`public.dlp_work_stretches`) with foreign key cascading deletes and atomic soft-delete RPCs.
 * **2D Continuous Spatial Coordinates**:
   * **Longitudinal (X-Axis)**: Chainage `From (Km)` $\rightarrow$ `To (Km)` ($\text{Length} = |\text{To} - \text{From}|$).
   * **Lateral / Cross-Sectional (Y-Axis)**: Symmetrical meters measured continuously from **Centerline ($0.00\text{m}$)** (e.g., $0.00\text{m} \rightarrow 3.50\text{m}$ for 2L, $0.00\text{m} \rightarrow 7.00\text{m}$ for 4L).
@@ -112,34 +119,33 @@ Comprehensive road maintenance and warranty lifecycle management covering the ca
 
 ---
 
-### 3. Master Highways Catalog & Interactive Straight-Line Diagram (SLD) (`/highways` & `/highways/[id]/sld`)
-The ground-truth linear referencing system for all National Highway corridors across Tamil Nadu.
+### 3. Ongoing Works & Major Projects (`/ongoing-works` / `/major-projects`)
+Comprehensive capital project monitoring, physical & financial progress tracking, contract milestones, statutory clearances, and executive reviews.
 
-* **Level 1 Master Corridor Inventory (`/highways`)**:
-  * Old/New NH designations, termini locations, chainage limits, total length, and 5-tier multi-lane distance distribution (`<2L`, `2L`, `2L+PS`, `4L`, `6L`).
-  * **Quadrant KPI Matrix (`KpiHeaderCards.tsx`)**: 4 summary cards with interactive lane filter isolation (clicking `<2L`, `2L`, `2L+PS`, `4L`, or `6L` isolates matching corridors in the table/grid).
-  * **4-Stage Progressive Gated Form (`HighwayEntryForm.tsx`)**: Gated entry with real-time **Lane Checksum Validator** ($\Delta = |\sum L_{\text{lanes}} - L_{\text{target}}| < 0.05\text{ km}$) and WGS84 GPS georeferencing.
-* **Level 2 Sub-Chainages Dual-Sheet Breakdown (`ViewHighwayModal.tsx`)**:
-  * **Macro Traffic Census (Sheet "PCU")**: Executive stretches, actual Passenger Car Unit traffic counts, and DPR widening proposals with color-coded congestion tiers ($<5\text{k}$ Green, $5\text{k}-15\text{k}$ Amber, $>15\text{k}$ Red).
-  * **Micro Lane Geometry (Sheet "NH")**: Granular consecutive stretches, important towns, Right of Way (ROW) dimensions, and carriageway widths.
-  * Inline and modal sub-stretch CRUD with soft-delete archiving and instant restore.
-* **Level 3 Interactive Straight-Line Diagram (SLD) (`/highways/[id]/sld`)**:
-  * **Distance-Proportional Physical Canvas Scaling**: Bar widths expand proportionally to physical distance (`length_km`) based on zoom density ($\text{px/km}$).
-  * **150px Minimum Width Floor Protection**: Guarantees chainage labels, town markers, and length badges remain completely legible without subpixel overlap.
-  * **7 Interactive Matrix Layers**:
-    1. *Towns & Landmarks*: Municipalities, river bridges, and ROB markers.
-    2. *Chainage Splits Ruler*: Boundary flags (`Km X → Km Y`) and span badges.
-    3. *Centerline-Aligned Road Corridor*: Symmetrical carriageway expansion locked to horizontal centerline axis ($Y = 170\text{px}$).
-    4. *Carriageway Technical Specs*: Width indicators (`20m`, `14m`, `10m`, `7m`, `<7m`).
-    5. *Traffic PCU Volume*: Passenger Car Unit densities with traffic volume badges.
-    6. *Right of Way (ROW)*: Gazetted land corridor boundary widths.
-    7. *Sanctioned DPR Proposals*: Widening proposals, consultant schemes, and ministry sanctions.
-  * **Left Fixed Sidebar Caliper Docking Gauge**: Mathematically locked caliper brackets matching exact carriageway lateral heights ($1\text{m} = 10\text{px}$: $6\text{L} \rightarrow 200\text{px}$, $4\text{L} \rightarrow 140\text{px}$, $2\text{L+PS} \rightarrow 100\text{px}$, $2\text{L} \rightarrow 70\text{px}$, $<2\text{L} \rightarrow 38\text{px}$).
-  * **2D DLP Geometric Overlay Matrix**: Color-coded continuous boundary boxes rendered directly on the road corridor (central carriageway band for $w_{\text{from}} = 0\text{m}$ vs dual symmetrical LHS/RHS widening strips for $w_{\text{from}} > 0\text{m}$).
-  * **Bidirectional Chainage Inversion**: 1-click toggle between Normal ($0 \rightarrow \text{End}$) and Reverse ($\text{End} \rightarrow 0$) orientation.
-  * **High-DPI Landscape Print Engine**: Dynamic CSS print scaling factor (`--sld-print-scale`) fitting wide linear diagrams onto standard A4/A3 landscape PDF/print outputs with official letterhead and technical legend.
-* **Master Data Portal (`HighwayMasterDataModal.tsx`)**:
-  * Manages Circles, Divisions, and Carriageway Configurations in `public.highway_master_config`.
+* **35-Column MIS & 43-Field Technical Coverage**:
+  * **Sanction & Identity**: Sl. No., Circle, Division, Annual Plan (FY) / Scheme, Name of Project, PMIS / OCMS / PMG ID, Old/New NH No., Job / AS No., Length (Km), Sanction Date.
+  * **Contract Milestones & Award**: Contractor Name, DE Name & Phone, Sanctioned TPC (₹ Cr), Contract Value (₹ Cr), Date of LOA, Date of Agreement, Date of Site Handover, Appointed Date / Date of Start.
+  * **Physical Civil Execution**: Completed Length Prior FY (Km), Completed Length Current FY (Km), Total Completed Length (Km), Cumulative Physical Progress % (0–100%), Work Stage (`IN_PROGRESS`, `TENDER_STAGE`, `COMPLETED`).
+  * **Financial Expenditure & RCE**: Revised Cost / RCE (₹ Cr), Cost Increase in RCE (₹ Cr), Prior FY Expenditure (₹ Cr), Current FY Expenditure (₹ Cr), Cumulative Financial Expenditure against TPC (₹ Cr), Contract Cumulative Expenditure (₹ Cr).
+  * **Timelines, Delays & Overruns**: Scheduled Completion Date, Likely / Actual Completion Date, Probable Completion Date, Dynamic Time Overrun (Years, Months & Days), EOT Granted Till Date, EOT Proposal Review Agency, Change of Scope (COS) Details.
+  * **Statutory Clearances (5 Isolated Fields)**: Land Acquisition (LA / Section 3D / 3G), Forest & Environment Clearances (MoEF / Wildlife), Utility Shifting (TNEB, TWAD, OFC, Gas), Railways (ROB / RUB / GAD approvals), Other Statutory Encumbrances.
+  * **Field Logs & Remarks**: Column 27 Detailed Technical Status Log (`detailed_stage_status`), Monthly Progress Remarks, Stage / Tender Remarks, Updated Division Date.
+* **6-Stage Progressive Entry Form (`OngoingWorkEntryForm.tsx`)**:
+  * `Stage 1: Sanction & Scope` $\rightarrow$ `Stage 2: Award & Contract` $\rightarrow$ `Stage 3: Physical & Financial Progress` $\rightarrow$ `Stage 4: Overruns & EOT` $\rightarrow$ `Stage 5: Statutory Clearances` $\rightarrow$ `Stage 6: Col 27 Field Log`.
+  * Live auto-summing math for physical lengths ($\text{Total} = \text{Prior} + \text{Current}$) and financial expenditures ($\text{Cumulative} = \text{Prior} + \text{Current}$).
+  * Monotonic physical progress integrity (prevents progress decreases for active works).
+  * Write-once freeze-when-filled protections on baseline identification columns.
+* **Single-Page Executive Passport (`ViewMajorProjectModal.tsx`)**:
+  * Continuous technical dossier with formatted progress indicators, milestone cards, clearance matrices, and a one-click **"Copy Log"** button for Column 27 field notes.
+* **Historical Audit Snapshot Engine (`ProjectHistoryModal.tsx`)**:
+  * Automated snapshot creation on every insert or edit (`major_projects_snapshots`).
+  * Interactive SVG **Milestone Staircase Step Chart** plotting physical progress % (Emerald) vs financial progress % (Blue) across historical dates with delta calculations.
+* **Executive KPI Summary & 2-Tier Filter Panel (`MajorProjectsDashboard.tsx`)**:
+  * 6 Mutually Exclusive KPI Filter Cards: Active Works, Capital Outlay Budget, Under Active Execution, Tender & Pre-Construction, Delayed Works, Completed Works.
+  * Tier 1: Debounced text search + Cascading Circle $\rightarrow$ Division selectors.
+  * Tier 2: Live Dynamic Delay Range (Years), Physical Progress Range (0–100%), Financial Progress Range (0–100%), and Mega Projects Toggle (`⚡ ≥ ₹50 Cr`).
+* **Dynamic Master Data Console (`OngoingWorksMasterDataModal.tsx`)**:
+  * Manages Circles, Divisions (with Parent Circle linking), and Schemes in `public.ongoing_works_master_config`.
 
 ---
 
@@ -211,8 +217,8 @@ Advocate fee auditing, invoice processing, decoupled assistant lawyer accounting
 
 ---
 
-### 6. Departmental Staff Directory (`/staff`)
-Human resource directory and field personnel posting hierarchy.
+### 6. Departmental Staff Directory & Role Studio (`/staff`)
+Human resource directory, field personnel posting hierarchy, and visual RBAC role management.
 
 * **6-Tier Administrative Posting Hierarchy**:
   $$\text{Office} \longrightarrow \text{Circle} \longrightarrow \text{Division} \longrightarrow \text{Sub-Division} \longrightarrow \text{Section} \longrightarrow \text{Sub-Section}$$
@@ -223,37 +229,30 @@ Human resource directory and field personnel posting hierarchy.
   * Stage 1 (Personnel Identity & Contact Details) $\rightarrow$ Stage 2 (Organizational Posting).
   * Non-destructive soft-deletion (`delete_status = 'DELETED'`) with 1-click restore action.
 * **Dynamic Master Data Console (`StaffMasterDataModal.tsx`)**:
-  * Manages hierarchical posting units in `public.staff_master_config` with bidirectional two-way update synchronization (renaming a Division automatically cascades updates to all affected staff rows and child sub-divisions).
+  * Manages hierarchical posting units in `public.staff_master_config` with bidirectional update synchronization (renaming a Division automatically cascades updates to all affected staff rows and child sub-divisions).
+* **Role Studio (`RoleStudioModal.tsx`)**:
+  * In-page RBAC role creator with integer rank reordering, permission check-grid, and jurisdiction scoping assignment.
 
 ---
 
-### 7. Universal Excel & CSV Ingestion Engine (`/ingest`)
-Automated data parsing pipeline designed to ingest legacy government spreadsheets.
+### 7. Statewide Admin & Immutable Audit Ledger (`/admin/audit`)
+Carrier-grade oversight, non-repudiation audit trail, and emergency controls.
 
-* **Multi-Format Processing**:
-  * XLSX / XLS buffer parsing via SheetJS (`xlsx`) with smart sheet detection (`Summary`, `PCU`, `NH`, etc.).
-  * CSV streaming via `PapaParse`.
-  * Supports 7 dataset categories: `HIGHWAYS_MASTER`, `HIGHWAY_SUB_CHAINAGES`, `DLP_CONTRACTS`, `HIGHWAY_MILESTONES`, `ACCIDENT_BLACKSPOTS`, `LEGAL_CASES`, `ONGOING_WORKS`.
-* **Merged Cell Resolution (`!merges`)**: Accurately extracts values spanning merged header and data cells.
-* **Date Normalization Engine (`parseIndianDate`)**:
-  * Converts Excel numeric serial dates (e.g. `44531` $\rightarrow$ `01/12/2021`).
-  * Parses Indian slashed and dotted date strings (`DD.MM.YYYY`, `DD-MM-YYYY`, `DD/MM/YYYY`).
-  * Normalizes 2-digit shorthand years (`24.05.27` $\rightarrow$ `2027-05-24`).
-  * Normalizes Month-Year notation (`05.2027` $\rightarrow$ `2027-05-31`).
-  * Clamps invalid calendar days (e.g. `31/02/2025` $\rightarrow$ `28/02/2025`).
-* **Chainage Slash-Notation Normalizer (`parseChainageValue`)**:
-  * Converts railway/highway slash formats (e.g., `63/2`, `110/2`, `60/600` $\rightarrow$ `63.200`, `110.200`, `60.600`).
-  * Fixes thousand-separator comma typos (`103,467` $\rightarrow$ `103.467`).
-* **Multi-Division Regex Detection**: Identifies division jurisdiction from multi-line text strings across 14 territorial divisions.
-* **Chunked Ingestion & Snapshot Audit**: Inserts records in 250-row chunks to prevent connection saturation, automatically recording snapshot audit logs in `major_projects_snapshots`.
+* **Tamper-Proof Audit Ledger (`public.audit_logs`)**:
+  * Automatically records all creations, modifications, soft-deletions, restorations, and role adjustments across all modules.
+  * Visual Red (`-`) / Green (`+`) field-level diffs with point-in-time state snapshots.
+* **Statewide Export Engine**:
+  * Full dataset server-side Excel export with timestamped audit certificates.
+* **Emergency Master Lockdown (`/api/admin/lockdown`)**:
+  * Instant statewide write-freeze for emergency maintenance or annual financial reviews.
 
 ---
 
-## 🛡️ Identity, Discord-Style RBAC, PBAC Jurisdiction & Immutable Audit Architecture
+## 🛡️ Identity, Discord-Style RBAC, PBAC Jurisdiction & Security Architecture
 
-The platform incorporates a carrier-grade enterprise security and governance foundation built on **RFC 6238 TOTP Two-Factor Authentication**, **Discord-Style Hierarchical Role-Based Access Control (RBAC)**, **Policy-Based Access Control (PBAC) Jurisdiction Scoping**, and an **Immutable Google-Sheets-Style Audit Trail**.
+The platform incorporates an enterprise security and governance foundation built on **RFC 6238 TOTP Two-Factor Authentication**, **Discord-Style Hierarchical Role-Based Access Control (RBAC)**, **Policy-Based Access Control (PBAC) Jurisdiction Scoping**, **DB-Backed Rate Limiting**, and **Complete Domain RLS Lockdown**.
 
-> 📖 **Full Specification**: For detailed schema designs, invariants, and implementation matrices, refer to [`AUTH_RBAC_AND_AUDIT_SPEC.md`](AUTH_RBAC_AND_AUDIT_SPEC.md).
+> 📖 **Full Specification**: For detailed schema designs, invariants, and implementation matrices, refer to [`AUTH_RBAC_AND_AUDIT_SPEC.md`](AUTH_RBAC_AND_AUDIT_SPEC.md) and [`docs/role-permissions-guide.md`](docs/role-permissions-guide.md).
 
 ```
 +---------------------------------------------------------------------------------------------------+
@@ -264,14 +263,16 @@ The platform incorporates a carrier-grade enterprise security and governance fou
 +---------------------------------------------------------------------------------------------------+
 ```
 
-### 1. Two-Factor Authentication (TOTP MFA)
+### 1. Two-Factor Authentication (TOTP MFA) & Rate Limiting
 * **Mobile-First Passwordless Onboarding**: Officers enter their 10-digit phone number registered in the Department Staff Directory (`staff_members`).
 * **RFC 6238 TOTP Standard (`otpauth`)**: Pure TypeScript implementation supporting Google Authenticator, Microsoft Authenticator, and 2FAS with $\pm 1$ time-step clock-drift tolerance.
+* **DB-Backed Rate Limiting (`auth_rate_limits`)**: Dedicated single-statement atomic PostgreSQL RPC (`check_and_increment_rate_limit`) providing serial lock safety against concurrent brute-force attacks.
+* **5-Attempt Lockout**: Accounts temporarily lock for 15 minutes after 5 failed verification attempts (`totp_locked_until`).
 * **Encrypted HTTP-Only Session (`nh_session`)**: 8-hour encrypted token containing officer metadata, jurisdiction scope, and active permission codes.
 
 ### 2. Discord-Style Hierarchical Role Matrix (`RoleStudioModal.tsx`)
 * **Integer Position Hierarchy**:
-  $$\text{Super Admin (100)} > \text{Chief Engineer (80)} > \text{Superintending Engineer (60)} > \text{Divisional Engineer (40)} > \text{Viewer (0)}$$
+  $$\text{Super Admin (100)} > \text{Chief Engineer (80)} > \text{Superintending Engineer (60)} > \text{Divisional Engineer (40)} > \text{Field Staff (20)} > \text{Viewer (0)}$$
 * **Target Position Invariant**: Administrators can only create, edit, delete, or assign roles positioned strictly below their own rank ($P_{\text{target}} < P_{\text{actor}}$).
 * **Anti-Escalation Containment**: Officers cannot grant permission codes they do not personally possess ($\text{GrantedPerms} \subseteq \text{ActorPerms}$).
 * **Decoupled Designation vs. Role**: Real-world job posts (SE, DE, AE) remain decoupled from platform permissions, preventing artificial UI fallbacks.
@@ -280,11 +281,9 @@ The platform incorporates a carrier-grade enterprise security and governance fou
 * **`jurisdiction:view_statewide`**: When unchecked, the server blind-silos read queries (`GET`) strictly to the officer's assigned division or circle (`LOWER(division) = LOWER(:userDivision)`).
 * **`jurisdiction:edit_statewide`**: When unchecked, write actions (`POST`, `PUT`, `PATCH`, `DELETE`) targeting records outside the officer's assigned division are rejected with `403 Forbidden`.
 
-### 4. Immutable Google-Sheets-Style Audit Trail (`/admin/audit`)
-* **Tamper-Proof Ledger (`public.audit_logs`)**: Automatically records every creation, modification, soft-deletion, restoration, lockdown toggle, and role promotion across all 8 modules.
-* **Granular Red $\rightarrow$ Green Field-Level Diffs**: Computes exact before/after diffs highlighting altered fields with Red (`-`) and Green (`+`) badges.
-* **Statewide Audit Console & Excel Export**: Real-time multi-filter log viewer with 1-click styled `.xlsx` audit report generation.
-* **Emergency Master Lockdown (`/api/admin/lockdown`)**: Super-Admin trigger to immediately suspend all platform mutations statewide during emergency audits or maintenance.
+### 4. Complete Database RLS Lockdown
+* **Zero Direct Anon/Public Table Access**: Overly permissive prototype policies revoked; all domain and security tables enforce strict RLS denying public access.
+* **Service Role Key Execution**: Next.js server route handlers execute queries via authenticated service-role client while enforcing granular PBAC/RBAC checks at the API boundary.
 
 ---
 
@@ -325,7 +324,7 @@ $$\Delta_{\text{completion}} = \lceil (\text{complianceCompletionDate} - \text{c
 * **Sharp 2px Corners**: Universal `--radius: 2px` (`rounded-xs`) across all cards, modals, buttons, table rows, and badges.
 * **Standardized 3×2 Action Toolbar Grid (`ModulePageHeader.tsx`)**:
   * `Refresh` (Spinning Icon) | `Master Config` (Sliders Icon) | `Add New` (Blue Accent)
-  * `Archive Toggle` (Amber/Slate) | `Import Data` (Indigo Accent) | `Export Data` (Emerald Accent)
+  * `Archive Toggle` (Amber/Slate) | `Emergency Freeze / Quick Filter` | `Export Data` (Emerald Accent)
 * **Dual-Mode DatePickerInput**: Strict Indian `DD/MM/YYYY` date format with 8-digit auto-masking, calendar picker popup, and leap year validation.
 * **Print & Export Typography**: Official departmental peach-cream header styling (`#FFF9CB9C`), Arial Narrow typography, solid black grid borders, and Landscape A4 fit-to-width print layout.
 
@@ -337,22 +336,27 @@ $$\Delta_{\text{completion}} = \lceil (\text{complianceCompletionDate} - \text{c
 nh_proj/
 ├── src/
 │   ├── app/
+│   │   ├── admin/
+│   │   │   └── audit/                   # Statewide Audit Trail & Log Inspector
 │   │   ├── api/
+│   │   │   ├── admin/lockdown/          # Statewide Emergency Freeze API
+│   │   │   ├── audit/                   # Audit Logs querying & export API
+│   │   │   ├── auth/                    # 2FA Identification, TOTP verification, Me & Reset APIs
 │   │   │   ├── dlp/                     # DLP master CRUD & spatial sub-stretches API
 │   │   │   │   └── master-data/         # DLP dynamic master data API
-│   │   │   ├── export/                  # Universal server-side ExcelJS & CSV export API
+│   │   │   ├── export/                  # Universal server-side ExcelJS export API
 │   │   │   ├── fee-bills/               # Legal fee bills API
 │   │   │   │   └── master-data/         # Fee bills master items API
 │   │   │   ├── highways/                # Corridors catalog API
 │   │   │   │   └── master-data/         # Highways master data API
-│   │   │   ├── ingest/                  # Universal Excel/CSV ingestion API
 │   │   │   ├── legal/                   # Legal cases litigation API
 │   │   │   │   └── master-data/         # Legal master config API
-│   │   │   ├── major-projects/          # Ongoing works API & route handler
+│   │   │   ├── major-projects/          # Ongoing capital works API
 │   │   │   │   ├── master-data/         # Ongoing works master config API
 │   │   │   │   └── snapshots/           # Historical audit timeline snapshots API
-│   │   │   ├── ongoing-works/           # Ongoing works route handler
+│   │   │   ├── ongoing-works/           # Ongoing works route handler alias
 │   │   │   │   └── master-data/         # Ongoing works master data route alias
+│   │   │   ├── roles/                   # RBAC Roles CRUD, ID, and reordering API
 │   │   │   ├── staff/                   # Department staff directory API
 │   │   │   │   └── master-data/         # Staff hierarchy master data API
 │   │   │   └── sub-chainages/           # Linear asset sub-chainages API
@@ -360,11 +364,11 @@ nh_proj/
 │   │   ├── fee-bills/page.tsx           # Fee bills audit & pendency dashboard
 │   │   ├── highways/page.tsx            # Highways master catalog dashboard
 │   │   ├── highways/[id]/sld/page.tsx   # Interactive Straight-Line Diagram (SLD)
-│   │   ├── ingest/page.tsx              # Universal bulk ingestion portal
 │   │   ├── legal/page.tsx               # Judicial cases & litigation portal
+│   │   ├── login/page.tsx               # Passwordless Mobile TOTP 2FA Login
 │   │   ├── major-projects/page.tsx      # Redirect alias to /ongoing-works
 │   │   ├── ongoing-works/page.tsx       # Ongoing capital works master portal
-│   │   ├── staff/page.tsx               # Staff management dashboard
+│   │   ├── staff/page.tsx               # Staff management & Role Studio dashboard
 │   │   ├── globals.css                  # Global styles & VS Code design tokens
 │   │   ├── layout.tsx                   # Root layout with NavigationHeader
 │   │   └── page.tsx                     # Landing / redirect route
@@ -375,35 +379,42 @@ nh_proj/
 │   │   ├── highways/                    # Highways grid, table, 4-stage entry form, KPI cards, master config, StraightLineDiagram
 │   │   ├── legal/                       # Legal case entry form, detail view, delete modal, dashboard, master config
 │   │   ├── major-projects/              # Ongoing works dashboard, table, 6-stage entry form, passport view, project history, master config
+│   │   ├── roles/                       # Discord-Style RoleStudioModal with integer rank drag-and-drop
 │   │   ├── staff/                       # Staff table, 2-stage entry form, detail view, master config
-│   │   └── NavigationHeader.tsx         # Sticky navigation header bar
+│   │   └── NavigationHeader.tsx         # Sticky navigation header bar with user status and lockdown indicator
 │   └── lib/
+│       ├── auth/                        # TOTP verification, session encryption, permissions, rate limiting
 │       ├── dlp/                         # DLP Level 2 micro-lane detection, capacity check, auto-split
 │       ├── export/                      # Column schemas (columns.ts), serverExcelBuilder.ts, exportGenerator.ts
 │       ├── feeBillMasterData.ts         # Fee bill mathematical helpers & pendency derivation
 │       ├── formatters.ts                # Dynamic delay & financial progress calculations
-│       ├── ingestion/                   # Universal spreadsheet parser & date normalizers
 │       ├── legal/                       # Legal master constants & appeal delay calculators
 │       ├── staff/                       # Staff cascading hierarchy resolvers
 │       └── supabase/                    # Supabase client & server instances
 ├── supabase/
-│   └── migrations/                      # 44 incremental SQL migrations (0000 to 0042)
-├── docs/                                # Detailed technical specifications
+│   └── migrations/                      # 52 incremental SQL migrations (0000 to 0050)
+├── docs/                                # Technical specifications and user manuals
+│   ├── user-guide.md                    # Departmental field and staff end-user manual
+│   ├── admin-guide.md                   # Administrator and managerial guide
+│   ├── role-permissions-guide.md        # Comprehensive role rank, PBAC scoping & permissions guide
 │   ├── DLP_SPECIFICATION.md             # DLP 2D Spatial Geometry specification
-│   ├── EXCEL_EXPORT_IMPORT_STANDARDS.md # Universal spreadsheet export/import specification
+│   ├── EXCEL_EXPORT_IMPORT_STANDARDS.md # Spreadsheet export specification
 │   ├── FEE_BILLS_SPECIFICATION.md       # Fee bills & voucher specification
 │   ├── HIERARCHICAL_ACCESS_AND_2FA_SPECIFICATION.md # Access control & 2FA specification
 │   ├── LEGAL_CASES_SPECIFICATION.md     # Legal litigation specification
-│   └── ONGOING_WORKS_SPECIFICATION.md   # Ongoing capital works 35-column specification
+│   ├── ONGOING_WORKS_SPECIFICATION.md   # Ongoing capital works 35-column specification
+│   ├── SECURITY_HARDENING_PLAN.md       # Security and RLS lockdown blueprint
+│   └── SESSION_CHANGELOG_2026_09_03.md  # Detailed engineering session changelog
+├── AUTH_RBAC_AND_AUDIT_SPEC.md          # Comprehensive RBAC & Audit specification
 ├── README.md                            # Master project documentation
 └── package.json                         # Next.js 16, React 19, TailwindCSS v4, ExcelJS
 ```
 
 ---
 
-## 🗄️ Database Migrations Lineage (0000 to 0042)
+## 🗄️ Database Migrations Lineage (0000 to 0050)
 
-Located in `supabase/migrations/`:
+Located in `supabase/migrations/` (52 migrations total):
 * `0000_init.sql` $\rightarrow$ Extensions initialization (`uuid-ossp`, `pgcrypto`).
 * `0001_initial_schema.sql` $\rightarrow$ Base highways, sections, and PostGIS enablement.
 * `0002_excel_ingestion_tables.sql` $\rightarrow$ Ingestion log & staging tables (`dataset_uploads`, `highway_sub_chainages`).
@@ -431,8 +442,8 @@ Located in `supabase/migrations/`:
 * `0024_staff_master_config_hierarchy.sql` $\rightarrow$ Added `parent_category` and `parent_value` to `staff_master_config`.
 * `0025_fee_bill_master_items_table.sql` $\rightarrow$ Relational `fee_bill_master_items` table with parent categories.
 * `0026_fee_bills_numeric_cases_and_assistant_settlement.sql` $\rightarrow$ Independent Assistant Law Officer settlement and receipt date fields.
-* `0027a_fee_bills_go_reference_letter_fields.sql` $\rightarrow$ Added G.O. reference letter tracking columns to `fee_bills`.
-* `0027b_legal_cases_relax_category_and_schema_updates.sql` $\rightarrow$ Relaxed category constraint and added court name normalization in `legal_cases`.
+* `0027_fee_bills_go_reference_letter_fields.sql` $\rightarrow$ Added G.O. reference letter tracking columns to `fee_bills`.
+* `0027_legal_cases_relax_category_and_schema_updates.sql` $\rightarrow$ Relaxed category constraint and added court name normalization in `legal_cases`.
 * `0028_add_base_original_case_columns.sql` $\rightarrow$ Added 12 lower-court columns to `legal_cases` for appeal proceedings.
 * `0029_dlp_rework_schema.sql` $\rightarrow$ Complete 2D spatial rework: `dlp_corridors` and `dlp_work_stretches` relational tables.
 * `0030_dlp_master_config.sql` $\rightarrow$ Dynamic DLP master data configuration table.
@@ -449,6 +460,13 @@ Located in `supabase/migrations/`:
 * `0041_legal_cases_court_and_compliance_enhancements.sql` $\rightarrow$ Added court name custom fields and compliance completion dates.
 * `0042_drop_ced_complaint_sent_date.sql` $\rightarrow$ Dropped deprecated complaint date column from `legal_cases`.
 * `0043_master_auth_rbac_and_audit.sql` $\rightarrow$ Master Identity, Discord-Style Hierarchical RBAC (`roles`, `permissions`, `role_permissions`, `user_profiles`), 50+ Permissions Catalog, PBAC Jurisdiction Scoping, Emergency Lockdown, and Immutable Google-Sheets Audit Trail (`audit_logs`).
+* `0044_add_bypass_validation_permission.sql` $\rightarrow$ Registered `system:bypass_validation` permission code.
+* `0045_highway_master_config.sql` $\rightarrow$ Dynamic master configuration table (`public.highway_master_config`) for highway corridors and lane configurations.
+* `0046_complete_granular_permissions.sql` $\rightarrow$ Seeded complete 50+ granular permissions across all modules, bulk actions, and master configs.
+* `0047_security_hardening_and_rls_lockdown.sql` $\rightarrow$ Enforced strict RLS lockdown on security tables, added TOTP rate limiting counters (`failed_totp_attempts`, `totp_locked_until`).
+* `0048_lockdown_domain_tables_rls.sql` $\rightarrow$ Revoked public access across all core domain tables, securing database access exclusively for service-role backend route handlers.
+* `0049_soft_delete_dlp_corridor_rpc.sql` $\rightarrow$ Atomic PostgreSQL RPC functions (`soft_delete_dlp_corridor`, `restore_dlp_corridor`) for transactional cascade updates.
+* `0050_auth_rate_limiting.sql` $\rightarrow$ Dedicated `auth_rate_limits` table and atomic single-statement serialization RPC (`check_and_increment_rate_limit`).
 
 ---
 
