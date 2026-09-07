@@ -442,6 +442,30 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     return Array.from(map.values());
   }, [dlpStretches, getDlpPosition, isReversed]);
 
+  // Precompute concurrency / chainage overlap for DLP work stretches
+  const concurrentDlpMap = useMemo(() => {
+    const map = new Map<string | number, boolean>();
+    dlpStretches.forEach((dlpA, idxA) => {
+      const keyA = dlpA.id || idxA;
+      const fromA = Number(dlpA.chainage_from_km || 0);
+      const toA = Number(dlpA.chainage_to_km || 0);
+      const minA = Math.min(fromA, toA);
+      const maxA = Math.max(fromA, toA);
+
+      const hasOverlap = dlpStretches.some((dlpB, idxB) => {
+        if (idxA === idxB || (dlpA.id && dlpB.id && dlpA.id === dlpB.id)) return false;
+        const fromB = Number(dlpB.chainage_from_km || 0);
+        const toB = Number(dlpB.chainage_to_km || 0);
+        const minB = Math.min(fromB, toB);
+        const maxB = Math.max(fromB, toB);
+        return Math.max(minA, minB) < Math.min(maxA, maxB);
+      });
+
+      map.set(keyA, hasOverlap);
+    });
+    return map;
+  }, [dlpStretches]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white flex flex-col items-center justify-center p-6">
@@ -937,6 +961,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                     {dlpStretches.map((dlp, dIdx) => {
                       const { leftPx, widthPx } = getDlpPosition(dlp);
                       const style = getDlpCategoryStyle(dlp.category);
+                      const isConcurrent = concurrentDlpMap.get(dlp.id || dIdx) ?? false;
                       const workTitle = dlp.work_name || dlp.scheme || dlp.category;
                       const contractorTitle = dlp.contractor_name || 'Assigned Agency';
                       const wFrom = Number(dlp.road_width_from_m ?? 0);
@@ -994,26 +1019,42 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                             }}
                             title={`${dlp.category} | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel} (Km ${dlp.chainage_from_km} → Km ${dlp.chainage_to_km}, Width 0 to ${wTo}m)`}
                           >
-                            {/* TOP: Contractor Name */}
-                            <div className="w-full text-center shrink-0 select-none">
-                              <span className={`${contractorSize} font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate block max-w-full leading-tight`}>
-                                {contractorTitle}
-                              </span>
-                            </div>
+                            {isConcurrent ? (
+                              <div className="w-full h-full flex items-center justify-between gap-1.5 px-1 overflow-hidden select-none">
+                                <span className={`${contractorSize} font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate shrink-0 max-w-[28%] text-left leading-tight`}>
+                                  {contractorTitle}
+                                </span>
+                                <span className={`${workTitleSize} font-black tracking-tight text-center truncate flex-1 drop-shadow-xs leading-tight px-1`}>
+                                  {workTitle}
+                                </span>
+                                <span className={`${dateSize} font-mono font-bold text-white/95 drop-shadow-xs truncate shrink-0 max-w-[32%] text-right leading-tight`}>
+                                  {rightDateLabel}
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                {/* TOP: Contractor Name */}
+                                <div className="w-full text-center shrink-0 select-none">
+                                  <span className={`${contractorSize} font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate block max-w-full leading-tight`}>
+                                    {contractorTitle}
+                                  </span>
+                                </div>
 
-                            {/* CENTER: Name of the Work (Justified / Centered & Wrapped) */}
-                            <div className="w-full flex-1 flex items-center justify-center my-0.5 px-0.5 overflow-hidden select-none">
-                              <span className={`${workTitleSize} font-black tracking-tight text-center break-words drop-shadow-xs leading-tight`}>
-                                {workTitle}
-                              </span>
-                            </div>
+                                {/* CENTER: Name of the Work (Justified / Centered & Wrapped) */}
+                                <div className="w-full flex-1 flex items-center justify-center my-0.5 px-0.5 overflow-hidden select-none">
+                                  <span className={`${workTitleSize} font-black tracking-tight text-center break-words drop-shadow-xs leading-tight`}>
+                                    {workTitle}
+                                  </span>
+                                </div>
 
-                            {/* BOTTOM: DLP Date / Status */}
-                            <div className="w-full text-center shrink-0 select-none">
-                              <span className={`${dateSize} font-mono font-bold text-white/95 drop-shadow-xs truncate block max-w-full leading-tight`}>
-                                {rightDateLabel}
-                              </span>
-                            </div>
+                                {/* BOTTOM: DLP Date / Status */}
+                                <div className="w-full text-center shrink-0 select-none">
+                                  <span className={`${dateSize} font-mono font-bold text-white/95 drop-shadow-xs truncate block max-w-full leading-tight`}>
+                                    {rightDateLabel}
+                                  </span>
+                                </div>
+                              </>
+                            )}
                           </div>
                         );
                       }
@@ -1067,15 +1108,31 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                             }}
                             title={`LHS Widening | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel}`}
                           >
-                            <span className={`${stripContractorSize} font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none`}>
-                              {contractorTitle}
-                            </span>
-                            <span className={`${stripWorkSize} font-black tracking-tight text-center break-words drop-shadow-xs leading-tight my-0.5 flex-1 flex items-center justify-center select-none`}>
-                              {workTitle}
-                            </span>
-                            <span className={`${stripDateSize} font-mono font-bold text-white/95 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none`}>
-                              {rightDateLabel}
-                            </span>
+                            {isConcurrent ? (
+                              <div className="w-full h-full flex items-center justify-between gap-1 px-1 overflow-hidden select-none">
+                                <span className={`${stripContractorSize} font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate shrink-0 max-w-[28%] text-left leading-tight`}>
+                                  {contractorTitle}
+                                </span>
+                                <span className={`${stripWorkSize} font-black tracking-tight text-center truncate flex-1 drop-shadow-xs leading-tight px-0.5`}>
+                                  {workTitle}
+                                </span>
+                                <span className={`${stripDateSize} font-mono font-bold text-white/95 drop-shadow-xs truncate shrink-0 max-w-[32%] text-right leading-tight`}>
+                                  {rightDateLabel}
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                <span className={`${stripContractorSize} font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none`}>
+                                  {contractorTitle}
+                                </span>
+                                <span className={`${stripWorkSize} font-black tracking-tight text-center break-words drop-shadow-xs leading-tight my-0.5 flex-1 flex items-center justify-center select-none`}>
+                                  {workTitle}
+                                </span>
+                                <span className={`${stripDateSize} font-mono font-bold text-white/95 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none`}>
+                                  {rightDateLabel}
+                                </span>
+                              </>
+                            )}
                           </div>
 
                           {/* Lower RHS Strip */}
@@ -1097,15 +1154,31 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                             }}
                             title={`RHS Widening | Contractor: ${contractorTitle} | Work: ${workTitle} | ${rightDateLabel}`}
                           >
-                            <span className={`${stripContractorSize} font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none`}>
-                              {contractorTitle}
-                            </span>
-                            <span className={`${stripWorkSize} font-black tracking-tight text-center break-words drop-shadow-xs leading-tight my-0.5 flex-1 flex items-center justify-center select-none`}>
-                              {workTitle}
-                            </span>
-                            <span className={`${stripDateSize} font-mono font-bold text-white/95 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none`}>
-                              {rightDateLabel}
-                            </span>
+                            {isConcurrent ? (
+                              <div className="w-full h-full flex items-center justify-between gap-1 px-1 overflow-hidden select-none">
+                                <span className={`${stripContractorSize} font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate shrink-0 max-w-[28%] text-left leading-tight`}>
+                                  {contractorTitle}
+                                </span>
+                                <span className={`${stripWorkSize} font-black tracking-tight text-center truncate flex-1 drop-shadow-xs leading-tight px-0.5`}>
+                                  {workTitle}
+                                </span>
+                                <span className={`${stripDateSize} font-mono font-bold text-white/95 drop-shadow-xs truncate shrink-0 max-w-[32%] text-right leading-tight`}>
+                                  {rightDateLabel}
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                <span className={`${stripContractorSize} font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none`}>
+                                  {contractorTitle}
+                                </span>
+                                <span className={`${stripWorkSize} font-black tracking-tight text-center break-words drop-shadow-xs leading-tight my-0.5 flex-1 flex items-center justify-center select-none`}>
+                                  {workTitle}
+                                </span>
+                                <span className={`${stripDateSize} font-mono font-bold text-white/95 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none`}>
+                                  {rightDateLabel}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </React.Fragment>
                       );
