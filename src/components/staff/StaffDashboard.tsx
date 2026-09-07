@@ -358,9 +358,8 @@ export const StaffDashboard: React.FC = () => {
               archiveToggle={{
                 showArchived,
                 onToggle: () => setShowArchived(!showArchived),
-                archivedCount: archivedStaffCount,
                 activeLabel: "Hide Archived",
-                inactiveLabel: `Archived (${archivedStaffCount})`,
+                inactiveLabel: "Show Archived",
               }}
               exportAction={{
                 onClick: () => setIsExportModalOpen(true),
