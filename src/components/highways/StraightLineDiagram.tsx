@@ -1605,7 +1605,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                         );
                       })}
 
-                      {/* Continuous Background Colored Bars (Text rendered in Page-Local Layer) */}
+                      {/* Continuous Background Colored Bars */}
                       {dlpStretches.map((dlp, dIdx) => {
                         const { leftPx, widthPx } = getDlpPosition(dlp);
                         const dlpStyle = getDlpCategoryStyle(dlp.category);
@@ -1630,6 +1630,110 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                           <React.Fragment key={dlp.id || dIdx}>
                             <div className={`absolute rounded-xs shadow-xs z-30 ${dlpStyle.bg} ${dlpStyle.border}`} style={{ left: `${leftPx}px`, width: `${widthPx}px`, top: topUpperPx, height: `${stripHeightPx}px` }} />
                             <div className={`absolute rounded-xs shadow-xs z-30 ${dlpStyle.bg} ${dlpStyle.border}`} style={{ left: `${leftPx}px`, width: `${widthPx}px`, top: topLowerPx, height: `${stripHeightPx}px` }} />
+                          </React.Fragment>
+                        );
+                      })}
+
+                      {/* Page-Local Label Overlay (Directly Inside Track 3 - Perfectly Aligned) */}
+                      {dlpStretches.map((dlp, dIdx) => {
+                        const { leftPx, widthPx } = getDlpPosition(dlp);
+                        const sliceWorkLeft = Math.max(leftPx, sliceStartPx);
+                        const sliceWorkRight = Math.min(leftPx + widthPx, sliceStartPx + PAGE_CONTENT_WIDTH);
+                        const sliceWorkWidth = sliceWorkRight - sliceWorkLeft;
+
+                        // Min-width guard: only render text if visible section on this page is >= 100px
+                        if (sliceWorkWidth < 100) return null;
+
+                        const isConcurrent = concurrentDlpMap.get(dlp.id || dIdx) ?? false;
+                        const workTitle = dlp.work_name || dlp.scheme || dlp.category;
+                        const contractorTitle = dlp.contractor_name || 'Assigned Agency';
+                        const wFrom = Number(dlp.road_width_from_m ?? 0);
+                        const wTo = Number(dlp.road_width_to_m ?? 3.5);
+                        const rightDateLabel = dlp.category === 'NO_DLP'
+                          ? `DLP Ended: ${formatDateIndian(dlp.dlp_ended_on_date || dlp.dlp_till_date)}`
+                          : dlp.category === 'CONSTRUCTION'
+                          ? `Progress: ${dlp.physical_progress_pct ?? 0}%`
+                          : `DLP Till: ${formatDateIndian(dlp.dlp_till_date)}`;
+
+                        if (wFrom === 0) {
+                          const offsetToPx = getLateralOffsetPx(wTo);
+                          const heightPx = Math.max(20, offsetToPx * 2);
+                          return (
+                            <div
+                              key={`print-lbl-${dlp.id || dIdx}`}
+                              className="absolute top-1/2 -translate-y-1/2 flex flex-col justify-between items-center text-center overflow-hidden p-1.5 z-40 text-white"
+                              style={{ left: `${sliceWorkLeft}px`, width: `${sliceWorkWidth}px`, height: `${heightPx}px` }}
+                            >
+                              {isConcurrent ? (
+                                <div className="w-full h-full flex items-center justify-between gap-1.5 px-1 overflow-hidden select-none">
+                                  <span className="text-[8px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate shrink-0 max-w-[28%] text-left leading-tight">{contractorTitle}</span>
+                                  <span className="text-[9px] font-black tracking-tight text-center truncate flex-1 drop-shadow-xs leading-tight px-1">{workTitle}</span>
+                                  <span className="text-[8px] font-mono font-bold text-white/95 drop-shadow-xs truncate shrink-0 max-w-[32%] text-right leading-tight">{rightDateLabel}</span>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="w-full text-center shrink-0 select-none">
+                                    <span className="text-[9px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate block max-w-full leading-tight">{contractorTitle}</span>
+                                  </div>
+                                  <div className="w-full flex-1 flex items-center justify-center my-0.5 px-0.5 overflow-hidden select-none">
+                                    <span className="text-[10px] font-black tracking-tight text-center break-words drop-shadow-xs leading-tight">{workTitle}</span>
+                                  </div>
+                                  <div className="w-full text-center shrink-0 select-none">
+                                    <span className="text-[8.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate block max-w-full leading-tight">{rightDateLabel}</span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        const offsetFromPx = getLateralOffsetPx(wFrom);
+                        const offsetToPx = getLateralOffsetPx(wTo);
+                        const stripHeightPx = Math.max(14, offsetToPx - offsetFromPx);
+                        const topUpperPx = `calc(50% - ${offsetToPx}px)`;
+                        const topLowerPx = `calc(50% + ${offsetFromPx}px)`;
+
+                        return (
+                          <React.Fragment key={`print-lbl-${dlp.id || dIdx}`}>
+                            {/* Upper LHS Strip Label */}
+                            <div
+                              className="absolute flex flex-col justify-between items-center text-center overflow-hidden p-1 z-40 text-white"
+                              style={{ left: `${sliceWorkLeft}px`, width: `${sliceWorkWidth}px`, top: topUpperPx, height: `${stripHeightPx}px` }}
+                            >
+                              {isConcurrent ? (
+                                <div className="w-full h-full flex items-center justify-between gap-1 px-1 overflow-hidden select-none">
+                                  <span className="text-[7.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate shrink-0 max-w-[28%] text-left leading-tight">{contractorTitle}</span>
+                                  <span className="text-[8px] font-black tracking-tight text-center truncate flex-1 drop-shadow-xs leading-tight px-0.5">{workTitle}</span>
+                                  <span className="text-[7.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate shrink-0 max-w-[32%] text-right leading-tight">{rightDateLabel}</span>
+                                </div>
+                              ) : (
+                                <>
+                                  <span className="text-[7.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none">{contractorTitle}</span>
+                                  <span className="text-[8px] font-black tracking-tight text-center break-words drop-shadow-xs leading-tight my-0.5 flex-1 flex items-center justify-center select-none">{workTitle}</span>
+                                  <span className="text-[7.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none">{rightDateLabel}</span>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Lower RHS Strip Label */}
+                            <div
+                              className="absolute flex flex-col justify-between items-center text-center overflow-hidden p-1 z-40 text-white"
+                              style={{ left: `${sliceWorkLeft}px`, width: `${sliceWorkWidth}px`, top: topLowerPx, height: `${stripHeightPx}px` }}
+                            >
+                              {isConcurrent ? (
+                                <div className="w-full h-full flex items-center justify-between gap-1 px-1 overflow-hidden select-none">
+                                  <span className="text-[7.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate shrink-0 max-w-[28%] text-left leading-tight">{contractorTitle}</span>
+                                  <span className="text-[8px] font-black tracking-tight text-center truncate flex-1 drop-shadow-xs leading-tight px-0.5">{workTitle}</span>
+                                  <span className="text-[7.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate shrink-0 max-w-[32%] text-right leading-tight">{rightDateLabel}</span>
+                                </div>
+                              ) : (
+                                <>
+                                  <span className="text-[7.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none">{contractorTitle}</span>
+                                  <span className="text-[8px] font-black tracking-tight text-center break-words drop-shadow-xs leading-tight my-0.5 flex-1 flex items-center justify-center select-none">{workTitle}</span>
+                                  <span className="text-[7.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none">{rightDateLabel}</span>
+                                </>
+                              )}
+                            </div>
                           </React.Fragment>
                         );
                       })}
@@ -1697,127 +1801,6 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
                         })}
                       </div>
                     )}
-                  </div>
-
-                  {/* 2. Page-Local Label Overlay Layer (Solution A: Strictly within [localLeft, localRight] if >= 100px) */}
-                  <div className="absolute inset-0 pointer-events-none z-40">
-                    {/* Offset down by header tracks (Towns 48px if shown + Splits 44px) */}
-                    <div className="relative w-full h-[340px]" style={{ top: `${(showTowns ? 48 : 0) + 44}px` }}>
-                      {dlpStretches.map((dlp, dIdx) => {
-                        const { leftPx, widthPx } = getDlpPosition(dlp);
-                        const localLeftPx = Math.max(0, leftPx - sliceStartPx);
-                        const localRightPx = Math.min(PAGE_CONTENT_WIDTH, (leftPx + widthPx) - sliceStartPx);
-                        const localVisibleWidth = localRightPx - localLeftPx;
-
-                        // Min-width guard: only render text if visible section on this page is >= 100px
-                        if (localVisibleWidth < 100) return null;
-
-                        const isConcurrent = concurrentDlpMap.get(dlp.id || dIdx) ?? false;
-                        const workTitle = dlp.work_name || dlp.scheme || dlp.category;
-                        const contractorTitle = dlp.contractor_name || 'Assigned Agency';
-                        const wFrom = Number(dlp.road_width_from_m ?? 0);
-                        const wTo = Number(dlp.road_width_to_m ?? 3.5);
-                        const rightDateLabel = dlp.category === 'NO_DLP'
-                          ? `DLP Ended: ${formatDateIndian(dlp.dlp_ended_on_date || dlp.dlp_till_date)}`
-                          : dlp.category === 'CONSTRUCTION'
-                          ? `Progress: ${dlp.physical_progress_pct ?? 0}%`
-                          : `DLP Till: ${formatDateIndian(dlp.dlp_till_date)}`;
-
-                        if (wFrom === 0) {
-                          const offsetToPx = getLateralOffsetPx(wTo);
-                          const heightPx = Math.max(20, offsetToPx * 2);
-                          return (
-                            <div
-                              key={`print-lbl-${dlp.id || dIdx}`}
-                              className="absolute top-1/2 -translate-y-1/2 flex flex-col justify-between items-center text-center overflow-hidden p-1.5 text-white"
-                              style={{ left: `${localLeftPx}px`, width: `${localVisibleWidth}px`, height: `${heightPx}px` }}
-                            >
-                              {isConcurrent ? (
-                                <div className="w-full h-full flex items-center justify-between gap-1.5 px-1 overflow-hidden select-none">
-                                  <span className="text-[8px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate shrink-0 max-w-[28%] text-left leading-tight">{contractorTitle}</span>
-                                  <span className="text-[9px] font-black tracking-tight text-center truncate flex-1 drop-shadow-xs leading-tight px-1">{workTitle}</span>
-                                  <span className="text-[8px] font-mono font-bold text-white/95 drop-shadow-xs truncate shrink-0 max-w-[32%] text-right leading-tight">{rightDateLabel}</span>
-                                </div>
-                              ) : (
-                                <>
-                                  <div className="w-full text-center shrink-0 select-none">
-                                    <span className="text-[9px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate block max-w-full leading-tight">{contractorTitle}</span>
-                                  </div>
-                                  <div className="w-full flex-1 flex items-center justify-center my-0.5 px-0.5 overflow-hidden select-none">
-                                    <span className="text-[10px] font-black tracking-tight text-center break-words drop-shadow-xs leading-tight">{workTitle}</span>
-                                  </div>
-                                  <div className="w-full text-center shrink-0 select-none">
-                                    <span className="text-[8.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate block max-w-full leading-tight">{rightDateLabel}</span>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          );
-                        }
-
-                        const offsetFromPx = getLateralOffsetPx(wFrom);
-                        const offsetToPx = getLateralOffsetPx(wTo);
-                        const stripHeightPx = Math.max(14, offsetToPx - offsetFromPx);
-                        const topUpperPx = `calc(50% - ${offsetToPx}px)`;
-                        const topLowerPx = `calc(50% + ${offsetFromPx}px)`;
-
-                        return (
-                          <React.Fragment key={`print-lbl-${dlp.id || dIdx}`}>
-                            {/* Upper LHS Strip Label */}
-                            <div
-                              className="absolute flex flex-col justify-between items-center text-center overflow-hidden p-1 text-white"
-                              style={{ left: `${localLeftPx}px`, width: `${localVisibleWidth}px`, top: topUpperPx, height: `${stripHeightPx}px` }}
-                            >
-                              {isConcurrent ? (
-                                <div className="w-full h-full flex items-center justify-between gap-1 px-1 overflow-hidden select-none">
-                                  <span className="text-[7.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate shrink-0 max-w-[28%] text-left leading-tight">{contractorTitle}</span>
-                                  <span className="text-[8px] font-black tracking-tight text-center truncate flex-1 drop-shadow-xs leading-tight px-0.5">{workTitle}</span>
-                                  <span className="text-[7.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate shrink-0 max-w-[32%] text-right leading-tight">{rightDateLabel}</span>
-                                </div>
-                              ) : (
-                                <>
-                                  <span className="text-[7.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none">
-                                    {contractorTitle}
-                                  </span>
-                                  <span className="text-[8px] font-black tracking-tight text-center break-words drop-shadow-xs leading-tight my-0.5 flex-1 flex items-center justify-center select-none">
-                                    {workTitle}
-                                  </span>
-                                  <span className="text-[7.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none">
-                                    {rightDateLabel}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-
-                            {/* Lower RHS Strip Label */}
-                            <div
-                              className="absolute flex flex-col justify-between items-center text-center overflow-hidden p-1 text-white"
-                              style={{ left: `${localLeftPx}px`, width: `${localVisibleWidth}px`, top: topLowerPx, height: `${stripHeightPx}px` }}
-                            >
-                              {isConcurrent ? (
-                                <div className="w-full h-full flex items-center justify-between gap-1 px-1 overflow-hidden select-none">
-                                  <span className="text-[7.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate shrink-0 max-w-[28%] text-left leading-tight">{contractorTitle}</span>
-                                  <span className="text-[8px] font-black tracking-tight text-center truncate flex-1 drop-shadow-xs leading-tight px-0.5">{workTitle}</span>
-                                  <span className="text-[7.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate shrink-0 max-w-[32%] text-right leading-tight">{rightDateLabel}</span>
-                                </div>
-                              ) : (
-                                <>
-                                  <span className="text-[7.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none">
-                                    {contractorTitle}
-                                  </span>
-                                  <span className="text-[8px] font-black tracking-tight text-center break-words drop-shadow-xs leading-tight my-0.5 flex-1 flex items-center justify-center select-none">
-                                    {workTitle}
-                                  </span>
-                                  <span className="text-[7.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none">
-                                    {rightDateLabel}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </React.Fragment>
-                        );
-                      })}
-                    </div>
                   </div>
                 </div>
               </div>
