@@ -260,13 +260,18 @@ export async function DELETE(request: NextRequest) {
     const category = searchParams.get("category");
     const value = searchParams.get("value");
 
+    const nowIso = new Date().toISOString();
+
     if (id) {
-      const { error } = await supabase.from("highway_master_config").delete().eq("id", id);
+      const { error } = await supabase
+        .from("highway_master_config")
+        .update({ status: "DELETED", updated_at: nowIso })
+        .eq("id", id);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     } else if (category && value) {
       const { error } = await supabase
         .from("highway_master_config")
-        .delete()
+        .update({ status: "DELETED", updated_at: nowIso })
         .eq("category", category)
         .eq("value", value);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });

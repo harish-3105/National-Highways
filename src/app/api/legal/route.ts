@@ -456,58 +456,35 @@ export async function DELETE(req: NextRequest) {
     }
 
     const isHardDelete = searchParams.get('hard') === 'true' || searchParams.get('permanent') === 'true';
-
     if (isHardDelete) {
-      const hardAuth = canPerformAction(session, 'system:hard_delete');
-      if (!hardAuth.allowed) {
-        return NextResponse.json(
-          { success: false, error: hardAuth.reason || 'Hard deletion unauthorized.' },
-          { status: 403 }
-        );
-      }
-
-      const { error: delErr } = await supabase.from('legal_cases').delete().eq('id', id);
-      if (delErr) {
-        return NextResponse.json({ success: false, error: delErr.message }, { status: 500 });
-      }
-
-      if (session) {
-        await logAudit({
-          actor: session,
-          module: 'LEGAL',
-          action: 'DELETE',
-          entityId: id,
-          entityTitle: `Legal Case: ${existingCase.case_details || id}`,
-          changesSummary: `Permanently deleted legal case`,
-          oldState: existingCase,
-        });
-      }
-
-      return NextResponse.json({ success: true, message: 'Case permanently deleted' });
-    } else {
-      const { error: softErr } = await supabase
-        .from('legal_cases')
-        .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
-        .eq('id', id);
-
-      if (softErr) {
-        return NextResponse.json({ success: false, error: softErr.message }, { status: 500 });
-      }
-
-      if (session) {
-        await logAudit({
-          actor: session,
-          module: 'LEGAL',
-          action: 'DELETE',
-          entityId: id,
-          entityTitle: `Legal Case: ${existingCase.case_details || id}`,
-          changesSummary: `Soft-deleted legal case from active register`,
-          oldState: existingCase,
-        });
-      }
-
-      return NextResponse.json({ success: true, message: 'Case marked as deleted' });
+      return NextResponse.json(
+        { success: false, error: 'Permanent deletion is not available through the application. Contact your database administrator.' },
+        { status: 403 }
+      );
     }
+
+    const { error: softErr } = await supabase
+      .from('legal_cases')
+      .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (softErr) {
+      return NextResponse.json({ success: false, error: softErr.message }, { status: 500 });
+    }
+
+    if (session) {
+      await logAudit({
+        actor: session,
+        module: 'LEGAL',
+        action: 'DELETE',
+        entityId: id,
+        entityTitle: `Legal Case: ${existingCase.case_details || id}`,
+        changesSummary: `Soft-deleted legal case from active register`,
+        oldState: existingCase,
+      });
+    }
+
+    return NextResponse.json({ success: true, message: 'Case marked as deleted' });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });

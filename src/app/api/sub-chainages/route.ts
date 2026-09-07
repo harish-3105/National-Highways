@@ -325,7 +325,13 @@ export async function DELETE(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const hard = searchParams.get('hard') === 'true';
+
+    if (searchParams.get('hard') === 'true' || searchParams.get('permanent') === 'true') {
+      return NextResponse.json(
+        { success: false, message: 'Permanent deletion is not available through the application. Contact your database administrator.' },
+        { status: 403 }
+      );
+    }
 
     if (!id) {
       return NextResponse.json({ success: false, message: 'Sub-chainage ID is required' }, { status: 400 });
@@ -356,48 +362,30 @@ export async function DELETE(request: Request) {
       );
     }
 
-      if (hard) {
-        const hardAuth = canPerformAction(session, 'system:hard_delete');
-        if (!hardAuth.allowed) {
-          return NextResponse.json(
-            { success: false, message: hardAuth.reason || 'Hard deletion unauthorized.' },
-            { status: 403 }
-          );
-        }
+    // Soft Delete: update delete_status to 'DELETED'
+    const { error } = await supabase
+      .from('highway_sub_chainages')
+      .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
+      .eq('id', id);
 
-        // Hard Delete
-        const { error } = await supabase.from('highway_sub_chainages').delete().eq('id', id);
-        if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
-      } else {
-        // Soft Delete: update delete_status to 'DELETED'
-        const { error } = await supabase
-          .from('highway_sub_chainages')
-          .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
-          .eq('id', id);
+    if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
 
-        if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
-      }
-
-      // Log Tamper-Proof Audit
-      if (session && existingSub) {
-        await logAudit({
-          actor: session,
-          module: 'HIGHWAYS',
-          action: 'DELETE',
-          entityId: id,
-          entityTitle: `Sub-Chainage: ${existingSub.highway_code} (Km ${existingSub.from_km}–${existingSub.to_km})`,
-          changesSummary: hard
-            ? `Permanently deleted sub-chainage stretch for ${existingSub.highway_code}`
-            : `Soft-deleted sub-chainage stretch for ${existingSub.highway_code}`,
-          oldState: existingSub,
-        });
-      }
+    // Log Tamper-Proof Audit
+    if (session && existingSub) {
+      await logAudit({
+        actor: session,
+        module: 'HIGHWAYS',
+        action: 'DELETE',
+        entityId: id,
+        entityTitle: `Sub-Chainage: ${existingSub.highway_code} (Km ${existingSub.from_km}–${existingSub.to_km})`,
+        changesSummary: `Soft-deleted sub-chainage stretch for ${existingSub.highway_code}`,
+        oldState: existingSub,
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      message: hard
-        ? 'Sub-chainage stretch permanently deleted successfully'
-        : 'Sub-chainage stretch soft-deleted successfully',
+      message: 'Sub-chainage stretch soft-deleted successfully',
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

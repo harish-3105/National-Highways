@@ -388,58 +388,35 @@ export async function DELETE(request: Request) {
     }
 
     const isHardDelete = searchParams.get('hard') === 'true' || searchParams.get('permanent') === 'true';
-
     if (isHardDelete) {
-      const hardAuth = canPerformAction(session, 'system:hard_delete');
-      if (!hardAuth.allowed) {
-        return NextResponse.json(
-          { success: false, message: hardAuth.reason || 'Hard deletion unauthorized.' },
-          { status: 403 }
-        );
-      }
-
-      const { error: delErr } = await supabase.from('fee_bills').delete().eq('id', id);
-      if (delErr) {
-        return NextResponse.json({ success: false, message: delErr.message }, { status: 500 });
-      }
-
-      if (session) {
-        await logAudit({
-          actor: session,
-          module: 'FEE_BILLS',
-          action: 'DELETE',
-          entityId: id,
-          entityTitle: `Fee Voucher: ${existingBill.fee_bill_number || id}`,
-          changesSummary: `Permanently deleted advocate fee voucher for ${existingBill.lawyer_name}`,
-          oldState: existingBill,
-        });
-      }
-
-      return NextResponse.json({ success: true, message: 'Fee bill permanently deleted' });
-    } else {
-      const { error: updateErr } = await supabase
-        .from('fee_bills')
-        .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
-        .eq('id', id);
-
-      if (updateErr) {
-        return NextResponse.json({ success: false, message: updateErr.message }, { status: 500 });
-      }
-
-      if (session) {
-        await logAudit({
-          actor: session,
-          module: 'FEE_BILLS',
-          action: 'DELETE',
-          entityId: id,
-          entityTitle: `Fee Voucher: ${existingBill.fee_bill_number || id}`,
-          changesSummary: `Soft-deleted advocate fee voucher for ${existingBill.lawyer_name}`,
-          oldState: existingBill,
-        });
-      }
-
-      return NextResponse.json({ success: true, message: 'Fee bill soft-deleted successfully' });
+      return NextResponse.json(
+        { success: false, message: 'Permanent deletion is not available through the application. Contact your database administrator.' },
+        { status: 403 }
+      );
     }
+
+    const { error: updateErr } = await supabase
+      .from('fee_bills')
+      .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (updateErr) {
+      return NextResponse.json({ success: false, message: updateErr.message }, { status: 500 });
+    }
+
+    if (session) {
+      await logAudit({
+        actor: session,
+        module: 'FEE_BILLS',
+        action: 'DELETE',
+        entityId: id,
+        entityTitle: `Fee Voucher: ${existingBill.fee_bill_number || id}`,
+        changesSummary: `Soft-deleted advocate fee voucher for ${existingBill.lawyer_name}`,
+        oldState: existingBill,
+      });
+    }
+
+    return NextResponse.json({ success: true, message: 'Fee bill soft-deleted successfully' });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, message: msg }, { status: 500 });

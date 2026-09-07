@@ -636,7 +636,12 @@ export async function DELETE(request: Request) {
     const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const hard = searchParams.get('hard') === 'true';
+    if (searchParams.get('hard') === 'true' || searchParams.get('permanent') === 'true') {
+      return NextResponse.json(
+        { success: false, message: 'Permanent deletion is not available through the application. Contact your database administrator.' },
+        { status: 403 }
+      );
+    }
 
     if (!id) {
       return NextResponse.json({ success: false, message: 'Project ID is required' }, { status: 400 });
@@ -664,25 +669,12 @@ export async function DELETE(request: Request) {
           );
         }
 
-        if (hard) {
-          const hardAuth = canPerformAction(session, 'system:hard_delete');
-          if (!hardAuth.allowed) {
-            return NextResponse.json(
-              { success: false, message: hardAuth.reason || 'Hard deletion unauthorized.' },
-              { status: 403 }
-            );
-          }
+        const { error } = await supabase
+          .from('major_projects_50cr')
+          .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
+          .eq('id', id);
 
-          const { error } = await supabase.from('major_projects_50cr').delete().eq('id', id);
-          if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
-        } else {
-          const { error } = await supabase
-            .from('major_projects_50cr')
-            .update({ delete_status: 'DELETED', updated_at: new Date().toISOString() })
-            .eq('id', id);
-
-          if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
-        }
+        if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
 
         // Record Audit Log for deletion
         if (session) {
@@ -692,9 +684,7 @@ export async function DELETE(request: Request) {
             action: 'DELETE',
             entityId: existingRec.id,
             entityTitle: existingRec.name_of_work,
-            changesSummary: hard
-              ? `Permanently deleted project: ${existingRec.name_of_work}`
-              : `Soft-deleted project from active roster: ${existingRec.name_of_work}`,
+            changesSummary: `Soft-deleted project from active roster: ${existingRec.name_of_work}`,
             oldState: existingRec,
           });
         }
@@ -703,7 +693,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: hard ? 'Project permanently deleted' : 'Project removed successfully',
+      message: 'Project removed successfully',
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

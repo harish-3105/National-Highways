@@ -69,22 +69,31 @@ function assembleConfigFromRows(rows: MasterItemRow[]): FeeBillMasterDataConfig 
         active: r.active,
       });
     } else if (cat === 'lawyerDesignations') {
+      if (!r.name || r.active === false) return;
       config.lawyerDesignations.push(r.name);
     } else if (cat === 'assistantDesignations') {
+      if (!r.name || r.active === false) return;
       config.assistantDesignations?.push(r.name);
     } else if (cat === 'caseTypes') {
+      if (!r.name || r.active === false) return;
       config.caseTypes.push(r.name);
     } else if (cat === 'casePertainsTo') {
+      if (!r.name || r.active === false) return;
       config.casePertainsTo.push(r.name);
     } else if (cat === 'paymentStatuses') {
+      if (!r.name || r.active === false) return;
       config.paymentStatuses.push(r.name);
     } else if (cat === 'statusOfObtainingGo' || cat === 'statusOfObtainingGoOptions') {
+      if (!r.name || r.active === false) return;
       config.statusOfObtainingGoOptions?.push(r.name);
     } else if (cat === 'statusOfPaymentProposal' || cat === 'statusOfPaymentProposalOptions') {
+      if (!r.name || r.active === false) return;
       config.statusOfPaymentProposalOptions?.push(r.name);
     } else if (cat === 'goStatusOptions' || cat === 'goStatus') {
+      if (!r.name || r.active === false) return;
       config.goStatusOptions?.push(r.name);
     } else if (cat === 'yesNoOptions') {
+      if (!r.name || r.active === false) return;
       config.yesNoOptions?.push(r.name);
     }
   });
@@ -245,12 +254,16 @@ export async function POST(request: Request) {
 
       if (action === 'delete' && category && item) {
         if (supabase) {
+          const nowIso = new Date().toISOString();
           if (item.id) {
-            await supabase.from('fee_bill_master_items').delete().eq('id', item.id);
+            await supabase
+              .from('fee_bill_master_items')
+              .update({ active: false, updated_at: nowIso })
+              .eq('id', item.id);
           } else if (item.name) {
             await supabase
               .from('fee_bill_master_items')
-              .delete()
+              .update({ active: false, updated_at: nowIso })
               .eq('category', category)
               .eq('name', item.name);
           }

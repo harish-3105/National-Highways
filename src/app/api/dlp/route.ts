@@ -695,58 +695,33 @@ export async function DELETE(req: NextRequest) {
     }
 
     const isHardDelete = searchParams.get('hard') === 'true' || searchParams.get('permanent') === 'true';
-
     if (isHardDelete) {
-      const hardAuth = canPerformAction(session, 'system:hard_delete');
-      if (!hardAuth.allowed) {
-        return NextResponse.json({ success: false, error: hardAuth.reason || 'Hard deletion unauthorized.' }, { status: 403 });
-      }
-
-      // Foreign key ON DELETE CASCADE atomically deletes child work stretches
-      const { error: delErr } = await supabase
-        .from('dlp_corridors')
-        .delete()
-        .eq('id', id);
-
-      if (delErr) {
-        return NextResponse.json({ success: false, error: delErr.message }, { status: 500 });
-      }
-
-      if (session) {
-        await logAudit({
-          actor: session,
-          module: 'DLP',
-          action: 'DELETE',
-          entityId: id,
-          entityTitle: `DLP Corridor ${existingCorridor.highway_code}`,
-          changesSummary: `Permanently deleted DLP maintenance corridor for ${existingCorridor.highway_code} in ${existingCorridor.division_name}`,
-          oldState: existingCorridor,
-        });
-      }
-
-      return NextResponse.json({ success: true, message: `Corridor ${id} permanently deleted` });
-    } else {
-      // Atomic soft-delete via PostgreSQL RPC
-      const { error: rpcErr } = await supabase.rpc('soft_delete_dlp_corridor', { p_corridor_id: id });
-
-      if (rpcErr) {
-        return NextResponse.json({ success: false, error: rpcErr.message }, { status: 500 });
-      }
-
-      if (session) {
-        await logAudit({
-          actor: session,
-          module: 'DLP',
-          action: 'DELETE',
-          entityId: id,
-          entityTitle: `DLP Corridor ${existingCorridor.highway_code}`,
-          changesSummary: `Soft-deleted DLP maintenance corridor for ${existingCorridor.highway_code} in ${existingCorridor.division_name}`,
-          oldState: existingCorridor,
-        });
-      }
-
-      return NextResponse.json({ success: true, message: `Corridor ${id} soft-deleted` });
+      return NextResponse.json(
+        { success: false, error: 'Permanent deletion is not available through the application. Contact your database administrator.' },
+        { status: 403 }
+      );
     }
+
+    // Atomic soft-delete via PostgreSQL RPC
+    const { error: rpcErr } = await supabase.rpc('soft_delete_dlp_corridor', { p_corridor_id: id });
+
+    if (rpcErr) {
+      return NextResponse.json({ success: false, error: rpcErr.message }, { status: 500 });
+    }
+
+    if (session) {
+      await logAudit({
+        actor: session,
+        module: 'DLP',
+        action: 'DELETE',
+        entityId: id,
+        entityTitle: `DLP Corridor ${existingCorridor.highway_code}`,
+        changesSummary: `Soft-deleted DLP maintenance corridor for ${existingCorridor.highway_code} in ${existingCorridor.division_name}`,
+        oldState: existingCorridor,
+      });
+    }
+
+    return NextResponse.json({ success: true, message: `Corridor ${id} soft-deleted successfully` });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });

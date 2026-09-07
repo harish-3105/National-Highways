@@ -43,7 +43,10 @@ export async function GET(request: NextRequest) {
     if (sub_division && sub_division !== "All Sub-Divisions") query = query.eq("sub_division", sub_division);
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,designation.ilike.%${search}%,contact_no.ilike.%${search}%,emailid.ilike.%${search}%`);
+      const cleanSearch = search.replace(/[,()"]/g, '').trim();
+      if (cleanSearch) {
+        query = query.or(`name.ilike.%${cleanSearch}%,designation.ilike.%${cleanSearch}%,contact_no.ilike.%${cleanSearch}%,emailid.ilike.%${cleanSearch}%`);
+      }
     }
 
     const { data: staffList, error: staffError } = await query;
@@ -363,7 +366,13 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    const permanent = searchParams.get("permanent") === "true";
+
+    if (searchParams.get("hard") === "true" || searchParams.get("permanent") === "true") {
+      return NextResponse.json(
+        { error: "Permanent deletion is not available through the application. Contact your database administrator." },
+        { status: 403 }
+      );
+    }
 
     if (!id) {
       return NextResponse.json({ error: "Missing staff member id" }, { status: 400 });
@@ -392,29 +401,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: authCheck.reason || "Unauthorized operation." }, { status: 403 });
     }
 
-    if (permanent) {
-      const hardAuth = canPerformAction(session, 'system:hard_delete');
-      if (!hardAuth.allowed) {
-        return NextResponse.json(
-          { error: hardAuth.reason || 'Hard deletion unauthorized.' },
-          { status: 403 }
-        );
-      }
+    const { error } = await supabase
+      .from("staff_members")
+      .update({ delete_status: "DELETED", updated_at: new Date().toISOString() })
+      .eq("id", id);
 
-      await supabase.from("user_profiles").delete().eq("staff_id", id);
-      const { error } = await supabase.from("staff_members").delete().eq("id", id);
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    } else {
-      const { error } = await supabase
-        .from("staff_members")
-        .update({ delete_status: "DELETED", updated_at: new Date().toISOString() })
-        .eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-      // Suspend login access while archived
-      await supabase.from("user_profiles").update({ is_active: false }).eq("staff_id", id);
-    }
+    // Suspend login access while archived
+    await supabase.from("user_profiles").update({ is_active: false }).eq("staff_id", id);
 
     // Log Tamper-Proof Audit
     if (session && existingStaff) {
@@ -424,16 +419,14 @@ export async function DELETE(request: NextRequest) {
         action: "DELETE",
         entityId: id,
         entityTitle: `Staff: ${existingStaff.name} (${existingStaff.designation || "Officer"})`,
-        changesSummary: permanent
-          ? `Permanently deleted staff member ${existingStaff.name}`
-          : `Soft-deleted/archived staff member ${existingStaff.name}`,
+        changesSummary: `Soft-deleted/archived staff member ${existingStaff.name}`,
         oldState: existingStaff,
       });
     }
 
     return NextResponse.json({
       success: true,
-      message: permanent ? "Staff member permanently deleted successfully" : "Staff member soft deleted successfully",
+      message: "Staff member soft deleted successfully",
     });
   } catch (err: any) {
     console.error("DELETE /api/staff error:", err);
