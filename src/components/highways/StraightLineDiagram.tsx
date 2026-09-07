@@ -227,12 +227,9 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
     [stretchPositions, minBarWidthPx]
   );
 
-  // Dynamic Print Scale Factor so SLD matrix fits landscape PDF/print page without horizontal truncation
-  const printScale = useMemo(() => {
-    const totalW = 224 + canvasWidthPxActual;
-    if (totalW <= 1000) return 1;
-    return Math.max(0.35, Math.round((1000 / totalW) * 100) / 100);
-  }, [canvasWidthPxActual]);
+  // Multi-Page Print Parameters (A4 Landscape Slicing)
+  const PAGE_CONTENT_WIDTH = 800; // Pixel width of diagram track per printed page sheet
+  const printPageCount = Math.max(1, Math.ceil(canvasWidthPxActual / PAGE_CONTENT_WIDTH));
 
   // Helper for Excel bar height specs (Scaled: 10px per meter width)
   const getLaneStyle = (laneConfig: string) => {
@@ -494,48 +491,8 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
   return (
     <div
-      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans print:bg-white print:text-black print:p-2"
-      style={{ '--sld-print-scale': printScale } as React.CSSProperties}
+      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans print:bg-white print:text-black"
     >
-      {/* Printable Document Header */}
-      <div className="hidden print:block mb-4 border-b-2 border-slate-900 pb-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 bg-slate-900 text-white font-mono font-extrabold text-xs rounded-xs">
-                {highway.road_code}
-              </span>
-              {highway.old_nh_no && (
-                <span className="px-2 py-0.5 bg-slate-200 text-slate-800 text-xs font-bold rounded-xs border border-slate-400">
-                  Old NH: {highway.old_nh_no}
-                </span>
-              )}
-              <h1 className="text-lg font-black text-slate-900 uppercase tracking-tight">
-                {highway.corridor_name}
-              </h1>
-            </div>
-            <p className="text-xs text-slate-700 mt-1 font-medium">
-              National Highway Corridor Linear Asset &amp; Straight-Line Diagram (SLD) Official Report
-            </p>
-          </div>
-          <div className="text-right text-xs text-slate-700">
-            <p className="font-bold text-slate-900">Tamil Nadu National Highways Division</p>
-            <p className="text-[11px] text-slate-600 mt-0.5">
-              Report Date: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 pt-2 border-t border-slate-300 flex items-center justify-between text-xs text-slate-800 font-semibold">
-          <span>Corridor Span: <strong>{isReversed ? `Km ${maxKm} → Km ${minKm}` : `Km ${minKm} → Km ${maxKm}`}</strong> ({totalSpan.toFixed(2)} km)</span>
-          <span>&bull;</span>
-          <span>Direction: <strong>{isReversed ? 'Reverse (Decreasing Chainage)' : 'Normal (Increasing Chainage)'}</strong></span>
-          <span>&bull;</span>
-          <span>Sub-Chainage Splits: <strong>{activeStretches.length} Stretches</strong></span>
-          <span>&bull;</span>
-          <span>Diagram Mode: <strong>{viewType === 'MICRO_LANE' ? 'Micro Splits SLD' : 'Macro Census SLD'}</strong></span>
-        </div>
-      </div>
-
       {/* Top Header Bar */}
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -650,8 +607,8 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
         </div>
       </header>
 
-      {/* Main Canvas Workspace */}
-      <main className="flex-1 max-w-[1440px] w-full mx-auto p-4 md:p-6 space-y-4 flex flex-col print:p-0 print:max-w-none print:w-full print:m-0 print:space-y-2">
+      {/* Main Canvas Workspace (Interactive On-Screen View) */}
+      <main className="flex-1 max-w-[1440px] w-full mx-auto p-4 md:p-6 space-y-4 flex flex-col print:hidden">
         {/* Layer Visibility Filters Bar */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xs flex items-center justify-between flex-wrap gap-3 print:hidden shrink-0 shadow-2xs">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
@@ -719,7 +676,7 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
 
         {/* FULL SCREEN DYNAMICALLY STRETCHED MATRIX SLD BOARD */}
         <div
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xs shadow-md overflow-hidden flex print:border-slate-400 print:bg-white print:shadow-none print:rounded-none print:min-h-0 print:overflow-visible sld-matrix-board-print-scale"
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xs shadow-md overflow-hidden flex"
         >
           {/* LEFT FIXED SIDEBAR: Row Labels Locked 1-to-1 to Right Canvas Rows */}
           <div className="w-56 shrink-0 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col z-30 select-none">
@@ -1478,41 +1435,403 @@ export default function StraightLineDiagram({ highwayIdOrCode }: StraightLineDia
           </div>
         )}
 
-        {/* Printable Report Technical Legend */}
-        <div className="hidden print:block mt-6 pt-4 border-t-2 border-slate-800 text-xs text-slate-900">
-          <h3 className="font-bold text-slate-900 mb-2 uppercase tracking-wide text-xs">
-            SLD Technical Legend &amp; Operational Reference Guide
-          </h3>
-          <div className="grid grid-cols-3 gap-4 bg-slate-50 p-3 rounded-xs border border-slate-300">
-            <div>
-              <span className="font-bold text-slate-900 block mb-1">Carriageway Gauge Heights:</span>
-              <ul className="space-y-0.5 text-[10px] text-slate-700">
-                <li>&bull; <strong>6L (20m):</strong> 6-Lane Dual Carriageway</li>
-                <li>&bull; <strong>4L / 4L+PS (14m):</strong> 4-Lane / Paved Shoulder</li>
-                <li>&bull; <strong>2L+PS (10m):</strong> 2-Lane + Paved Shoulder</li>
-                <li>&bull; <strong>2L (7m):</strong> Standard 2-Lane Carriageway</li>
-              </ul>
-            </div>
-            <div>
-              <span className="font-bold text-slate-900 block mb-1">Traffic PCU Volume Range:</span>
-              <ul className="space-y-0.5 text-[10px] text-slate-700">
-                <li>&bull; <strong>Low Volume:</strong> &lt; 5,000 PCU / day</li>
-                <li>&bull; <strong>Medium Volume:</strong> 5,000 – 15,000 PCU / day</li>
-                <li>&bull; <strong>High Traffic:</strong> &gt; 15,000 PCU / day</li>
-              </ul>
-            </div>
-            <div>
-              <span className="font-bold text-slate-900 block mb-1">Official Verification:</span>
-              <p className="text-[10px] text-slate-700">
-                Linear asset matrix verified against Level 1 corridor master record &amp; Level 2 sub-chainage breakdown data.
-              </p>
-              <p className="text-[9px] text-slate-500 mt-2 font-mono">
-                Generated via TN National Highways Management System
-              </p>
-            </div>
-          </div>
-        </div>
       </main>
+
+      {/* ========================================================================= */}
+      {/* MULTI-PAGE PRINT STRIP MAP (Dedicated Page-Windowed Slicing View)         */}
+      {/* ========================================================================= */}
+      <div className="hidden print:block bg-white text-slate-900">
+        {Array.from({ length: printPageCount }).map((_, p) => {
+          const sliceStartPx = p * PAGE_CONTENT_WIDTH;
+          const sliceWidthPx = Math.min(PAGE_CONTENT_WIDTH, canvasWidthPxActual - sliceStartPx);
+
+          const pageFromKm = !isReversed
+            ? minKm + (sliceStartPx / canvasWidthPxActual) * totalSpan
+            : maxKm - (sliceStartPx / canvasWidthPxActual) * totalSpan;
+          const pageToKm = !isReversed
+            ? minKm + ((sliceStartPx + sliceWidthPx) / canvasWidthPxActual) * totalSpan
+            : maxKm - ((sliceStartPx + sliceWidthPx) / canvasWidthPxActual) * totalSpan;
+
+          return (
+            <div key={`sld-print-page-${p}`} className="sld-print-page p-2 bg-white flex flex-col justify-between min-h-[670px]">
+              {/* 1. Page Document Header */}
+              <div className="border-b-2 border-slate-900 pb-2 mb-2 flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-slate-900 text-white font-mono font-extrabold text-xs rounded-xs">
+                      {highway.road_code}
+                    </span>
+                    {highway.old_nh_no && (
+                      <span className="px-2 py-0.5 bg-slate-200 text-slate-800 text-xs font-bold rounded-xs border border-slate-400">
+                        Old NH: {highway.old_nh_no}
+                      </span>
+                    )}
+                    <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+                      {highway.corridor_name}
+                    </h1>
+                  </div>
+                  <p className="text-[10.5px] text-slate-600 font-medium mt-0.5">
+                    National Highway Corridor Linear Asset &amp; Straight-Line Diagram (SLD) — Strip Map Sheet {p + 1} of {printPageCount}
+                  </p>
+                </div>
+                <div className="text-right text-[10.5px] text-slate-700">
+                  <div className="font-bold text-slate-900">Tamil Nadu National Highways Division</div>
+                  <div className="font-mono text-blue-800 font-bold mt-0.5">
+                    Sheet Chainage: Km {pageFromKm.toFixed(2)} → Km {pageToKm.toFixed(2)} ({Math.abs(pageToKm - pageFromKm).toFixed(2)} km)
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Page Matrix Board (Repeated 224px Sidebar + 800px Clipped Viewport) */}
+              <div className="border border-slate-400 bg-white flex overflow-hidden">
+                {/* REPEATED SIDEBAR */}
+                <div className="w-56 shrink-0 bg-slate-50 border-r border-slate-300 flex flex-col select-none">
+                  {showTowns && (
+                    <div className="h-12 border-b border-slate-200 px-3 flex items-center gap-2 text-amber-800 text-xs font-bold shrink-0">
+                      <MapPin className="w-4 h-4 shrink-0" />
+                      <span>Important Towns</span>
+                    </div>
+                  )}
+                  <div className="h-11 border-b border-slate-200 px-3 flex items-center gap-2 text-blue-800 text-xs font-bold shrink-0">
+                    <Ruler className="w-4 h-4 shrink-0" />
+                    <span>Chainage Splits</span>
+                  </div>
+                  <div className="h-[340px] border-b border-slate-200 px-2 shrink-0 select-none relative overflow-hidden bg-slate-100/60">
+                    <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-slate-400 z-0 pointer-events-none" />
+                    <div className="absolute top-2 left-2 text-[9.5px] font-extrabold uppercase text-indigo-800 flex items-center gap-1 z-20">
+                      <ArrowUpDown className="w-3.5 h-3.5 text-indigo-700" />
+                      <span>Carriageway Gauge</span>
+                    </div>
+                    <div className="absolute inset-0 flex items-center z-10 pointer-events-none">
+                      {[
+                        { label: '6L', width: '20m', heightPx: 200, leftOffset: '12px', color: 'text-purple-600 border-purple-600' },
+                        { label: '4L / 4L+PS', width: '14m', heightPx: 140, leftOffset: '50px', color: 'text-blue-600 border-blue-600' },
+                        { label: '2L+PS', width: '10m', heightPx: 100, leftOffset: '115px', color: 'text-emerald-600 border-emerald-600' },
+                        { label: '2L', width: '7m', heightPx: 70, leftOffset: '165px', color: 'text-amber-600 border-amber-600' },
+                      ].map((spec) => (
+                        <React.Fragment key={spec.label}>
+                          <div className={`absolute top-1/2 -translate-y-1/2 w-0.5 bg-current ${spec.color}`} style={{ left: spec.leftOffset, height: `${spec.heightPx}px` }} />
+                          <div className={`absolute h-0 overflow-visible border-t-2 ${spec.color}`} style={{ top: `calc(50% - ${spec.heightPx / 2}px)`, left: spec.leftOffset, right: 0 }} />
+                          <div className={`absolute h-0 overflow-visible border-t-2 ${spec.color}`} style={{ top: `calc(50% + ${spec.heightPx / 2}px - 2px)`, left: spec.leftOffset, right: 0 }} />
+                          <div className="absolute flex flex-col items-start leading-none pointer-events-none z-20" style={{ left: `calc(${spec.leftOffset} + 6px)`, top: `calc(50% - ${spec.heightPx / 2}px + 4px)` }}>
+                            <span className={`text-[8.5px] font-extrabold font-mono tracking-tighter ${spec.color}`}>{spec.label}</span>
+                            <span className="text-[7.5px] font-mono font-bold text-slate-600">{spec.width}</span>
+                          </div>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                  {showCw && (
+                    <div className="h-11 border-b border-slate-200 px-3 flex items-center gap-2 text-indigo-800 text-xs font-bold shrink-0">
+                      <ArrowUpDown className="w-4 h-4 shrink-0" />
+                      <span>Carriageway Specs</span>
+                    </div>
+                  )}
+                  {showPcu && (
+                    <div className="h-11 border-b border-slate-200 px-3 flex items-center gap-2 text-emerald-800 text-xs font-bold shrink-0">
+                      <Car className="w-4 h-4 shrink-0" />
+                      <span>Traffic PCU Volume</span>
+                    </div>
+                  )}
+                  {showRow && (
+                    <div className="h-11 border-b border-slate-200 px-3 flex items-center gap-2 text-teal-800 text-xs font-bold shrink-0">
+                      <Maximize2 className="w-4 h-4 shrink-0" />
+                      <span>Right of Way (ROW)</span>
+                    </div>
+                  )}
+                  {showDpr && (
+                    <div className="h-12 border-b border-slate-200 px-3 flex items-center gap-2 text-purple-800 text-xs font-bold shrink-0">
+                      <Info className="w-4 h-4 shrink-0" />
+                      <span>DPR &amp; Schemes</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* CLIPPED VIEWPORT WINDOW */}
+                <div className="overflow-hidden relative shrink-0" style={{ width: `${PAGE_CONTENT_WIDTH}px` }}>
+                  {/* 1. Translated Continuous Track Layer */}
+                  <div className="relative" style={{ width: `${canvasWidthPxActual}px`, transform: `translateX(-${sliceStartPx}px)` }}>
+                    {/* Track 1: Towns */}
+                    {showTowns && (
+                      <div className="relative h-12 border-b border-slate-200 bg-slate-50/60 flex items-center shrink-0">
+                        {activeStretches.map((st, i) => {
+                          const { leftPx, widthPx } = getStretchPos(st, i);
+                          return (
+                            <div key={st.id || i} className="absolute h-full top-0 border-r border-slate-200 flex items-center justify-center px-1 text-[11px] font-bold text-amber-800 truncate" style={{ left: `${leftPx}px`, width: `${widthPx}px` }}>
+                              {st.important_town ? (
+                                <span className="px-2 py-1 bg-amber-100 text-amber-900 border border-amber-300 rounded-xs flex items-center gap-1 truncate max-w-full font-semibold">
+                                  <MapPin className="w-3 h-3 text-amber-700 shrink-0" />
+                                  <span className="truncate">{st.important_town}</span>
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 font-mono text-[10px]">&mdash;</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Track 2: Chainage Splits */}
+                    <div className="relative h-11 border-b border-slate-200 bg-slate-100 flex items-center shrink-0">
+                      {activeStretches.map((st, i) => {
+                        const { leftPx, widthPx } = getStretchPos(st, i);
+                        return (
+                          <div key={st.id || i} className="absolute h-full border-r border-slate-300 flex items-center justify-between px-2 text-[10px] font-mono font-bold text-blue-800 overflow-hidden" style={{ left: `${leftPx}px`, width: `${widthPx}px` }}>
+                            <span className="truncate">Km {isReversed ? st.to_km : st.from_km}</span>
+                            <span className="text-slate-700 text-[9px] bg-white px-1 py-0.5 rounded-xs border border-slate-300 shrink-0 font-sans font-semibold">{st.length_km} km</span>
+                            <span className="truncate">Km {isReversed ? st.from_km : st.to_km}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Track 3: Continuous Geometry (Lane Spans, Centerline, Pins & Background Bars) */}
+                    <div className="relative h-[340px] border-b border-slate-200 bg-slate-50/40 flex items-center shrink-0">
+                      <div className="absolute -left-8 -right-8 top-1/2 -translate-y-1/2 border-t border-dashed border-slate-400 z-0 pointer-events-none" />
+                      {uniqueDlpPins.map((pin) => (
+                        <div key={`print-pin-${pin.km}`} className="absolute top-2 -translate-x-1/2 z-40 pointer-events-none flex flex-col items-center select-none" style={{ left: `${pin.xPx}px` }}>
+                          <span className="px-1.5 py-0.5 bg-slate-900 text-white rounded-sm text-[8.5px] font-mono font-black shadow-sm flex items-center gap-0.5 whitespace-nowrap">📍 Km {pin.km}</span>
+                          <div className="w-px h-10 border-l border-dashed border-slate-400" />
+                        </div>
+                      ))}
+
+                      {/* Lane Geometry Spans */}
+                      {activeStretches.map((st, i) => {
+                        const { leftPx, widthPx } = getStretchPos(st, i);
+                        const laneStyle = getLaneStyle(st.lane_configuration);
+                        return (
+                          <div key={st.id || i} className={`absolute top-1/2 -translate-y-1/2 border-r border-slate-300 border-y ${laneStyle.border} bg-slate-200 flex items-center justify-center overflow-hidden`} style={{ left: `${leftPx}px`, width: `${widthPx}px`, height: `${laneStyle.heightPx}px` }} />
+                        );
+                      })}
+
+                      {/* Continuous Background Colored Bars (Text rendered in Page-Local Layer) */}
+                      {dlpStretches.map((dlp, dIdx) => {
+                        const { leftPx, widthPx } = getDlpPosition(dlp);
+                        const dlpStyle = getDlpCategoryStyle(dlp.category);
+                        const wFrom = Number(dlp.road_width_from_m ?? 0);
+                        const wTo = Number(dlp.road_width_to_m ?? 3.5);
+
+                        if (wFrom === 0) {
+                          const offsetToPx = getLateralOffsetPx(wTo);
+                          const heightPx = Math.max(20, offsetToPx * 2);
+                          return (
+                            <div key={dlp.id || dIdx} className={`absolute top-1/2 -translate-y-1/2 rounded-xs shadow-xs z-30 ${dlpStyle.bg} ${dlpStyle.border}`} style={{ left: `${leftPx}px`, width: `${widthPx}px`, height: `${heightPx}px` }} />
+                          );
+                        }
+
+                        const offsetFromPx = getLateralOffsetPx(wFrom);
+                        const offsetToPx = getLateralOffsetPx(wTo);
+                        const stripHeightPx = Math.max(14, offsetToPx - offsetFromPx);
+                        const topUpperPx = `calc(50% - ${offsetToPx}px)`;
+                        const topLowerPx = `calc(50% + ${offsetFromPx}px)`;
+
+                        return (
+                          <React.Fragment key={dlp.id || dIdx}>
+                            <div className={`absolute rounded-xs shadow-xs z-30 ${dlpStyle.bg} ${dlpStyle.border}`} style={{ left: `${leftPx}px`, width: `${widthPx}px`, top: topUpperPx, height: `${stripHeightPx}px` }} />
+                            <div className={`absolute rounded-xs shadow-xs z-30 ${dlpStyle.bg} ${dlpStyle.border}`} style={{ left: `${leftPx}px`, width: `${widthPx}px`, top: topLowerPx, height: `${stripHeightPx}px` }} />
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+
+                    {/* Track 4: CW Specs */}
+                    {showCw && (
+                      <div className="relative h-11 border-b border-slate-200 bg-slate-50/60 flex items-center shrink-0">
+                        {activeStretches.map((st, i) => {
+                          const { leftPx, widthPx } = getStretchPos(st, i);
+                          const norm = (st.lane_configuration || '').toLowerCase();
+                          let widthNum = '7m';
+                          if (norm.includes('6l') || norm.includes('6-lane')) widthNum = '20m';
+                          else if (norm.includes('4l') || norm.includes('4-lane')) widthNum = '14m';
+                          else if (norm.includes('2l+ps') || norm.includes('paved')) widthNum = '10m';
+                          const specLabel = st.carriageway_width ? `CW: ${st.carriageway_width}` : st.lane_configuration ? `${st.lane_configuration} (${widthNum})` : '';
+                          return (
+                            <div key={st.id || i} className="absolute h-full top-0 border-r border-slate-200 flex items-center justify-center px-1 text-[10px] font-bold truncate" style={{ left: `${leftPx}px`, width: `${widthPx}px` }}>
+                              {specLabel ? <span className="px-2 py-1 border border-indigo-300 bg-indigo-50 text-indigo-900 rounded-xs truncate font-mono">{specLabel}</span> : <span className="text-slate-400 font-mono">&mdash;</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Track 5: PCU */}
+                    {showPcu && (
+                      <div className="relative h-11 border-b border-slate-200 bg-slate-50/60 flex items-center shrink-0">
+                        {activeStretches.map((st, i) => {
+                          const { leftPx, widthPx } = getStretchPos(st, i);
+                          const pcuStyle = getPcuColor(st.pcu_count);
+                          return (
+                            <div key={st.id || i} className="absolute h-full top-0 border-r border-slate-200 flex items-center justify-center px-1 text-[10px] font-mono font-bold truncate" style={{ left: `${leftPx}px`, width: `${widthPx}px` }}>
+                              {st.pcu_count && st.pcu_count > 0 ? <span className={`px-2 py-0.5 border rounded-xs truncate ${pcuStyle}`}>{st.pcu_count.toLocaleString()} PCU</span> : <span className="text-slate-400 font-mono">&mdash;</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Track 6: RoW */}
+                    {showRow && (
+                      <div className="relative h-11 border-b border-slate-200 bg-slate-50/60 flex items-center shrink-0">
+                        {activeStretches.map((st, i) => {
+                          const { leftPx, widthPx } = getStretchPos(st, i);
+                          return (
+                            <div key={st.id || i} className="absolute h-full top-0 border-r border-slate-200 flex items-center justify-center px-1 text-[10px] font-bold truncate" style={{ left: `${leftPx}px`, width: `${widthPx}px` }}>
+                              {st.row_width ? <span className="px-2 py-0.5 bg-teal-50 text-teal-900 border border-teal-300 rounded-xs truncate font-mono">RoW: {st.row_width}</span> : <span className="text-slate-400 font-mono">&mdash;</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Track 7: DPR */}
+                    {showDpr && (
+                      <div className="relative h-12 border-b border-slate-200 bg-slate-50/60 flex items-center shrink-0">
+                        {activeStretches.map((st, i) => {
+                          const { leftPx, widthPx } = getStretchPos(st, i);
+                          return (
+                            <div key={st.id || i} className="absolute h-full top-0 border-r border-slate-200 flex items-center justify-center px-1.5 text-[10px] font-semibold truncate" style={{ left: `${leftPx}px`, width: `${widthPx}px` }}>
+                              {st.dpr_status ? <span className="px-2 py-1 bg-purple-50 text-purple-900 border border-purple-300 rounded-xs truncate max-w-full font-sans">{st.dpr_status}</span> : <span className="text-slate-400 font-mono">&mdash;</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. Page-Local Label Overlay Layer (Solution A: Strictly within [localLeft, localRight] if >= 100px) */}
+                  <div className="absolute inset-0 pointer-events-none z-40">
+                    {/* Offset down by header tracks (Towns 48px if shown + Splits 44px) */}
+                    <div className="relative w-full h-[340px]" style={{ top: `${(showTowns ? 48 : 0) + 44}px` }}>
+                      {dlpStretches.map((dlp, dIdx) => {
+                        const { leftPx, widthPx } = getDlpPosition(dlp);
+                        const localLeftPx = Math.max(0, leftPx - sliceStartPx);
+                        const localRightPx = Math.min(PAGE_CONTENT_WIDTH, (leftPx + widthPx) - sliceStartPx);
+                        const localVisibleWidth = localRightPx - localLeftPx;
+
+                        // Min-width guard: only render text if visible section on this page is >= 100px
+                        if (localVisibleWidth < 100) return null;
+
+                        const isConcurrent = concurrentDlpMap.get(dlp.id || dIdx) ?? false;
+                        const workTitle = dlp.work_name || dlp.scheme || dlp.category;
+                        const contractorTitle = dlp.contractor_name || 'Assigned Agency';
+                        const wFrom = Number(dlp.road_width_from_m ?? 0);
+                        const wTo = Number(dlp.road_width_to_m ?? 3.5);
+                        const rightDateLabel = dlp.category === 'NO_DLP'
+                          ? `DLP Ended: ${formatDateIndian(dlp.dlp_ended_on_date || dlp.dlp_till_date)}`
+                          : dlp.category === 'CONSTRUCTION'
+                          ? `Progress: ${dlp.physical_progress_pct ?? 0}%`
+                          : `DLP Till: ${formatDateIndian(dlp.dlp_till_date)}`;
+
+                        if (wFrom === 0) {
+                          const offsetToPx = getLateralOffsetPx(wTo);
+                          const heightPx = Math.max(20, offsetToPx * 2);
+                          return (
+                            <div
+                              key={`print-lbl-${dlp.id || dIdx}`}
+                              className="absolute top-1/2 -translate-y-1/2 flex flex-col justify-between items-center text-center overflow-hidden p-1.5 text-white"
+                              style={{ left: `${localLeftPx}px`, width: `${localVisibleWidth}px`, height: `${heightPx}px` }}
+                            >
+                              {isConcurrent ? (
+                                <div className="w-full h-full flex items-center justify-between gap-1.5 px-1 overflow-hidden select-none">
+                                  <span className="text-[8px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate shrink-0 max-w-[28%] text-left leading-tight">{contractorTitle}</span>
+                                  <span className="text-[9px] font-black tracking-tight text-center truncate flex-1 drop-shadow-xs leading-tight px-1">{workTitle}</span>
+                                  <span className="text-[8px] font-mono font-bold text-white/95 drop-shadow-xs truncate shrink-0 max-w-[32%] text-right leading-tight">{rightDateLabel}</span>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="w-full text-center shrink-0 select-none">
+                                    <span className="text-[9px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate block max-w-full leading-tight">{contractorTitle}</span>
+                                  </div>
+                                  <div className="w-full flex-1 flex items-center justify-center my-0.5 px-0.5 overflow-hidden select-none">
+                                    <span className="text-[10px] font-black tracking-tight text-center break-words drop-shadow-xs leading-tight">{workTitle}</span>
+                                  </div>
+                                  <div className="w-full text-center shrink-0 select-none">
+                                    <span className="text-[8.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate block max-w-full leading-tight">{rightDateLabel}</span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        const offsetFromPx = getLateralOffsetPx(wFrom);
+                        const offsetToPx = getLateralOffsetPx(wTo);
+                        const stripHeightPx = Math.max(14, offsetToPx - offsetFromPx);
+                        const topUpperPx = `calc(50% - ${offsetToPx}px)`;
+                        const topLowerPx = `calc(50% + ${offsetFromPx}px)`;
+
+                        return (
+                          <React.Fragment key={`print-lbl-${dlp.id || dIdx}`}>
+                            {/* Upper LHS Strip Label */}
+                            <div
+                              className="absolute flex flex-col justify-between items-center text-center overflow-hidden p-1 text-white"
+                              style={{ left: `${localLeftPx}px`, width: `${localVisibleWidth}px`, top: topUpperPx, height: `${stripHeightPx}px` }}
+                            >
+                              {isConcurrent ? (
+                                <div className="w-full h-full flex items-center justify-between gap-1 px-1 overflow-hidden select-none">
+                                  <span className="text-[7.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate shrink-0 max-w-[28%] text-left leading-tight">{contractorTitle}</span>
+                                  <span className="text-[8px] font-black tracking-tight text-center truncate flex-1 drop-shadow-xs leading-tight px-0.5">{workTitle}</span>
+                                  <span className="text-[7.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate shrink-0 max-w-[32%] text-right leading-tight">{rightDateLabel}</span>
+                                </div>
+                              ) : (
+                                <>
+                                  <span className="text-[7.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none">
+                                    {contractorTitle}
+                                  </span>
+                                  <span className="text-[8px] font-black tracking-tight text-center break-words drop-shadow-xs leading-tight my-0.5 flex-1 flex items-center justify-center select-none">
+                                    {workTitle}
+                                  </span>
+                                  <span className="text-[7.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none">
+                                    {rightDateLabel}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Lower RHS Strip Label */}
+                            <div
+                              className="absolute flex flex-col justify-between items-center text-center overflow-hidden p-1 text-white"
+                              style={{ left: `${localLeftPx}px`, width: `${localVisibleWidth}px`, top: topLowerPx, height: `${stripHeightPx}px` }}
+                            >
+                              {isConcurrent ? (
+                                <div className="w-full h-full flex items-center justify-between gap-1 px-1 overflow-hidden select-none">
+                                  <span className="text-[7.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate shrink-0 max-w-[28%] text-left leading-tight">{contractorTitle}</span>
+                                  <span className="text-[8px] font-black tracking-tight text-center truncate flex-1 drop-shadow-xs leading-tight px-0.5">{workTitle}</span>
+                                  <span className="text-[7.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate shrink-0 max-w-[32%] text-right leading-tight">{rightDateLabel}</span>
+                                </div>
+                              ) : (
+                                <>
+                                  <span className="text-[7.5px] font-black uppercase tracking-tight text-white/90 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none">
+                                    {contractorTitle}
+                                  </span>
+                                  <span className="text-[8px] font-black tracking-tight text-center break-words drop-shadow-xs leading-tight my-0.5 flex-1 flex items-center justify-center select-none">
+                                    {workTitle}
+                                  </span>
+                                  <span className="text-[7.5px] font-mono font-bold text-white/95 drop-shadow-xs truncate w-full block leading-tight shrink-0 select-none">
+                                    {rightDateLabel}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Page Document Footer */}
+              <div className="mt-2 pt-1 border-t border-slate-300 flex items-center justify-between text-[9px] text-slate-600 font-medium select-none">
+                <span>Corridor: {highway.corridor_name} &bull; Total Span: Km {minKm} → Km {maxKm} ({totalSpan.toFixed(2)} km) &bull; Direction: {isReversed ? 'Reverse' : 'Normal'}</span>
+                <span className="font-bold text-slate-900">Sheet {p + 1} of {printPageCount}</span>
+                <span>Date: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

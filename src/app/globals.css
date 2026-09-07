@@ -232,13 +232,24 @@ select option {
     padding: 0.5in !important;
   }
 
-  /* General SLD Print Optimization */
+  /* Multi-Page SLD Print Styles */
   @page {
-    size: landscape;
+    size: A4 landscape;
     margin: 8mm;
   }
 
-  .sld-matrix-board-print-scale {
-    zoom: var(--sld-print-scale, 1) !important;
+  .sld-print-page {
+    break-after: page;
+    page-break-after: always;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .sld-print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 }
