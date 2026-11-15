@@ -229,6 +229,17 @@ export function NavigationHeader() {
                 </button>
               )}
 
+              {/* Recruiter / HR Demo Indicator Pill */}
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-demo-intimation'))}
+                title="Click to view Demo & Security Notice"
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xs text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors cursor-pointer select-none"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span>Demo Mode</span>
+              </button>
+
               {/* User Avatar & Identity Menu */}
               {currentUser ? (
                 <div className="relative">

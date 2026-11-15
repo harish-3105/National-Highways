@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
         .select('permission_code')
         .eq('role_id', user.role_id);
 
-      permissions = (rolePerms || []).map((rp) => rp.permission_code);
+      permissions = ((rolePerms || []) as any[]).map((rp: any) => rp.permission_code);
     }
 
     // 5. Fetch Global Lockdown State

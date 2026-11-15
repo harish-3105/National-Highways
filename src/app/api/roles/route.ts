@@ -44,18 +44,18 @@ export async function GET() {
       .select('role_id');
 
     const userCountMap: Record<string, number> = {};
-    (userProfiles || []).forEach((u) => {
+    ((userProfiles || []) as any[]).forEach((u: any) => {
       userCountMap[u.role_id] = (userCountMap[u.role_id] || 0) + 1;
     });
 
     // Map permissions into each role
     const permsByRole: Record<string, string[]> = {};
-    (rolePerms || []).forEach((rp) => {
+    ((rolePerms || []) as any[]).forEach((rp: any) => {
       if (!permsByRole[rp.role_id]) permsByRole[rp.role_id] = [];
       permsByRole[rp.role_id].push(rp.permission_code);
     });
 
-    const enrichedRoles = (roles || []).map((role) => ({
+    const enrichedRoles = ((roles || []) as any[]).map((role: any) => ({
       ...role,
       permissions: role.name === 'Super Admin' ? ['*:*'] : permsByRole[role.id] || [],
       memberCount: userCountMap[role.id] || 0,

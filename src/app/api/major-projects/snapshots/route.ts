@@ -1,29 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createMockSupabaseClient } from '@/lib/mock/mockSupabase';
 import { getSession } from '@/lib/auth/session';
 import { canPerformAction } from '@/lib/auth/permissions';
 
 export const dynamic = 'force-dynamic';
 
 function getSupabaseClient() {
-  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const rawKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    '';
-
-  const supabaseUrl = rawUrl.replace(/^["']|["']$/g, '').trim();
-  const supabaseKey = rawKey.replace(/^["']|["']$/g, '').trim();
-
-  if (!supabaseUrl || !supabaseKey) return null;
-
-  try {
-    return createClient(supabaseUrl, supabaseKey, {
-      auth: { persistSession: false },
-    });
-  } catch {
-    return null;
-  }
+  return createMockSupabaseClient();
 }
 
 export async function GET(request: Request) {

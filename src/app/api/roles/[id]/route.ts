@@ -54,7 +54,7 @@ export async function PUT(
       .select('permission_code')
       .eq('role_id', id);
 
-    const oldPermList = (oldPerms || []).map((p) => p.permission_code);
+    const oldPermList = ((oldPerms || []) as any[]).map((p: any) => p.permission_code);
 
     // Update Role Metadata
     const updatePayload: Record<string, any> = {};

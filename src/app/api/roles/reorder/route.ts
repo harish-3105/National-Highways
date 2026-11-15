@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: fetchErr?.message || 'Failed to fetch roles' }, { status: 500 });
     }
 
-    const roleMap = new Map(allRoles.map((r) => [r.id, r]));
+    const roleMap = new Map<string, any>((allRoles as any[]).map((r: any) => [r.id, r]));
 
     // Discord Invariant Check: Non-admins cannot move roles at or above themselves
     if (!actor.isSuperAdmin) {
