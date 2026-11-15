@@ -152,18 +152,39 @@ export async function verifySessionToken(token: string): Promise<SessionUser | n
   }
 }
 
+export const DEFAULT_USER: SessionUser = {
+  id: 'default-admin-id',
+  phoneNumber: '9999999999',
+  fullName: 'Department Administrator',
+  roleId: 'super-admin-role',
+  roleName: 'Super Admin',
+  position: 100,
+  isSuperAdmin: true,
+  jurisdictionScope: 'STATEWIDE',
+  circle: null,
+  division: null,
+  subDivision: null,
+  permissions: ['*:*'],
+  isLockdownActive: false,
+  isActive: true,
+};
+
 /**
  * Gets the current session user from the incoming request cookies (Server Components & Route Handlers)
+ * When authentication is disabled, defaults to full Super Admin permissions.
  */
 export async function getSession(): Promise<SessionUser | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value;
-    if (!token) return null;
-    return await verifySessionToken(token);
+    if (token) {
+      const verified = await verifySessionToken(token);
+      if (verified) return verified;
+    }
   } catch {
-    return null;
+    // ignore
   }
+  return DEFAULT_USER;
 }
 
 /**

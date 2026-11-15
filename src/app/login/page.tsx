@@ -21,6 +21,11 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/highways';
 
+  // Automatically redirect away from login since authentication is disabled
+  React.useEffect(() => {
+    router.replace(redirectUrl || '/highways');
+  }, [router, redirectUrl]);
+
   const [step, setStep] = useState<'PHONE' | 'SETUP_QR' | 'VERIFY_OTP'>('PHONE');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [fullName, setFullName] = useState('');

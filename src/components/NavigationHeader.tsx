@@ -14,14 +14,12 @@ import {
   X,
   Lock,
   Unlock,
-  LogOut,
   User,
-  ShieldCheck,
   History,
   AlertTriangle,
   Loader2,
 } from 'lucide-react';
-import { SessionUser } from '@/lib/auth/session';
+import { SessionUser, DEFAULT_USER } from '@/lib/auth/session';
 
 interface NavItem {
   label: string;
@@ -74,7 +72,7 @@ export function NavigationHeader() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<SessionUser | null>(DEFAULT_USER);
   const [isLockdownActive, setIsLockdownActive] = useState(false);
   const [isTogglingLockdown, setIsTogglingLockdown] = useState(false);
 
@@ -96,18 +94,6 @@ export function NavigationHeader() {
     }
     loadSession();
   }, [pathname]);
-
-  // Handle Logout
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      setCurrentUser(null);
-      router.push('/login');
-      router.refresh();
-    } catch (err) {
-      console.error('Error logging out:', err);
-    }
-  };
 
   // Handle Master Lockdown Toggle
   const handleToggleLockdown = async () => {
@@ -290,27 +276,10 @@ export function NavigationHeader() {
                           <span>Statewide Audit Logs</span>
                         </Link>
                       )}
-
-                      <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer border-t border-slate-100 dark:border-slate-700/60 mt-1"
-                      >
-                        <LogOut className="w-3.5 h-3.5" />
-                        <span>Log Out</span>
-                      </button>
                     </div>
                   )}
                 </div>
-              ) : (
-                <Link
-                  href="/login"
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xs transition-colors cursor-pointer shadow-xs"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Log In</span>
-                </Link>
-              )}
+              ) : null}
 
               {/* Mobile Hamburger Toggle Button */}
               <div className="flex items-center md:hidden">
