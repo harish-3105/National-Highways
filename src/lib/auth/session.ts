@@ -1,5 +1,3 @@
-import { cookies } from 'next/headers';
-
 export interface SessionUser {
   id: string;
   phoneNumber: string;
@@ -170,42 +168,22 @@ export const DEFAULT_USER: SessionUser = {
 };
 
 /**
- * Gets the current session user from the incoming request cookies (Server Components & Route Handlers)
- * When authentication is disabled, defaults to full Super Admin permissions.
+ * Gets the current session user (Defaults to full Super Admin permissions in demo mode)
  */
 export async function getSession(): Promise<SessionUser | null> {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(COOKIE_NAME)?.value;
-    if (token) {
-      const verified = await verifySessionToken(token);
-      if (verified) return verified;
-    }
-  } catch {
-    // ignore
-  }
   return DEFAULT_USER;
 }
 
 /**
- * Sets the session cookie
+ * Sets the session cookie (no-op in demo mode)
  */
 export async function setSessionCookie(user: SessionUser): Promise<void> {
-  const token = await createSessionToken(user);
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: SESSION_MAX_AGE,
-  });
+  // no-op in demo mode
 }
 
 /**
- * Clears the session cookie on logout
+ * Clears the session cookie on logout (no-op in demo mode)
  */
 export async function clearSessionCookie(): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.delete(COOKIE_NAME);
+  // no-op in demo mode
 }
